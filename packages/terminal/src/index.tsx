@@ -10,6 +10,7 @@ import { App } from './components/App';
 import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
 import { parseArgs, main } from './cli/main';
+import { printExitSummary, getExitStats } from './exit-summary';
 
 // --- Graceful shutdown handling ---
 
@@ -225,6 +226,10 @@ if (options.print !== null) {
   waitUntilExit().then(() => {
     // Restore original stdout.write before exiting
     disableSyncOutput();
+    const stats = getExitStats();
+    if (stats) {
+      printExitSummary(stats);
+    }
     cleanup();
     process.exit(0);
   });

@@ -60,6 +60,7 @@ import type { QueuedMessage } from './appTypes';
 import { takeNextQueuedMessage } from './queueUtils';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { CLEAR_SCREEN_TOKEN } from '../output/sanitize';
+import { setExitStats } from '../exit-summary';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
   getTasks,
@@ -700,6 +701,10 @@ export function App({ cwd, version }: AppProps) {
   const isProcessingRef = useRef(isProcessing);
   const currentToolCallRef = useRef<ToolCall | undefined>(currentToolCall);
   const hasPendingToolsRef = useRef(false);
+  const tokenUsageRef = useRef<TokenUsage | undefined>(tokenUsage);
+  tokenUsageRef.current = tokenUsage;
+  const messagesLengthRef = useRef(messages.length);
+  messagesLengthRef.current = messages.length;
   const pendingFirstGreetingRef = useRef(false);
   const inputRef = useRef<InputHandle>(null);
   const isPanelOpen = (
@@ -1687,6 +1692,15 @@ export function App({ cwd, version }: AppProps) {
       setQueueFlushTrigger((prev) => prev + 1);
     } else if (chunk.type === 'exit') {
       // Exit command was issued
+      const active = registryRef.current.getActiveSession();
+      if (active) {
+        setExitStats({
+          sessionId: active.id,
+          startedAt: active.startedAt,
+          tokenUsage: tokenUsageRef.current,
+          messageCount: messagesLengthRef.current,
+        });
+      }
       registry.closeAll();
       exit();
     } else if (chunk.type === 'usage' && chunk.usage) {
@@ -1860,7 +1874,7 @@ export function App({ cwd, version }: AppProps) {
       } else if (chunk.panel === 'hooks') {
         // Load hooks and show panel
         if (!hookStoreRef.current) {
-          hookStoreRef.current = new HookStore(cwd, workspaceBaseDir);
+          hookStoreRef.current = new HookStore();
         }
         const hooks = hookStoreRef.current.loadAll();
         setHooksConfig(hooks);
@@ -1941,7 +1955,7 @@ export function App({ cwd, version }: AppProps) {
       } else if (chunk.panel === 'guardrails') {
         // Load guardrails and show panel
         if (!guardrailsStoreRef.current) {
-          guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+          guardrailsStoreRef.current = new GuardrailsStore();
         }
         const config = guardrailsStoreRef.current.loadAll();
         const policies = guardrailsStoreRef.current.listPolicies();
@@ -2706,6 +2720,19 @@ export function App({ cwd, version }: AppProps) {
   }, [finalizeResponse, resetTurnState]);
 
 
+  // Gather exit stats for the session summary printed after Ink unmounts
+  const gatherAndSetExitStats = useCallback(() => {
+    const active = registryRef.current.getActiveSession();
+    if (active) {
+      setExitStats({
+        sessionId: active.id,
+        startedAt: active.startedAt,
+        tokenUsage,
+        messageCount: messages.length,
+      });
+    }
+  }, [tokenUsage, messages.length]);
+
   // Handle keyboard shortcuts (inactive when session selector is shown)
   useInput((input, key) => {
     // Ctrl+R: push-to-talk recording toggle
@@ -2746,6 +2773,7 @@ export function App({ cwd, version }: AppProps) {
       const timeSinceLastCtrlC = now - lastCtrlCRef.current;
       if (timeSinceLastCtrlC < 1500 && lastCtrlCRef.current > 0) {
         // Double Ctrl+C - exit the app
+        gatherAndSetExitStats();
         registry.closeAll();
         exit();
         return;
@@ -2860,6 +2888,7 @@ export function App({ cwd, version }: AppProps) {
 
       // Check for /exit command
       if (trimmedInput === '/exit') {
+        gatherAndSetExitStats();
         registry.closeAll();
         exit();
         return;
@@ -2892,7 +2921,7 @@ export function App({ cwd, version }: AppProps) {
         // /hooks (no args) → open panel
         if (cmdName === 'hooks' && !cmdArgs) {
           if (!hookStoreRef.current) {
-            hookStoreRef.current = new HookStore(cwd, workspaceBaseDir);
+            hookStoreRef.current = new HookStore();
           }
           const hooks = hookStoreRef.current.loadAll();
           setHooksConfig(hooks);
@@ -2936,7 +2965,7 @@ export function App({ cwd, version }: AppProps) {
         // /guardrails (no args) → open panel
         if (cmdName === 'guardrails' && !cmdArgs) {
           if (!guardrailsStoreRef.current) {
-            guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+            guardrailsStoreRef.current = new GuardrailsStore();
           }
           const config = guardrailsStoreRef.current.loadAll();
           const policies = guardrailsStoreRef.current.listPolicies();
@@ -4165,7 +4194,7 @@ export function App({ cwd, version }: AppProps) {
   if (showHooksPanel) {
     const handleHookToggle = (event: HookEvent, hookId: string, enabled: boolean) => {
       if (!hookStoreRef.current) {
-        hookStoreRef.current = new HookStore(cwd, workspaceBaseDir);
+        hookStoreRef.current = new HookStore();
       }
       hookStoreRef.current.setEnabled(hookId, enabled);
       const hooks = hookStoreRef.current.loadAll();
@@ -4174,7 +4203,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleHookDelete = async (event: HookEvent, hookId: string) => {
       if (!hookStoreRef.current) {
-        hookStoreRef.current = new HookStore(cwd, workspaceBaseDir);
+        hookStoreRef.current = new HookStore();
       }
       hookStoreRef.current.removeHook(hookId);
       const hooks = hookStoreRef.current.loadAll();
@@ -4188,7 +4217,7 @@ export function App({ cwd, version }: AppProps) {
       matcher?: string
     ) => {
       if (!hookStoreRef.current) {
-        hookStoreRef.current = new HookStore(cwd, workspaceBaseDir);
+        hookStoreRef.current = new HookStore();
       }
       hookStoreRef.current.addHook(event, handler, location, matcher);
       const hooks = hookStoreRef.current.loadAll();
@@ -4309,7 +4338,7 @@ export function App({ cwd, version }: AppProps) {
   if (showGuardrailsPanel && guardrailsConfig) {
     const handleToggleEnabled = (enabled: boolean) => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       guardrailsStoreRef.current.setEnabled(enabled, 'project');
       const config = guardrailsStoreRef.current.loadAll();
@@ -4320,7 +4349,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleTogglePolicy = (policyId: string, enabled: boolean) => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       guardrailsStoreRef.current.setPolicyEnabled(policyId, enabled);
       const config = guardrailsStoreRef.current.loadAll();
@@ -4331,7 +4360,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleSetPreset = (preset: 'permissive' | 'restrictive') => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       const policy = preset === 'permissive' ? PERMISSIVE_POLICY : RESTRICTIVE_POLICY;
       guardrailsStoreRef.current.addPolicy({ ...policy }, 'project');
@@ -4344,7 +4373,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleAddPolicy = (policy: any) => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       guardrailsStoreRef.current.addPolicy(policy, 'project');
       const config = guardrailsStoreRef.current.loadAll();
@@ -4355,7 +4384,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleRemovePolicy = (policyId: string) => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       guardrailsStoreRef.current.removePolicy(policyId);
       const config = guardrailsStoreRef.current.loadAll();
@@ -4366,7 +4395,7 @@ export function App({ cwd, version }: AppProps) {
 
     const handleUpdatePolicy = (policyId: string, updates: any) => {
       if (!guardrailsStoreRef.current) {
-        guardrailsStoreRef.current = new GuardrailsStore(cwd, workspaceBaseDir);
+        guardrailsStoreRef.current = new GuardrailsStore();
       }
       const existing = guardrailsStoreRef.current.getPolicy(policyId);
       if (existing) {
