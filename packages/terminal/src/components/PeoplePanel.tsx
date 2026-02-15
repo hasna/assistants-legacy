@@ -305,7 +305,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
                 if (createName.trim()) setMode('create-email');
               }}
               focus
-              placeholder="e.g., Andrei Hasna"
+              placeholder="e.g., Jane Smith"
             />
           </Box>
         </Box>
@@ -329,7 +329,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               onChange={setCreateEmail}
               onSubmit={() => setMode('create-phone')}
               focus
-              placeholder="(optional) e.g., andrei@hasna.com"
+              placeholder="(optional) e.g., jane@example.com"
             />
           </Box>
         </Box>

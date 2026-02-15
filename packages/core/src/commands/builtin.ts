@@ -802,7 +802,7 @@ export class BuiltinCommands {
           }
 
           // Find the hook by ID
-          const store = new HookStore(context.cwd, context.getStorageDir?.());
+          const store = new HookStore();
           const hookInfo = store.getHook(hookId);
 
           if (!hookInfo) {
@@ -3390,7 +3390,7 @@ Created: ${new Date(job.createdAt).toISOString()}
 
           if (!name) {
             context.emit('text', 'Usage: /people create <name> [email]\n');
-            context.emit('text', 'Example: /people create Andrei andrei@hasna.com\n');
+            context.emit('text', 'Example: /people create Jane jane@example.com\n');
             context.emit('done');
             return { handled: true };
           }
