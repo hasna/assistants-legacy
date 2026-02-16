@@ -65,8 +65,14 @@ export { FilesystemTools } from './tools/filesystem';
 export { WebTools } from './tools/web';
 export { FeedbackTool } from './tools/feedback';
 export { AudioTools } from './tools/audio';
+export { SpreadsheetTools } from './tools/spreadsheet';
+export { WorkflowTools } from './tools/workflows';
+
+// Workflows
+export * from './workflows';
 export { SchedulerTool, createSchedulerTool, registerSchedulerTools, type SchedulerContext } from './tools/scheduler';
 export { WaitTool, SleepTool } from './tools/wait';
+export { TmuxTools } from './tools/tmux';
 export {
   projectTools,
   planTools,
@@ -182,6 +188,7 @@ export { NativeHookRegistry, nativeHookRegistry } from './hooks/native';
 export { ScopeContextManager } from './hooks/scope-context';
 export { createScopeVerificationHook, scopeVerificationHandler } from './hooks/scope-verification';
 export { HookStore } from './hooks/store';
+export { HookCliBridge } from './hooks/cli-bridge';
 export { HookTester } from './hooks/tester';
 export { HookLogger } from './hooks/logger';
 export type { HookLocation, HookInfo } from './hooks/store';
@@ -199,6 +206,9 @@ export { MemoryStore } from './memory/store';
 export { SessionManager } from './memory/sessions';
 export { GlobalMemoryManager } from './memory/global-memory';
 export { MemoryInjector, buildContextInjection } from './memory/injector';
+export { ProjectMemoryManager } from './memory/project-memory';
+export { PreferenceLearner } from './memory/preference-learner';
+export type { PreferenceEvent } from './memory/preference-learner';
 export type {
   MemoryScope,
   MemoryCategory,
@@ -330,6 +340,10 @@ export * from './contacts';
 
 // Telephony (Twilio + ElevenLabs Conversational AI)
 export * from './telephony';
+
+// Server
+export { LocalAPIServer } from './server/api-server';
+export type { LocalAPIServerOptions, ServerStatus } from './server/api-server';
 
 // Client
 export { EmbeddedClient } from './client';

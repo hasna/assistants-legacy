@@ -1,5 +1,6 @@
 import type { HookMatcher, HookHandler, HookInput, HookOutput, Message } from '@hasna/assistants-shared';
 import type { LLMClient } from '../llm/client';
+import type { HookCliBridge } from './cli-bridge';
 import { existsSync } from 'fs';
 import { generateId, sleep } from '@hasna/assistants-shared';
 import { getRuntime } from '../runtime';
@@ -19,6 +20,7 @@ export class HookExecutor {
   private llmClient?: LLMClient;
   private assistantRunner?: AssistantRunner;
   private logger?: HookLogger;
+  private cliBridge?: HookCliBridge;
 
   setLLMClient(client: LLMClient): void {
     this.llmClient = client;
@@ -30,6 +32,10 @@ export class HookExecutor {
 
   setLogger(logger: HookLogger): void {
     this.logger = logger;
+  }
+
+  setCliBridge(bridge: HookCliBridge): void {
+    this.cliBridge = bridge;
   }
 
   /**
@@ -62,8 +68,17 @@ export class HookExecutor {
           return result;
         }
 
-        // If hook returns a permission decision, use it
+        // If hook returns a permission decision, return it while preserving merged updates
         if (result?.permissionDecision) {
+          if (result.updatedInput || mergedInput) {
+            return {
+              ...result,
+              updatedInput: {
+                ...(mergedInput || {}),
+                ...(result.updatedInput || {}),
+              },
+            };
+          }
           return result;
         }
 
@@ -161,6 +176,9 @@ export class HookExecutor {
           break;
         case 'assistant':
           result = await this.executeAssistantHook(hook, input, timeout);
+          break;
+        case 'cli':
+          result = await this.executeCliHook(hook, input);
           break;
         default:
           return null;
@@ -384,6 +402,24 @@ Respond with JSON only: {"allow": boolean, "reason": string}`;
       };
     } catch (error) {
       console.error('Assistant hook error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Execute a CLI hook via HookCliBridge
+   */
+  private async executeCliHook(
+    hook: HookHandler,
+    input: HookInput
+  ): Promise<HookOutput | null> {
+    const cliName = hook.cliName;
+    if (!cliName || !this.cliBridge) return null;
+
+    try {
+      return await this.cliBridge.executeCliHook(cliName, input.hook_event_name, input);
+    } catch (error) {
+      console.error(`CLI hook error (${cliName}):`, error);
       return null;
     }
   }

@@ -87,18 +87,38 @@ export class WebFetchTool {
     },
   };
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const url = input.url as string;
     const extractType = (input.extract_type as string) || 'text';
     const timeoutInput = Number(input.timeout);
     const timeout = Number.isFinite(timeoutInput) && timeoutInput > 0 ? timeoutInput : 30000;
 
     try {
+      if (signal?.aborted) {
+        throw new ToolExecutionError('Request aborted', {
+          toolName: 'web_fetch',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: true,
+        });
+      }
+
       let currentUrl = url;
       let redirects = 0;
       let response: Response | null = null;
 
       while (true) {
+        if (signal?.aborted) {
+          throw new ToolExecutionError('Request aborted', {
+            toolName: 'web_fetch',
+            toolInput: input,
+            code: ErrorCodes.TOOL_EXECUTION_FAILED,
+            recoverable: false,
+            retryable: true,
+          });
+        }
+
         // Validate URL
         const parsedUrl = new URL(currentUrl);
         if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
@@ -113,25 +133,28 @@ export class WebFetchTool {
         }
 
         // Block local/private IPs for security
-      const hostname = parsedUrl.hostname;
-      if (await isPrivateHostOrResolved(hostname)) {
-        throw new ToolExecutionError('Cannot fetch from local/private network addresses for security reasons', {
-          toolName: 'web_fetch',
-          toolInput: input,
-          code: ErrorCodes.TOOL_PERMISSION_DENIED,
-          recoverable: false,
-          retryable: false,
-        });
-      }
+        const hostname = parsedUrl.hostname;
+        if (await isPrivateHostOrResolved(hostname)) {
+          throw new ToolExecutionError('Cannot fetch from local/private network addresses for security reasons', {
+            toolName: 'web_fetch',
+            toolInput: input,
+            code: ErrorCodes.TOOL_PERMISSION_DENIED,
+            recoverable: false,
+            retryable: false,
+          });
+        }
 
         response = await fetchWithTimeout(currentUrl, {
-            timeout,
-            redirect: 'manual',
-            headers: {
-              'User-Agent': 'assistants/1.0 (AI Assistant)',
-              'Accept': extractType === 'json' ? 'application/json' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            },
-          });
+          timeout,
+          redirect: 'manual',
+          headers: {
+            'User-Agent': 'assistants/1.0 (AI Assistant)',
+            'Accept': extractType === 'json' ? 'application/json' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          signal,
+          toolName: 'web_fetch',
+          toolInput: input,
+        });
 
         if ([301, 302, 303, 307, 308].includes(response.status)) {
           const location = response.headers.get('location');
@@ -287,7 +310,7 @@ export class WebSearchTool {
     },
   };
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const query = input.query as string;
     const requested = Number(input.max_results);
     const maxResults = Number.isFinite(requested) && requested > 0
@@ -305,6 +328,9 @@ export class WebSearchTool {
           'User-Agent': 'assistants/1.0 (AI Assistant)',
           'Accept': 'text/html',
         },
+        signal,
+        toolName: 'web_search',
+        toolInput: input,
       });
 
       if (!response.ok) {
@@ -325,7 +351,7 @@ export class WebSearchTool {
 
       // Fallback to Instant Answer API when DDG HTML is blocked or empty
       if (results.length === 0 || isLikelyBotChallenge(html)) {
-        const apiResults = await fetchInstantAnswerResults(query, maxResults, timeout);
+        const apiResults = await fetchInstantAnswerResults(query, maxResults, timeout, signal);
         if (apiResults.length > 0) {
           results = apiResults;
         }
@@ -349,6 +375,7 @@ export class WebSearchTool {
 
       return output.trim();
     } catch (error) {
+      if (error instanceof ToolExecutionError) throw error;
       if (error instanceof Error && /aborted|timeout/i.test(error.message)) {
         throw new ToolExecutionError(`Search request timed out after ${timeout}ms`, {
           toolName: 'web_search',
@@ -359,7 +386,6 @@ export class WebSearchTool {
           suggestion: 'Try again or increase the timeout.',
         });
       }
-      if (error instanceof ToolExecutionError) throw error;
       throw new ToolExecutionError(error instanceof Error ? error.message : String(error), {
         toolName: 'web_search',
         toolInput: input,
@@ -451,6 +477,7 @@ async function fetchInstantAnswerResults(
   query: string,
   maxResults: number,
   timeout: number,
+  signal?: AbortSignal,
 ): Promise<Array<{ title: string; url: string; snippet: string }>> {
   const apiUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
   try {
@@ -460,6 +487,9 @@ async function fetchInstantAnswerResults(
         'User-Agent': 'assistants/1.0 (AI Assistant)',
         'Accept': 'application/json',
       },
+      signal,
+      toolName: 'web_search',
+      toolInput: { query },
     });
     if (!response.ok) {
       return [];
@@ -565,7 +595,7 @@ export class CurlTool {
     },
   };
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const url = input.url as string;
     const methodRaw = (input.method as string) || 'GET';
     const method = methodRaw.toUpperCase();
@@ -585,11 +615,31 @@ export class CurlTool {
     }
 
     try {
+      if (signal?.aborted) {
+        throw new ToolExecutionError('Request aborted', {
+          toolName: 'curl',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: true,
+        });
+      }
+
       let currentUrl = url;
       let redirects = 0;
       let response: Response | null = null;
 
       while (true) {
+        if (signal?.aborted) {
+          throw new ToolExecutionError('Request aborted', {
+            toolName: 'curl',
+            toolInput: input,
+            code: ErrorCodes.TOOL_EXECUTION_FAILED,
+            recoverable: false,
+            retryable: true,
+          });
+        }
+
         const parsedUrl = new URL(currentUrl);
         if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
           throw new ToolExecutionError('Only http/https URLs are supported', {
@@ -602,27 +652,30 @@ export class CurlTool {
         }
 
         // Block local/private IPs
-      const hostname = parsedUrl.hostname;
-      if (await isPrivateHostOrResolved(hostname)) {
-        throw new ToolExecutionError('Cannot fetch from local/private network addresses for security reasons', {
-          toolName: 'curl',
-          toolInput: input,
-          code: ErrorCodes.TOOL_PERMISSION_DENIED,
-          recoverable: false,
-          retryable: false,
-        });
-      }
+        const hostname = parsedUrl.hostname;
+        if (await isPrivateHostOrResolved(hostname)) {
+          throw new ToolExecutionError('Cannot fetch from local/private network addresses for security reasons', {
+            toolName: 'curl',
+            toolInput: input,
+            code: ErrorCodes.TOOL_PERMISSION_DENIED,
+            recoverable: false,
+            retryable: false,
+          });
+        }
 
         response = await fetchWithTimeout(currentUrl, {
-            timeout,
-            method,
-            redirect: 'manual',
-            headers: {
-              'User-Agent': 'assistants/1.0 (AI Assistant)',
-              ...headers,
-            },
-            body: body && ['POST', 'PUT'].includes(method) ? body : undefined,
-          });
+          timeout,
+          method,
+          redirect: 'manual',
+          headers: {
+            'User-Agent': 'assistants/1.0 (AI Assistant)',
+            ...headers,
+          },
+          body: body && ['POST', 'PUT'].includes(method) ? body : undefined,
+          signal,
+          toolName: 'curl',
+          toolInput: input,
+        });
 
         if ([301, 302, 303, 307, 308].includes(response.status)) {
           if (!['GET', 'HEAD'].includes(method)) {

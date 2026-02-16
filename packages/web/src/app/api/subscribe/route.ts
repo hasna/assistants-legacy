@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSubscribersDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
     }
 
-    const db = getDb();
+    const db = getSubscribersDb();
     const stmt = db.prepare('INSERT OR IGNORE INTO subscribers (email) VALUES (?)');
     const result = stmt.run(trimmed);
 

@@ -216,9 +216,37 @@ export class SubassistantManager {
   filterToolsForSubassistant(requestedTools: string[] | undefined, depth: number): string[] {
     // Start with requested tools or defaults
     let tools = requestedTools ?? this.config.defaultTools;
+    tools = tools
+      .map((tool) => tool.trim().toLowerCase())
+      .filter((tool) => tool.length > 0);
+
+    const aliases: Record<string, string[]> = {
+      read: ['read'],
+      edit: ['write'],
+      write: ['write'],
+      bash: ['bash'],
+      search: ['web_search'],
+      web_search: ['web_search'],
+      fetch: ['web_fetch', 'curl'],
+      web_fetch: ['web_fetch'],
+      curl: ['curl'],
+      image: ['display_image'],
+      display_image: ['display_image'],
+    };
+
+    const expanded: string[] = [];
+    for (const tool of tools) {
+      const mapped = aliases[tool];
+      if (mapped) {
+        expanded.push(...mapped);
+      } else {
+        expanded.push(tool);
+      }
+    }
+    tools = Array.from(new Set(expanded));
 
     // At max depth - 1, also forbid spawning tools to prevent depth violation
-    const forbiddenSet = new Set(this.config.forbiddenTools);
+    const forbiddenSet = new Set(this.config.forbiddenTools.map((tool) => tool.toLowerCase()));
     if (depth >= this.config.maxDepth - 1) {
       forbiddenSet.add('assistant_spawn');
       forbiddenSet.add('assistant_delegate');
@@ -264,7 +292,7 @@ export class SubassistantManager {
       task: config.task,
       status: 'running',
       startedAt: Date.now(),
-      depth: config.depth,
+      depth: config.depth + 1,
     };
 
     // Reserve slot immediately to avoid race with concurrent spawns
@@ -281,7 +309,7 @@ export class SubassistantManager {
         task: config.task,
         allowed_tools: config.tools ?? this.config.defaultTools,
         max_turns: config.maxTurns ?? this.config.maxTurns,
-        depth: config.depth,
+        depth: info.depth,
       };
 
       const hookResult = await this.context.fireHook(hookInput);
@@ -437,6 +465,9 @@ export class SubassistantManager {
       throw new Error(canSpawnResult.reason);
     }
 
+    // Trim old jobs before adding a new one
+    this.cleanupJobs();
+
     const jobId = generateId();
     const job: SubassistantJob = {
       id: jobId,
@@ -504,6 +535,7 @@ export class SubassistantManager {
    * List async jobs
    */
   listJobs(): SubassistantJob[] {
+    this.cleanupJobs();
     return Array.from(this.asyncJobs.values());
   }
 

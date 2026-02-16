@@ -12,6 +12,12 @@ import {
   POLICY_SCOPE_PRECEDENCE,
 } from '../src/guardrails';
 import type { GuardrailsConfig, GuardrailsPolicy, ToolPolicyRule } from '../src/guardrails/types';
+import { setRuntime } from '../src/runtime';
+import { bunRuntime } from '@hasna/runtime-bun';
+import { closeDatabase, resetDatabaseSingleton } from '../src/database';
+
+// Ensure the Bun runtime is available for database access
+setRuntime(bunRuntime);
 
 let tempDir: string;
 let homeDir: string;
@@ -19,16 +25,20 @@ let projectDir: string;
 let originalHome: string | undefined;
 
 beforeEach(() => {
+  resetDatabaseSingleton();
   tempDir = mkdtempSync(join(tmpdir(), 'assistants-guardrails-'));
   homeDir = join(tempDir, 'home');
   projectDir = join(tempDir, 'project');
   mkdirSync(homeDir, { recursive: true });
+  mkdirSync(join(homeDir, '.assistants'), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;
 });
 
 afterEach(() => {
+  closeDatabase();
+  resetDatabaseSingleton();
   process.env.HOME = originalHome;
   rmSync(tempDir, { recursive: true, force: true });
 });
@@ -385,7 +395,7 @@ describe('PolicyEvaluator', () => {
 describe('GuardrailsStore', () => {
   describe('persistence', () => {
     test('saves and loads config', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       const config: GuardrailsConfig = {
         enabled: true,
         policies: [{
@@ -403,7 +413,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('merges configs from multiple locations', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
 
       store.save('user', {
         enabled: true,
@@ -423,7 +433,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('adds policy to specific location', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       const policyId = store.addPolicy({
         id: 'added-policy',
         scope: 'session',
@@ -437,7 +447,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('removes policy', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       store.addPolicy({
         id: 'removable',
         scope: 'session',
@@ -449,7 +459,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('enables/disables policy', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       store.addPolicy({
         id: 'toggleable',
         scope: 'session',
@@ -468,7 +478,7 @@ describe('GuardrailsStore', () => {
 
   describe('policy listing', () => {
     test('lists all policies', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       store.addPolicy({ id: 'policy-1', scope: 'session', enabled: true }, 'user');
       store.addPolicy({ id: 'policy-2', scope: 'project', enabled: true }, 'project');
 
@@ -480,7 +490,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('includes system default policy', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       const policies = store.listPolicies();
       expect(policies.some(p => p.id === 'system-default')).toBe(true);
     });
@@ -488,7 +498,7 @@ describe('GuardrailsStore', () => {
 
   describe('enabled state', () => {
     test('sets enabled state', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       store.setEnabled(true, 'project');
       expect(store.isEnabled()).toBe(true);
 
@@ -497,7 +507,7 @@ describe('GuardrailsStore', () => {
     });
 
     test('local overrides project and user', () => {
-      const store = new GuardrailsStore(projectDir);
+      const store = new GuardrailsStore();
       store.setEnabled(true, 'user');
       store.setEnabled(false, 'project');
       store.setEnabled(true, 'local');

@@ -1,0 +1,15 @@
+name: multi-step
+description: test
+
+steps:
+  - name: Step A
+    prompt: do A
+    output_variable: resultA
+  - name: Step B
+    prompt: do B with ${resultA}
+    condition: should_run
+    requires_approval: true
+    timeout: 10000
+    allowed_tools: [bash, read]
+  - name: Step C
+    prompt: finalize

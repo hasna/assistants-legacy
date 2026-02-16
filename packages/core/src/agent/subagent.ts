@@ -40,26 +40,30 @@ Respond with ALLOW or DENY on the first line, followed by a short reason.`,
   });
 
   await assistant.initialize();
+  try {
+    const runPromise = assistant.process(JSON.stringify(input)).catch(() => {});
+    const timedOut = await Promise.race([
+      runPromise.then(() => false),
+      sleepSafe(timeout).then(() => true),
+    ]);
 
-  const runPromise = assistant.process(JSON.stringify(input)).catch(() => {});
-  const timedOut = await Promise.race([
-    runPromise.then(() => false),
-    sleepSafe(timeout).then(() => true),
-  ]);
-
-  if (timedOut) {
-    assistant.stop();
-    return '';
-  }
-
-  await runPromise;
-  let trimmed = response.trim();
-  if (!trimmed) {
-    const messages = assistant.getContext().getMessages();
-    const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant' && msg.content);
-    if (lastAssistant?.content) {
-      trimmed = String(lastAssistant.content).trim();
+    if (timedOut) {
+      assistant.stop();
+      await runPromise;
+      return '';
     }
+
+    await runPromise;
+    let trimmed = response.trim();
+    if (!trimmed) {
+      const messages = assistant.getContext().getMessages();
+      const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant' && msg.content);
+      if (lastAssistant?.content) {
+        trimmed = String(lastAssistant.content).trim();
+      }
+    }
+    return trimmed;
+  } finally {
+    assistant.shutdown();
   }
-  return trimmed;
 }

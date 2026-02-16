@@ -631,8 +631,8 @@ export function App({ cwd, version }: AppProps) {
   const [currentTurnTokens, setCurrentTurnTokens] = useState(0);
   const [lastWorkedFor, setLastWorkedFor] = useState<string | undefined>();
 
-  const renderedMessageIdsRef = useRef<Set<string>>(new Set());
-  const cachedDisplayMessagesRef = useRef<Map<string, ReturnType<typeof buildDisplayMessages>[0][]>>(new Map());
+  const cachedDisplayMessagesRef = useRef<Map<string, { signature: string; display: ReturnType<typeof buildDisplayMessages> }>>(new Map());
+  const pendingMetadataSessionIdRef = useRef<string | null>(null);
   const staticMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Push-to-talk state
@@ -746,6 +746,8 @@ export function App({ cwd, version }: AppProps) {
   const processingStartTimeRef = useRef<number | undefined>(processingStartTime);
   const pendingSendsRef = useRef<Array<{ id: string; sessionId: string }>>([]);
   const pendingConnectorInstallRef = useRef<Set<string>>(new Set());
+  const queueBlockedRef = useRef<Set<string>>(new Set());
+  const queueBlockedTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const askUserStateRef = useRef<Map<string, AskUserState>>(new Map());
   const interviewStateRef = useRef<Map<string, InterviewState>>(new Map());
   const interviewStoreRef = useRef<InterviewStore | null>(null);
@@ -801,25 +803,60 @@ export function App({ cwd, version }: AppProps) {
   }, [activeSessionId]);
 
   const submitAskAnswer = useCallback((answer: string) => {
-    setAskUserState((prev) => {
-      if (!prev) return prev;
-      const question = prev.request.questions[prev.index];
-      const answers = { ...prev.answers, [question.id]: answer };
-      const nextIndex = prev.index + 1;
-      if (nextIndex >= prev.request.questions.length) {
-        askUserStateRef.current.delete(prev.sessionId);
-        prev.resolve({ answers });
-        return null;
+    if (!activeSessionId) return;
+    const current = askUserStateRef.current.get(activeSessionId);
+    if (!current) return;
+
+    const question = current.request.questions[current.index];
+    const trimmed = answer.trim();
+
+    if (question.required && !trimmed) {
+      setError('This question requires an answer.');
+      return;
+    }
+
+    const options = (question.options || []).map((opt) => opt.trim()).filter(Boolean);
+    if (trimmed && options.length > 0) {
+      const normalizedOptions = options.map((opt) => opt.toLowerCase());
+      const hasOther = normalizedOptions.some((opt) => opt === 'other' || opt.startsWith('other') || opt.includes('other'));
+      if (!hasOther) {
+        const parts = question.multiline
+          ? trimmed.split(/[,\n]+/).map((part) => part.trim()).filter(Boolean)
+          : [trimmed];
+        const invalid = parts.some((part) => !normalizedOptions.includes(part.toLowerCase()));
+        if (invalid) {
+          const preview = options.slice(0, 6).join(', ');
+          const suffix = options.length > 6 ? ', ...' : '';
+          setError(`Please answer with one of: ${preview}${suffix}`);
+          return;
+        }
       }
-      const nextState: AskUserState = {
-        ...prev,
-        index: nextIndex,
-        answers,
-      };
-      askUserStateRef.current.set(prev.sessionId, nextState);
-      return nextState;
-    });
-  }, []);
+    }
+
+    setError(null);
+
+    const answers = { ...current.answers, [question.id]: trimmed };
+    const nextIndex = current.index + 1;
+
+    if (nextIndex >= current.request.questions.length) {
+      askUserStateRef.current.delete(current.sessionId);
+      if (current.sessionId === activeSessionId) {
+        setAskUserState(null);
+      }
+      current.resolve({ answers });
+      return;
+    }
+
+    const nextState: AskUserState = {
+      ...current,
+      index: nextIndex,
+      answers,
+    };
+    askUserStateRef.current.set(current.sessionId, nextState);
+    if (current.sessionId === activeSessionId) {
+      setAskUserState(nextState);
+    }
+  }, [activeSessionId]);
 
   // Interview mode handlers (rich multi-step wizard)
   const beginInterview = useCallback((sessionId: string, request: InterviewRequest) => {
@@ -928,11 +965,15 @@ export function App({ cwd, version }: AppProps) {
   }, []);
 
   const loadSessionMetadata = useCallback(async (session: SessionInfo) => {
+    pendingMetadataSessionIdRef.current = session.id;
     try {
       const [loadedSkills, loadedCommands] = await Promise.all([
         session.client.getSkills(),
         session.client.getCommands(),
       ]);
+      if (pendingMetadataSessionIdRef.current !== session.id) {
+        return;
+      }
       setSkills(loadedSkills.map((s) => ({
         name: s.name,
         description: s.description || '',
@@ -943,6 +984,9 @@ export function App({ cwd, version }: AppProps) {
         description: cmd.description || '',
       })));
     } catch (err) {
+      if (pendingMetadataSessionIdRef.current !== session.id) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     }
   }, []);
@@ -1162,6 +1206,7 @@ export function App({ cwd, version }: AppProps) {
     setProcessingStartTime(undefined);
     processingStartTimeRef.current = undefined; // Sync ref immediately to avoid stale values
     setCurrentTurnTokens(0);
+    setPartialTranscript('');
   }, []);
 
   // Push-to-talk: toggle recording
@@ -1316,7 +1361,6 @@ export function App({ cwd, version }: AppProps) {
     } else if (process.stdout?.write) {
       process.stdout.write(CLEAR_SCREEN_TOKEN);
     }
-    renderedMessageIdsRef.current.clear();
     cachedDisplayMessagesRef.current.clear();
     staticMessageIdsRef.current.clear();
     setStaticMessages([]);
@@ -1354,6 +1398,42 @@ export function App({ cwd, version }: AppProps) {
     if (sessionId === activeSessionId) {
       return;
     }
+
+    // Close panels to avoid stale cross-session UI state
+    setShowSessionSelector(false);
+    setShowConnectorsPanel(false);
+    setShowTasksPanel(false);
+    setShowSchedulesPanel(false);
+    setShowSkillsPanel(false);
+    setShowAssistantsPanel(false);
+    setShowIdentityPanel(false);
+    setShowMemoryPanel(false);
+    setShowHooksPanel(false);
+    setShowGuardrailsPanel(false);
+    setShowBudgetPanel(false);
+    setShowModelPanel(false);
+    setShowAssistantsRegistryPanel(false);
+    setShowConfigPanel(false);
+    setShowWebhooksPanel(false);
+    setShowChannelsPanel(false);
+    setShowPeoplePanel(false);
+    setShowContactsPanel(false);
+    setShowTelephonyPanel(false);
+    setShowOrdersPanel(false);
+    setShowJobsPanel(false);
+    setShowDocsPanel(false);
+    setShowMessagesPanel(false);
+    setShowProjectsPanel(false);
+    setShowPlansPanel(false);
+    setShowWalletPanel(false);
+    setShowSecretsPanel(false);
+    setShowSwarmPanel(false);
+    setShowWorkspacePanel(false);
+    setShowLogsPanel(false);
+    setShowHeartbeatPanel(false);
+    setShowResumePanel(false);
+    setShowAssistantsDashboard(false);
+    setPartialTranscript('');
 
     saveCurrentSessionState();
     clearSessionWindow();
@@ -1397,6 +1477,40 @@ export function App({ cwd, version }: AppProps) {
     newSession.client.setInterviewHandler((request) => beginInterview(newSession.id, request));
 
     clearSessionWindow();
+    setShowSessionSelector(false);
+    setShowConnectorsPanel(false);
+    setShowTasksPanel(false);
+    setShowSchedulesPanel(false);
+    setShowSkillsPanel(false);
+    setShowAssistantsPanel(false);
+    setShowIdentityPanel(false);
+    setShowMemoryPanel(false);
+    setShowHooksPanel(false);
+    setShowGuardrailsPanel(false);
+    setShowBudgetPanel(false);
+    setShowModelPanel(false);
+    setShowAssistantsRegistryPanel(false);
+    setShowConfigPanel(false);
+    setShowWebhooksPanel(false);
+    setShowChannelsPanel(false);
+    setShowPeoplePanel(false);
+    setShowContactsPanel(false);
+    setShowTelephonyPanel(false);
+    setShowOrdersPanel(false);
+    setShowJobsPanel(false);
+    setShowDocsPanel(false);
+    setShowMessagesPanel(false);
+    setShowProjectsPanel(false);
+    setShowPlansPanel(false);
+    setShowWalletPanel(false);
+    setShowSecretsPanel(false);
+    setShowSwarmPanel(false);
+    setShowWorkspacePanel(false);
+    setShowLogsPanel(false);
+    setShowHeartbeatPanel(false);
+    setShowResumePanel(false);
+    setShowAssistantsDashboard(false);
+    setPartialTranscript('');
 
     await registry.switchSession(newSession.id);
     setActiveSessionId(newSession.id);
@@ -1543,8 +1657,38 @@ export function App({ cwd, version }: AppProps) {
     setShowOnboardingPanel(false);
     setShowResumePanel(false);
     setResumeSessions([]);
+    setShowSessionSelector(false);
+    setShowConnectorsPanel(false);
+    setShowTasksPanel(false);
+    setShowSchedulesPanel(false);
+    setShowSkillsPanel(false);
+    setShowAssistantsPanel(false);
+    setShowIdentityPanel(false);
+    setShowMemoryPanel(false);
+    setShowHooksPanel(false);
+    setShowGuardrailsPanel(false);
+    setShowBudgetPanel(false);
+    setShowModelPanel(false);
+    setShowAssistantsRegistryPanel(false);
     setShowConfigPanel(false);
+    setShowWebhooksPanel(false);
+    setShowChannelsPanel(false);
+    setShowPeoplePanel(false);
+    setShowContactsPanel(false);
+    setShowTelephonyPanel(false);
+    setShowOrdersPanel(false);
+    setShowJobsPanel(false);
+    setShowDocsPanel(false);
+    setShowMessagesPanel(false);
+    setShowProjectsPanel(false);
+    setShowPlansPanel(false);
+    setShowWalletPanel(false);
+    setShowSecretsPanel(false);
+    setShowSwarmPanel(false);
+    setShowWorkspacePanel(false);
     setShowLogsPanel(false);
+    setShowHeartbeatPanel(false);
+    setShowAssistantsDashboard(false);
     setCurrentConfig(null);
     setUserConfig(null);
     setProjectConfig(null);
@@ -1555,6 +1699,12 @@ export function App({ cwd, version }: AppProps) {
     budgetSessionMapRef.current = {};
     setAssistantsList([]);
     setRegistryStats(null);
+    setPartialTranscript('');
+    queueBlockedRef.current.clear();
+    for (const timer of queueBlockedTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    queueBlockedTimersRef.current.clear();
     clearSessionWindow();
     setShowWorkspacePanel(false);
 
@@ -1577,6 +1727,12 @@ export function App({ cwd, version }: AppProps) {
   const handleChunk = useCallback((chunk: StreamChunk) => {
     const isStartChunk = chunk.type === 'text' || chunk.type === 'tool_use';
     const isTerminalChunk = chunk.type === 'error' || chunk.type === 'done';
+    if (chunk.type === 'text' || chunk.type === 'partial_transcript') {
+      const activeForVoice = registryRef.current.getActiveSession();
+      if (activeForVoice) {
+        setVoiceState(activeForVoice.client.getVoiceState() ?? undefined);
+      }
+    }
     if (!isProcessingRef.current && (isStartChunk || isTerminalChunk)) {
       const active = registryRef.current.getActiveSession();
       if (active) {
@@ -1659,6 +1815,22 @@ export function App({ cwd, version }: AppProps) {
           }
           return prev;
         });
+        const hasPendingCall = activityLogRef.current.some(
+          (entry) => entry.type === 'tool_call' && entry.toolCall?.id === chunk.toolResult!.toolCallId
+        );
+        if (hasPendingCall) {
+          const resultEntry = {
+            id: generateId(),
+            type: 'tool_result' as const,
+            toolResult: chunk.toolResult,
+            timestamp: now(),
+          };
+          activityLogRef.current = [...activityLogRef.current, resultEntry];
+          setActivityLog(activityLogRef.current);
+        }
+        if (pendingInstall && !chunk.toolResult.isError) {
+          void refreshConnectorBridge();
+        }
         return;
       }
       // Track tool result
@@ -1687,6 +1859,10 @@ export function App({ cwd, version }: AppProps) {
       const active = registryRef.current.getActiveSession();
       if (active) {
         registryRef.current.setProcessing(active.id, false);
+        setInlinePending((prev) => prev.filter((msg) => msg.sessionId !== active.id));
+        pendingSendsRef.current = pendingSendsRef.current.filter(
+          (entry) => entry.sessionId !== active.id
+        );
       }
       // Trigger queue flush check after state settles
       setQueueFlushTrigger((prev) => prev + 1);
@@ -2445,6 +2621,7 @@ export function App({ cwd, version }: AppProps) {
   const processQueue = useCallback(async () => {
     const activeSession = registryRef.current.getActiveSession();
     if (!activeSessionId || !activeSession) return;
+    if (queueBlockedRef.current.has(activeSessionId)) return;
 
     // Read from ref to avoid stale closure issues
     const currentQueue = messageQueueRef.current;
@@ -2495,6 +2672,27 @@ export function App({ cwd, version }: AppProps) {
     try {
       await activeSession.client.send(nextMessage.content);
     } catch (err) {
+      queueBlockedRef.current.add(activeSessionId);
+      if (!queueBlockedTimersRef.current.has(activeSessionId)) {
+        const timer = setTimeout(() => {
+          queueBlockedRef.current.delete(activeSessionId);
+          queueBlockedTimersRef.current.delete(activeSessionId);
+          setQueueFlushTrigger((prev) => prev + 1);
+        }, 15000);
+        queueBlockedTimersRef.current.set(activeSessionId, timer);
+      }
+      setMessageQueue((prev) => {
+        if (prev.some((msg) => msg.id === nextMessage.id)) {
+          return prev;
+        }
+        return [
+          {
+            ...nextMessage,
+            mode: 'queued',
+          },
+          ...prev,
+        ];
+      });
       clearPendingSend(nextMessage.id, activeSessionId);
       setError(err instanceof Error ? err.message : String(err));
       setIsProcessing(false);
@@ -2601,10 +2799,18 @@ export function App({ cwd, version }: AppProps) {
     const result: ReturnType<typeof buildDisplayMessages> = [];
 
     for (const msg of messages) {
+      const signature = [
+        msg.role,
+        msg.content?.length ?? 0,
+        msg.toolCalls?.length ?? 0,
+        msg.toolResults?.length ?? 0,
+        wrapChars,
+        renderWidth ?? 0,
+      ].join(':');
       // Use cached rendering if available to keep keys stable
       const cached = cachedDisplayMessagesRef.current.get(msg.id);
-      if (cached && renderedMessageIdsRef.current.has(msg.id)) {
-        result.push(...cached);
+      if (cached && cached.signature === signature) {
+        result.push(...cached.display);
         continue;
       }
 
@@ -2612,8 +2818,7 @@ export function App({ cwd, version }: AppProps) {
       const msgDisplay = buildDisplayMessages([msg], MESSAGE_CHUNK_LINES, wrapChars, { maxWidth: renderWidth });
 
       // Cache the result
-      cachedDisplayMessagesRef.current.set(msg.id, msgDisplay);
-      renderedMessageIdsRef.current.add(msg.id);
+      cachedDisplayMessagesRef.current.set(msg.id, { signature, display: msgDisplay });
 
       result.push(...msgDisplay);
     }
@@ -2855,6 +3060,15 @@ export function App({ cwd, version }: AppProps) {
         return;
       }
       if (!activeSession || !input.trim()) return;
+
+      if (activeSessionId) {
+        queueBlockedRef.current.delete(activeSessionId);
+        const timer = queueBlockedTimersRef.current.get(activeSessionId);
+        if (timer) {
+          clearTimeout(timer);
+          queueBlockedTimersRef.current.delete(activeSessionId);
+        }
+      }
 
       const trimmedInput = input.trim();
 
@@ -5518,7 +5732,7 @@ export function App({ cwd, version }: AppProps) {
           request={interviewState.request}
           onComplete={completeInterview}
           onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
-          isActive={!anyPanelOpen}
+          isActive={!isPanelOpen}
         />
       )}
 

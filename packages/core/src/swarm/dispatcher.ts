@@ -311,15 +311,24 @@ export class SwarmDispatcher {
    */
   stop(): void {
     this.isStopped = true;
+    const now = Date.now();
 
     // Cancel all queued/waiting tasks
     for (const [taskId, task] of this.tasks) {
       if (task.status === 'queued' || task.status === 'waiting_deps') {
         task.status = 'cancelled';
-        task.finishedAt = Date.now();
+        task.finishedAt = now;
+        this.emit('task:cancelled', taskId);
+      } else if (task.status === 'dispatching' || task.status === 'running' || task.status === 'retrying') {
+        task.status = 'cancelled';
+        task.finishedAt = now;
+        task.durationMs = task.startedAt ? now - task.startedAt : undefined;
         this.emit('task:cancelled', taskId);
       }
     }
+
+    // Stop active subassistants to avoid runaway tasks
+    this.subassistantManager.stopAll();
   }
 
   /**
@@ -514,6 +523,18 @@ export class SwarmDispatcher {
         // Execute with timeout
         const result = await this.executeWithTimeout(dispatchTask);
 
+        if (this.isStopped) {
+          if (dispatchTask.status !== 'cancelled') {
+            dispatchTask.status = 'cancelled';
+            dispatchTask.finishedAt = Date.now();
+            dispatchTask.durationMs = dispatchTask.startedAt
+              ? dispatchTask.finishedAt - dispatchTask.startedAt
+              : undefined;
+            this.emit('task:cancelled', task.id);
+          }
+          return;
+        }
+
         // Success
         dispatchTask.status = 'completed';
         dispatchTask.result = result;
@@ -525,7 +546,21 @@ export class SwarmDispatcher {
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        const isTimeout = errorMessage === 'Task execution timeout';
+        const normalizedError = errorMessage.toLowerCase();
+        const isTimeout = normalizedError.includes('timeout') || normalizedError.includes('timed out');
+
+        if (this.isStopped) {
+          if (dispatchTask.status !== 'cancelled') {
+            dispatchTask.status = 'cancelled';
+            dispatchTask.error = 'Cancelled';
+            dispatchTask.finishedAt = Date.now();
+            dispatchTask.durationMs = dispatchTask.startedAt
+              ? dispatchTask.finishedAt - dispatchTask.startedAt
+              : undefined;
+            this.emit('task:cancelled', task.id);
+          }
+          return;
+        }
 
         // Record retry history
         dispatchTask.retryHistory.push({
@@ -569,45 +604,26 @@ export class SwarmDispatcher {
 
     // Build subassistant config
     const systemPrompt = ROLE_SYSTEM_PROMPTS[task.role];
-    const tools = (task.requiredTools || this.config.defaultWorkerTools)
+    const tools = (task.requiredTools ?? this.config.defaultWorkerTools)
       .filter(t => !this.config.forbiddenTools.includes(t));
 
+    const timeoutMs = this.config.defaultTimeoutMs;
     const config: SubassistantConfig = {
       task: `${systemPrompt}\n\n---\n\n${task.description}`,
       tools,
       maxTurns: this.config.maxTurnsPerTask,
       parentSessionId: this.sessionId,
-      depth: this.depth + 1,
+      depth: this.depth,
       cwd: this.cwd,
+      timeoutMs,
     };
 
-    // Create timeout promise
-    const timeoutMs = this.config.defaultTimeoutMs;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error('Task execution timeout'));
-      }, timeoutMs);
-    });
-
-    // Execute with race against timeout
-    try {
-      const result = await Promise.race([
-        this.subassistantManager.spawn(config),
-        timeoutPromise,
-      ]);
-      clearTimeout(timeoutId!);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Task failed');
-      }
-
-      return result;
-    } catch (error) {
-      clearTimeout(timeoutId!);
-      throw error;
+    const result = await this.subassistantManager.spawn(config);
+    if (!result.success) {
+      throw new Error(result.error || 'Task failed');
     }
+
+    return result;
   }
 
   /**

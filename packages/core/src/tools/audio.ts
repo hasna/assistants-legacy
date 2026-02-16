@@ -214,7 +214,7 @@ export class AudioTools {
     },
   };
 
-  static readonly generateAudioExecutor: ToolExecutor = async (input) => {
+  static readonly generateAudioExecutor: ToolExecutor = async (input, signal) => {
     const text = input.text as string;
     const voice = (input.voice as string) || 'nova';
     const model = (input.model as string) || 'gpt-4o-mini-tts';
@@ -265,6 +265,7 @@ export class AudioTools {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(body),
+        signal,
       });
 
       if (!response.ok) {

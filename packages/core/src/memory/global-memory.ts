@@ -111,9 +111,21 @@ export class GlobalMemoryManager {
         return this.config.scopes.sharedEnabled;
       case 'private':
         return this.config.scopes.privateEnabled;
+      case 'session':
+        return true; // Session scope is always enabled when a sessionId exists
       default:
         return false;
     }
+  }
+
+  /**
+   * Clear all memories associated with a specific session
+   */
+  async clearSessionMemories(sessionId: string): Promise<number> {
+    const result = this.db.prepare(`
+      DELETE FROM memories WHERE scope = 'session' AND scope_id = ?
+    `).run(sessionId);
+    return result.changes;
   }
 
   /**
@@ -148,6 +160,7 @@ export class GlobalMemoryManager {
     // - global: always null (visible to all)
     // - shared: use explicit scopeId or null (for team/project sharing)
     // - private: use explicit scopeId or defaultScopeId (assistant-specific)
+    // - session: use explicit scopeId or sessionId (session-scoped)
     let scopeId: string | null;
     if (options.scopeId !== undefined) {
       // Explicit scopeId provided - use it
@@ -158,6 +171,9 @@ export class GlobalMemoryManager {
     } else if (scope === 'private') {
       // Private scope: require scopeId (assistant isolation)
       scopeId = this.defaultScopeId || null;
+    } else if (scope === 'session') {
+      // Session scope: use sessionId
+      scopeId = this.sessionId || null;
     } else {
       // Shared scope: use explicit scopeId or null for "all assistants" sharing
       scopeId = null;
@@ -166,6 +182,11 @@ export class GlobalMemoryManager {
     // Require scopeId for private scope to prevent unscoped private data
     if (scope === 'private' && !scopeId) {
       throw new Error('Private scope requires a scopeId to identify the owner. Set defaultScopeId on the manager or provide scopeId explicitly.');
+    }
+
+    // Require scopeId for session scope
+    if (scope === 'session' && !scopeId) {
+      throw new Error('Session scope requires a sessionId. Set sessionId on the manager or provide scopeId explicitly.');
     }
 
     // Check if memory exists
@@ -715,12 +736,12 @@ export class GlobalMemoryManager {
       .query<{ avg: number }>(`SELECT AVG(importance) as avg FROM memories`)
       .get();
 
-    const scopeMap: Record<MemoryScope, number> = { global: 0, shared: 0, private: 0 };
+    const scopeMap: Record<MemoryScope, number> = { global: 0, shared: 0, private: 0, session: 0 };
     for (const row of byScope) {
       scopeMap[row.scope] = row.count;
     }
 
-    const categoryMap: Record<MemoryCategory, number> = { preference: 0, fact: 0, history: 0, knowledge: 0 };
+    const categoryMap: Record<MemoryCategory, number> = { preference: 0, fact: 0, history: 0, knowledge: 0, context: 0 };
     for (const row of byCategory) {
       categoryMap[row.category] = row.count;
     }

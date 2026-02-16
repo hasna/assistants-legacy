@@ -2,6 +2,8 @@ import { ErrorCodes, ToolExecutionError } from '../errors';
 
 export interface FetchWithTimeoutOptions extends RequestInit {
   timeout?: number;
+  toolName?: string;
+  toolInput?: unknown;
 }
 
 /**
@@ -11,17 +13,46 @@ export interface FetchWithTimeoutOptions extends RequestInit {
  * the fetch, and clears the timeout on completion.  If the request is aborted
  * due to the timeout, a ToolExecutionError with TOOL_TIMEOUT code is thrown.
  *
- * Any existing AbortSignal supplied in `options.signal` is **not** composed
- * with the timeout signal — the timeout signal takes precedence.
+ * Any existing AbortSignal supplied in `options.signal` is composed
+ * with the timeout signal so either can abort the request.
  */
 export async function fetchWithTimeout(
   url: string,
   options?: FetchWithTimeoutOptions,
 ): Promise<Response> {
-  const { timeout = 30_000, ...fetchInit } = options ?? {};
+  const {
+    timeout = 30_000,
+    signal: externalSignal,
+    toolName,
+    toolInput,
+    ...fetchInit
+  } = options ?? {};
+  const errorToolName = toolName ?? 'fetch';
+  const errorToolInput = toolInput ?? { url };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  let abortReason: 'timeout' | 'external' | null = null;
+
+  const handleExternalAbort = () => {
+    if (abortReason) return;
+    abortReason = 'external';
+    controller.abort();
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortReason = 'external';
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', handleExternalAbort, { once: true });
+    }
+  }
+
+  const timeoutId = setTimeout(() => {
+    if (abortReason) return;
+    abortReason = 'timeout';
+    controller.abort();
+  }, timeout);
 
   try {
     const response = await fetch(url, {
@@ -31,17 +62,30 @@ export async function fetchWithTimeout(
     return response;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new ToolExecutionError(`Request timed out after ${timeout}ms`, {
-        toolName: 'fetch',
-        toolInput: { url },
-        code: ErrorCodes.TOOL_TIMEOUT,
-        recoverable: true,
+      if (abortReason === 'timeout') {
+        throw new ToolExecutionError(`Request timed out after ${timeout}ms`, {
+          toolName: errorToolName,
+          toolInput: errorToolInput,
+          code: ErrorCodes.TOOL_TIMEOUT,
+          recoverable: true,
+          retryable: true,
+          suggestion: 'Try again or increase the timeout.',
+        });
+      }
+      throw new ToolExecutionError('Request aborted', {
+        toolName: errorToolName,
+        toolInput: errorToolInput,
+        code: ErrorCodes.TOOL_EXECUTION_FAILED,
+        recoverable: false,
         retryable: true,
-        suggestion: 'Try again or increase the timeout.',
+        suggestion: 'Try again if you want to resume the request.',
       });
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', handleExternalAbort);
+    }
   }
 }

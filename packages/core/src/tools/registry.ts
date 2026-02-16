@@ -1,5 +1,4 @@
 import type { Tool, ToolCall, ToolResult, ValidationConfig } from '@hasna/assistants-shared';
-import { sleep } from '@hasna/assistants-shared';
 import { AssistantError, ErrorAggregator, ErrorCodes, ToolExecutionError } from '../errors';
 import { enforceToolOutputLimit, getLimits } from '../validation/limits';
 import { validateToolInput, type ValidationMode } from '../validation/schema';
@@ -228,6 +227,9 @@ export class ToolRegistry {
       };
     }
 
+    let abortListener: (() => void) | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     try {
       const validationMode = this.getValidationMode(toolCall.name);
       const validation = validateToolInput(toolCall.name, registered.tool.parameters, toolCall.input);
@@ -262,6 +264,7 @@ export class ToolRegistry {
           };
         }
       }
+      toolCall.input = input;
 
       const timeoutMsRaw = input?.timeoutMs ?? input?.timeout;
       const timeoutMsParsed = typeof timeoutMsRaw === 'string' ? Number(timeoutMsRaw) : timeoutMsRaw;
@@ -283,10 +286,13 @@ export class ToolRegistry {
         });
       }
 
+      const controller = new AbortController();
+
       // Create abort promise if signal provided
       const abortPromise = signal
         ? new Promise<never>((_, reject) => {
-            const onAbort = () => {
+            abortListener = () => {
+              controller.abort();
               reject(
                 new ToolExecutionError('Tool execution aborted', {
                   toolName: toolCall.name,
@@ -298,22 +304,33 @@ export class ToolRegistry {
                 })
               );
             };
-            signal.addEventListener('abort', onAbort, { once: true });
+            signal.addEventListener('abort', abortListener, { once: true });
+            if (signal.aborted) {
+              abortListener();
+            }
           })
         : null;
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(
+            new ToolExecutionError(`Tool timeout after ${Math.round(timeoutMs / 1000)}s`, {
+              toolName: toolCall.name,
+              toolInput: toolCall.input,
+              code: ErrorCodes.TOOL_TIMEOUT,
+              recoverable: true,
+              retryable: true,
+              suggestion: 'Try again or increase the timeout.',
+            })
+          );
+        }, timeoutMs);
+      });
+
+      const executorPromise = registered.executor(input, controller.signal);
       const racePromises: Promise<string>[] = [
-        registered.executor(input, signal),
-        sleep(timeoutMs).then(() => {
-          throw new ToolExecutionError(`Tool timeout after ${Math.round(timeoutMs / 1000)}s`, {
-            toolName: toolCall.name,
-            toolInput: toolCall.input,
-            code: ErrorCodes.TOOL_TIMEOUT,
-            recoverable: true,
-            retryable: true,
-            suggestion: 'Try again or increase the timeout.',
-          });
-        }),
+        executorPromise,
+        timeoutPromise,
       ];
 
       if (abortPromise) {
@@ -321,6 +338,7 @@ export class ToolRegistry {
       }
 
       const result = await Promise.race(racePromises);
+      void executorPromise.catch(() => {});
       const isError = isErrorResult(result);
       const outputLimit = this.getToolOutputLimit(toolCall.name);
       const rawContent = typeof result === 'string' ? result : safeStringify(result);
@@ -349,6 +367,13 @@ export class ToolRegistry {
         isError: true,
         toolName: toolCall.name,
       };
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (signal && abortListener) {
+        signal.removeEventListener('abort', abortListener);
+      }
     }
   }
 

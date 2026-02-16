@@ -11,12 +11,12 @@
 /**
  * Memory scope - determines visibility and access
  */
-export type MemoryScope = 'global' | 'shared' | 'private';
+export type MemoryScope = 'global' | 'shared' | 'private' | 'session';
 
 /**
  * Memory category - classifies the type of memory
  */
-export type MemoryCategory = 'preference' | 'fact' | 'history' | 'knowledge';
+export type MemoryCategory = 'preference' | 'fact' | 'history' | 'knowledge' | 'context';
 
 /**
  * Memory source - who created the memory

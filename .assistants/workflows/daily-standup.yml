@@ -1,0 +1,24 @@
+name: daily-standup
+description: Review recent git activity, summarize progress, and plan today's tasks
+version: "1.0"
+tags: [dev, daily, planning]
+
+steps:
+  - name: Review git history
+    prompt: "Run 'git log --oneline --since=yesterday --all' to see recent commits. Summarize what was worked on."
+    allowed_tools: [bash]
+    output_variable: git_summary
+
+  - name: Check current status
+    prompt: "Run 'git status' and 'git diff --stat' to see current changes in progress. What's the current state of the codebase?"
+    allowed_tools: [bash]
+    output_variable: current_status
+
+  - name: Review open tasks
+    prompt: "Check for any TODO comments, open issues, or pending tasks. Look at any task files or issue trackers available."
+    allowed_tools: [bash, read, glob, grep]
+    output_variable: open_tasks
+
+  - name: Generate standup report
+    prompt: "Based on the previous steps, generate a standup report with: 1) What was done yesterday (${git_summary}), 2) Current state (${current_status}), 3) Plan for today based on open items (${open_tasks}). Format as a clear, concise standup update."
+    output_variable: report

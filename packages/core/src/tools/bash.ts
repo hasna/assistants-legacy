@@ -241,7 +241,12 @@ export class BashTool {
   private static isCommandPartAllowed(commandPart: string, allowlist: string[]): boolean {
     const trimmed = commandPart.trim().toLowerCase();
     for (const allowed of allowlist) {
-      if (trimmed.startsWith(allowed.toLowerCase())) {
+      const allowedLower = allowed.toLowerCase();
+      if (allowedLower.endsWith('-') || allowedLower.endsWith('_')) {
+        if (trimmed.startsWith(allowedLower)) return true;
+        continue;
+      }
+      if (trimmed === allowedLower || trimmed.startsWith(`${allowedLower} `)) {
         return true;
       }
     }
@@ -266,26 +271,101 @@ export class BashTool {
   }
 
   /**
-   * Extract URLs from a curl command string
+   * Tokenize a command string into args, respecting simple quotes.
+   */
+  private static tokenizeArgs(input: string): string[] {
+    const tokens: string[] = [];
+    let current = '';
+    let quote: '"' | '\'' | null = null;
+    let escaped = false;
+
+    for (let i = 0; i < input.length; i += 1) {
+      const char = input[i];
+
+      if (quote === '"' && !escaped && char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (quote) {
+        if (!escaped && char === quote) {
+          quote = null;
+          continue;
+        }
+        current += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '"' || char === '\'') {
+        quote = char;
+        continue;
+      }
+
+      if (/\s/.test(char)) {
+        if (current) {
+          tokens.push(current);
+          current = '';
+        }
+        continue;
+      }
+
+      current += char;
+    }
+
+    if (current) tokens.push(current);
+    return tokens;
+  }
+
+  /**
+   * Extract URL/host targets from a curl command string.
+   * Non-flag args in curl are treated as URLs; skip known non-URL flag values.
    */
   private static extractCurlUrls(command: string): string[] {
     const urls: string[] = [];
-
-    // Match curl command and extract URL patterns
-    // curl supports URLs directly or via -u/--url flag
     const curlMatch = command.match(/^curl\s+(.+)$/i);
     if (!curlMatch) return urls;
 
     const args = curlMatch[1];
+    const tokens = this.tokenizeArgs(args);
+    const skipValueFlags = new Set([
+      '-d', '--data', '--data-raw', '--data-binary', '--data-urlencode',
+      '-F', '--form',
+      '-H', '--header',
+      '-u', '--user',
+      '-o', '--output', '-O', '--remote-name',
+      '-e', '--referer',
+      '-A', '--user-agent',
+      '-b', '--cookie', '-c', '--cookie-jar',
+      '-x', '--proxy',
+    ]);
 
-    // Match URLs (http:// or https://)
-    const urlMatches = args.match(/https?:\/\/[^\s'"]+/gi);
-    if (urlMatches) {
-      for (const url of urlMatches) {
-        // Clean up any trailing characters that might be part of shell syntax
-        const cleanUrl = url.replace(/[;|&<>]+$/, '');
-        if (cleanUrl) urls.push(cleanUrl);
+    let skipNext = false;
+    for (const token of tokens) {
+      if (!token) continue;
+
+      if (skipNext) {
+        skipNext = false;
+        continue;
       }
+
+      if (token.startsWith('--url=')) {
+        urls.push(token.slice('--url='.length));
+        continue;
+      }
+
+      if (token.startsWith('-')) {
+        if (skipValueFlags.has(token)) {
+          skipNext = true;
+        }
+        continue;
+      }
+
+      if (token.startsWith('@')) {
+        continue;
+      }
+
+      urls.push(token);
     }
 
     return urls;
@@ -305,8 +385,11 @@ export class BashTool {
     const urls = this.extractCurlUrls(command.trim());
 
     for (const urlStr of urls) {
+      const candidate = urlStr.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)
+        ? urlStr
+        : `http://${urlStr}`;
       try {
-        const url = new URL(urlStr);
+        const url = new URL(candidate);
         if (await isPrivateHostOrResolved(url.hostname)) {
           return { valid: false, blockedUrl: urlStr };
         }
@@ -385,7 +468,7 @@ export class BashTool {
     return parts;
   }
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const command = input.command as string;
     const cwd = (input.cwd as string) || process.cwd();
     const timeoutInput = Number(input.timeout);
@@ -517,7 +600,21 @@ export class BashTool {
       }
     }
 
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let abortListenerAttached = false;
+    let handleAbort: (() => void) | null = null;
     try {
+      if (signal?.aborted) {
+        throw new ToolExecutionError('Command execution aborted', {
+          toolName: 'bash',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: true,
+          suggestion: 'Try again if you want to resume the command.',
+        });
+      }
+
       const runtime = getRuntime();
       const isWindows = process.platform === 'win32';
       const shellBinary = isWindows ? 'cmd' : (runtime.which('bash') || 'sh');
@@ -528,17 +625,37 @@ export class BashTool {
         stderr: 'pipe',
       });
 
+      let aborted = false;
+      handleAbort = () => {
+        if (aborted) return;
+        aborted = true;
+        killProcess(proc);
+      };
+      if (signal) {
+        signal.addEventListener('abort', handleAbort, { once: true });
+        abortListenerAttached = true;
+      }
+
       // Set up timeout
-      const timeoutId = setTimeout(killProcess, timeout, proc);
+      timeoutId = setTimeout(killProcess, timeout, proc);
 
       const [stdout, stderr] = await Promise.all([
         proc.stdout ? new Response(proc.stdout).text() : '',
         proc.stderr ? new Response(proc.stderr).text() : '',
       ]);
 
-      clearTimeout(timeoutId);
-
       const exitCode = await proc.exited;
+
+      if (aborted) {
+        throw new ToolExecutionError('Command execution aborted', {
+          toolName: 'bash',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: true,
+          suggestion: 'Try again if you want to resume the command.',
+        });
+      }
 
       if (exitCode !== 0) {
         throw toolError('bash', `Exit code ${exitCode}\n${stderr || stdout}`.trim(), {
@@ -552,6 +669,13 @@ export class BashTool {
       throw toolError('bash', error instanceof Error ? error.message : String(error), {
         input: input as Record<string, unknown>,
       });
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (signal && abortListenerAttached && handleAbort) {
+        signal.removeEventListener('abort', handleAbort);
+      }
     }
   };
 }

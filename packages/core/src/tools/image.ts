@@ -42,7 +42,7 @@ export class ImageDisplayTool {
     },
   };
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const imagePath = input.path as string;
     const width = input.width as number | undefined;
     const height = input.height as number | undefined;
@@ -55,21 +55,43 @@ export class ImageDisplayTool {
         // SSRF protection: block private/internal network addresses
         const url = new URL(imagePath);
         if (await isPrivateHostOrResolved(url.hostname)) {
-          return 'Error: Cannot fetch from local/private network addresses for security reasons';
+          throw new ToolExecutionError('Cannot fetch from local/private network addresses for security reasons', {
+            toolName: 'display_image',
+            toolInput: input,
+            code: ErrorCodes.TOOL_PERMISSION_DENIED,
+            recoverable: false,
+            retryable: false,
+          });
         }
 
         // Fetch with timeout
         const response = await fetchWithTimeout(imagePath, {
           timeout: FETCH_TIMEOUT_MS,
+          signal,
+          toolName: 'display_image',
+          toolInput: input,
         });
 
         if (!response.ok) {
-          return `Error: Failed to fetch image: HTTP ${response.status}`;
+          throw new ToolExecutionError(`Failed to fetch image: HTTP ${response.status}`, {
+            toolName: 'display_image',
+            toolInput: input,
+            code: ErrorCodes.TOOL_EXECUTION_FAILED,
+            recoverable: true,
+            retryable: false,
+          });
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.startsWith('image/')) {
-          return `Error: URL does not point to an image (content-type: ${contentType})`;
+          throw new ToolExecutionError(`URL does not point to an image (content-type: ${contentType})`, {
+            toolName: 'display_image',
+            toolInput: input,
+            code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+            recoverable: false,
+            retryable: false,
+            suggestion: 'Provide a direct image URL.',
+          });
         }
 
         // Check Content-Length if available
@@ -77,7 +99,17 @@ export class ImageDisplayTool {
         if (contentLength) {
           const size = parseInt(contentLength, 10);
           if (!isNaN(size) && size > MAX_IMAGE_SIZE_BYTES) {
-            return `Error: Image too large (${Math.round(size / 1024 / 1024)}MB exceeds ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB limit)`;
+            throw new ToolExecutionError(
+              `Image too large (${Math.round(size / 1024 / 1024)}MB exceeds ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB limit)`,
+              {
+                toolName: 'display_image',
+                toolInput: input,
+                code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+                recoverable: false,
+                retryable: false,
+                suggestion: 'Use a smaller image.',
+              }
+            );
           }
         }
 
@@ -87,7 +119,13 @@ export class ImageDisplayTool {
         const reader = response.body?.getReader();
 
         if (!reader) {
-          return 'Error: Failed to read image response';
+          throw new ToolExecutionError('Failed to read image response', {
+            toolName: 'display_image',
+            toolInput: input,
+            code: ErrorCodes.TOOL_EXECUTION_FAILED,
+            recoverable: true,
+            retryable: false,
+          });
         }
 
         try {
@@ -97,7 +135,17 @@ export class ImageDisplayTool {
 
             totalSize += value.length;
             if (totalSize > MAX_IMAGE_SIZE_BYTES) {
-              return `Error: Image too large (exceeds ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB limit)`;
+              throw new ToolExecutionError(
+                `Image too large (exceeds ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB limit)`,
+                {
+                  toolName: 'display_image',
+                  toolInput: input,
+                  code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+                  recoverable: false,
+                  retryable: false,
+                  suggestion: 'Use a smaller image.',
+                }
+              );
             }
             chunks.push(value);
           }
@@ -117,20 +165,38 @@ export class ImageDisplayTool {
         writeFileSync(tempFile, buffer);
         localPath = tempFile;
       } catch (error) {
-        // fetchWithTimeout wraps AbortError in a ToolExecutionError with TOOL_TIMEOUT code
-        if (error instanceof ToolExecutionError && error.code === ErrorCodes.TOOL_TIMEOUT) {
-          return `Error: Image fetch timed out after ${FETCH_TIMEOUT_MS / 1000} seconds`;
+        if (error instanceof ToolExecutionError) {
+          throw error;
         }
         if (error instanceof Error && error.name === 'AbortError') {
-          return `Error: Image fetch timed out after ${FETCH_TIMEOUT_MS / 1000} seconds`;
+          throw new ToolExecutionError(`Image fetch timed out after ${FETCH_TIMEOUT_MS / 1000} seconds`, {
+            toolName: 'display_image',
+            toolInput: input,
+            code: ErrorCodes.TOOL_TIMEOUT,
+            recoverable: true,
+            retryable: true,
+            suggestion: 'Try again or reduce image size.',
+          });
         }
-        return `Error: Failed to fetch image: ${error instanceof Error ? error.message : String(error)}`;
+        throw new ToolExecutionError(`Failed to fetch image: ${error instanceof Error ? error.message : String(error)}`, {
+          toolName: 'display_image',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: true,
+          retryable: false,
+        });
       }
     }
 
     // Check if local file exists
     if (!existsSync(localPath)) {
-      return `Error: Image file not found: ${localPath}`;
+      throw new ToolExecutionError(`Image file not found: ${localPath}`, {
+        toolName: 'display_image',
+        toolInput: input,
+        code: ErrorCodes.TOOL_EXECUTION_FAILED,
+        recoverable: false,
+        retryable: false,
+      });
     }
 
     // Return structured JSON so the terminal UI can render it with ink-picture
@@ -188,7 +254,7 @@ export class ImageGenerateTool {
     },
   };
 
-  static readonly executor: ToolExecutor = async (input) => {
+  static readonly executor: ToolExecutor = async (input, signal) => {
     const prompt = input.prompt as string;
     const model = (input.model as string) || 'gpt-image-1';
     const size = (input.size as string) || '1024x1024';
@@ -220,6 +286,9 @@ export class ImageGenerateTool {
           quality,
           output_format: outputFormat,
         }),
+        signal,
+        toolName: 'generate_image',
+        toolInput: input,
       });
 
       if (!response.ok) {

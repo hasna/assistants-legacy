@@ -268,13 +268,17 @@ export class FilesystemTools {
 
   static readonly writeTool: Tool = {
     name: 'write',
-    description: 'Write content to a file. RESTRICTED: Can only write to the project scripts folder (.assistants-data/scripts/{session}). Provide a filename and it will be saved under the scripts folder.',
+    description: 'Write content to a file. RESTRICTED: Can only write to the project scripts folder (.assistants-data/scripts/{session}). Provide a filename (or path) and it will be saved under the scripts folder.',
     parameters: {
       type: 'object',
       properties: {
         filename: {
           type: 'string',
           description: 'The filename to write to (saved in the project scripts folder)',
+        },
+        path: {
+          type: 'string',
+          description: 'Alias for filename (saved in the project scripts folder)',
         },
         content: {
           type: 'string',
@@ -285,7 +289,11 @@ export class FilesystemTools {
           description: 'Base working directory for the project (optional)',
         },
       },
-      required: ['filename', 'content'],
+      required: ['content'],
+      anyOf: [
+        { required: ['filename'] },
+        { required: ['path'] },
+      ],
     },
   };
 
@@ -309,7 +317,7 @@ export class FilesystemTools {
     const scriptsFolder = getScriptsFolder(baseCwd, input.sessionId as string | undefined);
 
     if (!filename || !filename.trim()) {
-      throw new ToolExecutionError('Filename is required', {
+      throw new ToolExecutionError('Filename or path is required', {
         toolName: 'write',
         toolInput: input,
         code: ErrorCodes.TOOL_EXECUTION_FAILED,

@@ -798,12 +798,23 @@ export class ConnectorBridge {
    * Create an executor function for a connector
    */
   private createExecutor(connector: Connector): ToolExecutor {
-    return async (input: Record<string, unknown>): Promise<string> => {
+    return async (input: Record<string, unknown>, signal?: AbortSignal): Promise<string> => {
       const command = input.command as string;
       const args = (input.args as string[]) || [];
       const options = (input.options as Record<string, unknown>) || {};
       const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
       const timeoutMs = Number(options.timeoutMs || options.timeout || 15000);
+
+      if (signal?.aborted) {
+        throw new ConnectorError('Command aborted', {
+          connectorName: connector.name,
+          command,
+          code: ErrorCodes.CONNECTOR_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: true,
+          suggestion: 'Try again if you want to rerun the command.',
+        });
+      }
 
       // Check if this should run as an async job
       const jobManager = this.jobManagerGetter?.();
@@ -859,45 +870,70 @@ export class ConnectorBridge {
           stderr: 'pipe',
         });
         let timedOut = false;
+        let aborted = false;
+        const abortHandler = () => {
+          aborted = true;
+          proc.kill();
+        };
+        if (signal) {
+          signal.addEventListener('abort', abortHandler, { once: true });
+        }
         const timer = setTimeout(() => {
           timedOut = true;
           proc.kill();
         }, Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
 
-        const [stdout, stderr] = await Promise.all([
-          proc.stdout ? new Response(proc.stdout).text() : '',
-          proc.stderr ? new Response(proc.stderr).text() : '',
-        ]);
-        const exitCode = await proc.exited;
-        clearTimeout(timer);
+        try {
+          const [stdout, stderr] = await Promise.all([
+            proc.stdout ? new Response(proc.stdout).text() : '',
+            proc.stderr ? new Response(proc.stderr).text() : '',
+          ]);
+          const exitCode = await proc.exited;
 
-        if (timedOut) {
-          throw new ConnectorError(
-            `Command timed out after ${Math.round((Number.isFinite(timeoutMs) ? timeoutMs : 15000) / 1000)}s.`,
-            {
+          if (aborted || signal?.aborted) {
+            throw new ConnectorError('Command aborted', {
+              connectorName: connector.name,
+              command,
+              code: ErrorCodes.CONNECTOR_EXECUTION_FAILED,
+              recoverable: false,
+              retryable: true,
+              suggestion: 'Try again if you want to rerun the command.',
+            });
+          }
+
+          if (timedOut) {
+            throw new ConnectorError(
+              `Command timed out after ${Math.round((Number.isFinite(timeoutMs) ? timeoutMs : 15000) / 1000)}s.`,
+              {
+                connectorName: connector.name,
+                command,
+                code: ErrorCodes.CONNECTOR_EXECUTION_FAILED,
+                recoverable: true,
+                retryable: true,
+                suggestion: 'Try again or increase the timeout.',
+              }
+            );
+          }
+
+          if (exitCode !== 0) {
+            const stderrText = stderr.toString().trim();
+            const stdoutText = stdout.toString().trim();
+            throw new ConnectorError(`Exit ${exitCode}: ${stderrText || stdoutText || 'Command failed'}`, {
               connectorName: connector.name,
               command,
               code: ErrorCodes.CONNECTOR_EXECUTION_FAILED,
               recoverable: true,
-              retryable: true,
-              suggestion: 'Try again or increase the timeout.',
-            }
-          );
-        }
+              retryable: false,
+            });
+          }
 
-        if (exitCode !== 0) {
-          const stderrText = stderr.toString().trim();
-          const stdoutText = stdout.toString().trim();
-          throw new ConnectorError(`Exit ${exitCode}: ${stderrText || stdoutText || 'Command failed'}`, {
-            connectorName: connector.name,
-            command,
-            code: ErrorCodes.CONNECTOR_EXECUTION_FAILED,
-            recoverable: true,
-            retryable: false,
-          });
+          return stdout.toString().trim() || 'Command completed successfully';
+        } finally {
+          clearTimeout(timer);
+          if (signal) {
+            signal.removeEventListener('abort', abortHandler);
+          }
         }
-
-        return stdout.toString().trim() || 'Command completed successfully';
       } catch (error) {
         if (error instanceof ConnectorError) throw error;
         throw new ConnectorError(error instanceof Error ? error.message : String(error), {

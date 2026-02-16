@@ -68,13 +68,15 @@ export interface ToolParameters {
   type: 'object';
   properties: Record<string, ToolProperty>;
   required?: string[];
+  anyOf?: Array<Record<string, unknown>>;
+  oneOf?: Array<Record<string, unknown>>;
+  allOf?: Array<Record<string, unknown>>;
 }
 
 type ToolPropertyType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 
-export interface ToolProperty {
-  type: ToolPropertyType | ToolPropertyType[];
-  description: string;
+interface ToolPropertyBase {
+  description?: string;
   enum?: string[];
   items?: ToolProperty;
   default?: unknown;
@@ -83,6 +85,12 @@ export interface ToolProperty {
   /** For object types: required property names */
   required?: string[];
 }
+
+export type ToolProperty =
+  | (ToolPropertyBase & { type: ToolPropertyType | ToolPropertyType[] })
+  | (ToolPropertyBase & { oneOf: ToolProperty[] })
+  | (ToolPropertyBase & { anyOf: ToolProperty[] })
+  | (ToolPropertyBase & { allOf: ToolProperty[] });
 
 export interface ToolCall {
   id: string;
@@ -292,13 +300,15 @@ export interface HookHandler {
   name?: string; // Human-readable name
   description?: string; // What this hook does
   enabled?: boolean; // Whether hook is active (default true)
-  type: 'command' | 'prompt' | 'assistant';
+  type: 'command' | 'prompt' | 'assistant' | 'cli';
   command?: string;
   prompt?: string;
   model?: string;
   timeout?: number;
   async?: boolean;
   statusMessage?: string;
+  cliName?: string; // Name of CLI hook (for type: 'cli')
+  source?: string; // Where this hook came from ('config' | 'cli')
 }
 
 export interface HookInput {

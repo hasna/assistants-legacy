@@ -1,0 +1,22 @@
+name: content-creation
+description: Create polished content through a structured outline, draft, and review process
+version: "1.0"
+tags: [writing, content]
+
+steps:
+  - name: Research and outline
+    prompt: "For the content topic '${topic}', create a detailed outline. Consider the target audience '${audience}' and format '${format}'. Research relevant information if needed. The outline should include main sections, key points, and supporting details."
+    allowed_tools: [web_search, web_fetch]
+    output_variable: outline
+
+  - name: Write first draft
+    prompt: "Using the outline (${outline}), write a complete first draft. Follow the specified format '${format}'. Write in a clear, engaging style appropriate for the audience '${audience}'. Include all sections from the outline with full content."
+    output_variable: draft
+
+  - name: Review and improve
+    prompt: "Review the draft (${draft}) for: 1) Clarity and flow, 2) Grammar and style, 3) Accuracy of information, 4) Engagement and readability, 5) Structure and organization. Provide specific revision suggestions."
+    output_variable: review
+
+  - name: Final polish
+    prompt: "Apply the review feedback (${review}) to create a final, polished version of the content. Ensure smooth transitions, strong opening and closing, consistent tone, and professional quality throughout."
+    output_variable: final_content

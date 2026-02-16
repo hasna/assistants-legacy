@@ -841,4 +841,88 @@ export const SCHEMA_STATEMENTS: string[] = [
     data TEXT NOT NULL,
     cached_at TEXT NOT NULL
   )`,
+
+  // ============================================
+  // Guardrails Policies (from guardrails/store.ts, JSON -> SQL)
+  // ============================================
+  `CREATE TABLE IF NOT EXISTS guardrails_policies (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    scope TEXT NOT NULL DEFAULT 'project',
+    enabled INTEGER DEFAULT 1,
+    policy_json TEXT NOT NULL,
+    location TEXT NOT NULL DEFAULT 'project',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS guardrails_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS guardrails_overrides (
+    id TEXT PRIMARY KEY,
+    policy_id TEXT,
+    rule_pattern TEXT,
+    new_action TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    approved_by TEXT,
+    expires_at TEXT,
+    scope TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+
+  // ============================================
+  // Hooks (from hooks/store.ts, JSON -> SQL)
+  // ============================================
+  `CREATE TABLE IF NOT EXISTS hooks (
+    id TEXT PRIMARY KEY,
+    event TEXT NOT NULL,
+    matcher TEXT,
+    type TEXT NOT NULL,
+    name TEXT,
+    description TEXT,
+    command TEXT,
+    prompt TEXT,
+    model TEXT,
+    timeout INTEGER,
+    async INTEGER DEFAULT 0,
+    enabled INTEGER DEFAULT 1,
+    status_message TEXT,
+    scope TEXT NOT NULL DEFAULT 'project',
+    source TEXT NOT NULL DEFAULT 'config',
+    cli_name TEXT,
+    priority INTEGER DEFAULT 100,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_hooks_event ON hooks(event)`,
+  `CREATE INDEX IF NOT EXISTS idx_hooks_enabled ON hooks(enabled)`,
+
+  `CREATE TABLE IF NOT EXISTS hook_cli_cache (
+    name TEXT PRIMARY KEY,
+    cli_path TEXT NOT NULL,
+    manifest TEXT NOT NULL,
+    cached_at TEXT NOT NULL
+  )`,
+
+  // ============================================
+  // Workflow Executions (from workflows/store.ts)
+  // ============================================
+  `CREATE TABLE IF NOT EXISTS workflow_executions (
+    id TEXT PRIMARY KEY,
+    workflow_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running',
+    current_step INTEGER NOT NULL DEFAULT 0,
+    variables TEXT NOT NULL DEFAULT '{}',
+    step_results TEXT NOT NULL DEFAULT '{}',
+    started_at TEXT NOT NULL,
+    completed_at TEXT
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_workflow_executions_status ON workflow_executions(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_workflow_executions_name ON workflow_executions(workflow_name)`,
 ];

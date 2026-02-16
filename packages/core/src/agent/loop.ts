@@ -33,9 +33,13 @@ import { FeedbackTool } from '../tools/feedback';
 import { registerSchedulerTools, type SchedulerContext } from '../tools/scheduler';
 import { ImageTools } from '../tools/image';
 import { AudioTools } from '../tools/audio';
+import { MarkdownTools } from '../tools/markdown';
+import { SpreadsheetTools } from '../tools/spreadsheet';
+import { WorkflowTools } from '../tools/workflows';
 import { SkillTool, SkillInstallTool, SkillUninstallTool, createSkillListTool, createSkillReadTool, createSkillExecuteTool } from '../tools/skills';
 import { createAskUserTool, type AskUserHandler, type InterviewHandler } from '../tools/ask-user';
 import { WaitTool, SleepTool } from '../tools/wait';
+import { TmuxTools } from '../tools/tmux';
 import { runHookAssistant } from './subagent';
 import { SkillLoader } from '../skills/loader';
 import { SkillExecutor } from '../skills/executor';
@@ -43,6 +47,7 @@ import {
   HookLoader,
   HookExecutor,
   HookStore,
+  HookCliBridge,
   nativeHookRegistry,
   ScopeContextManager,
   createScopeVerificationHook,
@@ -50,7 +55,7 @@ import {
 } from '../hooks';
 import { CommandLoader, CommandExecutor, BuiltinCommands, type TokenUsage, type CommandContext, type CommandResult } from '../commands';
 import { createLLMClient, type LLMClient } from '../llm/client';
-import { loadConfig, loadHooksConfig, loadSystemPrompt, ensureConfigDir, getConfigDir } from '../config';
+import { loadConfig, loadSystemPrompt, ensureConfigDir, getConfigDir } from '../config';
 import { getDatabase, closeDatabase } from '../database';
 import { backupIfNeeded } from '../database/backup';
 import { migrateIfNeeded } from '../database/migrate';
@@ -118,6 +123,8 @@ export interface AssistantLoopOptions {
   llmClient?: LLMClient;
   /** Override the model from config (e.g., assistant-specific model selection) */
   model?: string;
+  /** Maximum turns per processing loop (default: 50) */
+  maxTurns?: number;
   /** Optional base path for workspace-scoped storage */
   storageDir?: string;
   /** Optional workspace identifier for scoping */
@@ -241,6 +248,7 @@ export class AssistantLoop {
   private swarmCoordinator: SwarmCoordinator | null = null;
   private paused = false;
   private pauseResolve: (() => void) | null = null;
+  private maxTurnsPerRun = 50;
 
   // Event callbacks
   private onChunk?: (chunk: StreamChunk) => void;
@@ -272,6 +280,10 @@ export class AssistantLoop {
     this.extraSystemPrompt = options.extraSystemPrompt || null;
     this.llmClient = options.llmClient ?? null;
     this.modelOverride = options.model || null;
+    if (typeof options.maxTurns === 'number' && options.maxTurns > 0) {
+      const normalized = Math.floor(options.maxTurns);
+      this.maxTurnsPerRun = Math.min(normalized, AssistantLoop.MAX_CUMULATIVE_TURNS);
+    }
     this.sessionContextOptions = options.sessionContext || null;
 
     this.onChunk = options.onChunk;
@@ -429,17 +441,21 @@ export class AssistantLoop {
           return client;
         });
 
-    const [, , hooksConfig, systemPrompt] = await Promise.all([
+    const [, , , systemPrompt] = await Promise.all([
       llmClientPromise,
       // Load skills metadata (descriptions only)
       this.skillLoader.loadAll(this.cwd, { includeContent: false }),
-      // Load hooks config
-      loadHooksConfig(this.cwd, this.storageDir),
+      // Placeholder for hooks (now loaded from SQLite below)
+      Promise.resolve(),
       // Load system prompt
       loadSystemPrompt(this.cwd, this.storageDir),
       // Load commands
       this.commandLoader.loadAll(),
     ]);
+
+    // Load hooks from SQLite via HookStore
+    const hookStore = new HookStore();
+    const hooksConfig = hookStore.loadAll();
 
     if (this.llmClient && this.contextConfig) {
       const summaryClient = await this.buildSummaryClient(this.contextConfig);
@@ -462,6 +478,9 @@ export class AssistantLoop {
     WebTools.registerAll(this.toolRegistry);
     ImageTools.registerAll(this.toolRegistry);
     AudioTools.registerAll(this.toolRegistry);
+    MarkdownTools.registerAll(this.toolRegistry);
+    SpreadsheetTools.registerAll(this.toolRegistry);
+    WorkflowTools.registerAll(this.toolRegistry);
     this.toolRegistry.register(SkillTool.tool, SkillTool.executor);
     this.toolRegistry.register(SkillInstallTool.tool, SkillInstallTool.executor);
     this.toolRegistry.register(SkillUninstallTool.tool, SkillUninstallTool.executor);
@@ -483,6 +502,7 @@ export class AssistantLoop {
 
     this.toolRegistry.register(WaitTool.tool, WaitTool.executor);
     this.toolRegistry.register(SleepTool.tool, SleepTool.executor);
+    this.toolRegistry.register(TmuxTools.tool, TmuxTools.executor);
 
     // Initialize inbox if enabled
     if (this.config?.inbox?.enabled) {
@@ -797,10 +817,10 @@ export class AssistantLoop {
     registerBudgetTools(this.toolRegistry, () => this.budgetTracker);
 
     // Register guardrails tools (read-only, always available)
-    registerGuardrailsTools(this.toolRegistry, () => new GuardrailsStore(this.cwd, this.storageDir));
+    registerGuardrailsTools(this.toolRegistry, () => new GuardrailsStore());
 
     // Register hooks tools (always available for hook inspection)
-    registerHooksTools(this.toolRegistry, () => new HookStore(this.cwd, this.storageDir));
+    registerHooksTools(this.toolRegistry, () => new HookStore());
 
     // Initialize jobs system if enabled
     if (this.config?.jobs?.enabled !== false) {
@@ -839,6 +859,23 @@ export class AssistantLoop {
 
     // Load hooks
     this.hookLoader.load(hooksConfig);
+
+    // Initialize HookCliBridge for .hooks/ CLI discovery
+    const hookCliBridge = new HookCliBridge(this.cwd);
+    this.hookExecutor.setCliBridge(hookCliBridge);
+
+    // Fast CLI hook discovery (from cache)
+    hookCliBridge.fastDiscover();
+
+    // Background full CLI hook discovery
+    hookCliBridge.discover()
+      .then((discovered) => {
+        if (discovered.length > 0) {
+          const cliHooks = hookCliBridge.getDiscoveredHooksForUpsert();
+          hookStore.upsertFromCli(cliHooks);
+        }
+      })
+      .catch(() => {});
 
     // Register native hooks
     nativeHookRegistry.register(createScopeVerificationHook());
@@ -1226,7 +1263,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Main assistant loop - continues until no more tool calls
    */
   private async runLoop(): Promise<void> {
-    const maxTurns = 50;
+    const maxTurns = this.maxTurnsPerRun;
     let turn = 0;
     let streamError: Error | null = null;
 
@@ -1265,7 +1302,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         await this.maybeSummarizeContext();
 
         const messages = this.context.getMessages();
-        const tools = this.filterAllowedTools(this.toolRegistry.getTools());
+        const allTools = this.toolRegistry.getTools();
+        const tools = this.filterAllowedTools(allTools);
         const systemPrompt = this.buildSystemPrompt(messages);
 
         let responseText = '';
@@ -1307,21 +1345,60 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           break;
         }
 
-        const validation = validateToolCalls(toolCalls, tools);
+        const validation = validateToolCalls(toolCalls, allTools, this.config?.validation);
         if (validation.errors.length > 0) {
           for (const error of validation.errors) {
             this.errorAggregator.record(error);
           }
         }
-        if (validation.validated.size > 0) {
-          toolCalls = toolCalls.map((call) => validation.validated.get(call.id) ?? call);
+        const invalidResults = new Map<string, ToolResult>();
+        for (const call of toolCalls) {
+          if (validation.validated.has(call.id)) {
+            continue;
+          }
+          const callErrors = validation.errorsByCallId.get(call.id) ?? [];
+          const message = callErrors.length > 0
+            ? callErrors.map((err) => err.message).join('; ')
+            : `Invalid tool call for "${call.name}".`;
+          const result: ToolResult = {
+            toolCallId: call.id,
+            content: `Tool call validation failed: ${message}`,
+            isError: true,
+            toolName: call.name,
+          };
+          invalidResults.set(call.id, result);
+          this.emit({ type: 'tool_result', toolResult: result });
+          await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
+            session_id: this.sessionId,
+            hook_event_name: 'PostToolUseFailure',
+            cwd: this.cwd,
+            tool_name: call.name,
+            tool_input: call.input,
+            tool_result: result.content,
+          });
         }
 
-        // Execute tool calls
-        const results = await this.executeToolCalls(toolCalls);
+        const validatedCalls = toolCalls
+          .map((call) => validation.validated.get(call.id))
+          .filter(Boolean) as ToolCall[];
+
+        // Execute valid tool calls
+        const validResults = await this.executeToolCalls(validatedCalls);
+        const resultsById = new Map<string, ToolResult>();
+        for (const result of validResults) {
+          resultsById.set(result.toolCallId, result);
+        }
+
+        const orderedResults: ToolResult[] = [];
+        for (const call of toolCalls) {
+          const result = resultsById.get(call.id) ?? invalidResults.get(call.id);
+          if (result) {
+            orderedResults.push(result);
+          }
+        }
 
         // Add tool results to context
-        this.context.addToolResults(results);
+        this.context.addToolResults(orderedResults);
       }
     } finally {
       // In talk mode, skip Stop hooks, scope verification, and done emission.
@@ -1610,6 +1687,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           toolCallId: toolCall.id,
           content: `Tool call denied: "${toolCall.name}" is not in the allowed tools list`,
           isError: true,
+          toolName: toolCall.name,
         };
         this.emit({ type: 'tool_result', toolResult: blockedResult });
         await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
@@ -1761,7 +1839,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
       // Apply updated input from hook if provided
       if (preHookResult?.updatedInput) {
-        toolCall.input = { ...preHookResult.updatedInput };
+        toolCall.input = { ...(toolCall.input || {}), ...preHookResult.updatedInput };
       }
 
       const input = toolCall.input as Record<string, unknown>;
@@ -1796,7 +1874,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       // If PreToolUse didn't make a decision, fire PermissionRequest hook
       // This allows hooks to auto-approve/deny or fall through to user prompt
       let finalPermissionDecision: 'allow' | 'deny' | 'ask' | undefined = preHookResult?.permissionDecision;
-      if (!finalPermissionDecision && !preHookResult?.continue) {
+      let permissionStopReason = preHookResult?.stopReason;
+      if (!finalPermissionDecision) {
         const permHookResult = await this.hookExecutor.execute(
           this.hookLoader.getHooks('PermissionRequest'),
           {
@@ -1808,8 +1887,14 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             permission_type: 'tool_execution',
           }
         );
+        if (permHookResult?.updatedInput) {
+          toolCall.input = { ...(toolCall.input || {}), ...permHookResult.updatedInput };
+        }
         if (permHookResult?.permissionDecision) {
           finalPermissionDecision = permHookResult.permissionDecision;
+        }
+        if (permHookResult?.stopReason) {
+          permissionStopReason = permHookResult.stopReason;
         }
         // Handle PermissionRequest hook decision to deny
         if (permHookResult?.permissionDecision === 'deny' || permHookResult?.continue === false) {
@@ -1836,7 +1921,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       if (finalPermissionDecision === 'ask' || preHookResult?.permissionDecision === 'ask') {
         const askResult: ToolResult = {
           toolCallId: toolCall.id,
-          content: `Tool call requires approval: ${preHookResult?.stopReason || 'Approval required'}`,
+          content: `Tool call requires approval: ${permissionStopReason || 'Approval required'}`,
           isError: true,
           toolName: toolCall.name,
         };
@@ -1867,18 +1952,13 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       // Record tool call in budget tracker
       this.recordToolCallBudget(toolDuration);
 
-      // If stop was triggered during tool execution, skip processing the result
-      // This prevents late tool results from contaminating the conversation
-      if (this.shouldStop) {
-        this.pendingToolCalls.delete(toolCall.id);
-        break;
-      }
+      const stopAfterTool = this.shouldStop;
 
       // Emit tool end
       this.onToolEnd?.(toolCall, result);
 
       // Auto-refresh connectors after a successful global install
-      if (!result.isError && toolCall.name === 'bash') {
+      if (!stopAfterTool && !result.isError && toolCall.name === 'bash') {
         const command = (toolCall.input as Record<string, unknown> | undefined)?.command;
         if (typeof command === 'string' && this.shouldRefreshConnectors(command)) {
           try {
@@ -1907,9 +1987,13 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         tool_result: result.content,
       });
 
-      results.push(result);
-
       this.pendingToolCalls.delete(toolCall.id);
+
+      if (stopAfterTool) {
+        break;
+      }
+
+      results.push(result);
 
       // Update registry load after tool completion
       this.updateRegistryLoad();
@@ -3606,6 +3690,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         depth: this.depth,
         onChunk: this.onChunk,
         getAvailableTools: () => this.toolRegistry.getTools().map(t => t.name),
+        budgetTracker: this.budgetTracker ?? undefined,
       };
 
       this.swarmCoordinator = new SwarmCoordinator({}, context);
@@ -3632,6 +3717,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       allowedTools: config.tools,
       depth: config.depth,
       llmClient: config.llmClient,
+      maxTurns: config.maxTurns,
       extraSystemPrompt: `You are a subassistant spawned to complete a specific task.
 
 Task: ${config.task}
@@ -3667,6 +3753,17 @@ Be concise but thorough. Focus only on this task.`,
           const usage = subassistant.getTokenUsage();
           const tokensUsed = usage.inputTokens + usage.outputTokens;
 
+          if (stopped) {
+            return {
+              success: false,
+              result: response.trim(),
+              error: 'Subassistant stopped',
+              turns,
+              toolCalls,
+              tokensUsed,
+            };
+          }
+
           return {
             success: true,
             result: response.trim(),
@@ -3678,6 +3775,17 @@ Be concise but thorough. Focus only on this task.`,
           // Get token usage even on error
           const usage = subassistant.getTokenUsage();
           const tokensUsed = usage.inputTokens + usage.outputTokens;
+
+          if (stopped) {
+            return {
+              success: false,
+              result: response.trim(),
+              error: 'Subassistant stopped',
+              turns,
+              toolCalls,
+              tokensUsed,
+            };
+          }
 
           return {
             success: false,
@@ -3701,7 +3809,8 @@ Be concise but thorough. Focus only on this task.`,
    * Normalize tool names to a canonical set (case-insensitive with aliases)
    */
   private normalizeAllowedTools(tools?: string[]): Set<string> | null {
-    if (!tools || tools.length === 0) return null;
+    if (!tools) return null;
+    if (tools.length === 0) return new Set<string>();
 
     const aliases: Record<string, string[]> = {
       read: ['read'],

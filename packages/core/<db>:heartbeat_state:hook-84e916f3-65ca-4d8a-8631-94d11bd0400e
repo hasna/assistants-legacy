@@ -1,0 +1,12 @@
+{
+  "sessionId": "hook-84e916f3-65ca-4d8a-8631-94d11bd0400e",
+  "timestamp": "2026-02-14T18:48:38.350Z",
+  "state": "idle",
+  "lastActivity": "2026-02-14T18:48:38.350Z",
+  "stats": {
+    "messagesProcessed": 0,
+    "toolCallsExecuted": 0,
+    "errorsEncountered": 0,
+    "uptimeSeconds": 0
+  }
+}

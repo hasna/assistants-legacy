@@ -1,0 +1,23 @@
+name: code-review
+description: Review staged or recent code changes for quality, bugs, and improvements
+version: "1.0"
+tags: [dev, review, quality]
+
+steps:
+  - name: Get diff
+    prompt: "Run 'git diff --staged' to see staged changes. If nothing is staged, run 'git diff' for unstaged changes. If still nothing, run 'git log -1 --format=%H' and 'git diff HEAD~1' to review the last commit."
+    allowed_tools: [bash]
+    output_variable: diff_output
+
+  - name: Identify changed files
+    prompt: "From the diff, list all changed files and categorize them: source code, tests, config, docs. Note the number of additions and deletions."
+    output_variable: file_summary
+
+  - name: Review for issues
+    prompt: "Review the code changes for: 1) Bugs or logic errors, 2) Security vulnerabilities (injection, auth issues), 3) Performance concerns, 4) Missing error handling, 5) Code style consistency. Be specific about line numbers and files."
+    allowed_tools: [read, grep]
+    output_variable: issues
+
+  - name: Suggest improvements
+    prompt: "Based on the review findings (${issues}), provide: 1) Critical issues that must be fixed, 2) Recommended improvements, 3) Optional nice-to-haves. For each suggestion, explain why and provide a code example if helpful."
+    output_variable: suggestions

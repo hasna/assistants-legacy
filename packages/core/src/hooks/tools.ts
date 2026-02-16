@@ -90,7 +90,7 @@ export function createHooksToolExecutors(
       const hooks = store.listHooks();
 
       if (hooks.length === 0) {
-        return 'No hooks configured. Add hooks to .assistants/hooks.json or ~/.config/assistants/hooks.json.';
+        return 'No hooks configured.';
       }
 
       const lines: string[] = [];
@@ -139,7 +139,6 @@ export function createHooksToolExecutors(
         matcher: info.matcher,
         handler: info.handler,
         location: info.location,
-        filePath: info.filePath,
       }, null, 2);
     },
 
@@ -154,32 +153,10 @@ export function createHooksToolExecutors(
         return 'Error: hookId is required.';
       }
 
-      const hook = store.getHook(hookId);
-      if (!hook) {
+      const success = store.setEnabled(hookId, true);
+      if (!success) {
         return `Hook ${hookId} not found.`;
       }
-
-      // Update the hook's enabled status in its source file
-      const config = store.loadAll();
-      let found = false;
-
-      for (const [_event, matchers] of Object.entries(config)) {
-        for (const matcher of matchers) {
-          for (const h of matcher.hooks) {
-            if (h.id === hookId) {
-              h.enabled = true;
-              found = true;
-            }
-          }
-        }
-      }
-
-      if (!found) {
-        return `Hook ${hookId} not found in configuration.`;
-      }
-
-      // Save back to the hook's source location
-      store.save(hook.location, config);
 
       return `Hook ${hookId} enabled.`;
     },
@@ -195,32 +172,10 @@ export function createHooksToolExecutors(
         return 'Error: hookId is required.';
       }
 
-      const hook = store.getHook(hookId);
-      if (!hook) {
+      const success = store.setEnabled(hookId, false);
+      if (!success) {
         return `Hook ${hookId} not found.`;
       }
-
-      // Update the hook's enabled status in its source file
-      const config = store.loadAll();
-      let found = false;
-
-      for (const [_event, matchers] of Object.entries(config)) {
-        for (const matcher of matchers) {
-          for (const h of matcher.hooks) {
-            if (h.id === hookId) {
-              h.enabled = false;
-              found = true;
-            }
-          }
-        }
-      }
-
-      if (!found) {
-        return `Hook ${hookId} not found in configuration.`;
-      }
-
-      // Save back to the hook's source location
-      store.save(hook.location, config);
 
       return `Hook ${hookId} disabled.`;
     },

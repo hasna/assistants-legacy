@@ -321,6 +321,10 @@ export class SwarmCoordinator {
             this.updateStatus('cancelled');
             this.emit('swarm:cancelled');
             this.streamText('\n🛑 Plan aborted by user\n');
+            this.clearTimeoutTimer();
+            if (this.state) {
+              this.state.endedAt = Date.now();
+            }
             return {
               success: false,
               error: 'Plan aborted by user',
@@ -421,6 +425,13 @@ export class SwarmCoordinator {
       // Set end timestamp
       if (this.state) {
         this.state.endedAt = Date.now();
+      }
+
+      if (this.stopped) {
+        if (this.state && this.state.status !== 'cancelled') {
+          this.updateStatus('cancelled');
+        }
+        return this.buildResult(startTime);
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -727,7 +738,13 @@ Maximum ${this.config.maxTasks} tasks.`;
     const taskPrompt = `${task.description}\n\n${dependencyContext}${memoryContext ? `\n\nShared Knowledge:\n${memoryContext}` : ''}`;
 
     // Select tools
-    const tools = task.requiredTools || this.config.workerTools;
+    const defaultToolsByRole: Record<SwarmRole, string[]> = {
+      planner: this.config.plannerTools,
+      worker: this.config.workerTools,
+      critic: this.config.criticTools,
+      aggregator: [],
+    };
+    const tools = task.requiredTools ?? defaultToolsByRole[task.role] ?? this.config.workerTools;
 
     // Track the real subassistant ID once we have it from spawn result
     let realSubassistantId: string | undefined;
@@ -1066,7 +1083,7 @@ Maximum ${this.config.maxTasks} tasks.`;
       tools: filteredTools,
       maxTurns: 15,
       parentSessionId: this.context.sessionId,
-      depth: this.context.depth + 1,
+      depth: this.context.depth,
       cwd: this.context.cwd,
       timeoutMs: this.config.taskTimeoutMs,
     };

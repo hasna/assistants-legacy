@@ -1,0 +1,23 @@
+name: research
+description: Research a topic thoroughly by searching, gathering sources, and synthesizing findings
+version: "1.0"
+tags: [research, knowledge]
+
+steps:
+  - name: Initial search
+    prompt: "Search the web for '${topic}' using web_search. Find 5-10 relevant sources covering different aspects of the topic."
+    allowed_tools: [web_search]
+    output_variable: search_results
+
+  - name: Deep dive
+    prompt: "From the search results (${search_results}), fetch and read the top 3-5 most relevant sources using web_fetch. Extract key information, data points, and expert opinions."
+    allowed_tools: [web_fetch]
+    output_variable: source_content
+
+  - name: Cross-reference
+    prompt: "Compare information across the sources (${source_content}). Identify: 1) Points of agreement, 2) Conflicting information, 3) Unique insights from specific sources. Note which sources are most authoritative."
+    output_variable: analysis
+
+  - name: Synthesize report
+    prompt: "Create a comprehensive research report on '${topic}' based on the analysis (${analysis}). Include: Overview, Key Findings (with citations), Different Perspectives, Data/Statistics, Conclusions, and Source list with URLs. Be thorough but clear."
+    output_variable: report

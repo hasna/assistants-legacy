@@ -179,6 +179,9 @@ export class CodexAgentLoop {
   }
 
   stop(): void {
+    if (this.processing) {
+      this.emitChunk({ type: 'stopped' });
+    }
     this.stopped = true;
     this.processing = false;
   }

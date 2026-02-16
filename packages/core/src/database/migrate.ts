@@ -9,6 +9,7 @@
 
 import { join } from 'path';
 import { existsSync, writeFileSync, readFileSync, readdirSync, mkdirSync } from 'fs';
+import { createHash } from 'crypto';
 import { getConfigDir } from '../config';
 import type { DatabaseConnection } from '../runtime';
 
@@ -316,7 +317,206 @@ export function runMigration(
     }
   }
 
+  // 11. Migrate guardrails JSON files -> guardrails_policies/config/overrides tables
+  const cwd = process.cwd();
+  results['guardrails'] = migrateGuardrailsIfNeeded(db, dir, cwd);
+
+  // 12. Migrate hooks JSON files -> hooks table
+  results['hooks'] = migrateHooksIfNeeded(db, dir, cwd);
+
   return { results };
+}
+
+/**
+ * Migrate guardrails from JSON files to SQLite.
+ * Checks user, project, and local locations for guardrails.json files.
+ */
+function migrateGuardrailsIfNeeded(
+  db: DatabaseConnection,
+  baseDir: string,
+  cwd: string
+): { migrated: boolean; error?: string } {
+  // Check if guardrails_policies table already has data
+  const count = db.prepare(
+    `SELECT COUNT(*) as c FROM guardrails_policies`
+  ).get() as { c: number };
+  if (count.c > 0) {
+    return { migrated: false }; // Already has data
+  }
+
+  const locations: Array<{ location: string; path: string }> = [
+    { location: 'user', path: join(baseDir, 'guardrails.json') },
+    { location: 'project', path: join(cwd, '.assistants', 'guardrails.json') },
+    { location: 'local', path: join(cwd, '.assistants', 'guardrails.local.json') },
+  ];
+
+  let anyMigrated = false;
+  const now = new Date().toISOString();
+
+  for (const loc of locations) {
+    if (!existsSync(loc.path)) continue;
+
+    try {
+      const raw = readFileSync(loc.path, 'utf-8');
+      const data = JSON.parse(raw);
+      const config = data.guardrails || data;
+
+      // Migrate policies
+      if (config.policies && Array.isArray(config.policies)) {
+        for (const policy of config.policies) {
+          if (!policy.id) {
+            const hash = createHash('sha256')
+              .update(`${policy.name || 'unnamed'}-${policy.scope}-${Date.now()}`)
+              .digest('hex')
+              .slice(0, 8);
+            policy.id = `policy-${policy.scope}-${hash}`;
+          }
+          db.prepare(
+            `INSERT OR IGNORE INTO guardrails_policies (id, name, scope, enabled, policy_json, location, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(
+            policy.id,
+            policy.name || null,
+            policy.scope || 'project',
+            policy.enabled !== false ? 1 : 0,
+            JSON.stringify(policy),
+            loc.location,
+            now,
+            now
+          );
+        }
+      }
+
+      // Migrate config values
+      if (config.enabled !== undefined) {
+        db.prepare(
+          `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('enabled', ?, ?)`
+        ).run(config.enabled ? 'true' : 'false', now);
+      }
+      if (config.defaultAction) {
+        db.prepare(
+          `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('defaultAction', ?, ?)`
+        ).run(config.defaultAction, now);
+      }
+      if (config.logEvaluations !== undefined) {
+        db.prepare(
+          `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('logEvaluations', ?, ?)`
+        ).run(config.logEvaluations ? 'true' : 'false', now);
+      }
+
+      // Migrate overrides
+      if (config.overrides && Array.isArray(config.overrides)) {
+        for (const override of config.overrides) {
+          db.prepare(
+            `INSERT OR IGNORE INTO guardrails_overrides (id, policy_id, rule_pattern, new_action, reason, approved_by, expires_at, scope, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(
+            override.id,
+            override.policyId || null,
+            override.rulePattern || null,
+            override.newAction,
+            override.reason,
+            override.approvedBy || null,
+            override.expiresAt || null,
+            override.scope || 'project',
+            now
+          );
+        }
+      }
+
+      anyMigrated = true;
+    } catch (err) {
+      return { migrated: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  return { migrated: anyMigrated };
+}
+
+/**
+ * Migrate hooks from JSON files to SQLite.
+ * Checks user, project, and local locations for hooks.json files.
+ */
+function migrateHooksIfNeeded(
+  db: DatabaseConnection,
+  baseDir: string,
+  cwd: string
+): { migrated: boolean; error?: string } {
+  // Check if hooks table already has data
+  const count = db.prepare(
+    `SELECT COUNT(*) as c FROM hooks`
+  ).get() as { c: number };
+  if (count.c > 0) {
+    return { migrated: false }; // Already has data
+  }
+
+  const locations: Array<{ location: string; path: string }> = [
+    { location: 'user', path: join(baseDir, 'hooks.json') },
+    { location: 'project', path: join(cwd, '.assistants', 'hooks.json') },
+    { location: 'local', path: join(cwd, '.assistants', 'hooks.local.json') },
+  ];
+
+  let anyMigrated = false;
+  const now = new Date().toISOString();
+
+  for (const loc of locations) {
+    if (!existsSync(loc.path)) continue;
+
+    try {
+      const raw = readFileSync(loc.path, 'utf-8');
+      const data = JSON.parse(raw);
+      const hookConfig = data.hooks || data;
+
+      for (const [event, matchers] of Object.entries(hookConfig)) {
+        if (!Array.isArray(matchers)) continue;
+
+        for (const matcher of matchers as Array<{ matcher?: string; hooks: Array<Record<string, unknown>> }>) {
+          if (!matcher.hooks || !Array.isArray(matcher.hooks)) continue;
+
+          for (const hook of matcher.hooks) {
+            // Generate ID if missing
+            let hookId = hook.id as string | undefined;
+            if (!hookId) {
+              const content = (hook.command as string) || (hook.prompt as string) || '';
+              const hash = createHash('sha256')
+                .update(content)
+                .digest('hex')
+                .slice(0, 8);
+              hookId = `${event.toLowerCase()}-${hook.type}-${hash}`;
+            }
+
+            db.prepare(
+              `INSERT OR IGNORE INTO hooks (id, event, matcher, type, name, description, command, prompt, model, timeout, async, enabled, status_message, scope, source, priority, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'config', 100, ?, ?)`
+            ).run(
+              hookId,
+              event,
+              matcher.matcher || null,
+              hook.type as string,
+              (hook.name as string) || null,
+              (hook.description as string) || null,
+              (hook.command as string) || null,
+              (hook.prompt as string) || null,
+              (hook.model as string) || null,
+              (hook.timeout as number) || null,
+              hook.async ? 1 : 0,
+              hook.enabled !== false ? 1 : 0,
+              (hook.statusMessage as string) || null,
+              loc.location,
+              now,
+              now
+            );
+          }
+        }
+      }
+
+      anyMigrated = true;
+    } catch (err) {
+      return { migrated: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  return { migrated: anyMigrated };
 }
 
 /**

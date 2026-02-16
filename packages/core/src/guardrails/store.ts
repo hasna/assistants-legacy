@@ -1,9 +1,7 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
 import { createHash } from 'crypto';
 import type { GuardrailsConfig, GuardrailsPolicy, PolicyOverride } from './types';
 import { DEFAULT_GUARDRAILS_CONFIG, DEFAULT_SYSTEM_POLICY } from './defaults';
-import { getConfigDir } from '../config';
+import { getDatabase } from '../database';
 
 /**
  * Guardrails storage location
@@ -35,85 +33,17 @@ function generatePolicyId(name: string, scope: string): string {
 }
 
 /**
- * Ensure all policies have IDs
- */
-function ensurePolicyIds(config: GuardrailsConfig): void {
-  for (const policy of config.policies) {
-    if (!policy.id) {
-      policy.id = generatePolicyId(policy.name || 'unnamed', policy.scope);
-    }
-  }
-}
-
-/**
- * Guardrails store - manages guardrails persistence across locations
+ * Guardrails store - manages guardrails persistence using SQLite
  */
 export class GuardrailsStore {
-  private cwd: string;
-  private baseDir?: string;
-
-  constructor(cwd: string = process.cwd(), baseDir?: string) {
-    this.cwd = cwd;
-    this.baseDir = baseDir;
-  }
+  constructor() {}
 
   /**
-   * Get file path for a guardrails location
-   */
-  private getFilePath(location: GuardrailsLocation): string {
-    switch (location) {
-      case 'user':
-        return join(this.baseDir || getConfigDir(), 'guardrails.json');
-      case 'project':
-        return join(this.cwd, '.assistants', 'guardrails.json');
-      case 'local':
-        return join(this.cwd, '.assistants', 'guardrails.local.json');
-    }
-  }
-
-  /**
-   * Load guardrails from a specific location
-   */
-  private loadFrom(location: GuardrailsLocation): GuardrailsConfig | null {
-    const filePath = this.getFilePath(location);
-    if (!existsSync(filePath)) {
-      return null;
-    }
-
-    try {
-      const content = readFileSync(filePath, 'utf-8');
-      const data = JSON.parse(content);
-      const config = data.guardrails || data;
-      ensurePolicyIds(config);
-      return config;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Save guardrails to a specific location
-   */
-  save(location: GuardrailsLocation, config: GuardrailsConfig): void {
-    const filePath = this.getFilePath(location);
-    const dir = dirname(filePath);
-
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-
-    ensurePolicyIds(config);
-    writeFileSync(filePath, JSON.stringify({ guardrails: config }, null, 2), 'utf-8');
-  }
-
-  /**
-   * Load guardrails from all sources (user, project, local)
-   * Merges all sources with later sources and higher precedence scopes winning
+   * Load guardrails from all sources
+   * Reads from SQLite tables and assembles a full GuardrailsConfig
    */
   loadAll(): GuardrailsConfig {
-    const userConfig = this.loadFrom('user');
-    const projectConfig = this.loadFrom('project');
-    const localConfig = this.loadFrom('local');
+    const db = getDatabase();
 
     // Start with defaults
     const merged: GuardrailsConfig = {
@@ -125,174 +55,266 @@ export class GuardrailsStore {
       persist: false,
     };
 
-    // Apply configs in order (user < project < local)
-    for (const config of [userConfig, projectConfig, localConfig]) {
-      if (!config) continue;
+    // Load enabled state from guardrails_config
+    const enabledRow = db.prepare(
+      `SELECT value FROM guardrails_config WHERE key = 'enabled'`
+    ).get() as { value: string } | undefined;
+    if (enabledRow) {
+      merged.enabled = enabledRow.value === 'true';
+    }
 
-      // Override enabled state
-      if (config.enabled !== undefined) {
-        merged.enabled = config.enabled;
-      }
+    // Load defaultAction from guardrails_config
+    const defaultActionRow = db.prepare(
+      `SELECT value FROM guardrails_config WHERE key = 'defaultAction'`
+    ).get() as { value: string } | undefined;
+    if (defaultActionRow) {
+      merged.defaultAction = defaultActionRow.value as GuardrailsConfig['defaultAction'];
+    }
 
-      // Override default action
-      if (config.defaultAction) {
-        merged.defaultAction = config.defaultAction;
-      }
+    // Load logEvaluations from guardrails_config
+    const logRow = db.prepare(
+      `SELECT value FROM guardrails_config WHERE key = 'logEvaluations'`
+    ).get() as { value: string } | undefined;
+    if (logRow) {
+      merged.logEvaluations = logRow.value === 'true';
+    }
 
-      // Merge policies (adding to the list)
-      if (config.policies) {
-        for (const policy of config.policies) {
-          // Skip system policy duplicates
-          if (policy.id === 'system-default') continue;
+    // Load persist from guardrails_config
+    const persistRow = db.prepare(
+      `SELECT value FROM guardrails_config WHERE key = 'persist'`
+    ).get() as { value: string } | undefined;
+    if (persistRow) {
+      merged.persist = persistRow.value === 'true';
+    }
 
-          // Check if policy already exists by ID
-          const existingIdx = merged.policies.findIndex((p) => p.id === policy.id);
-          if (existingIdx >= 0) {
-            // Replace existing
-            merged.policies[existingIdx] = policy;
-          } else {
-            merged.policies.push(policy);
-          }
+    // Load all policies
+    const policyRows = db.prepare(
+      `SELECT id, name, scope, enabled, policy_json, location FROM guardrails_policies ORDER BY rowid`
+    ).all() as Array<{
+      id: string;
+      name: string | null;
+      scope: string;
+      enabled: number;
+      policy_json: string;
+      location: string;
+    }>;
+
+    for (const row of policyRows) {
+      if (row.id === 'system-default') continue;
+
+      try {
+        const policy = JSON.parse(row.policy_json) as GuardrailsPolicy;
+        policy.id = row.id;
+        policy.enabled = row.enabled === 1;
+
+        // Check if policy already exists by ID
+        const existingIdx = merged.policies.findIndex((p) => p.id === policy.id);
+        if (existingIdx >= 0) {
+          merged.policies[existingIdx] = policy;
+        } else {
+          merged.policies.push(policy);
         }
-      }
-
-      // Merge overrides
-      if (config.overrides) {
-        merged.overrides = [...(merged.overrides || []), ...config.overrides];
-      }
-
-      // Override log settings
-      if (config.logEvaluations !== undefined) {
-        merged.logEvaluations = config.logEvaluations;
-      }
-
-      if (config.persist !== undefined) {
-        merged.persist = config.persist;
+      } catch {
+        // Skip invalid policy JSON
       }
     }
+
+    // Load overrides
+    const overrideRows = db.prepare(
+      `SELECT id, policy_id, rule_pattern, new_action, reason, approved_by, expires_at, scope FROM guardrails_overrides`
+    ).all() as Array<{
+      id: string;
+      policy_id: string | null;
+      rule_pattern: string | null;
+      new_action: string;
+      reason: string;
+      approved_by: string | null;
+      expires_at: string | null;
+      scope: string;
+    }>;
+
+    merged.overrides = overrideRows.map((row) => ({
+      id: row.id,
+      policyId: row.policy_id || undefined,
+      rulePattern: row.rule_pattern || undefined,
+      newAction: row.new_action as PolicyOverride['newAction'],
+      reason: row.reason,
+      approvedBy: row.approved_by || undefined,
+      expiresAt: row.expires_at || undefined,
+      scope: row.scope as PolicyOverride['scope'],
+    }));
 
     return merged;
   }
 
   /**
-   * Add a policy to a specific location
+   * Add a policy
    */
   addPolicy(
     policy: GuardrailsPolicy,
     location: GuardrailsLocation = 'project'
   ): string {
-    let config = this.loadFrom(location);
-    if (!config) {
-      config = {
-        enabled: true,
-        policies: [],
-        defaultAction: 'allow',
-      };
-    }
+    const db = getDatabase();
+    const now = new Date().toISOString();
 
     if (!policy.id) {
       policy.id = generatePolicyId(policy.name || 'unnamed', policy.scope);
     }
 
-    config.policies.push(policy);
-    this.save(location, config);
+    db.prepare(
+      `INSERT OR REPLACE INTO guardrails_policies (id, name, scope, enabled, policy_json, location, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      policy.id,
+      policy.name || null,
+      policy.scope,
+      policy.enabled ? 1 : 0,
+      JSON.stringify(policy),
+      location,
+      now,
+      now
+    );
 
     return policy.id;
   }
 
   /**
-   * Remove a policy by ID from all locations
+   * Remove a policy by ID
    */
   removePolicy(policyId: string): boolean {
-    let removed = false;
-
-    for (const location of ['user', 'project', 'local'] as GuardrailsLocation[]) {
-      const config = this.loadFrom(location);
-      if (!config) continue;
-
-      const idx = config.policies.findIndex((p) => p.id === policyId);
-      if (idx !== -1) {
-        config.policies.splice(idx, 1);
-        this.save(location, config);
-        removed = true;
-      }
-    }
-
-    return removed;
+    const db = getDatabase();
+    const result = db.prepare(
+      `DELETE FROM guardrails_policies WHERE id = ?`
+    ).run(policyId);
+    return (result as { changes: number }).changes > 0;
   }
 
   /**
    * Enable or disable a policy by ID
    */
   setPolicyEnabled(policyId: string, enabled: boolean): boolean {
-    for (const location of ['user', 'project', 'local'] as GuardrailsLocation[]) {
-      const config = this.loadFrom(location);
-      if (!config) continue;
+    const db = getDatabase();
+    const now = new Date().toISOString();
 
-      const policy = config.policies.find((p) => p.id === policyId);
-      if (policy) {
+    // Update the enabled column
+    const result = db.prepare(
+      `UPDATE guardrails_policies SET enabled = ?, updated_at = ? WHERE id = ?`
+    ).run(enabled ? 1 : 0, now, policyId);
+
+    if ((result as { changes: number }).changes === 0) {
+      return false;
+    }
+
+    // Also update the policy_json to keep enabled in sync
+    const row = db.prepare(
+      `SELECT policy_json FROM guardrails_policies WHERE id = ?`
+    ).get(policyId) as { policy_json: string } | undefined;
+    if (row) {
+      try {
+        const policy = JSON.parse(row.policy_json) as GuardrailsPolicy;
         policy.enabled = enabled;
-        this.save(location, config);
-        return true;
+        db.prepare(
+          `UPDATE guardrails_policies SET policy_json = ? WHERE id = ?`
+        ).run(JSON.stringify(policy), policyId);
+      } catch {
+        // Ignore JSON parse errors
       }
     }
 
-    return false;
+    return true;
   }
 
   /**
    * Get a policy by ID
    */
   getPolicy(policyId: string): PolicyInfo | null {
-    for (const location of ['local', 'project', 'user'] as GuardrailsLocation[]) {
-      const filePath = this.getFilePath(location);
-      const config = this.loadFrom(location);
-      if (!config) continue;
+    const db = getDatabase();
 
-      const policy = config.policies.find((p) => p.id === policyId);
-      if (policy) {
+    const row = db.prepare(
+      `SELECT id, name, scope, enabled, policy_json, location FROM guardrails_policies WHERE id = ?`
+    ).get(policyId) as {
+      id: string;
+      name: string | null;
+      scope: string;
+      enabled: number;
+      policy_json: string;
+      location: string;
+    } | undefined;
+
+    if (!row) {
+      // Check if it's the system default
+      if (policyId === 'system-default') {
         return {
-          id: policy.id!,
-          name: policy.name || 'Unnamed',
-          scope: policy.scope,
-          enabled: policy.enabled,
-          location,
-          filePath,
-          policy,
+          id: 'system-default',
+          name: 'System Default Policy',
+          scope: 'system',
+          enabled: true,
+          location: 'user',
+          filePath: '',
+          policy: DEFAULT_SYSTEM_POLICY,
         };
       }
+      return null;
     }
 
-    return null;
+    try {
+      const policy = JSON.parse(row.policy_json) as GuardrailsPolicy;
+      policy.id = row.id;
+      policy.enabled = row.enabled === 1;
+
+      return {
+        id: row.id,
+        name: row.name || 'Unnamed',
+        scope: row.scope,
+        enabled: row.enabled === 1,
+        location: row.location as GuardrailsLocation,
+        filePath: '',
+        policy,
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**
    * List all policies with metadata
    */
   listPolicies(): PolicyInfo[] {
+    const db = getDatabase();
     const policies: PolicyInfo[] = [];
     const seenIds = new Set<string>();
 
-    // Process in priority order (local > project > user)
-    for (const location of ['local', 'project', 'user'] as GuardrailsLocation[]) {
-      const filePath = this.getFilePath(location);
-      const config = this.loadFrom(location);
-      if (!config) continue;
+    const rows = db.prepare(
+      `SELECT id, name, scope, enabled, policy_json, location FROM guardrails_policies ORDER BY rowid`
+    ).all() as Array<{
+      id: string;
+      name: string | null;
+      scope: string;
+      enabled: number;
+      policy_json: string;
+      location: string;
+    }>;
 
-      for (const policy of config.policies) {
-        const id = policy.id || generatePolicyId(policy.name || 'unnamed', policy.scope);
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          policies.push({
-            id,
-            name: policy.name || 'Unnamed',
-            scope: policy.scope,
-            enabled: policy.enabled,
-            location,
-            filePath,
-            policy,
-          });
-        }
+    for (const row of rows) {
+      if (seenIds.has(row.id)) continue;
+      seenIds.add(row.id);
+
+      try {
+        const policy = JSON.parse(row.policy_json) as GuardrailsPolicy;
+        policy.id = row.id;
+        policy.enabled = row.enabled === 1;
+
+        policies.push({
+          id: row.id,
+          name: row.name || 'Unnamed',
+          scope: row.scope,
+          enabled: row.enabled === 1,
+          location: row.location as GuardrailsLocation,
+          filePath: '',
+          policy,
+        });
+      } catch {
+        // Skip invalid rows
       }
     }
 
@@ -317,24 +339,25 @@ export class GuardrailsStore {
    */
   addOverride(
     override: PolicyOverride,
-    location: GuardrailsLocation = 'project'
+    _location: GuardrailsLocation = 'project'
   ): string {
-    let config = this.loadFrom(location);
-    if (!config) {
-      config = {
-        enabled: true,
-        policies: [],
-        overrides: [],
-        defaultAction: 'allow',
-      };
-    }
+    const db = getDatabase();
+    const now = new Date().toISOString();
 
-    if (!config.overrides) {
-      config.overrides = [];
-    }
-
-    config.overrides.push(override);
-    this.save(location, config);
+    db.prepare(
+      `INSERT OR REPLACE INTO guardrails_overrides (id, policy_id, rule_pattern, new_action, reason, approved_by, expires_at, scope, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      override.id,
+      override.policyId || null,
+      override.rulePattern || null,
+      override.newAction,
+      override.reason,
+      override.approvedBy || null,
+      override.expiresAt || null,
+      override.scope,
+      now
+    );
 
     return override.id;
   }
@@ -343,58 +366,77 @@ export class GuardrailsStore {
    * Remove an override by ID
    */
   removeOverride(overrideId: string): boolean {
-    let removed = false;
-
-    for (const location of ['user', 'project', 'local'] as GuardrailsLocation[]) {
-      const config = this.loadFrom(location);
-      if (!config || !config.overrides) continue;
-
-      const idx = config.overrides.findIndex((o) => o.id === overrideId);
-      if (idx !== -1) {
-        config.overrides.splice(idx, 1);
-        this.save(location, config);
-        removed = true;
-      }
-    }
-
-    return removed;
+    const db = getDatabase();
+    const result = db.prepare(
+      `DELETE FROM guardrails_overrides WHERE id = ?`
+    ).run(overrideId);
+    return (result as { changes: number }).changes > 0;
   }
 
   /**
-   * Set guardrails enabled state in a specific location
+   * Set guardrails enabled state
    */
-  setEnabled(enabled: boolean, location: GuardrailsLocation = 'project'): void {
-    let config = this.loadFrom(location);
-    if (!config) {
-      config = {
-        enabled,
-        policies: [],
-        defaultAction: 'allow',
-      };
-    } else {
-      config.enabled = enabled;
-    }
-    this.save(location, config);
+  setEnabled(enabled: boolean, _location: GuardrailsLocation = 'project'): void {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    db.prepare(
+      `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('enabled', ?, ?)`
+    ).run(enabled ? 'true' : 'false', now);
   }
 
   /**
-   * Get enabled state from all locations (local overrides project overrides user)
+   * Get enabled state
    */
   isEnabled(): boolean {
-    // Check in priority order
-    for (const location of ['local', 'project', 'user'] as GuardrailsLocation[]) {
-      const config = this.loadFrom(location);
-      if (config?.enabled !== undefined) {
-        return config.enabled;
-      }
+    const db = getDatabase();
+    const row = db.prepare(
+      `SELECT value FROM guardrails_config WHERE key = 'enabled'`
+    ).get() as { value: string } | undefined;
+
+    if (row) {
+      return row.value === 'true';
     }
+
     return DEFAULT_GUARDRAILS_CONFIG.enabled;
   }
 
   /**
-   * Update working directory
+   * Save guardrails config to a specific location (used by tools.ts enable/disable)
+   * In SQLite mode, this is handled by individual methods, but we keep the signature
+   * for backwards compatibility with hooks_enable/disable tools that call store.save()
    */
-  setCwd(cwd: string): void {
-    this.cwd = cwd;
+  save(_location: GuardrailsLocation, config: GuardrailsConfig): void {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // Sync enabled state
+    db.prepare(
+      `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('enabled', ?, ?)`
+    ).run(config.enabled ? 'true' : 'false', now);
+
+    if (config.defaultAction) {
+      db.prepare(
+        `INSERT OR REPLACE INTO guardrails_config (key, value, updated_at) VALUES ('defaultAction', ?, ?)`
+      ).run(config.defaultAction, now);
+    }
+
+    // Sync policies - upsert all
+    for (const policy of config.policies) {
+      if (!policy.id || policy.id === 'system-default') continue;
+      db.prepare(
+        `INSERT OR REPLACE INTO guardrails_policies (id, name, scope, enabled, policy_json, location, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        policy.id,
+        policy.name || null,
+        policy.scope,
+        policy.enabled ? 1 : 0,
+        JSON.stringify(policy),
+        _location,
+        now,
+        now
+      );
+    }
   }
 }

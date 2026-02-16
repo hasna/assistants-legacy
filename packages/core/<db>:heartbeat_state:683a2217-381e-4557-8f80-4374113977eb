@@ -1,0 +1,12 @@
+{
+  "sessionId": "683a2217-381e-4557-8f80-4374113977eb",
+  "timestamp": "2026-02-14T18:48:37.111Z",
+  "state": "idle",
+  "lastActivity": "2026-02-14T18:48:37.111Z",
+  "stats": {
+    "messagesProcessed": 0,
+    "toolCallsExecuted": 0,
+    "errorsEncountered": 0,
+    "uptimeSeconds": 0
+  }
+}

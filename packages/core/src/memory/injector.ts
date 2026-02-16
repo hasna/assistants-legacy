@@ -81,12 +81,29 @@ export class MemoryInjector {
       this.lastInjectedIds.clear();
     }
 
-    // Get relevant memories
-    const memories = await this.memoryManager.getRelevant(context, {
-      limit: 20, // Fetch more than needed, then filter
-      minImportance: this.config.minImportance,
-      categories: this.config.categories,
-    });
+    // Always fetch preferences regardless of context relevance
+    const [contextMemories, preferenceMemories] = await Promise.all([
+      this.memoryManager.getRelevant(context, {
+        limit: 15,
+        minImportance: this.config.minImportance,
+        categories: this.config.categories.filter(c => c !== 'preference'),
+      }),
+      this.memoryManager.getRelevant('', {
+        limit: 10,
+        minImportance: 5,
+        categories: ['preference'],
+      }),
+    ]);
+
+    // Merge and deduplicate
+    const seenIds = new Set<string>();
+    const memories: Memory[] = [];
+    for (const m of [...preferenceMemories, ...contextMemories]) {
+      if (!seenIds.has(m.id)) {
+        seenIds.add(m.id);
+        memories.push(m);
+      }
+    }
 
     if (memories.length === 0) {
       return { content: '', memoryIds: [], tokenEstimate: 0 };
@@ -161,10 +178,11 @@ export class MemoryInjector {
       fact: 'Known Facts',
       knowledge: 'Knowledge Base',
       history: 'Recent Context',
+      context: 'Session Context',
     };
 
     // Process each category
-    for (const category of ['preference', 'fact', 'knowledge', 'history'] as MemoryCategory[]) {
+    for (const category of ['preference', 'fact', 'knowledge', 'history', 'context'] as MemoryCategory[]) {
       const categoryMemories = byCategory[category];
       if (!categoryMemories || categoryMemories.length === 0) continue;
 

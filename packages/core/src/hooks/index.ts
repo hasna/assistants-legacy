@@ -4,6 +4,7 @@ export { NativeHookRegistry, nativeHookRegistry } from './native';
 export { ScopeContextManager } from './scope-context';
 export { scopeVerificationHandler, createScopeVerificationHook } from './scope-verification';
 export { HookStore, type HookLocation, type HookInfo } from './store';
+export { HookCliBridge, type HookCliManifest } from './cli-bridge';
 export { HookLogger, type HookLogEntry } from './logger';
 export { BackgroundProcessManager, backgroundProcessManager } from './background';
 export { HookTester, type HookTestResult } from './tester';
