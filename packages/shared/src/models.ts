@@ -153,7 +153,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   {
     id: 'gpt-5.2',
     provider: 'openai',
-    name: 'GPT-5.2',
+    name: 'GPT-5.2 Thinking',
     description: 'Previous flagship model',
     contextWindow: 400000,
     maxOutputTokens: 128000,
