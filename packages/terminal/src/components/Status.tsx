@@ -221,8 +221,7 @@ export function Status({
   if (queueInfo) rightParts.push(queueInfo);
   if (recentToolsSummary) rightParts.push(recentToolsSummary);
 
-  // Context % color: yellow at 80%+, red at 95%+
-  const contextColor = contextPercent >= 95 ? 'red' : contextPercent >= 80 ? 'yellow' : undefined;
+  // Context warning hint shown in status bar at high usage
   const contextWarning = contextPercent >= 80 && contextPercent < 95
     ? ' /compact'
     : contextPercent >= 95
@@ -234,25 +233,18 @@ export function Status({
   leftParts.push(folderName);
   if (gitBranch) leftParts.push(gitBranch);
 
-  // Combine plain right parts, then append context/cost with optional coloring
-  const plainRight = rightParts.join(' · ');
-  const coloredParts: string[] = [];
-  if (contextInfo) coloredParts.push(contextInfo + contextWarning);
-  if (costInfo) coloredParts.push(costInfo);
-  const coloredRight = coloredParts.join(' · ');
+  // Build context/cost display — add warning prefix at high usage
+  const contextDisplay = contextInfo
+    ? contextPercent >= 95 ? `!! ${contextInfo}` : contextPercent >= 80 ? `! ${contextInfo}` : contextInfo
+    : '';
 
-  const separator = plainRight && coloredRight ? ' · ' : '';
+  if (contextDisplay) rightParts.push(contextDisplay + contextWarning);
+  if (costInfo) rightParts.push(costInfo);
 
   return (
     <Box justifyContent="space-between">
       <Text dimColor>{leftParts.join(' · ')}</Text>
-      <Text>
-        {plainRight && <Text dimColor>{plainRight}</Text>}
-        {separator && <Text dimColor>{separator}</Text>}
-        {coloredRight && (
-          <Text color={contextColor} dimColor={!contextColor}>{coloredRight}</Text>
-        )}
-      </Text>
+      <Text dimColor>{rightParts.join(' · ')}</Text>
     </Box>
   );
 }
