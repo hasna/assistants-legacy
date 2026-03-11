@@ -3,6 +3,18 @@ import { mkdirSync } from 'fs';
 import { readFile, writeFile } from 'fs/promises';
 import type { AssistantState, Heartbeat, HeartbeatConfig, HeartbeatStats } from './types';
 import { appendHeartbeatHistory } from './history';
+import { StatePersistence } from './persistence';
+
+/** Check if a path is a SQLite marker (e.g. `<db>:heartbeat_state:session-id`) */
+function isDbPath(path: string): boolean {
+  return path.startsWith('<db>:');
+}
+
+/** Extract session ID from a `<db>:heartbeat_state:SESSION_ID` path */
+function extractSessionId(dbPath: string): string {
+  const parts = dbPath.split(':');
+  return parts.length >= 3 ? parts.slice(2).join(':') : parts[parts.length - 1];
+}
 
 export class HeartbeatManager {
   private config: HeartbeatConfig;
@@ -13,6 +25,7 @@ export class HeartbeatManager {
   private intervalId?: ReturnType<typeof setInterval>;
   private listeners: Set<(heartbeat: Heartbeat) => void> = new Set();
   private lastHeartbeatAt: number | null = null;
+  private dbPersistence: StatePersistence | null = null;
 
   constructor(config: HeartbeatConfig) {
     this.config = config;
@@ -25,8 +38,12 @@ export class HeartbeatManager {
       uptimeSeconds: 0,
     };
 
-    const dir = dirname(config.persistPath);
-    mkdirSync(dir, { recursive: true });
+    if (isDbPath(config.persistPath)) {
+      this.dbPersistence = new StatePersistence(extractSessionId(config.persistPath));
+    } else {
+      const dir = dirname(config.persistPath);
+      mkdirSync(dir, { recursive: true });
+    }
   }
 
   start(sessionId: string): void {
@@ -120,7 +137,16 @@ export class HeartbeatManager {
 
   private async persist(heartbeat: Heartbeat): Promise<void> {
     try {
-      await writeFile(this.config.persistPath, JSON.stringify(heartbeat, null, 2));
+      if (this.dbPersistence) {
+        await this.dbPersistence.save({
+          sessionId: heartbeat.sessionId,
+          heartbeat,
+          context: { stats: heartbeat.stats },
+          timestamp: heartbeat.timestamp,
+        });
+      } else {
+        await writeFile(this.config.persistPath, JSON.stringify(heartbeat, null, 2));
+      }
       if (this.config.historyPath) {
         await appendHeartbeatHistory(this.config.historyPath, heartbeat);
       }
@@ -134,6 +160,15 @@ export class HeartbeatManager {
     thresholdMs: number
   ): Promise<{ isStale: boolean; lastHeartbeat?: Heartbeat }> {
     try {
+      if (isDbPath(path)) {
+        const sessionId = extractSessionId(path);
+        const persistence = new StatePersistence(sessionId);
+        const state = await persistence.load();
+        if (!state) return { isStale: true };
+        const heartbeat = state.heartbeat as Heartbeat;
+        const age = Date.now() - new Date(heartbeat.timestamp).getTime();
+        return { isStale: age > thresholdMs, lastHeartbeat: heartbeat };
+      }
       const content = await readFile(path, 'utf-8');
       const heartbeat = JSON.parse(content) as Heartbeat;
       const age = Date.now() - new Date(heartbeat.timestamp).getTime();
