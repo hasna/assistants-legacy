@@ -13,7 +13,7 @@ import {
   type ContextInjectionConfig,
 } from '../context';
 import { ToolRegistry } from '../tools/registry';
-import { ConnectorBridge, registerConnectorExecuteTool, registerConnectorsListTool, registerConnectorsSearchTool } from '../tools/connector';
+import { ConnectorBridge, registerConnectorExecuteTool, registerConnectorsListTool, registerConnectorsSearchTool, registerConnectorsRegistryTools } from '../tools/connector';
 import { registerConnectorAutoRefreshTool } from '../tools/connector-refresh';
 import { registerConfigTools } from '../tools/config';
 import { registerAssistantTools } from '../tools/assistant';
@@ -36,7 +36,7 @@ import { AudioTools } from '../tools/audio';
 import { MarkdownTools } from '../tools/markdown';
 import { SpreadsheetTools } from '../tools/spreadsheet';
 import { WorkflowTools } from '../tools/workflows';
-import { SkillTool, SkillInstallTool, SkillUninstallTool, createSkillListTool, createSkillReadTool, createSkillExecuteTool } from '../tools/skills';
+import { SkillTool, SkillInstallTool, SkillUninstallTool, createSkillListTool, createSkillReadTool, createSkillExecuteTool, createSkillsRegistrySearchTool, createSkillsRegistryListTool, createSkillsRegistryInstallTool } from '../tools/skills';
 import { createAskUserTool, type AskUserHandler, type InterviewHandler } from '../tools/ask-user';
 import { WaitTool, SleepTool } from '../tools/wait';
 import { TmuxTools } from '../tools/tmux';
@@ -88,6 +88,8 @@ import { createWalletManager, registerWalletTools, type WalletManager } from '..
 import { createSecretsManager, registerSecretsTools, type SecretsManager } from '../secrets';
 import { JobManager, createJobTools } from '../jobs';
 import { createMessagesManager, registerMessagesTools, type MessagesManager } from '../messages';
+import { createConversationsAdapter } from '../messages/conversations-adapter';
+import { registerConversationsSpacesTools } from '../tools/conversations';
 import { createWebhooksManager, registerWebhookTools, type WebhooksManager } from '../webhooks';
 import { createChannelsManager, registerChannelTools, ChannelAgentPool, type ChannelsManager } from '../channels';
 import { createPeopleManager, registerPeopleTools, type PeopleManager } from '../people';
@@ -490,6 +492,13 @@ export class AssistantLoop {
     this.toolRegistry.register(skillReadTool.tool, skillReadTool.executor);
     const skillExecuteTool = createSkillExecuteTool(() => this.skillLoader);
     this.toolRegistry.register(skillExecuteTool.tool, skillExecuteTool.executor);
+    // Skills registry tools (browse/install from @hasna/skills registry of 202+ skills)
+    const skillsRegSearch = createSkillsRegistrySearchTool();
+    this.toolRegistry.register(skillsRegSearch.tool, skillsRegSearch.executor);
+    const skillsRegList = createSkillsRegistryListTool();
+    this.toolRegistry.register(skillsRegList.tool, skillsRegList.executor);
+    const skillsRegInstall = createSkillsRegistryInstallTool(this.cwd);
+    this.toolRegistry.register(skillsRegInstall.tool, skillsRegInstall.executor);
     const askUserTool = createAskUserTool(() => this.askUserHandler, () => this.interviewHandler);
     this.toolRegistry.register(askUserTool.tool, askUserTool.executor);
     this.toolRegistry.register(FeedbackTool.tool, FeedbackTool.executor);
@@ -530,17 +539,16 @@ export class AssistantLoop {
       registerSecretsTools(this.toolRegistry, () => this.secretsManager);
     }
 
-    // Initialize messages if enabled
+    // Initialize messages if enabled (native + conversations SDK)
     if (this.config?.messages?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
       this.messagesManager = createMessagesManager(assistantId, assistantName, this.config.messages);
       await this.messagesManager.initialize();
       registerMessagesTools(this.toolRegistry, () => this.messagesManager);
 
-      // Start watching for real-time message notifications
+      // Start watching for real-time message notifications (native)
       this.messagesManager.startWatching();
       this.messagesManager.onMessage((message) => {
-        // When a new message arrives, prepare it for injection at the next turn
         if (message.priority === 'urgent' || message.priority === 'high') {
           const context = this.messagesManager!.buildInjectionContext([message]);
           if (context) {
@@ -548,6 +556,30 @@ export class AssistantLoop {
           }
         }
       });
+
+      // Also register @hasna/conversations adapter for spaces support
+      try {
+        const convAdapter = createConversationsAdapter(assistantId, assistantName, this.config.messages);
+        await convAdapter.initialize();
+        // Watch for high-priority messages from conversations too
+        convAdapter.startWatching();
+        convAdapter.onMessage((message) => {
+          if (message.priority === 'urgent' || message.priority === 'high') {
+            const context = convAdapter.buildInjectionContext([message]);
+            if (context) {
+              this.pendingMessagesContext = context;
+            }
+          }
+        });
+      } catch {
+        // Conversations SDK unavailable — continue with native only
+      }
+      // Register spaces tools from @hasna/conversations
+      try {
+        registerConversationsSpacesTools(this.toolRegistry, assistantId);
+      } catch {
+        // Spaces tools unavailable
+      }
     }
 
     // Initialize webhooks if enabled
@@ -709,6 +741,8 @@ export class AssistantLoop {
       getConnectorBridge: () => this.connectorBridge,
     });
     registerConnectorAutoRefreshTool(this.toolRegistry);
+    // Connectors registry tools (browse/install from @hasna/connectors registry of 62+ connectors)
+    registerConnectorsRegistryTools(this.toolRegistry, this.cwd);
 
     // Register config tools
     registerConfigTools(this.toolRegistry, {
