@@ -60,6 +60,7 @@ import type { QueuedMessage } from './appTypes';
 import { takeNextQueuedMessage } from './queueUtils';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { CLEAR_SCREEN_TOKEN } from '../output/sanitize';
+import { handleExport, handleUndo, handleUndoConfirm, handlePin, handlePins, handleReplay, handleHistory, handleTemplates } from '../commands/qolCommands';
 import { setExitStats } from '../exit-summary';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
@@ -624,6 +625,7 @@ export function App({ cwd, version }: AppProps) {
   const [heartbeatState, setHeartbeatState] = useState<HeartbeatState | undefined>();
   const [identityInfo, setIdentityInfo] = useState<ActiveIdentityInfo | undefined>();
   const [verboseTools, setVerboseTools] = useState(false);
+  const [pinnedMessageIds, setPinnedMessageIds] = useState<Set<string>>(new Set());
   const [gitBranch, setGitBranch] = useState<string | undefined>();
   const [askUserState, setAskUserState] = useState<AskUserState | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState | null>(null);
@@ -1875,6 +1877,7 @@ export function App({ cwd, version }: AppProps) {
           startedAt: active.startedAt,
           tokenUsage: tokenUsageRef.current,
           messageCount: messagesLengthRef.current,
+          modelId: active.client.getModel() ?? undefined,
         });
       }
       registry.closeAll();
@@ -2934,6 +2937,7 @@ export function App({ cwd, version }: AppProps) {
         startedAt: active.startedAt,
         tokenUsage,
         messageCount: messages.length,
+        modelId: active.client.getModel() ?? undefined,
       });
     }
   }, [tokenUsage, messages.length]);
@@ -3478,8 +3482,63 @@ export function App({ cwd, version }: AppProps) {
         }
       }
 
+      // QoL commands — extracted to commands/qolCommands.ts
+      if (trimmedInput.startsWith('/export')) {
+        const exportMsg = await handleExport(
+          trimmedInput.slice('/export'.length).trim(),
+          activeSession.id,
+          activeSession.cwd,
+          activeSession.client.getModel() ?? 'unknown',
+          messages,
+          tokenUsage,
+        );
+        setMessages((prev) => [...prev, exportMsg]);
+        return;
+      }
+
+      if (trimmedInput === '/undo') {
+        setMessages((prev) => [...prev, handleUndo(activeSession?.cwd || cwd)]);
+        return;
+      }
+
+      if (trimmedInput === '/undo confirm') {
+        setMessages((prev) => [...prev, handleUndoConfirm(activeSession?.cwd || cwd)]);
+        return;
+      }
+
+      if (trimmedInput === '/pin' || trimmedInput.startsWith('/pin ')) {
+        const result = handlePin(trimmedInput.slice('/pin'.length).trim(), messages, pinnedMessageIds.size);
+        if (result.clear) {
+          setPinnedMessageIds(new Set());
+        } else if (result.pinId) {
+          setPinnedMessageIds((prev) => { const next = new Set(prev); next.add(result.pinId!); return next; });
+        }
+        setMessages((prev) => [...prev, result.message]);
+        return;
+      }
+
+      if (trimmedInput === '/pins') {
+        setMessages((prev) => [...prev, handlePins(messages, pinnedMessageIds)]);
+        return;
+      }
+
+      if (trimmedInput.startsWith('/replay')) {
+        setMessages((prev) => [...prev, handleReplay(trimmedInput.slice('/replay'.length).trim(), messages)]);
+        return;
+      }
+
+      if (trimmedInput.startsWith('/history')) {
+        setMessages((prev) => [...prev, handleHistory(trimmedInput.slice('/history'.length).trim())]);
+        return;
+      }
+
+      if (trimmedInput === '/templates') {
+        setMessages((prev) => [...prev, handleTemplates()]);
+        return;
+      }
+
       // Handle /clear and /new entirely at terminal level for reliability.
-      const isClearCommand = trimmedInput === '/clear' || trimmedInput === '/new';
+      const isClearCommand = trimmedInput === '/clear' || trimmedInput === '/new' || trimmedInput.startsWith('/new ');
 
       if (isClearCommand) {
         // Stop any ongoing processing
@@ -3518,9 +3577,18 @@ export function App({ cwd, version }: AppProps) {
         activeSession.client.clearConversation();
 
         // Show confirmation message, then clear all messages
-        const confirmText = trimmedInput === '/new'
-          ? 'Starting new conversation.'
-          : 'Conversation cleared. Starting fresh.';
+        const templateArg = trimmedInput.startsWith('/new ') ? trimmedInput.slice('/new '.length).trim() : '';
+        const templateDescriptions: Record<string, string> = {
+          coding: 'Code generation, debugging, and refactoring',
+          research: 'Deep research, analysis, and comparison',
+          writing: 'Creative and technical writing',
+        };
+        const templateMatch = templateArg && templateDescriptions[templateArg];
+        const confirmText = trimmedInput === '/clear'
+          ? 'Conversation cleared. Starting fresh.'
+          : templateMatch
+          ? `Starting new conversation with **${templateArg}** template (${templateMatch}).`
+          : 'Starting new conversation.';
         const confirmMessage = {
           id: generateId(),
           role: 'assistant',
@@ -5787,6 +5855,11 @@ export function App({ cwd, version }: AppProps) {
         onStopRecording={togglePushToTalk}
         onFileSearch={searchFiles}
         partialTranscript={partialTranscript}
+        pasteConfig={currentConfig?.input?.paste ? {
+          enabled: currentConfig.input.paste.enabled,
+          thresholds: currentConfig.input.paste.thresholds,
+          mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+        } : undefined}
       />
 
       {/* Status bar */}
@@ -5795,6 +5868,7 @@ export function App({ cwd, version }: AppProps) {
         cwd={activeSession?.cwd || cwd}
         queueLength={activeQueue.length + inlineCount}
         tokenUsage={tokenUsage}
+        modelId={activeSession?.client.getModel() ?? undefined}
         voiceState={voiceState}
         heartbeatState={heartbeatState}
         identityInfo={identityInfo}
@@ -5804,6 +5878,20 @@ export function App({ cwd, version }: AppProps) {
         processingStartTime={processingStartTime}
         verboseTools={verboseTools}
         gitBranch={gitBranch}
+        recentTools={activityLog
+          .filter((e) => e.type === 'tool_call' && e.toolCall)
+          .slice(-8)
+          .map((e) => {
+            const hasResult = activityLog.some(
+              (r) => r.type === 'tool_result' && r.toolResult?.toolCallId === e.toolCall!.id
+            );
+            return {
+              name: e.toolCall!.name,
+              status: hasResult ? ('succeeded' as const) : ('running' as const),
+              durationMs: 0,
+              startedAt: e.timestamp,
+            };
+          })}
       />
 
       {stopHint && (

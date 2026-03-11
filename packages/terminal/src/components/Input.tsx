@@ -33,19 +33,24 @@ const COMMANDS = [
   { name: '/clear', description: 'clear the conversation' },
   { name: '/new', description: 'start a new conversation' },
   { name: '/exit', description: 'exit assistants' },
+  { name: '/templates', description: 'list session templates' },
   // Session management
   { name: '/sessions', description: 'list/switch sessions (Ctrl+])' },
+  { name: '/history', description: 'search past sessions' },
   { name: '/status', description: 'show session status' },
   { name: '/tokens', description: 'show token usage' },
   { name: '/cost', description: 'show estimated API cost' },
   { name: '/model', description: 'select or switch model interactively' },
   { name: '/compact', description: 'summarize to save context' },
+  { name: '/replay', description: 'redisplay last N messages' },
   // Skills and tools
   { name: '/skills', description: 'browse, create, and manage skills' },
   { name: '/connectors', description: 'list available connectors' },
   // Configuration
   { name: '/config', description: 'show configuration' },
   { name: '/init', description: 'initialize assistants in project' },
+  { name: '/pin', description: 'bookmark last assistant message' },
+  { name: '/pins', description: 'show pinned messages' },
   { name: '/memory', description: 'show what AI remembers' },
   { name: '/context', description: 'manage injected project context' },
   { name: '/hooks', description: 'manage hooks (list, add, remove, test)' },
@@ -74,6 +79,8 @@ const COMMANDS = [
   { name: '/jobs', description: 'manage background jobs' },
   { name: '/contacts', description: 'manage contacts address book' },
   { name: '/docs', description: 'interactive app documentation' },
+  // Export
+  { name: '/export', description: 'export conversation to markdown' },
   // Git
   { name: '/diff', description: 'show git diff of changes' },
   { name: '/undo', description: 'revert uncommitted changes' },

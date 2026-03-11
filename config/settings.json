@@ -17,5 +17,15 @@
       "model": "eleven_turbo_v2_5"
     }
   },
-  "connectors": []
+  "connectors": [],
+  "input": {
+    "paste": {
+      "enabled": true,
+      "thresholds": {
+        "chars": 500,
+        "words": 100,
+        "lines": 20
+      }
+    }
+  }
 }

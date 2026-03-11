@@ -2,12 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { basename } from 'path';
 import { Box, Text } from 'ink';
 import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
+import { getModelById } from '@hasna/assistants-shared';
 
 interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
   maxContextTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
 }
 
 /**
@@ -17,6 +20,7 @@ export interface RecentToolInfo {
   name: string;
   status: 'running' | 'succeeded' | 'failed';
   durationMs: number;
+  startedAt?: number;
 }
 
 interface StatusProps {
@@ -24,6 +28,7 @@ interface StatusProps {
   cwd: string;
   queueLength?: number;
   tokenUsage?: TokenUsage;
+  modelId?: string;
 
   voiceState?: VoiceState;
   heartbeatState?: HeartbeatState;
@@ -42,6 +47,7 @@ export function Status({
   cwd,
   queueLength = 0,
   tokenUsage,
+  modelId,
   voiceState,
   heartbeatState,
   identityInfo,
@@ -116,13 +122,32 @@ export function Status({
   // Folder name from cwd
   const folderName = basename(cwd);
 
-  // Format context usage
+  // Format context usage with warning thresholds
   let contextInfo = '';
+  let contextPercent = 0;
   if (tokenUsage && tokenUsage.maxContextTokens > 0) {
     const rawPercent = Math.round((tokenUsage.totalTokens / tokenUsage.maxContextTokens) * 100);
-    const percent = Math.max(0, Math.min(100, rawPercent));
-    contextInfo = `${percent}%`;
+    contextPercent = Math.max(0, Math.min(100, rawPercent));
+    contextInfo = `${contextPercent}%`;
   }
+
+  // Estimated cost from token usage and model pricing
+  const costInfo = useMemo(() => {
+    if (!tokenUsage || !modelId) return '';
+    const model = getModelById(modelId);
+    if (!model?.inputCostPer1M || !model?.outputCostPer1M) return '';
+    const inputCost = (tokenUsage.inputTokens * model.inputCostPer1M) / 1_000_000;
+    const outputCost = (tokenUsage.outputTokens * model.outputCostPer1M) / 1_000_000;
+    // Cache pricing: reads ~10% of input, writes ~125% of input (Anthropic standard)
+    const cacheReadCost = tokenUsage.cacheReadTokens
+      ? (tokenUsage.cacheReadTokens * model.inputCostPer1M * 0.1) / 1_000_000
+      : 0;
+    const cacheWriteCost = tokenUsage.cacheWriteTokens
+      ? (tokenUsage.cacheWriteTokens * model.inputCostPer1M * 1.25) / 1_000_000
+      : 0;
+    const total = inputCost + outputCost + cacheReadCost + cacheWriteCost;
+    return total < 0.01 ? `$${total.toFixed(3)}` : `$${total.toFixed(2)}`;
+  }, [tokenUsage, modelId]);
 
   // Session indicator (only show if multiple sessions)
   const sessionInfo = sessionCount && sessionCount > 1 && sessionIndex !== undefined
@@ -150,32 +175,41 @@ export function Status({
   const queueInfo = queueLength > 0 ? `${queueLength}q` : '';
   const verboseLabel = verboseTools ? 'verbose' : '';
 
-  // Build recent tools summary (group by tool name with counts)
+  // Build recent tools summary (group by tool name with counts and elapsed time)
   const recentToolsSummary = useMemo(() => {
     if (recentTools.length === 0) return '';
 
-    const counts = new Map<string, { count: number; failed: number; running: number }>();
+    const counts = new Map<string, { count: number; failed: number; running: number; maxElapsed: number }>();
+    const now = Date.now();
     for (const tool of recentTools) {
-      const existing = counts.get(tool.name) || { count: 0, failed: 0, running: 0 };
+      const existing = counts.get(tool.name) || { count: 0, failed: 0, running: 0, maxElapsed: 0 };
       existing.count++;
       if (tool.status === 'failed') existing.failed++;
-      if (tool.status === 'running') existing.running++;
+      if (tool.status === 'running') {
+        existing.running++;
+        if (tool.startedAt) {
+          const elapsedSec = Math.floor((now - tool.startedAt) / 1000);
+          existing.maxElapsed = Math.max(existing.maxElapsed, elapsedSec);
+        }
+      }
       counts.set(tool.name, existing);
     }
 
     const parts: string[] = [];
-    for (const [name, { count, failed, running }] of counts) {
+    for (const [name, { count, failed, running, maxElapsed }] of counts) {
       let part = name;
       if (count > 1) part += `x${count}`;
       if (failed > 0) part += '!';
-      if (running > 0) part += '..';
+      if (running > 0) {
+        part += maxElapsed > 0 ? ` ${maxElapsed}s..` : '..';
+      }
       parts.push(part);
     }
 
     return parts.slice(0, 4).join(' ');
-  }, [recentTools]);
+  }, [recentTools, elapsed]);
 
-  // Build right-side segments
+  // Build right-side segments (plain parts rendered dimColor, context/cost may be colored)
   const rightParts: string[] = [];
   if (heartbeatDisplay) rightParts.push(heartbeatDisplay);
   if (voiceLabel) rightParts.push(voiceLabel);
@@ -183,20 +217,42 @@ export function Status({
   if (isProcessing && processingStartTime) rightParts.push(formatDuration(elapsed));
   if (sessionInfo) rightParts.push(`${sessionInfo}${bgIndicator}`);
 
-  if (contextInfo) rightParts.push(contextInfo);
   if (verboseLabel) rightParts.push(verboseLabel);
   if (queueInfo) rightParts.push(queueInfo);
   if (recentToolsSummary) rightParts.push(recentToolsSummary);
+
+  // Context % color: yellow at 80%+, red at 95%+
+  const contextColor = contextPercent >= 95 ? 'red' : contextPercent >= 80 ? 'yellow' : undefined;
+  const contextWarning = contextPercent >= 80 && contextPercent < 95
+    ? ' /compact'
+    : contextPercent >= 95
+    ? ' /compact!'
+    : '';
 
   // Build left-side segments
   const leftParts: string[] = [];
   leftParts.push(folderName);
   if (gitBranch) leftParts.push(gitBranch);
 
+  // Combine plain right parts, then append context/cost with optional coloring
+  const plainRight = rightParts.join(' · ');
+  const coloredParts: string[] = [];
+  if (contextInfo) coloredParts.push(contextInfo + contextWarning);
+  if (costInfo) coloredParts.push(costInfo);
+  const coloredRight = coloredParts.join(' · ');
+
+  const separator = plainRight && coloredRight ? ' · ' : '';
+
   return (
     <Box justifyContent="space-between">
       <Text dimColor>{leftParts.join(' · ')}</Text>
-      <Text dimColor>{rightParts.join(' · ')}</Text>
+      <Text>
+        {plainRight && <Text dimColor>{plainRight}</Text>}
+        {separator && <Text dimColor>{separator}</Text>}
+        {coloredRight && (
+          <Text color={contextColor} dimColor={!contextColor}>{coloredRight}</Text>
+        )}
+      </Text>
     </Box>
   );
 }

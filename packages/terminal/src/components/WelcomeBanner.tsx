@@ -39,6 +39,10 @@ export function WelcomeBanner({ version, model, directory }: WelcomeBannerProps)
         <Text dimColor>directory: </Text>
         <Text>{shortDir}</Text>
       </Box>
+      <Box>
+        <Text dimColor>shortcuts: </Text>
+        <Text dimColor>Ctrl+] sessions · Ctrl+C stop · /help commands</Text>
+      </Box>
     </Box>
   );
 }
