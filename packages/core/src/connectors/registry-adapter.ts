@@ -1,21 +1,18 @@
 /**
  * Registry adapter for @hasna/connectors
- * Provides access to the 62-connector registry for discovery and installation.
- * The native ConnectorBridge still handles runtime execution — this adapter adds
- * the ability to browse and install from the curated registry.
+ * Uses lazy imports to avoid module-level side effects in bundled context.
  */
 
-import {
-  CONNECTORS,
-  CATEGORIES,
-  getConnector as getRegistryConnector,
-  getConnectorsByCategory,
-  searchConnectors as searchRegistryConnectors,
-  installConnector,
-  getInstalledConnectors,
-  removeConnector,
-  type ConnectorMeta,
-} from '@hasna/connectors';
+// Type-only import (erased at runtime, no side effects)
+import type { ConnectorMeta } from '@hasna/connectors';
+
+let _connectorsLib: typeof import('@hasna/connectors') | null = null;
+async function getConnectorsLib(): Promise<typeof import('@hasna/connectors')> {
+  if (!_connectorsLib) {
+    _connectorsLib = await import('@hasna/connectors');
+  }
+  return _connectorsLib;
+}
 
 export interface RegistryConnectorInfo {
   name: string;
@@ -23,96 +20,66 @@ export interface RegistryConnectorInfo {
   description: string;
   category: string;
   tags: string[];
-  installed?: boolean;
 }
 
-/**
- * Search the @hasna/connectors registry for available connectors.
- */
-export function searchConnectorRegistry(query: string): RegistryConnectorInfo[] {
-  const results = searchRegistryConnectors(query);
-  return results.map(metaToInfo);
+export async function searchConnectorRegistry(query: string): Promise<RegistryConnectorInfo[]> {
+  const lib = await getConnectorsLib();
+  return lib.searchConnectors(query).map((m) => ({
+    name: m.name, displayName: m.displayName,
+    description: m.description, category: m.category, tags: m.tags,
+  }));
 }
 
-/**
- * List all available connector categories from the registry.
- */
-export function listConnectorCategories(): string[] {
-  return [...CATEGORIES];
+export async function listConnectorCategories(): Promise<string[]> {
+  const lib = await getConnectorsLib();
+  return [...lib.CATEGORIES];
 }
 
-/**
- * List all connectors in the registry, optionally filtered by category.
- */
-export function listRegistryConnectors(category?: string): RegistryConnectorInfo[] {
-  if (category) {
-    return getConnectorsByCategory(category).map(metaToInfo);
-  }
-  return CONNECTORS.map(metaToInfo);
+export async function listRegistryConnectors(category?: string): Promise<RegistryConnectorInfo[]> {
+  const lib = await getConnectorsLib();
+  const connectors = category ? lib.getConnectorsByCategory(category) : lib.CONNECTORS;
+  return connectors.map((m) => ({
+    name: m.name, displayName: m.displayName,
+    description: m.description, category: m.category, tags: m.tags,
+  }));
 }
 
-/**
- * Get details for a specific connector from the registry.
- */
-export function getConnectorFromRegistry(name: string): RegistryConnectorInfo | null {
-  const connector = getRegistryConnector(name);
-  if (!connector) return null;
-  return metaToInfo(connector);
+export function getConnectorRegistryCount(): number {
+  return _connectorsLib ? _connectorsLib.CONNECTORS.length : 62;
 }
 
-/**
- * Install a connector from the registry.
- * After installation the ConnectorBridge will auto-discover it from PATH.
- * @param name - Connector name (e.g. 'stripe', 'figma', 'gmail')
- * @param scope - 'project' (.connectors/) or 'global' (~/.connectors/)
- * @param cwd - Working directory for project scope
- */
 export async function installConnectorFromRegistry(
   name: string,
   scope: 'project' | 'global' = 'global',
   cwd?: string,
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
-    const result = await installConnector(name, {
+    const lib = await getConnectorsLib();
+    const result = await lib.installConnector(name, {
       global: scope === 'global',
       projectDir: scope === 'project' ? cwd : undefined,
     });
-    if (!result.success) {
-      return { success: false, error: result.error ?? 'Installation failed' };
-    }
+    if (!result.success) return { success: false, error: result.error ?? 'Installation failed' };
     return { success: true, path: result.path };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-/**
- * Get installed connectors from the registry.
- */
-export function getInstalledRegistryConnectors(
-  scope: 'project' | 'global' = 'global',
-  cwd?: string,
-): string[] {
+export async function getInstalledRegistryConnectors(scope: 'project' | 'global' = 'global', cwd?: string): Promise<string[]> {
   try {
-    return getInstalledConnectors({
+    const lib = await getConnectorsLib();
+    return lib.getInstalledConnectors({
       global: scope === 'global',
       projectDir: scope === 'project' ? cwd : undefined,
     });
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-/**
- * Remove an installed connector from the registry.
- */
-export async function removeInstalledConnector(
-  name: string,
-  scope: 'project' | 'global' = 'global',
-  cwd?: string,
-): Promise<{ success: boolean; error?: string }> {
+export async function removeInstalledConnector(name: string, scope: 'project' | 'global' = 'global', cwd?: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await removeConnector(name, {
+    const lib = await getConnectorsLib();
+    await lib.removeConnector(name, {
       global: scope === 'global',
       projectDir: scope === 'project' ? cwd : undefined,
     });
@@ -120,21 +87,4 @@ export async function removeInstalledConnector(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
-}
-
-/**
- * Get total count of connectors in registry.
- */
-export function getConnectorRegistryCount(): number {
-  return CONNECTORS.length;
-}
-
-function metaToInfo(meta: ConnectorMeta): RegistryConnectorInfo {
-  return {
-    name: meta.name,
-    displayName: meta.displayName,
-    description: meta.description,
-    category: meta.category,
-    tags: meta.tags,
-  };
 }

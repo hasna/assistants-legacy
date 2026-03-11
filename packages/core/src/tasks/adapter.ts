@@ -50,7 +50,8 @@ const projectIdCache = new Map<string, string>();
 async function getProjectId(cwd: string): Promise<string> {
   if (projectIdCache.has(cwd)) return projectIdCache.get(cwd)!;
   const db = getDatabase();
-  const project = await ensureProject({ name: cwd, path: cwd }, db);
+  const name = cwd.split('/').filter(Boolean).pop() || 'default';
+  const project = ensureProject(name, cwd, db);
   projectIdCache.set(cwd, project.id);
   return project.id;
 }
@@ -198,7 +199,7 @@ export async function startTask(cwd: string, id: string): Promise<Task | null> {
   const db = getDatabase();
   const existing = sdkGetTask(id, db);
   if (!existing) return null;
-  const updated = sdkStartTask(id, { agent_id: undefined }, db);
+  const updated = sdkStartTask(id, '', db);
   return fromSdkTask(updated);
 }
 
@@ -206,7 +207,7 @@ export async function completeTask(cwd: string, id: string, result?: string): Pr
   const db = getDatabase();
   const existing = sdkGetTask(id, db);
   if (!existing) return null;
-  const updated = sdkCompleteTask(id, db);
+  const updated = sdkCompleteTask(id, undefined, db);
   return fromSdkTask(updated);
 }
 

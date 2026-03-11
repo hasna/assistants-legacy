@@ -8,13 +8,7 @@ import { ConnectorError, ErrorCodes } from '../errors';
 import { getRuntime } from '../runtime';
 import { buildCommandArgs, splitCommandLine } from '../utils/command-line';
 import { ConnectorAutoRefreshManager } from '../connectors/auto-refresh';
-import {
-  searchConnectorRegistry,
-  listRegistryConnectors,
-  listConnectorCategories,
-  installConnectorFromRegistry,
-  getConnectorRegistryCount,
-} from '../connectors/registry-adapter';
+// Registry adapter now in tools/connectors-registry.ts (loaded dynamically)
 
 /**
  * Normalize connectors config to the object format
@@ -1496,111 +1490,5 @@ export function registerConnectorsListTool(
   registry.register(connectorsListTool, executor);
 }
 
-// ─── Connectors Registry Tools ───────────────────────────────────────────────
-
-export function createConnectorsRegistrySearchTool(): { tool: Tool; executor: ToolExecutor } {
-  const tool: Tool = {
-    name: 'connectors_registry_search',
-    description: `Search the @hasna/connectors registry of ${getConnectorRegistryCount()} pre-built API connectors. Returns matching connectors with name, description, category, and tags.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Search query (e.g. "stripe", "email", "github")' },
-      },
-      required: ['query'],
-    },
-  };
-
-  const executor: ToolExecutor = async (input) => {
-    const query = String(input.query || '').trim();
-    if (!query) return 'Provide a search query to find connectors.';
-    const results = searchConnectorRegistry(query);
-    if (results.length === 0) return `No connectors found matching "${query}". Try broader terms.`;
-    const lines = results.slice(0, 15).map((c) =>
-      `• ${c.name} (${c.category}): ${c.description}`
-    );
-    return `Found ${results.length} connector(s) matching "${query}":\n\n${lines.join('\n')}`;
-  };
-
-  return { tool, executor };
-}
-
-export function createConnectorsRegistryListTool(): { tool: Tool; executor: ToolExecutor } {
-  const tool: Tool = {
-    name: 'connectors_registry_list',
-    description: `List available connectors from the @hasna/connectors registry. Can filter by category.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        category: { type: 'string', description: 'Filter by category (optional). Use "categories" to list all categories.' },
-      },
-    },
-  };
-
-  const executor: ToolExecutor = async (input) => {
-    const category = String(input.category || '').trim();
-
-    if (category === 'categories' || category === 'list') {
-      const cats = listConnectorCategories();
-      return `Available connector categories:\n\n${cats.map((c) => `• ${c}`).join('\n')}`;
-    }
-
-    const connectors = listRegistryConnectors(category || undefined);
-    if (connectors.length === 0) {
-      if (category) return `No connectors found in category "${category}".`;
-      return 'Registry is empty.';
-    }
-
-    const grouped = new Map<string, string[]>();
-    for (const c of connectors) {
-      if (!grouped.has(c.category)) grouped.set(c.category, []);
-      grouped.get(c.category)!.push(`  - ${c.name}: ${c.description}`);
-    }
-
-    const sections = Array.from(grouped.entries()).map(
-      ([cat, items]) => `${cat}:\n${items.join('\n')}`
-    );
-
-    return `${connectors.length} connectors available${category ? ` in "${category}"` : ''}:\n\n${sections.join('\n\n')}`;
-  };
-
-  return { tool, executor };
-}
-
-export function createConnectorsRegistryInstallTool(cwd: string): { tool: Tool; executor: ToolExecutor } {
-  const tool: Tool = {
-    name: 'connectors_registry_install',
-    description: `Install a connector from the @hasna/connectors registry. After installation, the connector will be auto-discovered by the connector bridge.`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'Connector name to install (e.g. "stripe", "figma", "gmail")' },
-        scope: { type: 'string', enum: ['global', 'project'], description: 'Install scope: "global" (~/.connectors/) or "project" (.connectors/). Default: global.' },
-      },
-      required: ['name'],
-    },
-  };
-
-  const executor: ToolExecutor = async (input) => {
-    const name = String(input.name || '').trim();
-    if (!name) throw new ConnectorError('Connector name is required.', { code: ErrorCodes.TOOL_EXECUTION_FAILED, recoverable: true });
-
-    const scope = (String(input.scope || 'global').trim() as 'global' | 'project');
-    const result = await installConnectorFromRegistry(name, scope, cwd);
-
-    if (!result.success) return `Failed to install "${name}": ${result.error}`;
-    return `Installed connector "${name}" to ${scope} scope. The connector will be auto-discovered on next startup.`;
-  };
-
-  return { tool, executor };
-}
-
-export function registerConnectorsRegistryTools(registry: ToolRegistry, cwd: string): void {
-  const search = createConnectorsRegistrySearchTool();
-  registry.register(search.tool, search.executor);
-  const list = createConnectorsRegistryListTool();
-  registry.register(list.tool, list.executor);
-  const install = createConnectorsRegistryInstallTool(cwd);
-  registry.register(install.tool, install.executor);
-}
+// Registry tools moved to tools/connectors-registry.ts (loaded dynamically)
 

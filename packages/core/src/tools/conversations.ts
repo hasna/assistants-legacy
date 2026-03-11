@@ -5,19 +5,19 @@
 
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
-import {
-  sendMessage,
-  listSpaces,
-  createSpace,
-  joinSpace,
-  leaveSpace,
-} from '@hasna/conversations';
+
+// Lazily import @hasna/conversations to avoid module-level side effects
+// that can interfere with Anthropic SDK streaming
+async function getConversationsLib() {
+  const { sendMessage, listSpaces, createSpace, joinSpace, leaveSpace } = await import('@hasna/conversations');
+  return { sendMessage, listSpaces, createSpace, joinSpace, leaveSpace };
+}
 
 export function createMessagesSpacesListTool(): { tool: Tool; executor: ToolExecutor } {
   const tool: Tool = {
     name: 'messages_spaces_list',
     description: 'List available broadcast spaces for agent coordination. Spaces allow one-to-many messaging.',
-    inputSchema: {
+    parameters: {
       type: 'object',
       properties: {},
     },
@@ -25,6 +25,7 @@ export function createMessagesSpacesListTool(): { tool: Tool; executor: ToolExec
 
   const executor: ToolExecutor = async () => {
     try {
+      const { listSpaces } = await getConversationsLib();
       const spaces = listSpaces({});
       if (spaces.length === 0) return 'No spaces available. Create one with messages_spaces_join.';
       const lines = spaces.map((s) =>
@@ -43,7 +44,7 @@ export function createMessagesSpacesJoinTool(agentId: string): { tool: Tool; exe
   const tool: Tool = {
     name: 'messages_spaces_join',
     description: 'Join or create a broadcast space for agent coordination. Other agents can subscribe to the same space.',
-    inputSchema: {
+    parameters: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Space name (e.g. "deployments", "project-alpha")' },
@@ -58,6 +59,7 @@ export function createMessagesSpacesJoinTool(agentId: string): { tool: Tool; exe
     if (!name) return 'Space name is required.';
 
     try {
+      const { joinSpace, createSpace } = await getConversationsLib();
       // Try to join existing space, or create+join a new one
       try {
         joinSpace({ name, from: agentId });
@@ -80,7 +82,7 @@ export function createMessagesSpacesSendTool(agentId: string): { tool: Tool; exe
   const tool: Tool = {
     name: 'messages_spaces_send',
     description: 'Broadcast a message to all members of a space. Use for team-wide announcements.',
-    inputSchema: {
+    parameters: {
       type: 'object',
       properties: {
         space: { type: 'string', description: 'Space name to broadcast to' },
@@ -102,6 +104,7 @@ export function createMessagesSpacesSendTool(agentId: string): { tool: Tool; exe
       : 'normal';
 
     try {
+      const { sendMessage } = await getConversationsLib();
       sendMessage({
         from: agentId,
         to: space,
