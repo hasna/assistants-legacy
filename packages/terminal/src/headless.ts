@@ -117,9 +117,9 @@ export async function runHeadless(options: HeadlessOptions): Promise<HeadlessRes
     }
 
     if (chunk.type === 'tool_result' && chunk.toolResult?.isError) {
-      hadError = true;
-      errorMessage = chunk.toolResult.content || 'Tool error';
-      process.stderr.write(`Error: ${errorMessage}\n`);
+      // Tool errors are normal — the AI handles them and continues.
+      // Don't mark the overall run as failed; only log for visibility.
+      process.stderr.write(`Tool error: ${chunk.toolResult.content || 'Tool error'}\n`);
     }
 
     // Handle errors
