@@ -1194,6 +1194,12 @@ export function App({ cwd, version }: AppProps) {
       },
     ]);
 
+    // Clear activity log immediately to prevent duplication — the finalized
+    // message now contains all content, so the streaming entries must not
+    // be rendered alongside it.
+    setActivityLog([]);
+    activityLogRef.current = [];
+
     return true;
   }, [buildFullResponse]); // Note: processingStartTime accessed via ref to avoid dependency chain issues
 

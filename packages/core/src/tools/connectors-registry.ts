@@ -9,13 +9,12 @@ import {
   listRegistryConnectors,
   listConnectorCategories,
   installConnectorFromRegistry,
-  getConnectorRegistryCount,
 } from '../connectors/registry-adapter';
 
 export function createConnectorsRegistrySearchTool(): { tool: Tool; executor: ToolExecutor } {
   const tool: Tool = {
     name: 'connectors_registry_search',
-    description: `Search the @hasna/connectors registry of ${getConnectorRegistryCount()} pre-built API connectors.`,
+    description: `Search the @hasna/connectors registry of pre-built API connectors.`,
     parameters: {
       type: 'object',
       properties: { query: { type: 'string', description: 'Search query (e.g. "stripe", "gmail")' } },

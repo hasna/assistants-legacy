@@ -963,6 +963,25 @@ export class ConnectorBridge {
   }
 
   /**
+   * Get a formatted description of all installed connectors for system prompt injection.
+   * Returns empty string if no connectors are installed.
+   */
+  getConnectorDescriptions(): string {
+    const connectors = this.getConnectors();
+    if (connectors.length === 0) return '';
+
+    const lines = ['Installed connectors (use connector_execute to run commands):'];
+    for (const c of connectors) {
+      const cmds = c.commands
+        .filter((cmd) => cmd.name !== 'help')
+        .map((cmd) => cmd.name);
+      const cmdList = cmds.length > 0 ? ` [${cmds.join(', ')}]` : '';
+      lines.push(`- ${c.name}: ${c.description}${cmdList}`);
+    }
+    return lines.join('\n');
+  }
+
+  /**
    * Clear all caches (memory and disk) to force re-discovery
    */
   static clearCache(): void {

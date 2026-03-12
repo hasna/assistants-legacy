@@ -10,13 +10,12 @@ import {
   listRegistrySkills,
   listSkillCategories,
   installSkillFromRegistry,
-  getSkillRegistryCount,
 } from '../skills/registry-adapter';
 
 export function createSkillsRegistrySearchTool(): { tool: Tool; executor: ToolExecutor } {
   const tool: Tool = {
     name: 'skills_registry_search',
-    description: `Search the @hasna/skills registry of ${getSkillRegistryCount()} pre-built skills.`,
+    description: `Search the @hasna/skills registry of pre-built skills.`,
     parameters: {
       type: 'object',
       properties: { query: { type: 'string', description: 'Search query' } },

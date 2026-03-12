@@ -46,8 +46,7 @@ export async function listRegistrySkills(category?: string): Promise<RegistrySki
 }
 
 export function getSkillRegistryCount(): number {
-  // Return cached count if available, otherwise 202 (known count)
-  return _skillsLib ? _skillsLib.SKILLS.length : 202;
+  return _skillsLib ? _skillsLib.SKILLS.length : 0;
 }
 
 export async function installSkillFromRegistry(

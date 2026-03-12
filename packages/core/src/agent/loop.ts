@@ -3532,6 +3532,11 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       parts.push(`## Skills\n${skillDescriptions}`);
     }
 
+    const connectorDescriptions = this.connectorBridge.getConnectorDescriptions();
+    if (connectorDescriptions) {
+      parts.push(`## Connectors\n${connectorDescriptions}`);
+    }
+
     // Add assistant-specific system prompt addition
     const assistant = this.assistantManager?.getActive();
     if (assistant?.settings?.systemPromptAddition) {

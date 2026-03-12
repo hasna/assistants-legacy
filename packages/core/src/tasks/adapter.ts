@@ -23,7 +23,8 @@ import {
   type UpdateTaskInput,
 } from '@hasna/todos';
 
-import type { Task, TaskStatus, TaskPriority, TaskCreateOptions, TaskRecurrence } from './types';
+import type { Task, TaskStatus, TaskPriority, TaskCreateOptions, TaskRecurrence, TaskStoreData } from './types';
+import { PRIORITY_ORDER } from './types';
 import { generateId } from '@hasna/assistants-shared';
 
 // ─── Priority / Status Mapping ────────────────────────────────────────────────
@@ -65,7 +66,7 @@ function fromSdkTask(t: SdkTask): Task {
     status: fromSdkStatus(t.status as SdkStatus),
     priority: fromSdkPriority((t.priority as SdkPriority) || 'medium'),
     createdAt: new Date(t.created_at).getTime(),
-    startedAt: t.started_at ? new Date(t.started_at).getTime() : undefined,
+    startedAt: t.status === 'in_progress' ? new Date(t.updated_at).getTime() : undefined,
     completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
     result: t.metadata ? (t.metadata as Record<string, unknown>).result as string | undefined : undefined,
     error: t.metadata ? (t.metadata as Record<string, unknown>).error as string | undefined : undefined,
@@ -103,20 +104,25 @@ export async function getTask(cwd: string, id: string): Promise<Task | null> {
 
 export async function addTask(
   cwd: string,
-  options: TaskCreateOptions,
-  priority?: TaskPriority,
+  options: TaskCreateOptions | string,
+  priority: TaskPriority = 'normal',
   projectId?: string,
 ): Promise<Task> {
-  const resolvedProjectId = projectId || (await getProjectId(cwd));
+  const opts: TaskCreateOptions =
+    typeof options === 'string'
+      ? { description: options, priority, projectId }
+      : options;
+
+  const resolvedProjectId = opts.projectId || projectId || (await getProjectId(cwd));
   const db = getDatabase();
 
   const input: CreateTaskInput = {
-    title: options.description,
-    description: options.description,
+    title: opts.description,
+    description: opts.description,
     status: 'pending',
-    priority: toSdkPriority(priority || options.priority || 'normal'),
+    priority: toSdkPriority(opts.priority || priority || 'normal'),
     project_id: resolvedProjectId,
-    assigned_to: options.assignee ?? undefined,
+    assigned_to: opts.assignee ?? undefined,
   };
 
   const created = sdkCreateTask(input, db);
@@ -156,24 +162,30 @@ export async function deleteTask(cwd: string, id: string): Promise<boolean> {
   return true;
 }
 
-export async function clearPendingTasks(cwd: string): Promise<void> {
+export async function clearPendingTasks(cwd: string): Promise<number> {
   const tasks = await getTasks(cwd);
   const db = getDatabase();
+  let count = 0;
   for (const t of tasks) {
     if (t.status === 'pending') {
       sdkDeleteTask(t.id, db);
+      count++;
     }
   }
+  return count;
 }
 
-export async function clearCompletedTasks(cwd: string): Promise<void> {
+export async function clearCompletedTasks(cwd: string): Promise<number> {
   const tasks = await getTasks(cwd);
   const db = getDatabase();
+  let count = 0;
   for (const t of tasks) {
     if (t.status === 'completed' || t.status === 'failed') {
       sdkDeleteTask(t.id, db);
+      count++;
     }
   }
+  return count;
 }
 
 export async function getNextTask(cwd: string): Promise<Task | null> {
@@ -270,26 +282,45 @@ export async function createRecurringInstance(cwd: string, templateId: string): 
   return instance;
 }
 
-export async function cancelRecurringTask(cwd: string, id: string): Promise<boolean> {
-  if (recurringTasks.has(id)) {
+export async function cancelRecurringTask(cwd: string, id: string): Promise<Task | null> {
+  const task = recurringTasks.get(id);
+  if (task) {
     recurringTasks.delete(id);
-    return true;
+    return task;
   }
-  return false;
+  return null;
 }
 
 export async function resolveTaskId(
   cwd: string,
   idOrPrefix: string,
   filter?: (task: Task) => boolean,
-): Promise<Task | null> {
+): Promise<{ task: Task | null; matches: Task[] }> {
   const tasks = await getTasks(cwd);
-  const normalized = idOrPrefix.toLowerCase().trim();
-  const matches = tasks.filter((t) => {
-    const matchesId = t.id.toLowerCase().startsWith(normalized) || t.id.toLowerCase() === normalized;
-    return matchesId && (!filter || filter(t));
-  });
-  if (matches.length === 1) return matches[0];
-  if (matches.length > 1) return null; // ambiguous
-  return null;
+  const candidates = filter ? tasks.filter(filter) : tasks;
+  const exact = candidates.find((t) => t.id === idOrPrefix);
+  if (exact) return { task: exact, matches: [exact] };
+  const matches = candidates.filter((t) => t.id.toLowerCase().startsWith(idOrPrefix.toLowerCase()));
+  return { task: matches.length === 1 ? matches[0] : null, matches };
+}
+
+// ─── Store-level helpers (for compatibility with store.ts API) ───────────────
+
+export async function loadTaskStore(cwd: string): Promise<TaskStoreData> {
+  const tasks = await getTasks(cwd);
+  const paused = await isPaused(cwd);
+  const autoRun = await isAutoRun(cwd);
+  return { tasks, paused, autoRun };
+}
+
+export async function saveTaskStore(_cwd: string, _data: TaskStoreData): Promise<void> {
+  // No-op: individual operations write directly via the SDK
+}
+
+export async function isAutoRun(cwd: string): Promise<boolean> {
+  return autoRunState.get(cwd) ?? true;
+}
+
+export async function setAutoRun(cwd: string, autoRun: boolean): Promise<void> {
+  autoRunState.set(cwd, autoRun);
 }

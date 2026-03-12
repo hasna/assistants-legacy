@@ -45,7 +45,7 @@ export async function listRegistryConnectors(category?: string): Promise<Registr
 }
 
 export function getConnectorRegistryCount(): number {
-  return _connectorsLib ? _connectorsLib.CONNECTORS.length : 62;
+  return _connectorsLib ? _connectorsLib.CONNECTORS.length : 0;
 }
 
 export async function installConnectorFromRegistry(
