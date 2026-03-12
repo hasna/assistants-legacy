@@ -85,7 +85,6 @@ const COMMANDS = [
   { name: '/diff', description: 'show git diff of changes' },
   { name: '/undo', description: 'revert uncommitted changes' },
   // System
-  { name: '/rest', description: 'enter rest mode' },
   { name: '/logs', description: 'view security event logs' },
   { name: '/verification', description: 'scope verification status' },
   { name: '/feedback', description: 'submit feedback on GitHub' },

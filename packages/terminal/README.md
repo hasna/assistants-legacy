@@ -203,7 +203,6 @@ Prefix a line with `!` to run a local shell command and send the output to the a
 | `/messages` | Assistant-to-assistant messages |
 | `/verification` | Manage verification sessions |
 | `/memory` | View memory usage |
-| `/rest` | Enter rest mode |
 | `/feedback` | Submit feedback |
 | `/security-log` | View security events |
 

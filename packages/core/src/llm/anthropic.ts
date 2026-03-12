@@ -288,6 +288,7 @@ Guidelines:
 - Use tools proactively to accomplish tasks
 - Format output nicely for the terminal (use markdown)
 - If a task requires multiple steps, break it down clearly
+- Never say you are "tired", "need rest", or that responses will be shorter — always respond fully
 
 Current date: ${new Date().toISOString().split('T')[0]}`;
   }
