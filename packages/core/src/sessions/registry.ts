@@ -72,6 +72,7 @@ export class SessionRegistry {
   private chunkBuffers: Map<string, StreamChunk[]> = new Map();
   private chunkCallbacks: ((chunk: StreamChunk) => void)[] = [];
   private errorCallbacks: ((error: Error) => void)[] = [];
+  private labelChangeCallbacks: ((sessionId: string, label: string) => void)[] = [];
   private clientFactory: (cwd: string, options?: ConstructorParameters<typeof EmbeddedClient>[1]) => EmbeddedClient;
   private maxBufferedChunks = 2000;
   private store: SessionStore;
@@ -118,6 +119,10 @@ export class SessionRegistry {
           session.label = label;
           session.updatedAt = Date.now();
           this.persistSession(session);
+          // Notify UI of auto-generated label
+          for (const callback of this.labelChangeCallbacks) {
+            callback(sessionId, label);
+          }
         }
       },
     };
@@ -191,6 +196,10 @@ export class SessionRegistry {
     session.label = label;
     session.updatedAt = Date.now();
     this.persistSession(session);
+    // Notify UI of label change
+    for (const callback of this.labelChangeCallbacks) {
+      callback(sessionId, label);
+    }
   }
 
   /**
@@ -440,6 +449,13 @@ export class SessionRegistry {
    */
   onError(callback: (error: Error) => void): void {
     this.errorCallbacks.push(callback);
+  }
+
+  /**
+   * Register a callback for session label changes (rename, auto-name)
+   */
+  onLabelChange(callback: (sessionId: string, label: string) => void): void {
+    this.labelChangeCallbacks.push(callback);
   }
 
   /**

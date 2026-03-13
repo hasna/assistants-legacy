@@ -150,8 +150,9 @@ export function Status({
   }, [tokenUsage, modelId]);
 
   // Session indicator (only show if multiple sessions)
+  // sessionIndex is already 1-based from registry.getSessionIndex()
   const sessionInfo = sessionCount && sessionCount > 1 && sessionIndex !== undefined
-    ? `${sessionIndex + 1}/${sessionCount}`
+    ? `${sessionIndex}/${sessionCount}`
     : '';
 
   // Background processing indicator

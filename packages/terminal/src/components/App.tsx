@@ -445,6 +445,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showSessionSelector, setShowSessionSelector] = useState(false);
+  // Incremented to force re-render when session labels change (rename, auto-name)
+  const [sessionVersion, setSessionVersion] = useState(0);
 
   // Recovery state for crashed sessions
   const [recoverableSessions, setRecoverableSessions] = useState<RecoverableSession[]>([]);
@@ -2390,6 +2392,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         // Trigger queue flush check after error
         setQueueFlushTrigger((prev) => prev + 1);
       });
+      // Re-render when session labels change (rename, auto-name)
+      registry.onLabelChange(() => {
+        setSessionVersion((prev) => prev + 1);
+      });
     }
 
     // Load session data if recovering
@@ -2763,7 +2769,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     [activeQueue]
   );
 
-  // Get session info
+  // Get session info (sessionVersion forces re-read after label changes)
+  void sessionVersion;
   const sessions = registry.listSessions();
   const activeSession = registry.getActiveSession();
   const sessionIndex = activeSessionId ? registry.getSessionIndex(activeSessionId) : 0;

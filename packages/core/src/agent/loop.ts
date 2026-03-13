@@ -1284,12 +1284,15 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       if (!this.sessionAutoNamed && this.onSessionLabel && source === 'user') {
         this.sessionAutoNamed = true;
         const bgModel = this.config?.backgroundModel;
+        const sessionId = this.sessionId;
+        const labelCallback = this.onSessionLabel;
         generateSessionName(userMessage, { model: bgModel })
           .then((label) => {
-            this.onSessionLabel?.(this.sessionId, label);
+            labelCallback?.(sessionId, label);
           })
-          .catch(() => {
-            // Non-critical — silently ignore naming failures
+          .catch((err) => {
+            // Non-critical — log but don't block the conversation
+            // Non-critical — auto-naming is best-effort
           });
       }
 
