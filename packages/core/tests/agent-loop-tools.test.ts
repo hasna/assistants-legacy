@@ -150,8 +150,8 @@ describe('AssistantLoop tool execution', () => {
 
     const results = await (assistant as any).executeToolCalls([{ id: '1', name: 'slow-tool', input: {} }]);
 
-    // The result should not be emitted or included in results
-    expect(emittedResults.length).toBe(0);
+    // The result is emitted for visibility, but not included in returned results
+    expect(emittedResults.length).toBe(1);
     expect(results.length).toBe(0);
     // pendingToolCalls should be cleared
     expect((assistant as any).pendingToolCalls.size).toBe(0);

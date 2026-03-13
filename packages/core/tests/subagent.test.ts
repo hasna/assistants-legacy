@@ -36,23 +36,26 @@ describe('runHookAssistant', () => {
   });
 
   test('returns empty response on timeout', async () => {
-    class HangingLLM implements LLMClient {
+    class SlowLLM implements LLMClient {
       async *chat(): AsyncGenerator<any> {
-        await new Promise(() => {});
+        // Yield a delay that exceeds the timeout
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        yield { type: 'text', content: 'too late' };
+        yield { type: 'done' };
       }
       getModel(): string {
-        return 'hang';
+        return 'slow';
       }
     }
 
     const result = await runHookAssistant({
       hook: { prompt: 'Timeout' },
       input: { value: 1 },
-      timeout: 0,
+      timeout: 100,
       cwd: '/tmp',
-      llmClient: new HangingLLM(),
+      llmClient: new SlowLLM(),
     });
 
     expect(result).toBe('');
-  });
+  }, 15000);
 });

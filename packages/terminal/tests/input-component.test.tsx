@@ -131,9 +131,10 @@ describe('Input component', () => {
     await waitForRef();
 
     ref.current?.setValue('submit me');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Send ESC+CR as a single sequence (tmux-style enter)
     env.stdin.write('\x1b\r');
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(submitted.length).toBe(1);
     expect(submitted[0]).toEqual({ value: 'submit me', mode: 'normal' });

@@ -30,9 +30,9 @@ describe('Assistants naming unification', () => {
     }
   });
 
-  test('/agents command does NOT exist', () => {
+  test('/agents command exists for subagent management', () => {
     const cmd = loader.getCommand('agents');
-    expect(cmd).toBeUndefined();
+    expect(cmd).toBeDefined();
   });
 
   test('/assistants command exists', () => {
@@ -40,14 +40,13 @@ describe('Assistants naming unification', () => {
     expect(cmd).toBeDefined();
   });
 
-  test('panel type union does not include agents', () => {
-    // Verify that no builtin command emits showPanel: 'agents'
-    const commands = loader.getCommands();
-    for (const cmd of commands) {
-      // We can only check the command metadata, not handler results
-      // But the important thing is no command is named 'agents'
-      expect(cmd.name).not.toBe('agents');
-    }
+  test('agents command is separate from assistants command', () => {
+    // /agents and /assistants are both registered as distinct commands
+    const agents = loader.getCommand('agents');
+    const assistants = loader.getCommand('assistants');
+    expect(agents).toBeDefined();
+    expect(assistants).toBeDefined();
+    expect(agents!.name).not.toBe(assistants!.name);
   });
 
   describe('SharedWorkspaceManager', () => {

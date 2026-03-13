@@ -44,14 +44,14 @@ describe('Slash command QA', () => {
   // All builtin commands that should be registered
   const EXPECTED_COMMANDS = [
     'help', 'docs', 'clear', 'new', 'sessions', 'status', 'tokens', 'context',
-    'projects', 'plans', 'summarize', 'rest', 'voice',
+    'projects', 'plans', 'summarize', 'voice',
     'assistants', 'identity', 'whoami', 'compact', 'config', 'budgets',
     'registry', 'swarm', 'workspace', 'init', 'cost',
     'model', 'skill', 'skills', 'memory', 'hooks', 'feedback',
     'schedules',
     'connectors', 'logs', 'guardrails', 'verification',
     'inbox', 'wallet', 'secrets', 'jobs', 'messages', 'tasks',
-    'exit', 'diff', 'undo',
+    'exit', 'diff', 'undo', 'agents',
   ];
 
   test('all expected commands are registered', () => {
@@ -61,8 +61,8 @@ describe('Slash command QA', () => {
     }
   });
 
-  test('/agents command is NOT registered (merged into /assistants)', () => {
-    expect(loader.getCommand('agents')).toBeUndefined();
+  test('/agents command IS registered for subagent management', () => {
+    expect(loader.getCommand('agents')).toBeDefined();
   });
 
   // Self-handled commands that produce immediate results

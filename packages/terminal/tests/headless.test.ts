@@ -34,6 +34,11 @@ class MockCommandHistory {
 mock.module('@hasna/assistants-core', () => ({
   CommandHistory: MockCommandHistory,
   getCommandHistory: () => new MockCommandHistory(),
+  SessionStore: class SessionStore {
+    findByLabel(_label: string) {
+      return null;
+    }
+  },
   EmbeddedClient: class EmbeddedClient {
     private sessionId: string;
     private chunkHandlers: Array<(chunk: any) => void> = [];
@@ -174,9 +179,9 @@ describe('runHeadless', () => {
 
     expect(stdout).toContain('text_delta');
     expect(stdout).toContain('tool_result');
-    // Check return value indicates failure
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('boom');
+    // Tool errors don't mark the overall run as failed — the AI handles them
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
 
     process.stdout.write = originalWrite;
   });
@@ -187,7 +192,7 @@ describe('runHeadless', () => {
       cwd: '/tmp',
       outputFormat: 'text',
       resume: 'missing',
-    })).rejects.toThrow('Session missing not found');
+    })).rejects.toThrow('Session "missing" not found (tried ID and label lookup)');
   });
 
   describe('--continue with no sessions', () => {
@@ -347,10 +352,10 @@ describe('runHeadless', () => {
       });
 
       const parsed = JSON.parse(captured);
-      expect(parsed.error).toBe('Tool failed');
-      // Check return value indicates failure
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Tool failed');
+      // Tool errors don't mark the overall run as failed
+      expect(parsed.error).toBeUndefined();
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
 
       console.log = originalLog;
     });
@@ -776,13 +781,13 @@ describe('runHeadless', () => {
       process.stdout.write = originalStdoutWrite;
       process.stderr.write = originalStderrWrite;
 
-      // Error should be written to stderr
+      // Tool errors are written to stderr with "Tool error:" prefix
       const stderrOutput = stderrWrites.join('');
-      expect(stderrOutput).toContain('Error: Command failed');
+      expect(stderrOutput).toContain('Tool error: Command failed');
 
-      // Check return value indicates failure
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Command failed');
+      // Tool errors don't mark the overall run as failed
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
     });
 
     test('returns success=false on tool_result error', async () => {
@@ -805,8 +810,9 @@ describe('runHeadless', () => {
       process.stdout.write = originalWrite;
       process.stderr.write = originalStderrWrite;
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Error');
+      // Tool errors don't mark the overall run as failed
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
     });
 
     test('writes error chunks to stderr in text mode', async () => {

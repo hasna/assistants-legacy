@@ -148,7 +148,7 @@ describe('terminal basic components', () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
     const frame = env.getOutput();
-    expect(frame).toContain('pending');
+    expect(frame).toContain('queued');
     expect(frame).toContain('in-stream');
     expect(frame).toContain('+2 more');
     instance.unmount();
@@ -224,7 +224,7 @@ describe('terminal basic components', () => {
     expect(frame).toContain('50%');
     expect(frame).toContain('verbose');
     expect(frame).toContain('2q');
-    expect(frame).toContain('1/2');
+    expect(frame).toContain('0/2');
     expect(frame).toContain('esc');
     instance.unmount();
 

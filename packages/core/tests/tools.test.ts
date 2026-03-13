@@ -47,7 +47,7 @@ describe('BashTool', () => {
   });
 
   test('should reject commands not in allowlist', async () => {
-    await expect(BashTool.executor({ command: 'uname -a' })).rejects.toThrow('not in allowed list');
+    await expect(BashTool.executor({ command: 'uname -a' })).rejects.toThrow('not allowed');
   });
 
   test('should block shell chaining operators', async () => {
@@ -119,7 +119,7 @@ describe('FilesystemTools', () => {
 
   test('should reject empty filenames', async () => {
     await expect(FilesystemTools.writeExecutor({ filename: '   ', content: 'hello', cwd: tempDir }))
-      .rejects.toThrow('Filename is required');
+      .rejects.toThrow('Filename or path is required');
   });
 
   test('should sanitize filenames to stay within scripts folder', async () => {
@@ -570,8 +570,7 @@ describe('ImageDisplayTool', () => {
   });
 
   test('should report missing file', async () => {
-    const result = await ImageDisplayTool.executor({ path: 'missing.png' });
-    expect(result).toContain('Image file not found');
+    await expect(ImageDisplayTool.executor({ path: 'missing.png' })).rejects.toThrow('Image file not found');
   });
 
   test('should return structured JSON for local image', async () => {
@@ -627,8 +626,8 @@ describe('ImageDisplayTool', () => {
       });
 
     try {
-      const result = await ImageDisplayTool.executor({ path: 'https://example.com/not-image' });
-      expect(result).toContain('does not point to an image');
+      await expect(ImageDisplayTool.executor({ path: 'https://example.com/not-image' }))
+        .rejects.toThrow('does not point to an image');
     } finally {
       globalThis.fetch = originalFetch;
     }
