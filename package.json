@@ -1,6 +1,6 @@
 {
   "name": "@hasna/assistants",
-  "version": "1.1.91",
+  "version": "1.1.92",
   "description": "Personal AI assistant that runs in your terminal — powered by Claude",
   "type": "module",
   "bin": {
