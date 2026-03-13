@@ -3789,6 +3789,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       getTools: () => this.toolRegistry.getTools(),
       getParentAllowedTools: () => this.getEffectiveAllowedTools(),
       getLLMClient: () => this.llmClient,
+      getLLMConfig: () => this.config?.llm ?? null,
       fireHook: async (input) => {
         // Fire SubassistantStart/SubassistantStop hooks
         const hooks = this.hookLoader.getHooks(input.hook_event_name);

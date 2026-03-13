@@ -11,6 +11,7 @@
 import { generateId } from '@hasna/assistants-shared';
 import type { StreamChunk, Tool, HookInput, HookOutput } from '@hasna/assistants-shared';
 import type { LLMClient } from '../llm/client';
+import { createLLMClient } from '../llm/client';
 import type { SessionStore } from '../sessions/store';
 import { SubagentAuditLog, type SubagentLogEntry, type SubagentToolCallEntry } from '../agents/audit-log';
 
@@ -390,30 +391,55 @@ export class SubassistantManager {
       // workUntilDone: subagent keeps going until it explicitly signals completion
       const workUntilDone = config.workUntilDone ?? false;
 
-      // Create and run subassistant
-      // Note: We don't pass the parent LLM client to avoid concurrency issues
-      // when multiple subassistants run in parallel. Each subassistant creates its own client.
-      const runner = await this.context.createSubassistantLoop({
-        task: config.task,
-        tools,
-        context: config.context,
-        maxTurns,
-        minTurns,
-        workUntilDone,
-        cwd: config.cwd,
-        sessionId: `subassistant-${subassistantId}`,
-        depth: config.depth + 1,
-        // llmClient intentionally not passed - subassistant creates its own
-      });
-
-      // Track the runner so we can stop it if needed
-      this.activeRunners.set(subassistantId, runner);
-
-      // Run with timeout (use config-specific timeout if provided, otherwise use default)
+      // Start the timeout BEFORE createSubassistantLoop so that initialization
+      // time (LLM client creation, config loading, tool registration, etc.)
+      // is included in the timeout budget. Previously the timeout only covered
+      // runner.run(), so a slow initialize() could cause the subagent to appear
+      // to "never start" — it would time out with 0 turns, 0 tool calls.
       const timeoutMs = config.timeoutMs ?? this.config.defaultTimeoutMs;
+      let runner: SubassistantRunner | null = null;
+      const timeoutPromise = this.createTimeout(timeoutMs, () => runner, subassistantId);
+
+      // Create a dedicated LLM client for this subassistant from the parent's
+      // config. This avoids each subassistant running the full initialize() →
+      // loadConfig() → createLLMClient() pipeline, which is a major source of
+      // latency for async subagents. Each subassistant still gets its own client
+      // instance to avoid concurrency issues when multiple subassistants stream
+      // in parallel.
+      let subagentLLMClient: LLMClient | undefined;
+      const llmConfig = this.context.getLLMConfig?.();
+      if (llmConfig) {
+        try {
+          subagentLLMClient = await createLLMClient(llmConfig);
+        } catch {
+          // Fall back to letting the subassistant create its own client
+          // inside initialize() — this is slower but still works.
+        }
+      }
+
+      const runPromise = (async (): Promise<SubassistantResult> => {
+        const r = await this.context.createSubassistantLoop({
+          task: config.task,
+          tools,
+          context: config.context,
+          maxTurns,
+          minTurns,
+          workUntilDone,
+          cwd: config.cwd,
+          sessionId: `subassistant-${subassistantId}`,
+          depth: config.depth + 1,
+          llmClient: subagentLLMClient,
+        });
+        runner = r;
+        // Track the runner so we can stop it if needed
+        this.activeRunners.set(subassistantId, r);
+        return r.run();
+      })();
+
+      // Race initialization + execution against the timeout
       const result = await Promise.race([
-        runner.run(),
-        this.createTimeout(timeoutMs, runner, subassistantId),
+        runPromise,
+        timeoutPromise,
       ]);
 
       // Update info - detect timeout from error message
@@ -521,10 +547,19 @@ export class SubassistantManager {
 
     this.asyncJobs.set(jobId, job);
 
-    // Run in background
-    this.runAsyncJob(job).catch(() => {
-      // Error is captured in job status
-    });
+    // Schedule the async job in a new macrotask via setTimeout(fn, 0).
+    // This prevents microtask starvation: if we just called
+    // this.runAsyncJob(job) directly, the async function would start
+    // executing synchronously (up to its first await) within the current
+    // microtask queue. The parent's continuation (tool result handling,
+    // next LLM call, etc.) also runs as microtasks and can monopolize
+    // the queue, starving the async job's continuations. By deferring to
+    // a macrotask, the event loop guarantees the job gets its own turn.
+    setTimeout(() => {
+      this.runAsyncJob(job).catch(() => {
+        // Error is captured in job status inside runAsyncJob
+      });
+    }, 0);
 
     return jobId;
   }
@@ -771,13 +806,24 @@ export class SubassistantManager {
     }
   }
 
-  private createTimeout(ms: number, runner: SubassistantRunner, subassistantId: string): Promise<SubassistantResult> {
+  private createTimeout(
+    ms: number,
+    runnerOrGetter: SubassistantRunner | (() => SubassistantRunner | null),
+    subassistantId: string
+  ): Promise<SubassistantResult> {
     return new Promise((resolve) => {
       const timerId = setTimeout(() => {
         // Clean up the timer reference and runner
         this.activeTimeouts.delete(subassistantId);
         this.activeRunners.delete(subassistantId);
-        runner.stop();
+        // Resolve the runner — may be a direct ref or a getter (for cases
+        // where the runner isn't created yet when the timeout starts)
+        const runner = typeof runnerOrGetter === 'function'
+          ? runnerOrGetter()
+          : runnerOrGetter;
+        if (runner) {
+          runner.stop();
+        }
         resolve({
           success: false,
           error: `Subassistant timed out after ${Math.round(ms / 1000)} seconds`,
