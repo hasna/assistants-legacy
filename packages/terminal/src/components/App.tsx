@@ -5783,7 +5783,7 @@ export function App({ cwd, version }: AppProps) {
       )}
 
       {/* Messages area — flexGrow fills available space between header and footer */}
-      <Box flexDirection="column" flexGrow={1} overflowY="hidden">
+      <Box flexDirection="column" flexGrow={1}>
         {/* Historical messages - rendered with Static for native terminal scrollback */}
         <Static key={staticResetKey} items={staticMessages}>
           {(message) => (
