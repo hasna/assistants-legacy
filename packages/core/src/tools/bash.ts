@@ -1,4 +1,4 @@
-import type { Tool } from '@hasna/assistants-shared';
+import type { Tool, BashPermissionLevel } from '@hasna/assistants-shared';
 import type { ToolExecutor } from './registry';
 import { ErrorCodes, ToolExecutionError, toolError, toolPermissionDenied } from '../errors';
 import { getSecurityLogger } from '../security/logger';
@@ -89,7 +89,7 @@ function normalizeNewlinesOutsideQuotes(input: string): string {
 export class BashTool {
   static readonly tool: Tool = {
     name: 'bash',
-    description: 'Execute a shell command. RESTRICTED to read-only operations by default (ls, cat, grep, find, git status/log/diff, pwd, which, echo). Set validation.perTool.bash.allowAll=true to allow broader commands.',
+    description: 'Execute a shell command. Permission level is controlled by permissions.bash in config: "none" (disabled), "readonly" (default — ls, cat, grep, find, git status/log/diff, pwd, which, echo), or "readwrite" (broader commands, destructive ops still blocked).',
     parameters: {
       type: 'object',
       properties: {
@@ -185,6 +185,62 @@ export class BashTool {
   private static readonly SAFE_GLOBAL_BUN_PACKAGES = [
     /^connect-[a-z0-9._-]+$/i,
     /^@hasna\/[a-z0-9._-]+$/i,
+  ];
+
+  // Additional commands allowed in readwrite mode (on top of ALLOWED_COMMANDS)
+  private static readonly READWRITE_ALLOWED_COMMANDS = [
+    // File creation/modification
+    'mkdir', 'touch', 'cp', 'mv', 'ln',
+    // File writing
+    'tee',
+    // Editors (non-interactive)
+    'sed', 'awk',
+    // Archive
+    'tar', 'zip', 'unzip', 'gzip', 'gunzip', 'bzip2', 'bunzip2',
+    // Git write operations
+    'git add', 'git commit', 'git push', 'git pull', 'git checkout', 'git switch',
+    'git merge', 'git rebase', 'git stash', 'git cherry-pick', 'git revert',
+    'git reset', 'git restore', 'git init', 'git clone', 'git fetch',
+    'git branch',
+    // Package management
+    'npm', 'pnpm', 'yarn', 'bun', 'pip', 'pip3',
+    // Build tools
+    'make', 'cmake',
+    // Process management
+    'kill', 'pkill',
+    // Permission (non-destructive)
+    'chmod', 'chown',
+    // Docker
+    'docker',
+    // Node/Bun execution
+    'node', 'bun', 'npx', 'bunx', 'tsx', 'ts-node',
+    // Python
+    'python', 'python3',
+    // Misc write
+    'rm', 'rmdir',
+    // Redirect/pipe support is handled by not blocking ; and > in readwrite
+  ];
+
+  // Patterns blocked even in readwrite mode (catastrophically destructive)
+  private static readonly READWRITE_BLOCKED_PATTERNS = [
+    // Recursive force delete of root or home
+    /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(-[a-zA-Z]*r[a-zA-Z]*\s+)?(\/|~\/?\s|\.\.\/)/,
+    /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(-[a-zA-Z]*f[a-zA-Z]*\s+)?(\/|~\/?\s|\.\.\/)/,
+    /\brm\s+-rf\s+\/(?!\S)/, /\brm\s+-rf\s+~\/?(?:\s|$)/,
+    // Disk/filesystem destruction
+    /\bmkfs\b/, /\bdd\b/, /\bfdisk\b/, /\bparted\b/,
+    // Privilege escalation
+    /\bsudo\b/, /\bsu\b/, /\bdoas\b/,
+    // chmod 777 (overly permissive)
+    /\bchmod\s+777\b/,
+    // Dangerous curl piped to shell
+    /curl.*\|\s*(bash|sh)/, /wget.*\|\s*(bash|sh)/,
+    // Network listeners
+    /\bnc\s+-l/, /\bnetcat\s+-l/,
+    // Interactive editors (would hang)
+    /\bvim?\b/, /\bnano\b/, /\bemacs\b/,
+    // Fork bombs and similar
+    /:\(\)\s*\{/, /\bfork\s*bomb/i,
   ];
 
   private static getBunGlobalInstallInfo(command: string): {
@@ -477,16 +533,28 @@ export class BashTool {
     let allowEnv = true;
     let allowAll = false;
     let allowPackageInstall = false;
+    let bashPermission: BashPermissionLevel = 'readonly';
     try {
       const config = await loadConfig(cwd);
       const bashConfig = config.validation?.perTool?.bash;
       allowEnv = bashConfig?.allowEnv ?? true;
       allowAll = bashConfig?.allowAll ?? false;
       allowPackageInstall = bashConfig?.allowPackageInstall ?? false;
+      bashPermission = config.permissions?.bash ?? 'readonly';
     } catch {
       allowEnv = true;
       allowAll = false;
       allowPackageInstall = false;
+      bashPermission = 'readonly';
+    }
+
+    // If bash is disabled via permissions, block immediately
+    if (bashPermission === 'none') {
+      throw toolPermissionDenied(
+        'bash',
+        'Bash is disabled. Change permissions.bash in config to "readonly" or "readwrite" to enable.',
+        input as Record<string, unknown>,
+      );
     }
 
     const baseCommand = command.replace(/\s*2>&1\s*/g, ' ').trim();
@@ -516,8 +584,13 @@ export class BashTool {
     }
 
     if (!allowAll && !allowGlobalInstall) {
+      // Choose blocked patterns based on permission level
+      const blockedPatterns = bashPermission === 'readwrite'
+        ? this.READWRITE_BLOCKED_PATTERNS
+        : this.BLOCKED_PATTERNS;
+
       // Check against blocked patterns
-      for (const pattern of this.BLOCKED_PATTERNS) {
+      for (const pattern of blockedPatterns) {
         if (pattern.test(commandSansQuotes)) {
           getSecurityLogger().log({
             eventType: 'blocked_command',
@@ -529,9 +602,10 @@ export class BashTool {
             },
             sessionId: (input.sessionId as string) || 'unknown',
           });
+          const modeLabel = bashPermission === 'readwrite' ? 'readwrite' : 'readonly';
           throw toolPermissionDenied(
             'bash',
-            'This command is not allowed. Only read-only commands are permitted (ls, cat, grep, find, git status/log/diff, etc.)',
+            `Blocked: command is not allowed in ${modeLabel} mode. ${bashPermission === 'readonly' ? 'Only read-only commands are permitted (ls, cat, grep, find, git status/log/diff, etc.).' : 'Destructive operations (rm -rf /, mkfs, dd, sudo, etc.) are blocked even in readwrite mode.'}`,
             input as Record<string, unknown>,
           );
         }
@@ -555,10 +629,16 @@ export class BashTool {
     }
 
     if (!allowAll && !allowGlobalInstall) {
-      // Check if command (or all parts of a chained command) are in the allowlist
-      const allowlist = allowEnv
+      // Build allowlist based on permission level
+      let allowlist = allowEnv
         ? this.ALLOWED_COMMANDS
         : this.ALLOWED_COMMANDS.filter((allowed) => allowed !== 'env' && allowed !== 'printenv');
+
+      // In readwrite mode, expand the allowlist with write commands
+      if (bashPermission === 'readwrite') {
+        allowlist = [...allowlist, ...this.READWRITE_ALLOWED_COMMANDS];
+      }
+
       const isAllowed = this.areAllCommandPartsAllowed(commandForChecks, allowlist);
 
       if (!isAllowed) {
@@ -572,9 +652,10 @@ export class BashTool {
           },
           sessionId: (input.sessionId as string) || 'unknown',
         });
+        const modeLabel = bashPermission === 'readwrite' ? 'readwrite' : 'readonly';
         throw toolPermissionDenied(
           'bash',
-          'Command not in allowed list. Permitted commands: cat, head, tail, ls, find, grep, wc, file, stat, pwd, which, echo, curl, git status/log/diff/branch/show, connect-*',
+          `Blocked: command is not allowed in ${modeLabel} mode. ${bashPermission === 'readonly' ? 'Permitted commands: cat, head, tail, ls, find, grep, wc, file, stat, pwd, which, echo, curl, git status/log/diff/branch/show, connect-*' : 'The command is not in the readwrite allowlist. Destructive system operations remain blocked.'}`,
           input as Record<string, unknown>,
         );
       }

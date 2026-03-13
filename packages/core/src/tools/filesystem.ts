@@ -1,4 +1,4 @@
-import type { Tool } from '@hasna/assistants-shared';
+import type { Tool, WorkspaceConfig } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { join, resolve, dirname, sep } from 'path';
 import { homedir } from 'os';
@@ -13,6 +13,24 @@ import { isPathSafe } from '../security/path-validator';
 
 // Session ID for temp folder (set during registration)
 let currentSessionId: string = 'default';
+
+// Workspace configuration (set during registration)
+let currentWorkspaceConfig: WorkspaceConfig = { mode: 'sandbox', customPath: null };
+
+/**
+ * Directories that must never be written to regardless of workspace mode.
+ * Prevents accidental corruption of version control, dependencies, and system files.
+ */
+const DANGEROUS_DIRS = [
+  'node_modules',
+  '.git',
+  '.svn',
+  '.hg',
+  '.DS_Store',
+  '__pycache__',
+  '.env',
+  '.venv',
+];
 
 /**
  * Get the scripts folder path for the current session
@@ -30,6 +48,29 @@ function isInScriptsFolder(path: string, cwd: string, sessionId?: string): boole
   const resolved = resolve(path);
   if (resolved === scriptsFolder) return true;
   return resolved.startsWith(`${scriptsFolder}${sep}`);
+}
+
+/**
+ * Check if a resolved path targets a dangerous directory (node_modules, .git, etc.)
+ */
+function isDangerousPath(resolvedPath: string): string | null {
+  const parts = resolvedPath.split(sep);
+  for (const dir of DANGEROUS_DIRS) {
+    if (parts.includes(dir)) {
+      return `Writing to '${dir}' is not allowed for safety reasons`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if a path is within a given root directory
+ */
+function isWithinDir(filePath: string, rootDir: string): boolean {
+  const resolvedFile = resolve(filePath);
+  const resolvedRoot = resolve(rootDir);
+  if (resolvedFile === resolvedRoot) return true;
+  return resolvedFile.startsWith(`${resolvedRoot}${sep}`);
 }
 
 /**
@@ -51,9 +92,12 @@ export class FilesystemTools {
   /**
    * Register all filesystem tools with session context
    */
-  static registerAll(registry: ToolRegistry, sessionId?: string): void {
+  static registerAll(registry: ToolRegistry, sessionId?: string, workspaceConfig?: WorkspaceConfig): void {
     if (sessionId) {
       currentSessionId = sessionId;
+    }
+    if (workspaceConfig) {
+      currentWorkspaceConfig = workspaceConfig;
     }
     registry.register(this.readTool, this.readExecutor);
     registry.register(this.writeTool, this.writeExecutor);
@@ -268,17 +312,17 @@ export class FilesystemTools {
 
   static readonly writeTool: Tool = {
     name: 'write',
-    description: 'Write content to a file. RESTRICTED: Can only write to the project scripts folder (.assistants-data/scripts/{session}). Provide a filename (or path) and it will be saved under the scripts folder.',
+    description: 'Write content to a file. Behavior depends on workspace.mode in config: "sandbox" (default) restricts writes to .assistants-data/scripts/{session}/, "project" allows writing anywhere in the project directory, "custom" allows writing to a configured custom path. Dangerous directories (node_modules, .git, etc.) are always blocked.',
     parameters: {
       type: 'object',
       properties: {
         filename: {
           type: 'string',
-          description: 'The filename to write to (saved in the project scripts folder)',
+          description: 'The filename to write to. In sandbox mode, saved in the project scripts folder. In project/custom mode, can be a relative or absolute path within the workspace.',
         },
         path: {
           type: 'string',
-          description: 'Alias for filename (saved in the project scripts folder)',
+          description: 'Alias for filename',
         },
         content: {
           type: 'string',
@@ -313,9 +357,6 @@ export class FilesystemTools {
       });
     }
 
-    // Always write to scripts folder
-    const scriptsFolder = getScriptsFolder(baseCwd, input.sessionId as string | undefined);
-
     if (!filename || !filename.trim()) {
       throw new ToolExecutionError('Filename or path is required', {
         toolName: 'write',
@@ -327,28 +368,98 @@ export class FilesystemTools {
       });
     }
 
-    // Sanitize filename - remove any path traversal attempts
-    const sanitizedFilename = filename
-      .replace(/\.\.[/\\]/g, '')
-      .replace(/\.\./g, '')
-      .replace(/^[/\\]+/, '');
-    const path = join(scriptsFolder, sanitizedFilename);
+    const mode = currentWorkspaceConfig.mode || 'sandbox';
+    let resolvedPath: string;
+    let allowedRoot: string;
 
-    // Double check we're in scripts folder
-    if (!isInScriptsFolder(path, baseCwd, input.sessionId as string | undefined)) {
-      throw new ToolExecutionError(`Cannot write outside scripts folder. Files are saved to ${scriptsFolder}`, {
+    if (mode === 'sandbox') {
+      // Sandbox mode: restrict to scripts folder (original behavior)
+      const scriptsFolder = getScriptsFolder(baseCwd, input.sessionId as string | undefined);
+      // Sanitize filename - remove any path traversal attempts
+      const sanitizedFilename = filename
+        .replace(/\.\.[/\\]/g, '')
+        .replace(/\.\./g, '')
+        .replace(/^[/\\]+/, '');
+      resolvedPath = join(scriptsFolder, sanitizedFilename);
+      allowedRoot = scriptsFolder;
+
+      // Double check we're in scripts folder
+      if (!isInScriptsFolder(resolvedPath, baseCwd, input.sessionId as string | undefined)) {
+        throw new ToolExecutionError(`Cannot write outside scripts folder. Files are saved to ${scriptsFolder}`, {
+          toolName: 'write',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Write only within the project scripts folder.',
+        });
+      }
+    } else if (mode === 'project') {
+      // Project mode: allow writing anywhere within cwd
+      resolvedPath = FilesystemTools.resolveInputPath(baseCwd, filename);
+      allowedRoot = resolve(baseCwd);
+
+      if (!isWithinDir(resolvedPath, allowedRoot)) {
+        throw new ToolExecutionError(`Cannot write outside the project directory (${allowedRoot}). Use workspace.mode "custom" with a customPath to write elsewhere.`, {
+          toolName: 'write',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Provide a path within the project directory.',
+        });
+      }
+    } else if (mode === 'custom') {
+      // Custom mode: allow writing within the configured custom path
+      const customPath = currentWorkspaceConfig.customPath;
+      if (!customPath) {
+        throw new ToolExecutionError('Workspace mode is "custom" but no customPath is configured. Set workspace.customPath in your config.', {
+          toolName: 'write',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Set workspace.customPath to an absolute path in config.',
+        });
+      }
+      allowedRoot = resolve(customPath);
+      resolvedPath = FilesystemTools.resolveInputPath(allowedRoot, filename);
+
+      if (!isWithinDir(resolvedPath, allowedRoot)) {
+        throw new ToolExecutionError(`Cannot write outside the custom workspace (${allowedRoot}).`, {
+          toolName: 'write',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: `Provide a path within ${allowedRoot}.`,
+        });
+      }
+    } else {
+      throw new ToolExecutionError(`Unknown workspace mode: "${mode}". Valid modes: sandbox, project, custom.`, {
+        toolName: 'write',
+        toolInput: input,
+        code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+        recoverable: false,
+        retryable: false,
+      });
+    }
+
+    // Block dangerous directories in all modes
+    const dangerousReason = isDangerousPath(resolvedPath);
+    if (dangerousReason) {
+      throw new ToolExecutionError(dangerousReason, {
         toolName: 'write',
         toolInput: input,
         code: ErrorCodes.TOOL_PERMISSION_DENIED,
         recoverable: false,
         retryable: false,
-        suggestion: 'Write only within the project scripts folder.',
+        suggestion: 'Choose a different target path that avoids system directories.',
       });
     }
 
     try {
-      // Ensure scripts directory exists
-      const validated = await validatePath(path, { allowSymlinks: false, allowedPaths: [scriptsFolder] });
+      const validated = await validatePath(resolvedPath, { allowSymlinks: false, allowedPaths: [allowedRoot] });
       if (!validated.valid) {
         throw new ToolExecutionError(validated.error || 'Invalid path', {
           toolName: 'write',
@@ -356,7 +467,7 @@ export class FilesystemTools {
           code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
           recoverable: false,
           retryable: false,
-          suggestion: 'Write only within the allowed scripts folder.',
+          suggestion: `Write only within the allowed workspace (${allowedRoot}).`,
         });
       }
 
@@ -798,4 +909,6 @@ export class FilesystemTools {
 export const __test__ = {
   getScriptsFolder,
   isInScriptsFolder,
+  isDangerousPath,
+  isWithinDir,
 };

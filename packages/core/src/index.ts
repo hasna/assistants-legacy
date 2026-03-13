@@ -352,6 +352,7 @@ export { EmbeddedClient } from './client';
 export { SessionRegistry } from './sessions/registry';
 export type { SessionInfo, PersistedSession, CreateSessionOptions } from './sessions/registry';
 export { SessionStore, type PersistedSessionData } from './sessions/store';
+export { generateSessionName } from './sessions/auto-name';
 export {
   sessionTools,
   sessionInfoTool,

@@ -290,6 +290,14 @@ const DEFAULT_CONFIG: AssistantsConfig = {
       mode: 'placeholder',
     },
   },
+  workspace: {
+    mode: 'sandbox',
+    customPath: null,
+  },
+  permissions: {
+    bash: 'readonly',
+  },
+  backgroundModel: 'claude-haiku-4-5-20251001',
 };
 
 function mergeConfig(base: AssistantsConfig, override?: Partial<AssistantsConfig>): AssistantsConfig {

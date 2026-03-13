@@ -148,17 +148,22 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
         {/* Visible sessions */}
         {visibleSessions.map(({ session, originalIndex }) => {
           const isSelected = originalIndex === selectedSessionIndex;
-          const stateLabel = getStateLabel(session.heartbeat.state);
           const timeAgo = formatTimeAgo(session.lastActivity);
           const cwdDisplay = truncatePath(session.cwd, 30);
-          const msgCount = session.messageCount > 0 ? ` ${session.messageCount} msgs` : '';
+          const displayName = session.label || cwdDisplay;
+          const msgCount = session.messageCount > 0 ? `${session.messageCount} msgs` : '';
+          const modelName = session.model || '';
+          const meta = [msgCount, modelName].filter(Boolean).join(', ');
 
           return (
-            <Box key={session.sessionId} paddingY={0}>
+            <Box key={session.sessionId} flexDirection="column" paddingY={0}>
               <Text inverse={isSelected}>
-                {isSelected ? '▶' : ' '} {cwdDisplay}{msgCount}
-                <Text dimColor> ({stateLabel}, {timeAgo})</Text>
+                {isSelected ? '▶' : ' '} {displayName} <Text dimColor>({timeAgo})</Text>
+                {meta ? <Text dimColor> — {meta}</Text> : null}
               </Text>
+              {session.lastMessage && (
+                <Text dimColor>    {'\u2018'}{session.lastMessage}{'\u2018'}</Text>
+              )}
             </Box>
           );
         })}
@@ -172,13 +177,25 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
       </Box>
 
       {/* Details of selected session */}
-      {selectedSessionIndex >= 0 && selectedSessionIndex < sessions.length && (
-        <Box flexDirection="column" marginBottom={1}>
-          <Text dimColor>Selected:</Text>
-          <Text>  <Text color="cyan">{sessions[selectedSessionIndex].cwd}</Text></Text>
-          <Text>  {formatTimeAgo(sessions[selectedSessionIndex].lastActivity)} · {getStateLabel(sessions[selectedSessionIndex].heartbeat.state)}</Text>
-        </Box>
-      )}
+      {selectedSessionIndex >= 0 && selectedSessionIndex < sessions.length && (() => {
+        const s = sessions[selectedSessionIndex];
+        const details = [
+          formatTimeAgo(s.lastActivity),
+          getStateLabel(s.heartbeat.state),
+          s.messageCount > 0 ? `${s.messageCount} messages` : null,
+          s.model || null,
+        ].filter(Boolean).join(' · ');
+        return (
+          <Box flexDirection="column" marginBottom={1}>
+            <Text dimColor>Selected:</Text>
+            <Text>  <Text color="cyan">{s.cwd}</Text></Text>
+            <Text>  {details}</Text>
+            {s.lastMessage && (
+              <Text dimColor>  Last: {'\u2018'}{s.lastMessage}{'\u2018'}</Text>
+            )}
+          </Box>
+        );
+      })()}
 
       <Box>
         <Text dimColor>

@@ -46,6 +46,8 @@ export class EmbeddedClient implements AssistantClient {
       basePath?: string;
       /** Optional workspace identifier for scoping */
       workspaceId?: string | null;
+      /** Callback when session auto-name is generated */
+      onSessionLabel?: (sessionId: string, label: string) => void;
     }
   ) {
     // Initialize .assistants directory structure
@@ -98,6 +100,7 @@ export class EmbeddedClient implements AssistantClient {
           resultLength: result.content.length,
         });
       },
+      onSessionLabel: options?.onSessionLabel,
     });
   }
 

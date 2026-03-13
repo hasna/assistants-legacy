@@ -523,6 +523,41 @@ export interface AssistantsConfig {
   guardrails?: GuardrailsConfigShared;
   capabilities?: CapabilitiesConfigShared;
   statusLine?: StatusLineConfig;
+  /** Workspace configuration — controls where the AI writes files */
+  workspace?: WorkspaceConfig;
+  /** Permissions configuration — controls tool access levels */
+  permissions?: PermissionsConfig;
+  /** Model used for lightweight background tasks (session naming, etc.). Default: claude-haiku-4-5-20251001 */
+  backgroundModel?: string;
+}
+
+/**
+ * Bash permission level:
+ * - 'none': bash tool is completely disabled
+ * - 'readonly': only safe read commands (ls, cat, grep, find, git status/log/diff, etc.)
+ * - 'readwrite': broader commands allowed but destructive ops still blocked (rm -rf, mkfs, dd, etc.)
+ */
+export type BashPermissionLevel = 'none' | 'readonly' | 'readwrite';
+
+/**
+ * Permissions configuration for controlling tool access levels
+ */
+export interface PermissionsConfig {
+  /** Bash tool permission level (default: 'readonly') */
+  bash?: BashPermissionLevel;
+}
+
+/**
+ * Workspace configuration for controlling where the AI writes files.
+ * - 'sandbox' (default): writes only to .assistants-data/scripts/{session}/
+ * - 'project': writes anywhere within the project (cwd), except dangerous dirs
+ * - 'custom': writes to a user-specified absolute path
+ */
+export interface WorkspaceConfig {
+  /** Workspace write mode (default: 'sandbox') */
+  mode?: 'sandbox' | 'project' | 'custom';
+  /** Absolute path for 'custom' mode (ignored in other modes) */
+  customPath?: string | null;
 }
 
 /**

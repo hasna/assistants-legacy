@@ -213,6 +213,7 @@ export class BuiltinCommands {
     loader.register(this.ordersCommand());
     loader.register(this.tasksCommand());
     loader.register(this.setupCommand());
+    loader.register(this.scriptsCommand());
     loader.register(this.exitCommand());
     loader.register(this.diffCommand());
     loader.register(this.undoCommand());
@@ -8321,6 +8322,74 @@ Please summarize the last interaction and suggest 2-3 next steps.
   /**
    * /undo - Revert uncommitted changes
    */
+  private scriptsCommand(): Command {
+    return {
+      name: 'scripts',
+      description: 'List generated files in the sandbox folder',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (_args, context) => {
+        const { getProjectDataDir: getDataDir } = await import('../config');
+        const { readdirSync, statSync } = await import('fs');
+
+        const scriptsRoot = join(getDataDir(context.cwd), 'scripts', context.sessionId);
+
+        let entries: Array<{ relativePath: string; size: number }> = [];
+
+        const walk = (dir: string, prefix: string) => {
+          let items: string[];
+          try {
+            items = readdirSync(dir);
+          } catch {
+            return;
+          }
+          for (const item of items) {
+            const fullPath = join(dir, item);
+            try {
+              const stat = statSync(fullPath);
+              if (stat.isDirectory()) {
+                walk(fullPath, prefix ? `${prefix}/${item}` : item);
+              } else {
+                entries.push({
+                  relativePath: prefix ? `${prefix}/${item}` : item,
+                  size: stat.size,
+                });
+              }
+            } catch {
+              // skip inaccessible files
+            }
+          }
+        };
+
+        walk(scriptsRoot, '');
+
+        if (entries.length === 0) {
+          context.emit('text', '\nNo generated files yet.\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const formatSize = (bytes: number): string => {
+          if (bytes < 1024) return `${bytes} B`;
+          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+          return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        let message = `\n**Generated Files** (${entries.length})\n`;
+        message += `📂 ${scriptsRoot}\n\n`;
+        for (const entry of entries) {
+          message += `  ${entry.relativePath}  (${formatSize(entry.size)})\n`;
+        }
+        message += '\n';
+
+        context.emit('text', message);
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
   private undoCommand(): Command {
     return {
       name: 'undo',

@@ -116,6 +116,7 @@ export function SessionSelector({
         const time = formatSessionTime(session.updatedAt);
         const path = formatPath(session.cwd);
         const processing = session.isProcessing ? ' (processing)' : '';
+        const displayName = session.label || path;
 
         return (
           <Box key={session.id}>
@@ -124,7 +125,7 @@ export function SessionSelector({
               color={isActive ? 'green' : undefined}
               dimColor={!isSelected && !isActive}
             >
-              {prefix} {index + 1}. {time}  {path}{processing}
+              {prefix} {index + 1}. {time}  {displayName}{processing}
             </Text>
           </Box>
         );

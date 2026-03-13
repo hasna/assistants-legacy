@@ -13,6 +13,12 @@ export interface RecoverableSession {
   cwd: string;
   lastActivity: Date;
   messageCount: number;
+  /** Last user message text (truncated to 80 chars) */
+  lastMessage: string | null;
+  /** Model used in session */
+  model: string | null;
+  /** Human-readable session label (auto-generated or user-set) */
+  label: string | null;
 }
 
 /**
@@ -60,9 +66,56 @@ export function findRecoverableSessions(
         timestamp: row.timestamp,
       };
 
-      // Try to get message count from persisted_sessions
+      // Try to get label, model, and message count from persisted_sessions + related tables
       let messageCount = 0;
+      let lastMessage: string | null = null;
+      let model: string | null = null;
+      let label: string | null = null;
       const cwd = context.cwd || process.cwd();
+
+      try {
+        const persisted = db
+          .query<{ label: string | null; assistant_id: string | null }>('SELECT label, assistant_id FROM persisted_sessions WHERE id = ?')
+          .get(row.session_id);
+        if (persisted?.label) {
+          label = persisted.label;
+        }
+        // Try to get model from assistant config
+        if (persisted?.assistant_id) {
+          try {
+            const assistant = db
+              .query<{ model: string | null }>('SELECT model FROM assistants_config WHERE id = ?')
+              .get(persisted.assistant_id);
+            if (assistant?.model) {
+              model = assistant.model;
+            }
+          } catch {
+            // Non-critical
+          }
+        }
+      } catch {
+        // Non-critical
+      }
+
+      // Get message count and last user message from session_messages
+      try {
+        const countRow = db
+          .query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM session_messages WHERE session_id = ?')
+          .get(row.session_id);
+        if (countRow) {
+          messageCount = countRow.cnt;
+        }
+
+        const lastMsgRow = db
+          .query<{ content: string }>('SELECT content FROM session_messages WHERE session_id = ? AND role = ? ORDER BY timestamp DESC LIMIT 1')
+          .get(row.session_id, 'user');
+        if (lastMsgRow?.content) {
+          const text = lastMsgRow.content.trim();
+          lastMessage = text.length > 80 ? text.slice(0, 77) + '...' : text;
+        }
+      } catch {
+        // Non-critical — session_messages table may not exist or session has no messages
+      }
 
       recoverableSessions.push({
         sessionId: row.session_id,
@@ -72,6 +125,9 @@ export function findRecoverableSessions(
         cwd,
         lastActivity: new Date(heartbeat.lastActivity || heartbeat.timestamp),
         messageCount,
+        lastMessage,
+        model,
+        label,
       });
     } catch {
       continue;

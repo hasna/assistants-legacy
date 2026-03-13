@@ -1,4 +1,5 @@
 export { VerificationSessionStore } from './verification';
+export { generateSessionName } from './auto-name';
 export { SessionStore, type PersistedSessionData } from './store';
 export { SessionRegistry, type SessionInfo, type PersistedSession, type CreateSessionOptions } from './registry';
 export {

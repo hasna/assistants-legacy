@@ -18,6 +18,13 @@
     }
   },
   "connectors": [],
+  "permissions": {
+    "bash": "readonly"
+  },
+  "workspace": {
+    "mode": "sandbox",
+    "customPath": null
+  },
   "input": {
     "paste": {
       "enabled": true,

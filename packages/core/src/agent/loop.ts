@@ -97,6 +97,7 @@ import { createTelephonyManager, registerTelephonyTools, type TelephonyManager }
 import { createOrdersManager, registerOrderTools, type OrdersManager } from '../orders';
 import { createContactsManager, registerContactsTools, type ContactsManager } from '../contacts';
 import { registerSessionTools, type SessionContext, type SessionQueryFunctions } from '../sessions';
+import { generateSessionName } from '../sessions/auto-name';
 import { registerProjectTools, type ProjectToolContext } from '../tools/projects';
 import { registerSelfAwarenessTools } from '../tools/self-awareness';
 import { registerMemoryTools } from '../tools/memory';
@@ -150,6 +151,8 @@ export interface AssistantLoopOptions {
   guardrailsConfig?: GuardrailsConfig;
   /** Callback when guardrails violation occurs */
   onGuardrailsViolation?: (result: PolicyEvaluationResult, toolName: string) => void;
+  /** Callback when session auto-name is generated */
+  onSessionLabel?: (sessionId: string, label: string) => void;
 }
 
 /**
@@ -258,6 +261,8 @@ export class AssistantLoop {
   private onToolEnd?: (toolCall: ToolCall, result: ToolResult) => void;
   private onTokenUsage?: (usage: TokenUsage) => void;
   private onBudgetWarning?: (warning: string) => void;
+  private onSessionLabel?: (sessionId: string, label: string) => void;
+  private sessionAutoNamed = false;
 
   constructor(options: AssistantLoopOptions = {}) {
     this.storageDir = options.storageDir ?? getConfigDir();
@@ -293,6 +298,7 @@ export class AssistantLoop {
     this.onToolEnd = options.onToolEnd;
     this.onTokenUsage = options.onTokenUsage;
     this.onBudgetWarning = options.onBudgetWarning;
+    this.onSessionLabel = options.onSessionLabel;
     this.budgetConfig = options.budgetConfig || null;
     this.guardrailsConfig = options.guardrailsConfig || null;
     this.onGuardrailsViolation = options.onGuardrailsViolation;
@@ -476,7 +482,7 @@ export class AssistantLoop {
     // Phase 3: Sync operations (fast)
     // Register built-in tools
     this.toolRegistry.register(BashTool.tool, BashTool.executor);
-    FilesystemTools.registerAll(this.toolRegistry, this.sessionId);
+    FilesystemTools.registerAll(this.toolRegistry, this.sessionId, this.config.workspace);
     WebTools.registerAll(this.toolRegistry);
     ImageTools.registerAll(this.toolRegistry);
     AudioTools.registerAll(this.toolRegistry);
@@ -1220,6 +1226,20 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       const messages = this.context.getMessages().slice(beforeCount);
       const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant');
       const summary = lastAssistant?.content?.trim();
+
+      // Auto-name session after first successful response (fire-and-forget)
+      if (!this.sessionAutoNamed && this.onSessionLabel && source === 'user') {
+        this.sessionAutoNamed = true;
+        const bgModel = this.config?.backgroundModel;
+        generateSessionName(userMessage, { model: bgModel })
+          .then((label) => {
+            this.onSessionLabel?.(this.sessionId, label);
+          })
+          .catch(() => {
+            // Non-critical — silently ignore naming failures
+          });
+      }
+
       return { ok: true, summary: summary ? summary.slice(0, 200) : undefined };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
