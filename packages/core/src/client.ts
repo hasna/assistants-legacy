@@ -218,6 +218,8 @@ export class EmbeddedClient implements AssistantClient {
       startedAt: this.startedAt,
       updatedAt: new Date().toISOString(),
       cwd: this.cwd,
+      // Persist unsent queued messages so they survive session close/resume
+      pendingQueue: this.messageQueue.length > 0 ? [...this.messageQueue] : undefined,
     });
   }
 
@@ -650,6 +652,13 @@ export class EmbeddedClient implements AssistantClient {
   clearQueue(): void {
     this.messageQueue = [];
     this.logger.info('Message queue cleared');
+  }
+
+  /**
+   * Get a copy of the pending message queue (for persistence/diagnostics)
+   */
+  getPendingQueue(): string[] {
+    return [...this.messageQueue];
   }
 
   private mergeMessages(contextMessages: Message[]): void {

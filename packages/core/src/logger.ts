@@ -196,6 +196,7 @@ export class SessionStorage {
     startedAt: string;
     updatedAt: string;
     cwd: string;
+    pendingQueue?: string[];
   }) {
     try {
       writeFileSync(this.sessionFile, JSON.stringify(data, null, 2));
@@ -363,6 +364,8 @@ export interface SessionData {
   startedAt: string;
   updatedAt: string;
   cwd: string;
+  /** Unsent queued messages preserved across session save/resume */
+  pendingQueue?: string[];
 }
 
 /**

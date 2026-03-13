@@ -1615,6 +1615,38 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       seedSessionState(session!.id, sessionData.messages as Message[]);
     }
     await switchToSession(session.id);
+
+    // Restore unsent queued messages on session resume.
+    // First check explicitly persisted pendingQueue, then fall back to
+    // detecting orphaned trailing user messages (user messages at the end
+    // of the conversation with no following assistant response).
+    const pending = sessionData.pendingQueue;
+    let messagesToRequeue: { id: string; content: string }[] = [];
+
+    if (pending && pending.length > 0) {
+      messagesToRequeue = pending.map((content) => ({ id: generateId(), content }));
+    } else {
+      // Detect orphaned trailing user messages
+      const msgs = sessionData.messages as Message[];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'user' && msgs[i].content) {
+          messagesToRequeue.unshift({ id: msgs[i].id, content: msgs[i].content });
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (messagesToRequeue.length > 0) {
+      const restoredQueue: QueuedMessage[] = messagesToRequeue.map(({ id, content }) => ({
+        id,
+        sessionId: session!.id,
+        content,
+        queuedAt: Date.now(),
+        mode: 'queued' as const,
+      }));
+      setMessageQueue((prev) => [...prev, ...restoredQueue]);
+    }
   }, [cwd, registry, beginAskUser, beginInterview, seedSessionState, switchToSession, workspaceBaseDir]);
 
   const switchWorkspace = useCallback(async (workspaceId: string | null) => {
