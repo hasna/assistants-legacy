@@ -2835,16 +2835,14 @@ export function App({ cwd, version }: AppProps) {
     return result;
   }, [messages, wrapChars, renderWidth]);
 
-  // Track which display messages are the "last assistant response" — these stay
-  // in the dynamic viewport so the user can see them.  Only when a NEW user
-  // message arrives do we flush the previous assistant response into <Static>.
-  const lastResponseIdsRef = useRef<Set<string>>(new Set());
+  // Keep the last assistant response in the dynamic viewport so it's always visible.
+  // Only user messages and PREVIOUS assistant responses go to <Static> scrollback.
   const [lastResponseMessages, setLastResponseMessages] = useState<DisplayMessage[]>([]);
 
   useEffect(() => {
     if (displayMessages.length === 0) return;
 
-    // Find the index of the last user message
+    // Find the last user message index
     let lastUserIdx = -1;
     for (let i = displayMessages.length - 1; i >= 0; i--) {
       if (displayMessages[i].role === 'user') {
@@ -2853,46 +2851,32 @@ export function App({ cwd, version }: AppProps) {
       }
     }
 
-    // Collect the trailing assistant response messages (after last user message)
-    const newLastResponseIds = new Set<string>();
-    const newLastResponseMsgs: DisplayMessage[] = [];
+    // Everything AFTER the last user message that's an assistant message stays dynamic
+    const dynamicIds = new Set<string>();
+    const dynamicMsgs: DisplayMessage[] = [];
     if (lastUserIdx >= 0) {
       for (let i = lastUserIdx + 1; i < displayMessages.length; i++) {
         if (displayMessages[i].role === 'assistant') {
-          newLastResponseIds.add(displayMessages[i].id);
-          newLastResponseMsgs.push(displayMessages[i]);
+          dynamicIds.add(displayMessages[i].id);
+          dynamicMsgs.push(displayMessages[i]);
         }
       }
     }
 
-    // Flush previously held-back messages into static (they're no longer the latest)
-    const toFlush: DisplayMessage[] = [];
-    for (const id of lastResponseIdsRef.current) {
-      if (!newLastResponseIds.has(id) && !staticMessageIdsRef.current.has(id)) {
-        const msg = displayMessages.find((m) => m.id === id);
-        if (msg) {
-          staticMessageIdsRef.current.add(id);
-          toFlush.push(msg);
-        }
-      }
-    }
-
-    // Push all new messages to static EXCEPT the latest assistant response
+    // Push everything else to <Static> (user messages + older assistant messages)
     const next: DisplayMessage[] = [];
     for (const message of displayMessages) {
       if (staticMessageIdsRef.current.has(message.id)) continue;
-      if (newLastResponseIds.has(message.id)) continue;
+      if (dynamicIds.has(message.id)) continue;
       staticMessageIdsRef.current.add(message.id);
       next.push(message);
     }
 
-    const allNew = [...toFlush, ...next];
-    if (allNew.length > 0) {
-      setStaticMessages((prev) => [...prev, ...allNew]);
+    if (next.length > 0) {
+      setStaticMessages((prev) => [...prev, ...next]);
     }
 
-    lastResponseIdsRef.current = newLastResponseIds;
-    setLastResponseMessages(newLastResponseMsgs);
+    setLastResponseMessages(dynamicMsgs);
   }, [displayMessages]);
 
   const reservedLines = 12;
@@ -2922,7 +2906,12 @@ export function App({ cwd, version }: AppProps) {
     return trimActivityLogByLines(activityLog, wrapChars, renderWidth, activityBudget);
   }, [activityLog, wrapChars, renderWidth, dynamicBudget, streamingLineCount]);
   // Show the last assistant response in the dynamic panel (held back from <Static>)
-  const combinedStreamingMessages = streamingMessages.length > 0 ? streamingMessages : lastResponseMessages;
+  // Trim to fit the dynamic budget so long responses don't overflow the viewport
+  const lastResponseTrim = useMemo(() => {
+    if (lastResponseMessages.length === 0 || isProcessing) return { messages: lastResponseMessages, trimmed: false };
+    return trimDisplayMessagesByLines(lastResponseMessages, dynamicBudget, renderWidth);
+  }, [lastResponseMessages, isProcessing, dynamicBudget, renderWidth]);
+  const combinedStreamingMessages = streamingMessages.length > 0 ? streamingMessages : lastResponseTrim.messages;
   const showDynamicPanel = isProcessing || activityTrim.entries.length > 0 || lastResponseMessages.length > 0;
 
   // Process queue when not busy (not processing and no pending tools)
