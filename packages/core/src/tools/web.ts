@@ -3,6 +3,7 @@ import type { ToolExecutor } from './registry';
 import { ErrorCodes, ToolExecutionError } from '../errors';
 import { isPrivateHostOrResolved, setDnsLookupForTests as setDnsLookupForTestsNetwork, isIpLiteral, normalizeHostname, isPrivateHost, isPrivateIPv4 } from '../security/network-validator';
 import { fetchWithTimeout } from '../utils/fetch-with-timeout';
+import { isExaConfigured } from '../features';
 
 // Maximum bytes to read from response to prevent memory exhaustion
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -320,13 +321,22 @@ export class WebSearchTool {
     const timeout = Number.isFinite(timeoutInput) && timeoutInput > 0 ? timeoutInput : 15000;
 
     try {
-      // Use DuckDuckGo HTML search (no API key needed)
+      // Prefer Exa API when configured — DuckDuckGo blocks bot requests with CAPTCHAs
+      if (isExaConfigured()) {
+        const exaResults = await fetchExaSearchResults(query, maxResults, timeout, signal);
+        if (exaResults.length > 0) {
+          return formatSearchResults(query, exaResults);
+        }
+      }
+
+      // Fallback: DuckDuckGo HTML search (no API key needed)
       const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       const response = await fetchWithTimeout(searchUrl, {
         timeout,
         headers: {
-          'User-Agent': 'assistants/1.0 (AI Assistant)',
-          'Accept': 'text/html',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
         signal,
         toolName: 'web_search',
@@ -358,22 +368,14 @@ export class WebSearchTool {
       }
 
       if (results.length === 0) {
-        return `No results found for "${query}"`;
-      }
-
-      // Format results
-      let output = `Search results for "${query}":\n\n`;
-      for (let i = 0; i < results.length; i++) {
-        const r = results[i];
-        output += `${i + 1}. ${r.title}\n`;
-        output += `   ${r.url}\n`;
-        if (r.snippet) {
-          output += `   ${r.snippet}\n`;
+        // Provide actionable error instead of a misleading "no results" message
+        if (isLikelyBotChallenge(html)) {
+          return `Web search is currently blocked by DuckDuckGo's bot protection. To enable reliable web search, set EXA_API_KEY in your environment (~/.secrets). Get a key at https://exa.ai`;
         }
-        output += '\n';
+        return `No results found for "${query}". For more reliable search, set EXA_API_KEY in your environment (~/.secrets). Get a key at https://exa.ai`;
       }
 
-      return output.trim();
+      return formatSearchResults(query, results);
     } catch (error) {
       if (error instanceof ToolExecutionError) throw error;
       if (error instanceof Error && /aborted|timeout/i.test(error.message)) {
@@ -470,7 +472,85 @@ function parseDuckDuckGoResults(html: string, maxResults: number): Array<{ title
 
 function isLikelyBotChallenge(html: string): boolean {
   const lower = html.toLowerCase();
-  return lower.includes('anomaly.js') || lower.includes('anomaly-modal') || lower.includes('challenge-form');
+  return (
+    lower.includes('anomaly.js') ||
+    lower.includes('anomaly-modal') ||
+    lower.includes('challenge-form') ||
+    lower.includes('bots use duckduckgo') ||
+    lower.includes('challenge to confirm') ||
+    lower.includes('select all squares') ||
+    lower.includes('anomaly/images/challenge')
+  );
+}
+
+function formatSearchResults(query: string, results: Array<{ title: string; url: string; snippet: string }>): string {
+  let output = `Search results for "${query}":\n\n`;
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    output += `${i + 1}. ${r.title}\n`;
+    output += `   ${r.url}\n`;
+    if (r.snippet) {
+      output += `   ${r.snippet}\n`;
+    }
+    output += '\n';
+  }
+  return output.trim();
+}
+
+async function fetchExaSearchResults(
+  query: string,
+  maxResults: number,
+  timeout: number,
+  signal?: AbortSignal,
+): Promise<Array<{ title: string; url: string; snippet: string }>> {
+  const apiKey = process.env.EXA_API_KEY;
+  if (!apiKey) return [];
+
+  try {
+    const response = await fetchWithTimeout('https://api.exa.ai/search', {
+      timeout,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        numResults: maxResults,
+        type: 'keyword',
+        contents: {
+          text: { maxCharacters: 200 },
+        },
+      }),
+      signal,
+      toolName: 'web_search',
+      toolInput: { query },
+    });
+
+    if (!response.ok) return [];
+
+    const data = await response.json() as {
+      results?: Array<{
+        title?: string;
+        url?: string;
+        text?: string;
+      }>;
+    };
+
+    if (!data.results || !Array.isArray(data.results)) return [];
+
+    return data.results
+      .filter((r) => r.url && r.title)
+      .slice(0, maxResults)
+      .map((r) => ({
+        title: (r.title || '').trim(),
+        url: (r.url || '').trim(),
+        snippet: (r.text || '').trim(),
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function fetchInstantAnswerResults(
