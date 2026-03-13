@@ -110,6 +110,7 @@ import { registerSwarmTools, type SwarmToolContext } from '../tools/swarm';
 import { SwarmCoordinator, type SwarmCoordinatorContext } from '../swarm/coordinator';
 import { GlobalMemoryManager, MemoryInjector, type MemoryConfig } from '../memory';
 import { SubassistantManager, type SubassistantManagerContext, type SubassistantResult, type SubassistantLoopConfig } from './subagent-manager';
+import { StatsTracker } from './stats';
 import { BudgetTracker, DEFAULT_BUDGET_CONFIG, registerBudgetTools, type BudgetScope } from '../budget';
 import { PolicyEvaluator, GuardrailsStore, registerGuardrailsTools, type GuardrailsConfig, type PolicyEvaluationResult } from '../guardrails';
 import { getGlobalRegistry, type AssistantRegistryService, type RegisteredAssistant, type AssistantType } from '../registry';
@@ -251,6 +252,7 @@ export class AssistantLoop {
   private registryService: AssistantRegistryService | null = null;
   private registeredAssistantId: string | null = null;
   private swarmCoordinator: SwarmCoordinator | null = null;
+  private statsTracker: StatsTracker;
   private paused = false;
   private pauseResolve: (() => void) | null = null;
   private maxTurnsPerRun = 50;
@@ -283,6 +285,7 @@ export class AssistantLoop {
     this.commandLoader = new CommandLoader(this.cwd);
     this.commandExecutor = new CommandExecutor(this.commandLoader);
     this.builtinCommands = new BuiltinCommands();
+    this.statsTracker = new StatsTracker(this.sessionId);
     this.allowedTools = this.normalizeAllowedTools(options.allowedTools);
     this.extraSystemPrompt = options.extraSystemPrompt || null;
     this.llmClient = options.llmClient ?? null;
@@ -719,6 +722,7 @@ export class AssistantLoop {
       getAssistantManager: () => this.assistantManager,
       getIdentityManager: () => this.identityManager,
       getWalletManager: () => this.walletManager,
+      getStatsTracker: () => this.statsTracker,
       sessionId: this.sessionId,
       model: this.config?.llm?.model,
     });
@@ -1985,6 +1989,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       this.recordHeartbeatActivity('tool');
       this.lastToolName = toolCall.name;
       this.pendingToolCalls.set(toolCall.id, toolCall.name);
+      this.statsTracker.onToolStart(toolCall);
       this.onToolStart?.(toolCall);
 
       // Execute the tool with timing
@@ -1998,6 +2003,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       const stopAfterTool = this.shouldStop;
 
       // Emit tool end
+      this.statsTracker.onToolEnd(toolCall, result);
       this.onToolEnd?.(toolCall, result);
 
       // Auto-refresh connectors after a successful global install
@@ -2822,6 +2828,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    */
   updateTokenUsage(usage: Partial<TokenUsage>): void {
     this.builtinCommands.updateTokenUsage(usage);
+    this.statsTracker.updateTokenUsage(usage);
+    this.statsTracker.onLlmCall();
     this.onTokenUsage?.(this.builtinCommands.getTokenUsage());
 
     // Track budget usage
