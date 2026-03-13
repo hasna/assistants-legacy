@@ -5763,7 +5763,7 @@ export function App({ cwd, version }: AppProps) {
   const isThinking = isProcessing && !currentResponse && !currentToolCall && toolCallEntries.length === 0;
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" height={rows} paddingX={1}>
       {/* Welcome banner */}
       {showWelcome && (
         <WelcomeBanner
@@ -5782,49 +5782,52 @@ export function App({ cwd, version }: AppProps) {
         </Box>
       )}
 
-      {/* Historical messages - rendered with Static for native terminal scrollback */}
-      <Static key={staticResetKey} items={staticMessages}>
-        {(message) => (
-          <Messages
-            key={message.id}
-            messages={[message]}
-            currentResponse={undefined}
-            streamingMessages={[]}
-            currentToolCall={undefined}
-            lastToolResult={undefined}
-            activityLog={[]}
-            queuedMessageIds={queuedMessageIds}
-            verboseTools={verboseTools}
-          />
-        )}
-      </Static>
+      {/* Messages area — flexGrow fills available space between header and footer */}
+      <Box flexDirection="column" flexGrow={1} overflowY="hidden">
+        {/* Historical messages - rendered with Static for native terminal scrollback */}
+        <Static key={staticResetKey} items={staticMessages}>
+          {(message) => (
+            <Messages
+              key={message.id}
+              messages={[message]}
+              currentResponse={undefined}
+              streamingMessages={[]}
+              currentToolCall={undefined}
+              lastToolResult={undefined}
+              activityLog={[]}
+              queuedMessageIds={queuedMessageIds}
+              verboseTools={verboseTools}
+            />
+          )}
+        </Static>
 
-      {/* Current streaming content and activity - rendered dynamically */}
-      {showDynamicPanel && (
-        <>
-          {isProcessing && streamingTrimmed && (
-            <Box marginBottom={1}>
-              <Text dimColor>⋯ showing latest output</Text>
-            </Box>
-          )}
-          {isProcessing && activityTrim.trimmed && (
-            <Box marginBottom={1}>
-              <Text dimColor>⋯ showing latest activity</Text>
-            </Box>
-          )}
-          <Messages
-            key="streaming"
-            messages={[]}
-            currentResponse={undefined}
-            streamingMessages={combinedStreamingMessages}
-            currentToolCall={undefined}
-            lastToolResult={undefined}
-            activityLog={isProcessing ? activityTrim.entries : []}
-            queuedMessageIds={queuedMessageIds}
-            verboseTools={verboseTools}
-          />
-        </>
-      )}
+        {/* Current streaming content and activity - rendered dynamically */}
+        {showDynamicPanel && (
+          <>
+            {isProcessing && streamingTrimmed && (
+              <Box marginBottom={1}>
+                <Text dimColor>⋯ showing latest output</Text>
+              </Box>
+            )}
+            {isProcessing && activityTrim.trimmed && (
+              <Box marginBottom={1}>
+                <Text dimColor>⋯ showing latest activity</Text>
+              </Box>
+            )}
+            <Messages
+              key="streaming"
+              messages={[]}
+              currentResponse={undefined}
+              streamingMessages={combinedStreamingMessages}
+              currentToolCall={undefined}
+              lastToolResult={undefined}
+              activityLog={isProcessing ? activityTrim.entries : []}
+              queuedMessageIds={queuedMessageIds}
+              verboseTools={verboseTools}
+            />
+          </>
+        )}
+      </Box>
 
       {/* Ask-user simple interview */}
       {askUserState && activeAskQuestion && !interviewState && (
