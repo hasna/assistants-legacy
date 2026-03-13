@@ -296,6 +296,7 @@ const DEFAULT_CONFIG: AssistantsConfig = {
   },
   permissions: {
     bash: 'readonly',
+    mode: 'normal',
   },
   backgroundModel: 'claude-haiku-4-5-20251001',
 };

@@ -145,7 +145,7 @@ Headless Mode:
   --json-schema <schema>       JSON Schema for structured output (use with --output-format json)
   --headless-timeout-ms <ms>   Abort headless run after the given timeout (ms)
   -c, --continue               Continue the most recent conversation
-  -r, --resume <session_id>    Resume a specific session by ID
+  -r, --resume <id_or_name>    Resume a session by ID or name
   --cwd <path>                 Set working directory
 
 Examples:
@@ -195,6 +195,7 @@ if (options.print !== null) {
     resume: options.resume,
     cwdProvided: options.cwdProvided,
     timeoutMs: options.headlessTimeoutMs,
+    permissionMode: options.permissionMode ?? undefined,
   })
     .then((result) => {
       process.exit(result.success ? 0 : 1);
@@ -211,7 +212,7 @@ if (options.print !== null) {
   const useSyncOutput = process.env.ASSISTANTS_NO_SYNC !== '1';
   const disableSyncOutput = useSyncOutput ? enableSynchronizedOutput() : () => {};
 
-  const appElement = <App cwd={options.cwd} version={VERSION} />;
+  const appElement = <App cwd={options.cwd} version={VERSION} permissionMode={options.permissionMode ?? undefined} />;
 
   const { waitUntilExit } = render(
     appElement,

@@ -45,6 +45,7 @@ import { DiffTool } from '../tools/diff';
 import { runHookAssistant } from './subagent';
 import { SkillLoader } from '../skills/loader';
 import { SkillExecutor } from '../skills/executor';
+import { ExtensionLoader } from '../extensions/loader';
 import {
   HookLoader,
   HookExecutor,
@@ -178,6 +179,7 @@ export class AssistantLoop {
   private connectorBridge: ConnectorBridge;
   private skillLoader: SkillLoader;
   private skillExecutor: SkillExecutor;
+  private extensionLoader: ExtensionLoader;
   private hookLoader: HookLoader;
   private hookExecutor: HookExecutor;
   private scopeContextManager: ScopeContextManager;
@@ -281,6 +283,7 @@ export class AssistantLoop {
     this.connectorBridge = new ConnectorBridge(this.cwd);
     this.skillLoader = new SkillLoader();
     this.skillExecutor = new SkillExecutor();
+    this.extensionLoader = new ExtensionLoader();
     this.hookLoader = new HookLoader();
     this.hookExecutor = new HookExecutor();
     this.scopeContextManager = new ScopeContextManager();
@@ -893,6 +896,13 @@ export class AssistantLoop {
 
     // Register builtin commands
     this.builtinCommands.registerAll(this.commandLoader);
+
+    // Load and setup extensions (TypeScript plugins that register tools and commands)
+    try {
+      await this.extensionLoader.loadAll(this.cwd, this.toolRegistry, this.commandLoader, this.config);
+    } catch {
+      // Extension loading is non-fatal — continue without extensions
+    }
 
     // Load hooks
     this.hookLoader.load(hooksConfig);
@@ -1753,6 +1763,27 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         continue;
       }
 
+      // Check permission mode (plan mode blocks write tools)
+      if (this.config?.permissions?.mode === 'plan' && !this.isToolAllowedInPlanMode(toolCall.name)) {
+        const blockedResult: ToolResult = {
+          toolCallId: toolCall.id,
+          content: `Blocked in plan mode: "${toolCall.name}" is not available. Only read-only tools are allowed. Switch to normal mode with /mode normal`,
+          isError: true,
+          toolName: toolCall.name,
+        };
+        this.emit({ type: 'tool_result', toolResult: blockedResult });
+        await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
+          session_id: this.sessionId,
+          hook_event_name: 'PostToolUseFailure',
+          cwd: this.cwd,
+          tool_name: toolCall.name,
+          tool_input: toolCall.input,
+          tool_result: blockedResult.content,
+        });
+        results.push(blockedResult);
+        continue;
+      }
+
       // Check guardrails policy if enabled
       if (this.policyEvaluator?.isEnabled()) {
         const policyResult = this.policyEvaluator.evaluateToolUse({
@@ -2326,6 +2357,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         }
       },
       getSwarmCoordinator: () => this.getOrCreateSwarmCoordinator(),
+      getPermissionMode: () => this.getPermissionMode(),
+      setPermissionMode: (mode) => this.setPermissionMode(mode),
     };
 
     const result = await this.commandExecutor.execute(message, context);
@@ -3771,6 +3804,19 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     let toolCalls = 0;
     let stopped = false;
 
+    // Build thoroughness instructions based on config
+    const thoroughnessInstructions = [
+      'Work thoroughly on this task. Don\'t return after minimal effort.',
+      'Verify your work before completing.',
+      'If the task requires multiple steps, complete ALL steps.',
+      config.minTurns > 1
+        ? `You must take at least ${config.minTurns} turns before returning — do not give a superficial answer.`
+        : null,
+      config.workUntilDone
+        ? 'Keep working until the task is fully complete. Do not stop early or return partial results.'
+        : null,
+    ].filter(Boolean).join('\n');
+
     const subassistant = new AssistantLoop({
       cwd: config.cwd,
       sessionId: config.sessionId,
@@ -3782,7 +3828,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
 Task: ${config.task}
 
-${config.context ? `Context:\n${config.context}\n\n` : ''}
+${config.context ? `Context:\n${config.context}\n\n` : ''}${thoroughnessInstructions}
+
 Complete this task and provide a clear summary of what you found or accomplished.
 Be concise but thorough. Focus only on this task.`,
       onChunk: (chunk) => {
@@ -3932,6 +3979,51 @@ Be concise but thorough. Focus only on this task.`,
     if (!allowed) return true;
     if (name.toLowerCase() === 'ask_user') return true;
     return allowed.has(name.toLowerCase());
+  }
+
+  /**
+   * Tools allowed in plan mode (read-only analysis tools).
+   * Everything else is blocked.
+   */
+  private static readonly PLAN_MODE_ALLOWED_TOOLS = new Set([
+    // File reading
+    'read', 'glob', 'grep',
+    // Web (read-only)
+    'web_search', 'web_fetch',
+    // Memory (read-only)
+    'memory_list', 'memory_search', 'memory_recall', 'memory_context', 'memory_stats',
+    // Tasks (read-only)
+    'tasks_list', 'tasks_get',
+    // User interaction
+    'ask_user',
+    // Diff (read-only viewing)
+    'diff',
+  ]);
+
+  /**
+   * Check if a tool is allowed in plan mode.
+   * Only read-only, analysis-safe tools pass.
+   */
+  private isToolAllowedInPlanMode(name: string): boolean {
+    return AssistantLoop.PLAN_MODE_ALLOWED_TOOLS.has(name.toLowerCase());
+  }
+
+  /**
+   * Set the permission mode at runtime (used by /mode command)
+   */
+  setPermissionMode(mode: 'normal' | 'plan' | 'auto-accept'): void {
+    if (!this.config) return;
+    if (!this.config.permissions) {
+      this.config.permissions = {};
+    }
+    this.config.permissions.mode = mode;
+  }
+
+  /**
+   * Get the current permission mode
+   */
+  getPermissionMode(): 'normal' | 'plan' | 'auto-accept' {
+    return this.config?.permissions?.mode ?? 'normal';
   }
 }
 

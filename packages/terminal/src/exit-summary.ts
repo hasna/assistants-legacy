@@ -3,6 +3,7 @@ import { getModelById } from '@hasna/assistants-shared';
 
 export interface ExitStats {
   sessionId: string;
+  sessionLabel?: string | null;
   startedAt: number;
   tokenUsage?: TokenUsage;
   messageCount: number;
@@ -51,7 +52,11 @@ export function printExitSummary(stats: ExitStats): void {
 
   lines.push('');
   lines.push(`\x1b[1mResume this session:\x1b[0m`);
-  lines.push(`  assistants --resume ${stats.sessionId}`);
+  if (stats.sessionLabel) {
+    lines.push(`  assistants --resume ${stats.sessionLabel}`);
+  } else {
+    lines.push(`  assistants --resume ${stats.sessionId}`);
+  }
   lines.push('');
 
   const durationLabel = 'Total duration (wall):';

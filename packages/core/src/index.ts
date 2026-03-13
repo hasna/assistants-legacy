@@ -174,6 +174,15 @@ export type { LogsToolContext, LogSource, NormalizedLogEntry } from './tools/log
 export { CommandLoader, CommandExecutor, BuiltinCommands } from './commands';
 export type { Command, CommandContext, CommandResult, TokenUsage } from './commands';
 
+// Extensions
+export { ExtensionLoader } from './extensions';
+export type { Extension, ExtensionContext, ExtensionLoadResult } from './extensions';
+
+// Packages
+export { PackageInstaller } from './packages';
+export type { PackageSource, PackageScope, PackageInfo, InstallPackageOptions } from './packages';
+export { parseSource, resolvePackagesDir, installPackage, removePackage, listPackages, updatePackages } from './packages';
+
 // Skills
 export { SkillLoader } from './skills/loader';
 export { SkillExecutor } from './skills/executor';

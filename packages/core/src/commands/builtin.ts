@@ -212,11 +212,14 @@ export class BuiltinCommands {
     loader.register(this.callCommand());
     loader.register(this.ordersCommand());
     loader.register(this.tasksCommand());
+    loader.register(this.renameCommand());
     loader.register(this.setupCommand());
     loader.register(this.scriptsCommand());
     loader.register(this.exitCommand());
     loader.register(this.diffCommand());
     loader.register(this.undoCommand());
+    loader.register(this.treeCommand());
+    loader.register(this.modeCommand());
   }
 
   /**
@@ -4474,6 +4477,34 @@ Created: ${new Date(job.createdAt).toISOString()}
     };
   }
 
+  /**
+   * /rename <name> - Shortcut to rename the current session
+   */
+  private renameCommand(): Command {
+    return {
+      name: 'rename',
+      description: 'Rename the current session (shortcut for /session rename)',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const label = args.trim();
+        if (!label) {
+          context.emit('text', '\nUsage: /rename <name>\nExample: /rename auth-refactor\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        context.emit('done');
+        return {
+          handled: true,
+          sessionAction: 'rename',
+          sessionLabel: label,
+        };
+      },
+    };
+  }
+
   private exitCommand(): Command {
     return {
       name: 'exit',
@@ -8457,6 +8488,143 @@ Please summarize the last interaction and suggest 2-3 next steps.
           context.emit('text', '\nNot a git repository or git not available.\n');
         }
 
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
+   * /tree - Display session message history as a tree
+   */
+  /**
+   * /mode - Show or switch permission mode (normal, plan, auto)
+   */
+  private modeCommand(): Command {
+    return {
+      name: 'mode',
+      description: 'Show or switch permission mode: normal, plan (read-only), auto (auto-accept)',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const trimmedArgs = args.trim().toLowerCase();
+
+        // /mode — show current mode
+        if (!trimmedArgs) {
+          const current = context.getPermissionMode?.() ?? 'normal';
+          let message = `\n**Permission Mode:** ${current}\n\n`;
+          message += '**Available modes:**\n';
+          message += '  `normal`  — Standard behavior with per-tool permission checks\n';
+          message += '  `plan`    — Read-only mode. Only analysis tools allowed (read, glob, grep, web_search, etc.)\n';
+          message += '  `auto`    — Auto-accept all tool calls without confirmation\n\n';
+          message += 'Switch with: `/mode plan`, `/mode normal`, or `/mode auto`\n';
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // Normalize 'auto' to 'auto-accept'
+        const modeMap: Record<string, 'normal' | 'plan' | 'auto-accept'> = {
+          normal: 'normal',
+          plan: 'plan',
+          auto: 'auto-accept',
+          'auto-accept': 'auto-accept',
+        };
+
+        const newMode = modeMap[trimmedArgs];
+        if (!newMode) {
+          context.emit('text', `\nUnknown mode "${trimmedArgs}". Valid modes: normal, plan, auto\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        context.setPermissionMode?.(newMode);
+
+        const labels: Record<string, string> = {
+          normal: 'normal — standard tool permissions',
+          plan: 'plan — read-only mode (write tools blocked)',
+          'auto-accept': 'auto — all tool calls auto-accepted',
+        };
+
+        context.emit('text', `\nSwitched to **${labels[newMode]}**\n`);
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  private treeCommand(): Command {
+    return {
+      name: 'tree',
+      description: 'Show session message history as a navigable tree',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (_args, context) => {
+        const messages = context.messages;
+
+        if (!messages || messages.length === 0) {
+          context.emit('text', '\nNo messages in the current session.\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let output = '\n## Session Tree\n\n';
+
+        const formatTimeAgo = (ts: number): string => {
+          const diff = Date.now() - ts;
+          const seconds = Math.floor(diff / 1000);
+          if (seconds < 60) return `${seconds}s ago`;
+          const minutes = Math.floor(seconds / 60);
+          if (minutes < 60) return `${minutes}m ago`;
+          const hours = Math.floor(minutes / 60);
+          if (hours < 24) return `${hours}h ago`;
+          const days = Math.floor(hours / 24);
+          return `${days}d ago`;
+        };
+
+        const preview = (text: string): string => {
+          const clean = text.replace(/\n/g, ' ').trim();
+          return clean.length > 50 ? clean.slice(0, 50) + '...' : clean;
+        };
+
+        // Build tree: user messages are branch points, assistant responses are leaves
+        for (let i = 0; i < messages.length; i++) {
+          const msg = messages[i] as { role: string; content: string; timestamp?: number; parentId?: string };
+          const isLast = i === messages.length - 1;
+          const timeStr = msg.timestamp ? ` (${formatTimeAgo(msg.timestamp)})` : '';
+
+          if (msg.role === 'user') {
+            const connector = isLast ? '└─' : '├─';
+            output += `${connector} [user] "${preview(msg.content)}"${timeStr}\n`;
+
+            // Look ahead for assistant response(s)
+            let j = i + 1;
+            while (j < messages.length && messages[j].role === 'assistant') {
+              const aMsg = messages[j] as { role: string; content: string; timestamp?: number };
+              const aTimeStr = aMsg.timestamp ? ` (${formatTimeAgo(aMsg.timestamp)})` : '';
+              const isLastAssistant = j + 1 >= messages.length || messages[j + 1].role !== 'assistant';
+              const prefix = isLast ? '   ' : '│  ';
+              const aConnector = isLastAssistant ? '└─' : '├─';
+              output += `${prefix}${aConnector} [assistant] "${preview(aMsg.content)}"${aTimeStr}\n`;
+              j++;
+            }
+            // Skip assistant messages we already rendered
+            i = j - 1;
+          } else if (msg.role === 'system') {
+            const connector = isLast ? '└─' : '├─';
+            output += `${connector} [system] "${preview(msg.content)}"${timeStr}\n`;
+          } else {
+            // Standalone assistant message (no preceding user message)
+            const connector = isLast ? '└─' : '├─';
+            output += `${connector} [assistant] "${preview(msg.content)}"${timeStr}\n`;
+          }
+        }
+
+        output += `\n**Total messages:** ${messages.length}\n`;
+
+        context.emit('text', output);
         context.emit('done');
         return { handled: true };
       },

@@ -11,6 +11,8 @@ export interface Message {
   role: MessageRole;
   content: string;
   timestamp: number;
+  /** Parent message ID for branching support (forms a tree) */
+  parentId?: string;
   toolCalls?: ToolCall[];
   toolResults?: ToolResult[];
   documents?: DocumentAttachment[];
@@ -540,11 +542,21 @@ export interface AssistantsConfig {
 export type BashPermissionLevel = 'none' | 'readonly' | 'readwrite';
 
 /**
+ * Permission mode controls the overall tool access policy:
+ * - 'normal': standard behavior with per-tool permission checks
+ * - 'plan': read-only mode — only analysis tools allowed (read, glob, grep, web_search, web_fetch, memory)
+ * - 'auto-accept': all tool calls are auto-approved without confirmation
+ */
+export type PermissionMode = 'normal' | 'plan' | 'auto-accept';
+
+/**
  * Permissions configuration for controlling tool access levels
  */
 export interface PermissionsConfig {
   /** Bash tool permission level (default: 'readonly') */
   bash?: BashPermissionLevel;
+  /** Overall permission mode (default: 'normal') */
+  mode?: PermissionMode;
 }
 
 /**

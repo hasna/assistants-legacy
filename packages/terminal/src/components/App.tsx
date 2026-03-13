@@ -347,6 +347,7 @@ function deepMerge<T extends Record<string, unknown>>(
 interface AppProps {
   cwd: string;
   version?: string;
+  permissionMode?: 'normal' | 'plan' | 'auto-accept';
 }
 
 // Activity entry for tracking tool calls and text during a turn
@@ -416,7 +417,7 @@ function CloseOnAnyKeyPanel({ message, onClose }: { message: string; onClose: ()
   );
 }
 
-export function App({ cwd, version }: AppProps) {
+export function App({ cwd, version, permissionMode: initialPermissionMode }: AppProps) {
   const { exit } = useApp();
   const { stdout } = useStdout();
   const rows = stdout?.rows ?? 24;
@@ -1535,6 +1536,12 @@ export function App({ cwd, version }: AppProps) {
     const profileId = getSessionBudgetProfileId(newSession.id, profiles);
     await applyBudgetProfileToSession(newSession, profileId, profiles);
 
+    // Apply initial permission mode from CLI flag if provided
+    if (initialPermissionMode) {
+      const loop = newSession.client.getAssistantLoop?.();
+      loop?.setPermissionMode(initialPermissionMode);
+    }
+
     return newSession;
   }, [
     registry,
@@ -1548,6 +1555,7 @@ export function App({ cwd, version }: AppProps) {
     loadBudgetData,
     getSessionBudgetProfileId,
     applyBudgetProfileToSession,
+    initialPermissionMode,
   ]);
 
   const seedSessionState = useCallback((sessionId: string, seededMessages: Message[]) => {
@@ -1880,6 +1888,7 @@ export function App({ cwd, version }: AppProps) {
       if (active) {
         setExitStats({
           sessionId: active.id,
+          sessionLabel: active.label,
           startedAt: active.startedAt,
           tokenUsage: tokenUsageRef.current,
           messageCount: messagesLengthRef.current,
@@ -2929,6 +2938,7 @@ export function App({ cwd, version }: AppProps) {
     if (active) {
       setExitStats({
         sessionId: active.id,
+        sessionLabel: active.label,
         startedAt: active.startedAt,
         tokenUsage,
         messageCount: messages.length,

@@ -16,6 +16,7 @@ export interface ParsedOptions {
   continue: boolean;
   resume: string | null;
   cwdProvided: boolean;
+  permissionMode: 'normal' | 'plan' | 'auto-accept' | null;
   errors: string[];
 }
 
@@ -47,6 +48,7 @@ export function parseArgs(argv: string[]): ParsedOptions {
     continue: false,
     resume: null,
     cwdProvided: false,
+    permissionMode: null,
     errors: [],
   };
 
@@ -183,7 +185,7 @@ export function parseArgs(argv: string[]): ParsedOptions {
     if (arg === '--resume' || arg === '-r') {
       const nextArg = args[i + 1];
       if (nextArg === undefined || isFlag(nextArg)) {
-        options.errors.push(`${arg} requires a session ID`);
+        options.errors.push(`${arg} requires a session ID or name`);
       } else {
         options.resume = nextArg;
         i++;
@@ -199,6 +201,29 @@ export function parseArgs(argv: string[]): ParsedOptions {
       } else {
         options.cwd = nextArg;
         options.cwdProvided = true;
+        i++;
+      }
+      continue;
+    }
+
+    // Permission mode
+    if (arg === '--permission-mode' || arg === '--mode') {
+      const nextArg = args[i + 1];
+      if (nextArg === undefined || isFlag(nextArg)) {
+        options.errors.push(`${arg} requires a value (normal, plan, or auto-accept)`);
+      } else {
+        const modeMap: Record<string, 'normal' | 'plan' | 'auto-accept'> = {
+          normal: 'normal',
+          plan: 'plan',
+          auto: 'auto-accept',
+          'auto-accept': 'auto-accept',
+        };
+        const mode = modeMap[nextArg.toLowerCase()];
+        if (!mode) {
+          options.errors.push(`Invalid permission mode "${nextArg}". Valid options: normal, plan, auto-accept`);
+        } else {
+          options.permissionMode = mode;
+        }
         i++;
       }
       continue;
@@ -234,6 +259,7 @@ export interface HeadlessOptions {
   resume?: string | null;
   cwdProvided?: boolean;
   timeoutMs?: number | null;
+  permissionMode?: 'normal' | 'plan' | 'auto-accept';
 }
 
 export interface MainDependencies {
@@ -291,8 +317,9 @@ Headless Mode:
   --json-schema <schema>       JSON Schema for structured output (use with --output-format json)
   --headless-timeout-ms <ms>   Abort headless run after the given timeout (ms)
   -c, --continue               Continue the most recent conversation
-  -r, --resume <session_id>    Resume a specific session by ID
+  -r, --resume <id_or_name>    Resume a session by ID or name
   --cwd <path>                 Set working directory
+  --permission-mode <mode>     Permission mode: normal, plan (read-only), auto-accept
 
 Examples:
   # Ask a question

@@ -59,7 +59,15 @@ The subassistant has no memory of the parent conversation - provide all needed c
       },
       maxTurns: {
         type: 'number',
-        description: 'Maximum turns the subassistant can take (default: 10, max: 25)',
+        description: 'Maximum turns the subassistant can take (default: 25, max: 50)',
+      },
+      minTurns: {
+        type: 'number',
+        description: 'Minimum turns the subassistant must take before returning (default: 3). Prevents superficial results.',
+      },
+      workUntilDone: {
+        type: 'boolean',
+        description: 'If true, subassistant keeps working until the task is fully complete instead of returning early (default: false)',
       },
       async: {
         type: 'boolean',
@@ -240,6 +248,8 @@ export function createAssistantToolExecutors(
         : undefined;
       const contextStr = typeof input.context === 'string' ? input.context : undefined;
       const maxTurns = typeof input.maxTurns === 'number' ? input.maxTurns : undefined;
+      const minTurns = typeof input.minTurns === 'number' ? input.minTurns : undefined;
+      const workUntilDone = input.workUntilDone === true;
       const async = input.async === true;
 
       const config: SubassistantConfig = {
@@ -247,6 +257,8 @@ export function createAssistantToolExecutors(
         tools,
         context: contextStr,
         maxTurns,
+        minTurns,
+        workUntilDone,
         async,
         parentSessionId: context.getSessionId(),
         depth: context.getDepth(),

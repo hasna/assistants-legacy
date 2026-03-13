@@ -23,8 +23,12 @@ export interface SubassistantConfig {
   tools?: string[];
   /** Additional context to pass to the subassistant */
   context?: string;
-  /** Maximum turns the subassistant can take (default: 10, max: 25) */
+  /** Maximum turns the subassistant can take (default: 25, max: 50) */
   maxTurns?: number;
+  /** Minimum turns before the subassistant can return (default: 3) */
+  minTurns?: number;
+  /** If true, subassistant keeps going until it explicitly signals completion (default: false) */
+  workUntilDone?: boolean;
   /** Model to use for subassistant (default: inherit from parent) */
   model?: string;
   /** Run asynchronously and return job ID (default: false) */
@@ -82,8 +86,10 @@ export interface SubassistantManagerConfig {
   maxDepth?: number;
   /** Maximum concurrent subassistants per parent (default: 5) */
   maxConcurrent?: number;
-  /** Maximum turns per subassistant (default: 10) */
+  /** Maximum turns per subassistant (default: 25) */
   maxTurns?: number;
+  /** Minimum turns before a subassistant can return (default: 3) */
+  minTurns?: number;
   /** Default timeout in ms (default: 120000 = 2 minutes) */
   defaultTimeoutMs?: number;
   /** Default tools for subassistants */
@@ -112,6 +118,8 @@ export interface SubassistantLoopConfig {
   tools: string[];
   context?: string;
   maxTurns: number;
+  minTurns: number;
+  workUntilDone: boolean;
   cwd: string;
   sessionId: string;
   depth: number;
@@ -130,8 +138,9 @@ export interface SubassistantRunner {
 
 const DEFAULT_MAX_DEPTH = 3;
 const DEFAULT_MAX_CONCURRENT = 5;
-const DEFAULT_MAX_TURNS = 10;
-const MAX_ALLOWED_TURNS = 25;
+const DEFAULT_MAX_TURNS = 25;
+const DEFAULT_MIN_TURNS = 3;
+const MAX_ALLOWED_TURNS = 50;
 const DEFAULT_TIMEOUT_MS = 120_000; // 2 minutes
 
 const DEFAULT_SUBASSISTANT_TOOLS = [
@@ -172,6 +181,7 @@ export class SubassistantManager {
       maxDepth: config.maxDepth ?? DEFAULT_MAX_DEPTH,
       maxConcurrent: config.maxConcurrent ?? DEFAULT_MAX_CONCURRENT,
       maxTurns: config.maxTurns ?? DEFAULT_MAX_TURNS,
+      minTurns: config.minTurns ?? DEFAULT_MIN_TURNS,
       defaultTimeoutMs: config.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS,
       defaultTools: config.defaultTools ?? DEFAULT_SUBASSISTANT_TOOLS,
       forbiddenTools: config.forbiddenTools ?? FORBIDDEN_SUBASSISTANT_TOOLS,
@@ -357,6 +367,15 @@ export class SubassistantManager {
         MAX_ALLOWED_TURNS
       );
 
+      // Resolve minTurns (config-level override > manager default)
+      const minTurns = Math.min(
+        config.minTurns ?? this.config.minTurns,
+        maxTurns
+      );
+
+      // workUntilDone: subagent keeps going until it explicitly signals completion
+      const workUntilDone = config.workUntilDone ?? false;
+
       // Create and run subassistant
       // Note: We don't pass the parent LLM client to avoid concurrency issues
       // when multiple subassistants run in parallel. Each subassistant creates its own client.
@@ -365,6 +384,8 @@ export class SubassistantManager {
         tools,
         context: config.context,
         maxTurns,
+        minTurns,
+        workUntilDone,
         cwd: config.cwd,
         sessionId: `subassistant-${subassistantId}`,
         depth: config.depth + 1,

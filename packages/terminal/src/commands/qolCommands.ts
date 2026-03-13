@@ -229,7 +229,7 @@ export function handleHistory(query: string): Message {
     const id = r.session.id.slice(0, 8);
     return `${i + 1}. **${date}** \`${id}\` (${r.session.messageCount} msgs) — ${r.preview}`;
   });
-  return assistantMsg(`${header}\n\n${lines.join('\n')}\n\nResume with: \`assistants --resume <id>\``);
+  return assistantMsg(`${header}\n\n${lines.join('\n')}\n\nResume with: \`assistants --resume <id or name>\``);
 }
 
 /**

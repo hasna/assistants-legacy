@@ -226,12 +226,12 @@ describe('parseArgs - validation errors', () => {
 
   test('--resume missing value adds error', () => {
     const options = parseArgs(['node', 'cli', '-p', 'test', '--resume']);
-    expect(options.errors).toContain('--resume requires a session ID');
+    expect(options.errors).toContain('--resume requires a session ID or name');
   });
 
   test('-r missing value adds error', () => {
     const options = parseArgs(['node', 'cli', '-p', 'test', '-r', '--continue']);
-    expect(options.errors).toContain('-r requires a session ID');
+    expect(options.errors).toContain('-r requires a session ID or name');
     expect(options.continue).toBe(true);
   });
 
@@ -359,7 +359,7 @@ describe('parseArgs - end-of-options and flag handling', () => {
     const options = parseArgs(['node', 'cli', '-p', 'test', '--resume', '--continue']);
     expect(options.resume).toBeNull();
     expect(options.continue).toBe(true);
-    expect(options.errors).toContain('--resume requires a session ID');
+    expect(options.errors).toContain('--resume requires a session ID or name');
   });
 
   test('--cwd followed by flag has no value and adds error', () => {

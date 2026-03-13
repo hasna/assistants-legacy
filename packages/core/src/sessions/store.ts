@@ -109,6 +109,20 @@ export class SessionStore {
   }
 
   /**
+   * Find a session by label (case-insensitive)
+   */
+  findByLabel(label: string): PersistedSessionData | null {
+    try {
+      const row = this.db
+        .query<SessionRow>('SELECT * FROM persisted_sessions WHERE LOWER(label) = LOWER(?) ORDER BY updated_at DESC LIMIT 1')
+        .get(label);
+      return row ? rowToSession(row) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * List sessions that were active (not closed) - for recovery
    */
   listRecoverable(): PersistedSessionData[] {

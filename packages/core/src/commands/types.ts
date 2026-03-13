@@ -1,4 +1,4 @@
-import type { Tool, TokenUsage, VoiceState, HeartbeatState, HeartbeatConfig, HookConfig, BudgetConfig, GuardrailsConfigShared } from '@hasna/assistants-shared';
+import type { Tool, TokenUsage, VoiceState, HeartbeatState, HeartbeatConfig, HookConfig, BudgetConfig, GuardrailsConfigShared, PermissionMode } from '@hasna/assistants-shared';
 import type { BudgetScope, BudgetSummary } from '../budget/types';
 import type { GuardrailsConfig, GuardrailsPolicy, PolicyAction } from '../guardrails/types';
 import type { RecordOptions } from '../voice/recorder';
@@ -143,6 +143,8 @@ export interface CommandContext {
   removeGuardrailsPolicy?: (policyId: string) => void;
   setGuardrailsDefaultAction?: (action: PolicyAction) => void;
   getSwarmCoordinator?: () => SwarmCoordinator | null;
+  getPermissionMode?: () => PermissionMode;
+  setPermissionMode?: (mode: PermissionMode) => void;
   clearMessages: () => void;
   addSystemMessage: (content: string) => void;
   emit: (type: 'text' | 'done' | 'error' | 'partial_transcript', content?: string) => void;

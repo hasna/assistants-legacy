@@ -132,7 +132,7 @@ export const DEFAULT_DISPATCHER_CONFIG: DispatcherConfig = {
   maxQueueSize: 50,
   forbiddenTools: ['swarm_execute', 'assistant_spawn'],
   defaultWorkerTools: ['bash', 'read', 'write', 'edit', 'glob', 'grep'],
-  maxTurnsPerTask: 15,
+  maxTurnsPerTask: 25,
 };
 
 /**
