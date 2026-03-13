@@ -36,7 +36,23 @@ const MAX_VALUE_SIZE = 65536;
 const MAX_SUMMARY_LENGTH = 500;
 
 /**
- * Global Memory Manager - handles all memory operations
+ * Manages scoped, persistent key-value memories backed by SQLite.
+ * Supports four scopes (global, shared, private, session) with
+ * configurable isolation, importance ranking, TTL expiration,
+ * access tracking, and automatic storage-limit enforcement.
+ *
+ * @description Used by the assistant to remember user preferences,
+ * learned facts, session context, and cross-session knowledge.
+ * Scope isolation prevents one assistant from reading another's
+ * private memories, while global/shared memories are accessible
+ * to all assistants.
+ *
+ * @example
+ * ```ts
+ * const memory = new GlobalMemoryManager({ defaultScope: 'shared', scopeId: 'assistant-1' });
+ * await memory.set('user-language', 'TypeScript', { category: 'preference', importance: 8 });
+ * const pref = await memory.get('user-language');
+ * ```
  */
 export class GlobalMemoryManager {
   private db: DatabaseConnection;
@@ -129,7 +145,9 @@ export class GlobalMemoryManager {
   }
 
   /**
-   * Save or update a memory
+   * Save or update a memory. If a memory with the same key+scope+scopeId
+   * already exists, it is updated in place (upsert semantics).
+   * Validates key length, value size, and scope enablement before writing.
    */
   async set(key: string, value: unknown, options: MemoryOptions): Promise<Memory> {
     // Validate key length
@@ -581,7 +599,10 @@ export class GlobalMemoryManager {
   }
 
   /**
-   * Get memories relevant to a context (for injection)
+   * Retrieve memories relevant to a natural-language context string.
+   * Uses keyword matching against key, summary, and value fields,
+   * ordered by importance. Intended for automatic context injection
+   * into the assistant's system prompt.
    */
   async getRelevant(
     context: string,
@@ -863,7 +884,8 @@ export class GlobalMemoryManager {
   }
 
   /**
-   * Import memories from JSON
+   * Import memories from a JSON array. Skips entries whose key already
+   * exists unless `overwrite` is true. Returns the number of memories imported.
    */
   async import(memories: Memory[], options: { overwrite?: boolean } = {}): Promise<number> {
     let imported = 0;

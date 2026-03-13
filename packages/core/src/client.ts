@@ -7,7 +7,24 @@ import { Logger, SessionStorage, initAssistantsDir } from './logger';
 import type { Command } from './commands';
 
 /**
- * Embedded client - runs the assistant in the same process
+ * The primary API for embedding the assistant in a host application.
+ * Manages the full lifecycle: initialization, message sending, streaming
+ * response chunks, tool execution, session persistence, and cleanup.
+ *
+ * Messages are processed sequentially via an internal queue, so callers
+ * can safely call {@link send} while the assistant is still responding.
+ *
+ * @description Wraps an {@link AgentLoop} and exposes a callback-driven
+ * streaming interface suitable for terminal UIs, web servers, or tests.
+ *
+ * @example
+ * ```ts
+ * const client = new EmbeddedClient(process.cwd());
+ * client.onChunk((chunk) => process.stdout.write(chunk.type === 'text' ? chunk.text : ''));
+ * await client.initialize();
+ * await client.send('Hello!');
+ * client.disconnect();
+ * ```
  */
 export class EmbeddedClient implements AssistantClient {
   private assistantLoop: AgentLoop;
@@ -135,7 +152,9 @@ export class EmbeddedClient implements AssistantClient {
   }
 
   /**
-   * Send a message to the assistant
+   * Send a message to the assistant. If the assistant is already processing,
+   * the message is queued and will be delivered automatically when the
+   * current turn completes. Empty/whitespace-only messages are ignored.
    */
   async send(message: string): Promise<void> {
     if (!this.initialized) {
@@ -224,7 +243,8 @@ export class EmbeddedClient implements AssistantClient {
   }
 
   /**
-   * Register a chunk callback. Returns an unsubscribe function.
+   * Subscribe to streaming response chunks (text, tool_use, tool_result, done, error, etc.).
+   * @returns An unsubscribe function that removes the callback.
    */
   onChunk(callback: (chunk: StreamChunk) => void): () => void {
     this.chunkCallbacks.push(callback);
@@ -235,7 +255,8 @@ export class EmbeddedClient implements AssistantClient {
   }
 
   /**
-   * Register an error callback. Returns an unsubscribe function.
+   * Subscribe to unrecoverable processing errors (errors not already surfaced via an error chunk).
+   * @returns An unsubscribe function that removes the callback.
    */
   onError(callback: (error: Error) => void): () => void {
     this.errorCallbacks.push(callback);
@@ -315,7 +336,9 @@ export class EmbeddedClient implements AssistantClient {
   }
 
   /**
-   * Disconnect and clean up resources
+   * Disconnect and clean up all resources. Persists the current session,
+   * shuts down the agent loop, and removes all callbacks.
+   * The client cannot be reused after calling this method.
    */
   disconnect(): void {
     this.logger.info('Session ended');

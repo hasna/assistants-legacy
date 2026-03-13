@@ -64,7 +64,20 @@ export interface SessionRegistryOptions {
 }
 
 /**
- * Registry that manages multiple concurrent sessions
+ * Manages multiple concurrent assistant sessions with one "active" foreground
+ * session at a time. Background sessions continue processing and their
+ * response chunks are buffered until the session is switched to the foreground.
+ *
+ * @description Handles session creation, switching, persistence, chunk
+ * forwarding/buffering, label management, and graceful shutdown of all sessions.
+ *
+ * @example
+ * ```ts
+ * const registry = new SessionRegistry();
+ * const session = await registry.createSession({ cwd: process.cwd() });
+ * registry.onChunk((chunk) => console.log(chunk));
+ * await session.client.send('Hello');
+ * ```
  */
 export class SessionRegistry {
   private sessions: Map<string, SessionInfo> = new Map();
@@ -267,7 +280,9 @@ export class SessionRegistry {
   }
 
   /**
-   * Switch to a different session
+   * Switch the active (foreground) session. The previously active session
+   * moves to background buffering. Any buffered chunks from the new
+   * session are replayed to chunk callbacks immediately.
    */
   async switchSession(id: string): Promise<void> {
     if (!this.sessions.has(id)) {
@@ -363,7 +378,8 @@ export class SessionRegistry {
   }
 
   /**
-   * Close a specific session
+   * Close and clean up a specific session. If the closed session was active,
+   * the most recently updated remaining session becomes active automatically.
    */
   closeSession(id: string): void {
     const session = this.sessions.get(id);

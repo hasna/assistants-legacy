@@ -12,6 +12,23 @@ export interface SkillLoadOptions {
   includeContent?: boolean;
 }
 
+/**
+ * Discovers and loads SKILL.md files from global (~/.skill/) and
+ * project-local (.skill/) directories. Skills are loaded from both npm
+ * packages (@hasnaxyz/skill-*) and local directories (skill-*).
+ *
+ * @description Later-discovered skills override earlier ones by name,
+ * allowing project-local skills to shadow global defaults. Skills can
+ * be loaded with or without their full markdown content (lazy loading).
+ *
+ * @example
+ * ```ts
+ * const loader = new SkillLoader();
+ * await loader.loadAll('/path/to/project');
+ * const skills = loader.getSkills();
+ * const skill = await loader.ensureSkillContent('deepresearch');
+ * ```
+ */
 export class SkillLoader {
   private skills: Map<string, Skill> = new Map();
 
@@ -270,7 +287,9 @@ export class SkillLoader {
   }
 
   /**
-   * Ensure full content is loaded for a skill
+   * Ensure a skill's full markdown content is loaded. If the skill was
+   * initially loaded without content (includeContent: false), this
+   * re-reads the file to populate it. Returns null if the skill is unknown.
    */
   async ensureSkillContent(name: string): Promise<Skill | null> {
     const skill = this.skills.get(name);
@@ -298,7 +317,9 @@ export class SkillLoader {
   }
 
   /**
-   * Get skill descriptions for context (helps LLM know what's available)
+   * Build a formatted string listing all loaded skills with their
+   * descriptions and argument hints. Intended for injection into the
+   * LLM system prompt so it knows which skills are available.
    */
   getSkillDescriptions(): string {
     const skills = this.getSkills();

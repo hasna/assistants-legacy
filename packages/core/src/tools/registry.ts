@@ -39,7 +39,23 @@ interface RegisteredTool {
 }
 
 /**
- * Tool registry - manages available tools and their execution
+ * Central registry for assistant tools. Handles tool registration, schema
+ * validation, execution with timeouts and cancellation, guardrails policy
+ * enforcement, and output size limiting.
+ *
+ * @description Each tool is a named function with a JSON Schema for its input.
+ * The registry validates inputs, enforces configurable guardrails policies
+ * (allow/deny/require-approval), and caps output size.
+ *
+ * @example
+ * ```ts
+ * const registry = new ToolRegistry();
+ * registry.register(
+ *   { name: 'greet', description: 'Say hello', parameters: { type: 'object', properties: { name: { type: 'string' } } } },
+ *   async (input) => `Hello, ${input.name}!`,
+ * );
+ * const result = await registry.execute({ id: '1', name: 'greet', input: { name: 'World' } });
+ * ```
  */
 export class ToolRegistry {
   private tools: Map<string, RegisteredTool> = new Map();
@@ -378,7 +394,8 @@ export class ToolRegistry {
   }
 
   /**
-   * Execute multiple tool calls in parallel
+   * Execute multiple tool calls in parallel. All calls run concurrently
+   * and the returned array preserves the input order.
    */
   async executeAll(toolCalls: ToolCall[]): Promise<ToolResult[]> {
     const tasks: Promise<ToolResult>[] = [];
