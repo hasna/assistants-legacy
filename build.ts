@@ -24,7 +24,11 @@ const result = await Bun.build({
   outdir,
   target: 'bun',
   format: 'esm',
-  minify: false, // Keep readable for debugging
+  minify: {
+    whitespace: true,
+    syntax: true,
+    identifiers: false, // Keep identifiers readable for error stack traces
+  },
   sourcemap: 'external',
   // Embed version at build time
   define: {
