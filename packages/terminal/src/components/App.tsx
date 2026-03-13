@@ -1299,8 +1299,15 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   // Save current session UI state
   const saveCurrentSessionState = useCallback(() => {
     if (activeSessionId) {
+      // Deduplicate messages by ID before saving to prevent accumulation
+      const seen = new Set<string>();
+      const dedupedMessages = messages.filter((msg) => {
+        if (seen.has(msg.id)) return false;
+        seen.add(msg.id);
+        return true;
+      });
       sessionUIStates.current.set(activeSessionId, {
-        messages,
+        messages: dedupedMessages,
         currentResponse: responseRef.current,
         activityLog: activityLogRef.current,
         toolCalls: toolCallsRef.current,
@@ -1323,7 +1330,14 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     const askState = askUserStateRef.current.get(sessionId) || null;
     const ivState = interviewStateRef.current.get(sessionId) || null;
     if (state) {
-      setMessages(state.messages);
+      // Deduplicate messages by ID to prevent accumulation across session switches
+      const seen = new Set<string>();
+      const deduped = state.messages.filter((msg) => {
+        if (seen.has(msg.id)) return false;
+        seen.add(msg.id);
+        return true;
+      });
+      setMessages(deduped);
       setCurrentResponse(state.currentResponse);
       responseRef.current = state.currentResponse;
       setActivityLog(state.activityLog);
@@ -1561,8 +1575,15 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   ]);
 
   const seedSessionState = useCallback((sessionId: string, seededMessages: Message[]) => {
+    // Deduplicate messages by ID to prevent persisted duplicates from propagating
+    const seen = new Set<string>();
+    const deduped = seededMessages.filter((msg) => {
+      if (seen.has(msg.id)) return false;
+      seen.add(msg.id);
+      return true;
+    });
     sessionUIStates.current.set(sessionId, {
-      messages: seededMessages,
+      messages: deduped,
       currentResponse: '',
       activityLog: [],
       toolCalls: [],
@@ -2418,12 +2439,21 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     }
 
     // Create session (with or without initial messages)
-    const session = await registry.createSession(effectiveCwd);
+    const session = await registry.createSession(
+      initialMessages && initialMessages.length > 0
+        ? { cwd: effectiveCwd, sessionId, initialMessages, startedAt }
+        : effectiveCwd
+    );
 
-    // If recovering, we need to import the old messages
-    // Since SessionRegistry doesn't support initialMessages, we'll display them in the UI
+    // Set UI messages from recovery data (deduplicated)
     if (initialMessages && initialMessages.length > 0) {
-      setMessages(initialMessages);
+      const seen = new Set<string>();
+      const deduped = initialMessages.filter((msg) => {
+        if (seen.has(msg.id)) return false;
+        seen.add(msg.id);
+        return true;
+      });
+      setMessages(deduped);
     }
 
     setActiveSessionId(session.id);
@@ -2854,8 +2884,12 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
   const displayMessages = useMemo(() => {
     const result: ReturnType<typeof buildDisplayMessages> = [];
+    const seenIds = new Set<string>();
 
     for (const msg of messages) {
+      // Skip duplicate messages (safety net)
+      if (seenIds.has(msg.id)) continue;
+      seenIds.add(msg.id);
       const signature = [
         msg.role,
         msg.content?.length ?? 0,
