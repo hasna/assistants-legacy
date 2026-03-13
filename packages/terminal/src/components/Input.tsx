@@ -542,19 +542,25 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   // Handle keyboard input for autocomplete and editing
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
+      // During processing, Ctrl+C stops the active run (same as Escape)
+      if (isProcessing && onStopProcessing) {
+        onStopProcessing();
+        return;
+      }
       if (value.length > 0) {
         setValueAndCursor('');
       }
       return;
     }
 
+    // Escape during processing: ALWAYS stop, regardless of isAskingUser
+    if (key.escape && isProcessing && onStopProcessing) {
+      onStopProcessing();
+      return;
+    }
+
     // Escape: clear large paste, clear input, or exit history mode (if not asking user)
     if (key.escape && !isAskingUser) {
-      // In processing mode Esc is a hard stop signal for the active run.
-      if (isProcessing && onStopProcessing) {
-        onStopProcessing();
-        return;
-      }
       // First priority: cancel pending large paste
       if (largePaste) {
         setLargePaste(null);
