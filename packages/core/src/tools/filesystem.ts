@@ -181,7 +181,13 @@ export class FilesystemTools {
     const limit = typeof limitRaw === 'number' && limitRaw > 0 ? Math.floor(limitRaw) : undefined;
 
     try {
-      const safety = await isPathSafe(path, 'read', { cwd: baseCwd });
+      // Allow reading from /tmp, ~/.connect (connector downloads), and the sandbox data dir
+      const readAllowedPaths = [
+        '/tmp',
+        join(homedir(), '.connect'),
+        getProjectDataDir(baseCwd),
+      ];
+      const safety = await isPathSafe(path, 'read', { cwd: baseCwd, allowedPaths: readAllowedPaths });
       if (!safety.safe) {
         getSecurityLogger().log({
           eventType: 'path_violation',
@@ -804,8 +810,14 @@ export class FilesystemTools {
     const path = FilesystemTools.resolveInputPath(baseCwd, String(input.path || ''));
 
     try {
+      // Allow reading from /tmp, ~/.connect (connector downloads), and the sandbox data dir
+      const pdfAllowedPaths = [
+        '/tmp',
+        join(homedir(), '.connect'),
+        getProjectDataDir(baseCwd),
+      ];
       // Validate path safety
-      const safety = await isPathSafe(path, 'read', { cwd: baseCwd });
+      const safety = await isPathSafe(path, 'read', { cwd: baseCwd, allowedPaths: pdfAllowedPaths });
       if (!safety.safe) {
         getSecurityLogger().log({
           eventType: 'path_violation',

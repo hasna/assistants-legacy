@@ -583,15 +583,16 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       return;
     }
 
+    // Tab during processing: ALWAYS queue the message (top priority, before any autocomplete)
+    if (key.tab && isProcessing && value.trim()) {
+      onSubmit(value, 'queue');
+      setValueAndCursor('');
+      return;
+    }
+
     if (!isAskingUser) {
-      // Tab: queue message while processing, or autocomplete when idle
+      // Tab: autocomplete when idle
       if (key.tab) {
-        // When agent is processing, Tab always queues (takes priority over autocomplete)
-        if (isProcessing && value.trim()) {
-          onSubmit(value, 'queue');
-          setValueAndCursor('');
-          return;
-        }
         if (autocompleteItems.length > 0) {
           const selected = autocompleteItems[selectedIndex] || autocompleteItems[0];
           if (autocompleteMode === 'file') {

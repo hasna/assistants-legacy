@@ -162,7 +162,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
                 {meta ? <Text dimColor> — {meta}</Text> : null}
               </Text>
               {session.lastMessage && (
-                <Text dimColor>    {'\u2018'}{session.lastMessage}{'\u2018'}</Text>
+                <Text dimColor>    {'\u2018'}{session.lastMessage}{'\u2019'}</Text>
               )}
             </Box>
           );
@@ -191,7 +191,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
             <Text>  <Text color="cyan">{s.cwd}</Text></Text>
             <Text>  {details}</Text>
             {s.lastMessage && (
-              <Text dimColor>  Last: {'\u2018'}{s.lastMessage}{'\u2018'}</Text>
+              <Text dimColor>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</Text>
             )}
           </Box>
         );
