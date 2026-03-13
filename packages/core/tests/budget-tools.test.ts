@@ -90,11 +90,12 @@ describe('budget tool executors', () => {
     expect(tracker.getUsage('swarm').totalTokens).toBe(0);
   });
 
-  test('executors return disabled message when tracker is missing', async () => {
+  test('executors return informative message when tracker is missing', async () => {
     const executors = createBudgetToolExecutors(() => null);
-    expect(await executors.budget_get({})).toContain('not enabled');
-    expect(await executors.budget_status({ scope: 'session' })).toContain('not enabled');
-    expect(await executors.budget_set({ scope: 'session', maxTotalTokens: 100 })).toContain('not enabled');
-    expect(await executors.budget_reset({ scope: 'session' })).toContain('not enabled');
+    expect(await executors.budget_get({})).toContain('No budget tracker is configured');
+    expect(await executors.budget_status({ scope: 'session' })).toContain('No budget tracker is configured');
+    expect(await executors.budget_status({ scope: 'session' })).toContain('budget_set');
+    expect(await executors.budget_set({ scope: 'session', maxTotalTokens: 100 })).toContain('No budget tracker is configured');
+    expect(await executors.budget_reset({ scope: 'session' })).toContain('No budget tracker is configured');
   });
 });

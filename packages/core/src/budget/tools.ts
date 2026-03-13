@@ -145,7 +145,18 @@ export function createBudgetToolExecutors(
     budget_status: async (input) => {
       const tracker = getBudgetTracker();
       if (!tracker) {
-        return 'Budget tracking is not enabled.';
+        return [
+          '## Budget Status',
+          '',
+          'No budget tracker is configured for this session.',
+          'Budget tracking is available but not active — no budget limits have been set.',
+          '',
+          'To enable budget tracking, use the `budget_set` tool to configure limits:',
+          '  e.g., budget_set scope="session" maxTotalTokens=100000',
+          '',
+          'Available scopes: session, swarm, project',
+          'Available limits: maxInputTokens, maxOutputTokens, maxTotalTokens, maxLlmCalls, maxToolCalls, maxDurationMs',
+        ].join('\n');
       }
 
       const scopeInput = normalizeScope(input.scope || 'session');
@@ -199,7 +210,7 @@ export function createBudgetToolExecutors(
     budget_get: async () => {
       const tracker = getBudgetTracker();
       if (!tracker) {
-        return 'Budget tracking is not enabled.';
+        return 'No budget tracker is configured. Use `budget_set` to configure limits and enable tracking.';
       }
 
       const config = tracker.getConfig();
@@ -209,7 +220,7 @@ export function createBudgetToolExecutors(
     budget_set: async (input) => {
       const tracker = getBudgetTracker();
       if (!tracker) {
-        return 'Budget tracking is not enabled.';
+        return 'No budget tracker is configured. Budget limits cannot be set without an active tracker.';
       }
 
       const scopeInput = normalizeScope(input.scope || 'session');
@@ -256,7 +267,7 @@ export function createBudgetToolExecutors(
     budget_reset: async (input) => {
       const tracker = getBudgetTracker();
       if (!tracker) {
-        return 'Budget tracking is not enabled.';
+        return 'No budget tracker is configured. Nothing to reset.';
       }
 
       const scope = normalizeScope(input.scope || 'session');

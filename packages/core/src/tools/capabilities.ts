@@ -57,7 +57,36 @@ export function createCapabilitiesGetExecutor(context: CapabilityToolContext) {
     const section = (input.section as string) || 'all';
 
     if (!context.isEnabled()) {
-      return 'Capability enforcement is disabled.';
+      const lines: string[] = [];
+      lines.push('## Capabilities (enforcement disabled)');
+      lines.push('');
+      lines.push('Capability enforcement is not active — all tools and skills are available without restrictions.');
+      lines.push('');
+
+      const orchestrationLevel = context.getOrchestrationLevel?.();
+      if (orchestrationLevel) {
+        lines.push(`Orchestration level: ${orchestrationLevel}`);
+      }
+
+      const toolPolicy = context.getToolPolicy?.();
+      if (toolPolicy) {
+        lines.push(`Tool access policy: ${toolPolicy}`);
+      }
+
+      const allowedTools = context.getAllowedTools?.();
+      if (allowedTools && allowedTools.length > 0) {
+        lines.push(`Registered tools: ${allowedTools.length}`);
+      }
+
+      const deniedTools = context.getDeniedTools?.();
+      if (deniedTools && deniedTools.length > 0) {
+        lines.push(`Denied tools: ${deniedTools.join(', ')}`);
+      }
+
+      lines.push('');
+      lines.push('To enable capability enforcement, configure capabilities in the assistant settings.');
+
+      return lines.join('\n');
     }
 
     const capabilities = context.getCapabilities();
