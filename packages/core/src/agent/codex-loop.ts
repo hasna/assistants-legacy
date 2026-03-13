@@ -91,6 +91,7 @@ export class CodexAgentLoop {
       try {
         // @ts-ignore - Optional dependency, loaded dynamically
         const sdk = await import('@openai/codex-sdk');
+        // @ts-expect-error - default export may not be typed
         Codex = sdk.Codex || sdk.default;
       } catch {
         this.emitChunk({ type: 'error', error: 'OpenAI Codex SDK (@openai/codex-sdk) is not installed. Run: pnpm add -F @hasna/assistants-core @openai/codex-sdk' });

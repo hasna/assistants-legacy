@@ -4,7 +4,7 @@
  */
 
 // Type-only import (erased at runtime, no side effects)
-import type { SkillMeta, AgentTarget } from '@hasna/skills';
+import type { SkillMeta, AgentTarget, Category } from '@hasna/skills';
 
 // Lazy loader — called only when registry functions are actually used
 let _skillsLib: typeof import('@hasna/skills') | null = null;
@@ -38,7 +38,7 @@ export async function listSkillCategories(): Promise<string[]> {
 
 export async function listRegistrySkills(category?: string): Promise<RegistrySkillInfo[]> {
   const lib = await getSkillsLib();
-  const skills = category ? lib.getSkillsByCategory(category) : lib.SKILLS;
+  const skills = category ? lib.getSkillsByCategory(category as Category) : lib.SKILLS;
   return skills.map((m) => ({
     name: m.name, displayName: m.displayName,
     description: m.description, category: m.category, tags: m.tags,
@@ -56,9 +56,10 @@ export async function installSkillFromRegistry(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const lib = await getSkillsLib();
-    const agent: AgentTarget = 'assistants';
-    const result = await lib.installSkillForAgent(name, agent, {
-      scope: scope === 'global' ? 'global' : 'local',
+    const agent: AgentTarget = 'claude';
+    const result = await lib.installSkillForAgent(name, {
+      agent,
+      scope,
       projectDir: scope === 'project' ? cwd : undefined,
     });
     if (!result.success) return { success: false, error: result.error ?? 'Installation failed' };
@@ -71,10 +72,8 @@ export async function installSkillFromRegistry(
 export async function getInstalledRegistrySkills(scope: 'project' | 'global' = 'project', cwd?: string): Promise<string[]> {
   try {
     const lib = await getSkillsLib();
-    return lib.getInstalledSkills('assistants', {
-      scope: scope === 'global' ? 'global' : 'local',
-      projectDir: scope === 'project' ? cwd : undefined,
-    });
+    const targetDir = lib.getAgentSkillsDir('claude', scope, scope === 'project' ? cwd : undefined);
+    return lib.getInstalledSkills(targetDir);
   } catch { return []; }
 }
 

@@ -12,6 +12,7 @@ export interface HeadlessOptions {
   resume?: string | null;
   cwdProvided?: boolean;
   timeoutMs?: number | null;
+  permissionMode?: 'normal' | 'plan' | 'auto-accept';
 }
 
 interface JsonOutput {

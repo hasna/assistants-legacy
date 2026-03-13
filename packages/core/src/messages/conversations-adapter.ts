@@ -46,7 +46,7 @@ function sdkToNative(msg: SdkMessage): AssistantMessage {
   return {
     id: String(msg.id),
     threadId: msg.session_id,
-    parentId: msg.reply_to ? String(msg.reply_to) : null,
+    parentId: (meta.__reply_to != null) ? String(meta.__reply_to) : null,
     fromAssistantId: msg.from_agent,
     fromAssistantName: msg.from_agent,
     toAssistantId: msg.to_agent,
@@ -65,14 +65,14 @@ function sdkToNative(msg: SdkMessage): AssistantMessage {
 function nativeToSdkOptions(input: SendMessageInput, fromId: string): SendMessageOptions {
   const meta: Record<string, unknown> = { ...(input.metadata ?? {}) };
   if (input.subject) meta.subject = input.subject;
+  if (input.replyTo) meta.__reply_to = Number(input.replyTo);
 
   return {
     from: fromId,
     to: input.to,
     content: input.body,
     priority: input.priority ?? 'normal',
-    session_id: input.replyTo ? undefined : undefined, // let SDK auto-generate
-    reply_to: input.replyTo ? Number(input.replyTo) : undefined,
+    session_id: undefined, // let SDK auto-generate
     metadata: Object.keys(meta).length > 0 ? meta : undefined,
   };
 }
@@ -95,7 +95,7 @@ export class ConversationsAdapter {
   async initialize(): Promise<void> {
     // Register presence
     try {
-      heartbeat({ from: this.assistantId, status: 'online' });
+      heartbeat(this.assistantId, 'online');
     } catch {
       // Ignore presence errors — conversations may not be configured
     }
@@ -105,9 +105,9 @@ export class ConversationsAdapter {
     try {
       const opts = nativeToSdkOptions(input, this.assistantId);
       const msg = sendMessage(opts);
-      return { success: true, messageId: String(msg.id) };
+      return { success: true, message: 'Message sent', messageId: String(msg.id) };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) };
+      return { success: false, message: err instanceof Error ? err.message : String(err) };
     }
   }
 
@@ -138,7 +138,7 @@ export class ConversationsAdapter {
   async read(messageId: string): Promise<AssistantMessage | null> {
     try {
       const id = Number(messageId);
-      markRead({ ids: [id], from: this.assistantId });
+      markRead([id], this.assistantId);
 
       const msgs = readMessages({ to: this.assistantId, limit: 200 });
       const msg = msgs.find((m) => m.id === id);
@@ -155,7 +155,7 @@ export class ConversationsAdapter {
       // Mark all as read
       const unreadIds = msgs.filter((m) => !m.read_at).map((m) => m.id);
       if (unreadIds.length > 0) {
-        markRead({ ids: unreadIds, from: this.assistantId });
+        markRead(unreadIds, this.assistantId);
       }
       return msgs.map(sdkToNative);
     } catch {
@@ -165,7 +165,7 @@ export class ConversationsAdapter {
 
   async delete(messageId: string): Promise<boolean> {
     try {
-      deleteMessage(Number(messageId));
+      deleteMessage(Number(messageId), this.assistantId);
       return true;
     } catch {
       return false;
@@ -190,10 +190,17 @@ export class ConversationsAdapter {
         return {
           threadId,
           subject: meta.subject as string | undefined,
-          participants: [...new Set(threadMsgs.flatMap((m) => [m.from_agent, m.to_agent]))],
+          participants: [...new Set(threadMsgs.flatMap((m) => [m.from_agent, m.to_agent]))].map((agent) => ({
+            assistantId: agent,
+            assistantName: agent,
+          })),
           messageCount: sorted.length,
           unreadCount,
-          lastMessage: sdkToNative(last),
+          lastMessage: {
+            ...sdkToNative(last),
+            preview: last.content.slice(0, 120),
+            replyCount: sorted.length - 1,
+          },
           createdAt: sorted[0].created_at,
           updatedAt: last.created_at,
         };
@@ -209,7 +216,7 @@ export class ConversationsAdapter {
       return agents.map((a) => ({
         id: a.agent,
         name: a.agent,
-        lastSeen: a.last_seen,
+        lastSeen: a.last_seen_at,
       }));
     } catch {
       return [];
@@ -256,7 +263,7 @@ export class ConversationsAdapter {
     const ids = messageIds.map(Number).filter(Boolean);
     if (ids.length > 0) {
       try {
-        markRead({ ids, from: this.assistantId });
+        markRead(ids, this.assistantId);
       } catch {
         // ignore
       }

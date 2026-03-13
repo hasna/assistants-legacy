@@ -62,12 +62,12 @@ export function createMessagesSpacesJoinTool(agentId: string): { tool: Tool; exe
       const { joinSpace, createSpace } = await getConversationsLib();
       // Try to join existing space, or create+join a new one
       try {
-        joinSpace({ name, from: agentId });
+        joinSpace(name, agentId);
         return `Joined space "${name}". Use messages_spaces_send to broadcast to all members.`;
       } catch {
         // Space doesn't exist — create it
         const desc = String(input.description || '');
-        createSpace({ name, description: desc || undefined, from: agentId });
+        createSpace(name, agentId, { description: desc || undefined });
         return `Created and joined space "${name}".`;
       }
     } catch (err) {

@@ -75,7 +75,7 @@ export function createConnectorsRegistryInstallTool(cwd: string): { tool: Tool; 
   };
   const executor: ToolExecutor = async (input) => {
     const name = String(input.name || '').trim();
-    if (!name) throw new ConnectorError('Connector name is required.', { code: ErrorCodes.TOOL_EXECUTION_FAILED, recoverable: true });
+    if (!name) throw new ConnectorError('Connector name is required.', { code: ErrorCodes.TOOL_EXECUTION_FAILED, recoverable: true, connectorName: name });
     const scope = (String(input.scope || 'global').trim() as 'global' | 'project');
     const result = await installConnectorFromRegistry(name, scope, cwd);
     if (!result.success) return `Failed to install "${name}": ${result.error}`;

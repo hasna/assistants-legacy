@@ -524,7 +524,7 @@ export class SwarmDispatcher {
         const result = await this.executeWithTimeout(dispatchTask);
 
         if (this.isStopped) {
-          if (dispatchTask.status !== 'cancelled') {
+          if ((dispatchTask.status as string) !== 'cancelled') {
             dispatchTask.status = 'cancelled';
             dispatchTask.finishedAt = Date.now();
             dispatchTask.durationMs = dispatchTask.startedAt
@@ -550,7 +550,7 @@ export class SwarmDispatcher {
         const isTimeout = normalizedError.includes('timeout') || normalizedError.includes('timed out');
 
         if (this.isStopped) {
-          if (dispatchTask.status !== 'cancelled') {
+          if ((dispatchTask.status as string) !== 'cancelled') {
             dispatchTask.status = 'cancelled';
             dispatchTask.error = 'Cancelled';
             dispatchTask.finishedAt = Date.now();

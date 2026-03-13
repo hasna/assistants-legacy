@@ -142,7 +142,7 @@ export function useSafeInput(handler: Handler, options: Options = {}): void {
 
       const keypress = parseKeypress(data);
       const isReturn = keypress.name === 'return' || keypress.sequence === '\x1b\r' || keypress.sequence === '\x1b\n';
-      const key = {
+      const key: Key = {
         upArrow: keypress.name === 'up',
         downArrow: keypress.name === 'down',
         leftArrow: keypress.name === 'left',
@@ -158,8 +158,8 @@ export function useSafeInput(handler: Handler, options: Options = {}): void {
         tab: keypress.name === 'tab',
         backspace: keypress.name === 'backspace',
         delete: keypress.name === 'delete',
-        meta: keypress.meta || keypress.name === 'escape' || keypress.option,
-      };
+        meta: !!(keypress.meta || keypress.name === 'escape' || keypress.option),
+      } as Key;
 
       let input = keypress.ctrl ? keypress.name : keypress.sequence;
       if (NON_ALPHA_KEYS.includes(keypress.name)) {

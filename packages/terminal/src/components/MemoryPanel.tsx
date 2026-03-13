@@ -17,6 +17,7 @@ const SCOPE_TAG: Record<Memory['scope'], string> = {
   global: '[G]',
   shared: '[S]',
   private: '[P]',
+  session: '[T]',
 };
 
 function formatSummary(memory: Memory, maxLen: number = 60): string {

@@ -31,7 +31,7 @@ export async function fetchWithTimeout(
   const errorToolInput = toolInput ?? { url };
 
   const controller = new AbortController();
-  let abortReason: 'timeout' | 'external' | null = null;
+  let abortReason: string | null = null;
 
   const handleExternalAbort = () => {
     if (abortReason) return;

@@ -307,7 +307,7 @@ function mergeConfig(base: AssistantsConfig, override?: Partial<AssistantsConfig
 
   // Deep merge handles recursive object merging and array replacement.
   // Special cases that need non-generic logic are applied as post-merge fixups.
-  const merged = deepMerge(base as Record<string, unknown>, override as Record<string, unknown>) as AssistantsConfig;
+  const merged = deepMerge(base as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AssistantsConfig;
 
   // Connectors have special array-vs-object handling
   merged.connectors = mergeConnectorsConfig(base.connectors, override.connectors);
@@ -393,6 +393,56 @@ export async function loadConfig(
   const localConfigPath = join(getProjectConfigDir(cwd), 'config.local.json');
   const localConfig = await loadJsonFile<Partial<AssistantsConfig>>(localConfigPath);
   config = mergeConfig(config, migrateConfigKeys(localConfig) || undefined);
+
+  return validateConfig(config);
+}
+
+/**
+ * Validate config at load time. Logs warnings for invalid values
+ * and clamps them to safe defaults. Never throws — returns a valid config.
+ */
+function validateConfig(config: AssistantsConfig): AssistantsConfig {
+  const warn = (msg: string) => process.stderr.write(`[assistants-config] ${msg}\n`);
+
+  // llm.provider must be a known value
+  const validProviders = ['anthropic', 'openai', 'xai', 'mistral', 'gemini', 'codex'];
+  if (config.llm?.provider && !validProviders.includes(config.llm.provider)) {
+    warn(`Unknown LLM provider "${config.llm.provider}", falling back to "anthropic"`);
+    config.llm.provider = 'anthropic';
+  }
+
+  // llm.maxTokens must be positive
+  if (config.llm?.maxTokens !== undefined && (typeof config.llm.maxTokens !== 'number' || config.llm.maxTokens <= 0)) {
+    warn(`Invalid llm.maxTokens "${config.llm.maxTokens}", falling back to 8192`);
+    config.llm.maxTokens = 8192;
+  }
+
+  // permissions.bash must be a valid level
+  const validBashPerms = ['none', 'readonly', 'readwrite'];
+  if (config.permissions?.bash && !validBashPerms.includes(config.permissions.bash)) {
+    warn(`Unknown permissions.bash "${config.permissions.bash}", falling back to "readonly"`);
+    config.permissions.bash = 'readonly';
+  }
+
+  // permissions.mode must be valid
+  const validModes = ['normal', 'plan', 'auto-accept'];
+  if (config.permissions?.mode && !validModes.includes(config.permissions.mode)) {
+    warn(`Unknown permissions.mode "${config.permissions.mode}", falling back to "normal"`);
+    config.permissions.mode = 'normal';
+  }
+
+  // workspace.mode must be valid
+  const validWorkspaceModes = ['sandbox', 'unrestricted'];
+  if (config.workspace?.mode && !validWorkspaceModes.includes(config.workspace.mode)) {
+    warn(`Unknown workspace.mode "${config.workspace.mode}", falling back to "sandbox"`);
+    config.workspace.mode = 'sandbox';
+  }
+
+  // context.maxContextTokens must be positive
+  if (config.context?.maxContextTokens !== undefined && (typeof config.context.maxContextTokens !== 'number' || config.context.maxContextTokens <= 0)) {
+    warn(`Invalid context.maxContextTokens, falling back to 180000`);
+    config.context.maxContextTokens = 180000;
+  }
 
   return config;
 }

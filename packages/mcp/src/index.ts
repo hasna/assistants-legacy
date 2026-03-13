@@ -200,8 +200,8 @@ server.tool(
     const { SkillLoader } = await import('@hasna/assistants-core');
     const workingDir = cwd || process.cwd();
 
-    const loader = new SkillLoader(workingDir);
-    await loader.initialize();
+    const loader = new SkillLoader();
+    await loader.loadAll(workingDir);
     const skills = loader.getSkills();
 
     if (skills.length === 0) {
@@ -234,11 +234,16 @@ server.tool(
     const { SkillLoader, SkillExecutor } = await import('@hasna/assistants-core');
     const workingDir = cwd || process.cwd();
 
-    const loader = new SkillLoader(workingDir);
-    await loader.initialize();
+    const loader = new SkillLoader();
+    await loader.loadAll(workingDir);
 
-    const executor = new SkillExecutor(loader);
-    const expandedPrompt = await executor.execute(skill_name, args || '');
+    const skill = loader.getSkills().find(s => s.name === skill_name);
+    if (!skill) {
+      return { content: [{ type: 'text' as const, text: `Skill "${skill_name}" not found.` }], isError: true };
+    }
+
+    const executor = new SkillExecutor();
+    const expandedPrompt = await executor.prepare(skill, args ? args.split(/\s+/) : []);
 
     if (!expandedPrompt) {
       return { content: [{ type: 'text' as const, text: `Skill "${skill_name}" not found.` }], isError: true };

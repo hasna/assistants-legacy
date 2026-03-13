@@ -4,7 +4,9 @@
  */
 
 // Type-only import (erased at runtime, no side effects)
-import type { ConnectorMeta } from '@hasna/connectors';
+import type { ConnectorMeta, Category } from '@hasna/connectors';
+import { homedir } from 'os';
+import { join } from 'path';
 
 let _connectorsLib: typeof import('@hasna/connectors') | null = null;
 async function getConnectorsLib(): Promise<typeof import('@hasna/connectors')> {
@@ -37,7 +39,7 @@ export async function listConnectorCategories(): Promise<string[]> {
 
 export async function listRegistryConnectors(category?: string): Promise<RegistryConnectorInfo[]> {
   const lib = await getConnectorsLib();
-  const connectors = category ? lib.getConnectorsByCategory(category) : lib.CONNECTORS;
+  const connectors = category ? lib.getConnectorsByCategory(category as Category) : lib.CONNECTORS;
   return connectors.map((m) => ({
     name: m.name, displayName: m.displayName,
     description: m.description, category: m.category, tags: m.tags,
@@ -55,10 +57,10 @@ export async function installConnectorFromRegistry(
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
     const lib = await getConnectorsLib();
-    const result = await lib.installConnector(name, {
-      global: scope === 'global',
-      projectDir: scope === 'project' ? cwd : undefined,
-    });
+    const targetDir = scope === 'global'
+      ? join(homedir(), '.assistants', 'connectors')
+      : join(cwd || process.cwd(), '.assistants', 'connectors');
+    const result = lib.installConnector(name, { targetDir });
     if (!result.success) return { success: false, error: result.error ?? 'Installation failed' };
     return { success: true, path: result.path };
   } catch (err) {
@@ -69,20 +71,20 @@ export async function installConnectorFromRegistry(
 export async function getInstalledRegistryConnectors(scope: 'project' | 'global' = 'global', cwd?: string): Promise<string[]> {
   try {
     const lib = await getConnectorsLib();
-    return lib.getInstalledConnectors({
-      global: scope === 'global',
-      projectDir: scope === 'project' ? cwd : undefined,
-    });
+    const targetDir = scope === 'global'
+      ? join(homedir(), '.assistants', 'connectors')
+      : join(cwd || process.cwd(), '.assistants', 'connectors');
+    return lib.getInstalledConnectors(targetDir);
   } catch { return []; }
 }
 
 export async function removeInstalledConnector(name: string, scope: 'project' | 'global' = 'global', cwd?: string): Promise<{ success: boolean; error?: string }> {
   try {
     const lib = await getConnectorsLib();
-    await lib.removeConnector(name, {
-      global: scope === 'global',
-      projectDir: scope === 'project' ? cwd : undefined,
-    });
+    const targetDir = scope === 'global'
+      ? join(homedir(), '.assistants', 'connectors')
+      : join(cwd || process.cwd(), '.assistants', 'connectors');
+    lib.removeConnector(name, targetDir);
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };

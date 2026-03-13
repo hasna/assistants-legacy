@@ -25,6 +25,16 @@ export interface ZodDescriptor {
 }
 
 export function toolPropertyToZodDescriptor(prop: ToolProperty): ZodDescriptor {
+  // Not all ToolProperty variants have .type (oneOf/anyOf/allOf don't)
+  if (!('type' in prop)) {
+    // Handle union types (oneOf, anyOf, allOf)
+    const variants = 'oneOf' in prop ? prop.oneOf : 'anyOf' in prop ? prop.anyOf : 'allOf' in prop ? prop.allOf : [];
+    return {
+      type: 'union',
+      description: prop.description,
+      variants: variants.map(v => toolPropertyToZodDescriptor(v)),
+    };
+  }
   const baseType = Array.isArray(prop.type) ? prop.type[0] : prop.type;
 
   if (prop.enum && prop.enum.length > 0) {
@@ -119,7 +129,8 @@ export function buildToolsSystemPrompt(registry: ToolRegistry): string {
     const params = Object.entries(tool.parameters.properties)
       .map(([name, prop]) => {
         const req = tool.parameters.required?.includes(name) ? ' (required)' : '';
-        return `    ${name}: ${Array.isArray(prop.type) ? prop.type.join('|') : prop.type}${req} - ${prop.description}`;
+        const typeStr = 'type' in prop ? (Array.isArray(prop.type) ? prop.type.join('|') : prop.type) : 'union';
+        return `    ${name}: ${typeStr}${req} - ${prop.description}`;
       })
       .join('\n');
     lines.push(`- ${tool.name}: ${tool.description}`);

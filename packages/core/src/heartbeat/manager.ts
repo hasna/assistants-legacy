@@ -141,7 +141,7 @@ export class HeartbeatManager {
         await this.dbPersistence.save({
           sessionId: heartbeat.sessionId,
           heartbeat,
-          context: { stats: heartbeat.stats },
+          context: { cwd: process.cwd() },
           timestamp: heartbeat.timestamp,
         });
       } else {
