@@ -202,7 +202,7 @@ export { VerificationSessionStore } from './sessions/verification';
 export { InterviewStore } from './interviews';
 
 // Memory
-export { MemoryStore } from './memory/store';
+export { MemoryStore } from './memory/mementos-adapter';
 export { SessionManager } from './memory/sessions';
 export { GlobalMemoryManager } from './memory/global-memory';
 export { MemoryInjector, buildContextInjection } from './memory/injector';

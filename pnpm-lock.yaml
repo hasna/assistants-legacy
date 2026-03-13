@@ -37,10 +37,10 @@ importers:
         version: 6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4)
       ink-spinner:
         specifier: ^5.0.0
-        version: 5.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 5.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4)
       ink-text-input:
         specifier: ^6.0.0
-        version: 6.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 6.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4)
       marked:
         specifier: ^17.0.1
         version: 17.0.2
@@ -89,6 +89,9 @@ importers:
       '@hasna/conversations':
         specifier: ^0.1.18
         version: 0.1.18(@types/react@19.2.14)
+      '@hasna/mementos':
+        specifier: ^0.3.9
+        version: 0.3.9(@types/react@19.2.14)
       '@hasna/skills':
         specifier: ^0.1.8
         version: 0.1.8(@types/react@19.2.14)
@@ -226,10 +229,10 @@ importers:
         version: 0.3.6(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4)
       ink-spinner:
         specifier: ^5.0.0
-        version: 5.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 5.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4)
       ink-text-input:
         specifier: ^6.0.0
-        version: 6.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 6.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4)
       marked:
         specifier: ^17.0.1
         version: 17.0.2
@@ -612,6 +615,11 @@ packages:
 
   '@hasna/conversations@0.1.18':
     resolution: {integrity: sha512-H7fsveOxjFEiv2Zp5VlvwIT7PtK6wU7F0eVwJRcRA2a2hayrrjxjhQC+h6ZiqOHIIbqO2KpRPLr997Hn7yyo8Q==}
+    engines: {bun: '>=1.0.0'}
+    hasBin: true
+
+  '@hasna/mementos@0.3.9':
+    resolution: {integrity: sha512-N7tJFUhLxW9PoIfj02ycqr0bGUtS6MijRTVzpKdrtkWGf1Z7s5+qW38qdLC2dFyyhulaI9KnqKVcQ2ou8OFFsg==}
     engines: {bun: '>=1.0.0'}
     hasBin: true
 
@@ -4447,6 +4455,22 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@hasna/mementos@0.3.9(@types/react@19.2.14)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.26.0(zod@3.25.76)
+      chalk: 5.6.2
+      commander: 13.1.0
+      ink: 5.2.1(@types/react@19.2.14)(react@18.3.1)
+      react: 18.3.1
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - '@types/react'
+      - bufferutil
+      - react-devtools-core
+      - supports-color
+      - utf-8-validate
+
   '@hasna/skills@0.1.8(@types/react@19.2.14)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.26.0(zod@4.3.6)
@@ -6293,7 +6317,7 @@ snapshots:
       ink: 5.2.1(@types/react@19.2.14)(react@18.3.1)
       react: 18.3.1
 
-  ink-spinner@5.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
+  ink-spinner@5.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4):
     dependencies:
       cli-spinners: 2.9.2
       ink: 6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4)
@@ -6306,7 +6330,7 @@ snapshots:
       react: 18.3.1
       type-fest: 4.41.0
 
-  ink-text-input@6.0.0(ink@6.7.0(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
+  ink-text-input@6.0.0(ink@6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4))(react@19.2.4):
     dependencies:
       chalk: 5.6.2
       ink: 6.7.0(@types/react@19.2.14)(react-devtools-core@7.0.1)(react@19.2.4)

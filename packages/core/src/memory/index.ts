@@ -10,8 +10,8 @@
 // Types
 export * from './types';
 
-// Memory Store (legacy key-value)
-export { MemoryStore } from './store';
+// Memory Store — backed by @hasna/mementos SDK
+export { MemoryStore } from './mementos-adapter';
 
 // Global Memory Manager
 export { GlobalMemoryManager } from './global-memory';
