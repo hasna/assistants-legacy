@@ -27,23 +27,25 @@ export function QueueIndicator({
   const inlineCount = messages.filter((msg) => msg.mode === 'inline').length;
   const queuedCount = messages.filter((msg) => msg.mode === 'queued').length;
 
+  // Build summary parts
+  const parts: string[] = [];
+  if (queuedCount > 0) parts.push(`${queuedCount} queued`);
+  if (inlineCount > 0) parts.push(`${inlineCount} in-stream`);
+  const summary = parts.join(', ');
+
   return (
-    <Box flexDirection="column">
-      <Text dimColor>
-        ↳ {totalCount} pending{totalCount > 1 ? '' : ''}
-        {inlineCount > 0 || queuedCount > 0
-          ? ` · ${inlineCount} in-stream · ${queuedCount} queued`
-          : ''}
-      </Text>
-      {previewItems.map((queued) => (
-        <Box key={queued.id} marginLeft={2}>
-          <Text dimColor>
-            ↳ {truncateQueued(queued.content)}
+    <Box flexDirection="column" marginTop={0} marginBottom={0}>
+      {previewItems.map((msg) => (
+        <Box key={msg.id}>
+          <Text color={msg.mode === 'inline' ? 'cyan' : 'yellow'}>
+            {msg.mode === 'inline' ? '⚡' : '⏳'}{' '}
+            {msg.mode === 'inline' ? 'in-stream' : 'queued'}:{' '}
           </Text>
+          <Text dimColor>"{truncateQueued(msg.content, 60)}"</Text>
         </Box>
       ))}
       {hasMore && (
-        <Text dimColor>  +{totalCount - maxPreview} more</Text>
+        <Text dimColor>  +{totalCount - maxPreview} more ({summary})</Text>
       )}
     </Box>
   );

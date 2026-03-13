@@ -73,6 +73,7 @@ export * from './workflows';
 export { SchedulerTool, createSchedulerTool, registerSchedulerTools, type SchedulerContext } from './tools/scheduler';
 export { WaitTool, SleepTool } from './tools/wait';
 export { TmuxTools } from './tools/tmux';
+export { DiffTool } from './tools/diff';
 export {
   projectTools,
   planTools,

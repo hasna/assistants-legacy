@@ -270,7 +270,7 @@ function inferToolMetadata(tool: Tool): ToolMetadata {
     category = 'skills';
   } else if (name.startsWith('web_') || name === 'curl') {
     category = 'web';
-  } else if (['read', 'write', 'glob', 'grep', 'read_pdf'].includes(name)) {
+  } else if (['read', 'write', 'glob', 'grep', 'read_pdf', 'diff'].includes(name)) {
     category = 'filesystem';
   } else if (name === 'bash') {
     category = 'system';
@@ -288,7 +288,7 @@ function inferToolMetadata(tool: Tool): ToolMetadata {
   }
 
   // Detect connector-based tools
-  if (!name.includes('_') && !['bash', 'read', 'write', 'glob', 'grep', 'curl', 'wait', 'sleep', 'feedback'].includes(name)) {
+  if (!name.includes('_') && !['bash', 'read', 'write', 'glob', 'grep', 'curl', 'wait', 'sleep', 'feedback', 'diff'].includes(name)) {
     // Likely a connector tool (e.g., "notion", "gmail")
     source = 'connector';
     category = 'connectors';

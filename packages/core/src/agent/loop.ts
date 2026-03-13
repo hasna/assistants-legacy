@@ -39,7 +39,9 @@ import { WorkflowTools } from '../tools/workflows';
 import { SkillTool, SkillInstallTool, SkillUninstallTool, createSkillListTool, createSkillReadTool, createSkillExecuteTool } from '../tools/skills';
 import { createAskUserTool, type AskUserHandler, type InterviewHandler } from '../tools/ask-user';
 import { WaitTool, SleepTool } from '../tools/wait';
+import { NotifyTool } from '../tools/notify';
 import { TmuxTools } from '../tools/tmux';
+import { DiffTool } from '../tools/diff';
 import { runHookAssistant } from './subagent';
 import { SkillLoader } from '../skills/loader';
 import { SkillExecutor } from '../skills/executor';
@@ -530,7 +532,9 @@ export class AssistantLoop {
 
     this.toolRegistry.register(WaitTool.tool, WaitTool.executor);
     this.toolRegistry.register(SleepTool.tool, SleepTool.executor);
+    this.toolRegistry.register(NotifyTool.tool, NotifyTool.executor);
     this.toolRegistry.register(TmuxTools.tool, TmuxTools.executor);
+    this.toolRegistry.register(DiffTool.tool, DiffTool.executor);
 
     // Initialize inbox if enabled
     if (this.config?.inbox?.enabled) {
