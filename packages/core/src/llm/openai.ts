@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { LLMClient } from './client';
-import type { Message, Tool, StreamChunk, LLMConfig, ToolCall } from '@hasna/assistants-shared';
+import type { Message, Tool, StreamChunk, LLMConfig, ToolCall, EffortLevel } from '@hasna/assistants-shared';
 import { getProviderInfo, type LLMProvider } from '@hasna/assistants-shared';
 import { ErrorCodes, LLMError } from '../errors';
 import { LLMRetryConfig, withRetry } from '../utils/retry';
@@ -13,6 +13,7 @@ export class OpenAIClient implements LLMClient {
   private client: OpenAI;
   private model: string;
   private maxTokens: number;
+  private effortLevel: EffortLevel;
 
   constructor(config: LLMConfig) {
     const provider = (config.provider || 'openai') as LLMProvider;
@@ -32,10 +33,19 @@ export class OpenAIClient implements LLMClient {
     this.client = new OpenAI({ apiKey, baseURL: baseURL || undefined });
     this.model = config.model;
     this.maxTokens = config.maxTokens || 8192;
+    this.effortLevel = config.effortLevel || 'medium';
   }
 
   getModel(): string {
     return this.model;
+  }
+
+  getEffortLevel(): EffortLevel {
+    return this.effortLevel;
+  }
+
+  setEffortLevel(level: EffortLevel): void {
+    this.effortLevel = level;
   }
 
   async *chat(

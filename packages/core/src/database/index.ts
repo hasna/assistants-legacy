@@ -52,9 +52,32 @@ export function getDatabase(dbPath?: string): DatabaseConnection {
   db.exec('PRAGMA foreign_keys=ON');
   db.exec('PRAGMA synchronous=NORMAL');
 
-  // Run all schema statements
+  // Run all schema statements, with safe handling for migrations
   for (const sql of SCHEMA_STATEMENTS) {
-    db.exec(sql);
+    try {
+      db.exec(sql);
+    } catch (err) {
+      // Index creation on new columns may fail if the column doesn't exist yet
+      // in an existing database — we'll fix that with migrations below
+      const msg = err instanceof Error ? err.message : '';
+      if (!msg.includes('no such column')) {
+        throw err;
+      }
+    }
+  }
+
+  // Schema migrations for existing databases
+  // Add parent_session_id to persisted_sessions
+  try {
+    db.exec('ALTER TABLE persisted_sessions ADD COLUMN parent_session_id TEXT');
+  } catch {
+    // Column already exists — ignore
+  }
+  // Re-create the index after ensuring the column exists
+  try {
+    db.exec('CREATE INDEX IF NOT EXISTS idx_persisted_sessions_parent ON persisted_sessions(parent_session_id)');
+  } catch {
+    // Ignore if it already exists
   }
 
   // Record schema version if not already present

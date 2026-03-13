@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // Initialize Bun runtime before any core imports
-import { setRuntime, closeDatabase } from '@hasna/assistants-core';
+import { setRuntime, closeDatabase, createWorktree, removeWorktree } from '@hasna/assistants-core';
+import type { WorktreeInfo } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
 setRuntime(bunRuntime);
 
@@ -14,7 +15,11 @@ import { printExitSummary, getExitStats } from './exit-summary';
 
 // --- Graceful shutdown handling ---
 
+// Forward reference for worktree cleanup (initialized after arg parsing)
+let _worktreeCleanup: (() => void) | null = null;
+
 function cleanup(): void {
+  if (_worktreeCleanup) _worktreeCleanup();
   closeDatabase();
 }
 
@@ -147,6 +152,7 @@ Headless Mode:
   -c, --continue               Continue the most recent conversation
   -r, --resume <id_or_name>    Resume a session by ID or name
   --cwd <path>                 Set working directory
+  --worktree [name]            Run in an isolated git worktree (auto-cleaned on exit)
 
 Examples:
   # Ask a question
@@ -177,6 +183,36 @@ Interactive Mode:
   process.exit(0);
 }
 
+// Worktree setup — create an isolated git worktree if requested
+let activeWorktree: WorktreeInfo | null = null;
+
+if (options.worktree !== null) {
+  try {
+    const worktreeName = typeof options.worktree === 'string' ? options.worktree : undefined;
+    activeWorktree = createWorktree(options.cwd, worktreeName);
+    options.cwd = activeWorktree.path;
+    console.log(`Worktree created: ${activeWorktree.path}`);
+  } catch (error) {
+    console.error(`Error creating worktree: ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
+  }
+}
+
+function cleanupWorktree(): void {
+  if (activeWorktree) {
+    const removed = removeWorktree(activeWorktree.path);
+    if (removed) {
+      console.log(`Worktree cleaned up: ${activeWorktree.path}`);
+    } else {
+      console.log(`Worktree retained (has changes): ${activeWorktree.path}`);
+    }
+    activeWorktree = null;
+  }
+}
+
+// Register worktree cleanup with the global shutdown handler
+_worktreeCleanup = cleanupWorktree;
+
 // Headless mode
 if (options.print !== null) {
   if (!options.print.trim()) {
@@ -198,9 +234,11 @@ if (options.print !== null) {
     permissionMode: options.permissionMode ?? undefined,
   })
     .then((result) => {
+      cleanup();
       process.exit(result.success ? 0 : 1);
     })
     .catch((error) => {
+      cleanup();
       console.error('Error:', error.message);
       process.exit(1);
     });

@@ -75,6 +75,7 @@ import {
 } from '../heartbeat';
 
 import { AssistantError, ErrorAggregator, ErrorCodes, type ErrorCode } from '../errors';
+import { expandFileReferences } from './file-references';
 import { configureLimits, enforceMessageLimit, getLimits } from '../validation/limits';
 import { validateToolCalls } from '../validation/llm-response';
 import {
@@ -104,6 +105,9 @@ import { generateSessionName } from '../sessions/auto-name';
 import { registerProjectTools, type ProjectToolContext } from '../tools/projects';
 import { registerSelfAwarenessTools } from '../tools/self-awareness';
 import { registerMemoryTools } from '../tools/memory';
+import { registerBookmarkTools } from '../tools/bookmarks';
+import { registerCalendarTools } from '../tools/calendar';
+import { MemoryStore } from '../memory/mementos-adapter';
 import { registerAssistantTools as registerAssistantSpawnTools } from '../tools/agents';
 import { registerAssistantRegistryTools } from '../tools/agent-registry';
 import { registerCapabilityTools } from '../tools/capabilities';
@@ -113,6 +117,7 @@ import { registerSwarmTools, type SwarmToolContext } from '../tools/swarm';
 import { SwarmCoordinator, type SwarmCoordinatorContext } from '../swarm/coordinator';
 import { GlobalMemoryManager, MemoryInjector, type MemoryConfig } from '../memory';
 import { SubassistantManager, type SubassistantManagerContext, type SubassistantResult, type SubassistantLoopConfig } from './subagent-manager';
+import { SessionStore } from '../sessions/store';
 import { StatsTracker } from './stats';
 import { BudgetTracker, DEFAULT_BUDGET_CONFIG, registerBudgetTools, type BudgetScope } from '../budget';
 import { PolicyEvaluator, GuardrailsStore, registerGuardrailsTools, type GuardrailsConfig, type PolicyEvaluationResult } from '../guardrails';
@@ -259,6 +264,7 @@ export class AssistantLoop {
   private statsTracker: StatsTracker;
   private paused = false;
   private pauseResolve: (() => void) | null = null;
+  private pendingPermissionMode: 'normal' | 'plan' | 'auto-accept' | null = null;
   private maxTurnsPerRun = 50;
 
   // Event callbacks
@@ -346,6 +352,15 @@ export class AssistantLoop {
       ensureConfigDir(this.sessionId, this.storageDir),
     ]);
     this.config = config;
+
+    // Apply pending permission mode from CLI flag (set before initialize)
+    if (this.pendingPermissionMode) {
+      if (!this.config.permissions) {
+        this.config.permissions = {};
+      }
+      this.config.permissions.mode = this.pendingPermissionMode;
+      this.pendingPermissionMode = null;
+    }
 
     // Initialize the unified SQLite database (creates ~/.assistants/assistants.db on first run)
     const db = getDatabase();
@@ -698,6 +713,18 @@ export class AssistantLoop {
       });
       registerMemoryTools(this.toolRegistry, () => this.memoryManager);
     }
+
+    // Register bookmark tools (always available — uses its own MemoryStore instance)
+    registerBookmarkTools(this.toolRegistry, () => {
+      try {
+        return new MemoryStore(undefined, undefined, { scope: 'shared' });
+      } catch {
+        return null;
+      }
+    });
+
+    // Register calendar tools (always available — uses shared SQLite database)
+    registerCalendarTools(this.toolRegistry);
 
     // Register session tools if session context is provided
     if (this.sessionContextOptions) {
@@ -1091,6 +1118,9 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       // Inject memory context for the talk message
       await this.injectMemoryContext(userMessage);
 
+      // Expand @file references
+      userMessage = await expandFileReferences(userMessage, this.cwd);
+
       this.context.addUserMessage(userMessage);
       await this.runLoop();
       this.contextManager?.refreshState(this.context.getMessages());
@@ -1225,6 +1255,11 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
       const limits = getLimits();
       userMessage = enforceMessageLimit(userMessage, limits.maxUserMessageLength);
+
+      // Expand @file references before sending to LLM
+      if (source === 'user') {
+        userMessage = await expandFileReferences(userMessage, this.cwd);
+      }
 
       // Track scope context for goal verification (only for non-command messages)
       if (source === 'user') {
@@ -2181,6 +2216,17 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       },
       switchModel: async (modelId: string) => {
         await this.switchModel(modelId);
+      },
+      getEffortLevel: () => {
+        return this.llmClient?.getEffortLevel?.() || this.config?.llm?.effortLevel || 'medium';
+      },
+      setEffortLevel: (level) => {
+        if (this.llmClient?.setEffortLevel) {
+          this.llmClient.setEffortLevel(level);
+        }
+        if (this.config?.llm) {
+          this.config.llm.effortLevel = level;
+        }
       },
       getActiveProjectId: () => this.activeProjectId,
       setActiveProjectId: (projectId: string | null) => {
@@ -3748,6 +3794,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         const hooks = this.hookLoader.getHooks(input.hook_event_name);
         return this.hookExecutor.execute(hooks, input);
       },
+      sessionStore: new SessionStore(),
     };
 
     // Use subassistant config from AssistantsConfig, with fallbacks to defaults
@@ -4009,10 +4056,15 @@ Be concise but thorough. Focus only on this task.`,
   }
 
   /**
-   * Set the permission mode at runtime (used by /mode command)
+   * Set the permission mode at runtime (used by /mode command and CLI flag).
+   * If called before initialize(), stores the mode to apply after config loads.
    */
   setPermissionMode(mode: 'normal' | 'plan' | 'auto-accept'): void {
-    if (!this.config) return;
+    if (!this.config) {
+      // Store for later application during initialize()
+      this.pendingPermissionMode = mode;
+      return;
+    }
     if (!this.config.permissions) {
       this.config.permissions = {};
     }

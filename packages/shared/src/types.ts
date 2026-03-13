@@ -792,12 +792,16 @@ export interface MemoryConfigShared {
   };
 }
 
+export type EffortLevel = 'low' | 'medium' | 'high';
+
 export interface LLMConfig {
   provider?: LLMProvider;
   model: string;
   apiKey?: string;
   baseUrl?: string;
   maxTokens?: number;
+  /** Effort/thinking level — 'high' enables extended thinking, 'low' reduces max tokens */
+  effortLevel?: EffortLevel;
 }
 
 export interface VoiceConfig {

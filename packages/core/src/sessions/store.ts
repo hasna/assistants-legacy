@@ -18,7 +18,9 @@ export interface PersistedSessionData {
   updatedAt: number;
   assistantId: string | null;
   label: string | null;
-  status: 'active' | 'background' | 'closed';
+  status: 'active' | 'background' | 'closed' | 'completed';
+  /** Parent session ID — set for subagent sessions */
+  parentSessionId: string | null;
 }
 
 interface SessionRow {
@@ -29,6 +31,7 @@ interface SessionRow {
   assistant_id: string | null;
   label: string | null;
   status: string;
+  parent_session_id: string | null;
 }
 
 function rowToSession(row: SessionRow): PersistedSessionData {
@@ -40,6 +43,7 @@ function rowToSession(row: SessionRow): PersistedSessionData {
     assistantId: row.assistant_id,
     label: row.label,
     status: row.status as PersistedSessionData['status'],
+    parentSessionId: row.parent_session_id,
   };
 }
 
@@ -60,10 +64,10 @@ export class SessionStore {
     try {
       this.db
         .prepare(
-          `INSERT OR REPLACE INTO persisted_sessions (id, cwd, started_at, updated_at, assistant_id, label, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+          `INSERT OR REPLACE INTO persisted_sessions (id, cwd, started_at, updated_at, assistant_id, label, status, parent_session_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(data.id, data.cwd, data.startedAt, data.updatedAt, data.assistantId, data.label, data.status);
+        .run(data.id, data.cwd, data.startedAt, data.updatedAt, data.assistantId, data.label, data.status, data.parentSessionId);
     } catch {
       // Non-critical - session persistence is best-effort
     }
@@ -129,6 +133,34 @@ export class SessionStore {
     try {
       const rows = this.db
         .query<SessionRow>(`SELECT * FROM persisted_sessions WHERE status != 'closed' ORDER BY updated_at DESC`)
+        .all();
+      return rows.map(rowToSession);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * List subagent sessions for a given parent session
+   */
+  listByParent(parentSessionId: string): PersistedSessionData[] {
+    try {
+      const rows = this.db
+        .query<SessionRow>('SELECT * FROM persisted_sessions WHERE parent_session_id = ? ORDER BY started_at ASC')
+        .all(parentSessionId);
+      return rows.map(rowToSession);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * List all subagent sessions (sessions with a parent)
+   */
+  listSubagentSessions(): PersistedSessionData[] {
+    try {
+      const rows = this.db
+        .query<SessionRow>('SELECT * FROM persisted_sessions WHERE parent_session_id IS NOT NULL ORDER BY updated_at DESC')
         .all();
       return rows.map(rowToSession);
     } catch {

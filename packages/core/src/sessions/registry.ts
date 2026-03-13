@@ -17,6 +17,8 @@ export interface SessionInfo {
   assistantId: string | null;
   /** Human-readable session label */
   label: string | null;
+  /** Parent session ID — set for subagent sessions */
+  parentSessionId: string | null;
 }
 
 /**
@@ -48,6 +50,8 @@ export interface CreateSessionOptions {
   startedAt?: string;
   /** Optional backend override (native, claude-agent-sdk, codex-sdk) */
   backend?: string;
+  /** Parent session ID — set for subagent sessions */
+  parentSessionId?: string;
 }
 
 export interface SessionRegistryOptions {
@@ -131,6 +135,7 @@ export class SessionRegistry {
       client,
       assistantId: options.assistantId || null,
       label: options.label || null,
+      parentSessionId: options.parentSessionId || null,
     };
 
     // Setup chunk forwarding/buffering
@@ -200,6 +205,7 @@ export class SessionRegistry {
       assistantId: session.assistantId,
       label: session.label,
       status: session.id === this.activeSessionId ? 'active' : 'background',
+      parentSessionId: session.parentSessionId,
     });
   }
 
@@ -275,6 +281,7 @@ export class SessionRegistry {
           assistantId: oldSession.assistantId,
           label: oldSession.label,
           status: 'background',
+          parentSessionId: oldSession.parentSessionId,
         });
       }
     }
@@ -365,6 +372,7 @@ export class SessionRegistry {
         assistantId: session.assistantId,
         label: session.label,
         status: 'closed',
+        parentSessionId: session.parentSessionId,
       });
 
       // If we closed the active session, switch to another
@@ -401,6 +409,7 @@ export class SessionRegistry {
         assistantId: session.assistantId,
         label: session.label,
         status: 'closed',
+        parentSessionId: session.parentSessionId,
       });
     }
     this.sessions.clear();

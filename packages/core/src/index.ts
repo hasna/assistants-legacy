@@ -1,5 +1,22 @@
 // Core exports for assistants
 
+// Agent Definitions (named subagent specializations)
+export {
+  loadAgentDefinitions,
+  getAgentDefinition,
+  saveAgentDefinition,
+  deleteAgentDefinition,
+  type AgentDefinition,
+  SubagentAuditLog,
+  type SubagentLogEntry,
+  type SubagentToolCallEntry,
+  type SubagentLogFilter,
+} from './agents';
+
+// Git utilities
+export { createWorktree, removeWorktree, isWorktreeClean } from './git/worktree';
+export type { WorktreeInfo } from './git/worktree';
+
 // Runtime
 export { setRuntime, getRuntime, hasRuntime } from './runtime';
 export type { Runtime, FileHandle, SpawnOptions, SpawnResult, ShellResult, ShellCommand, GlobOptions, DatabaseConnection, DatabaseStatement } from './runtime';
@@ -120,6 +137,7 @@ export {
   assistantListTool,
   assistantDelegateTool,
   assistantJobStatusTool,
+  subagentHistoryTool,
   createAssistantToolExecutors,
   registerAssistantTools,
   type AssistantToolContext,
@@ -247,6 +265,25 @@ export {
   registerMemoryTools,
 } from './tools/memory';
 export type { MemoryToolContext } from './tools/memory';
+export {
+  bookmarkTools,
+  bookmarkSaveTool,
+  bookmarkListTool,
+  bookmarkGetTool,
+  bookmarkDeleteTool,
+  createBookmarkToolExecutors,
+  registerBookmarkTools,
+} from './tools/bookmarks';
+export type { BookmarkToolContext } from './tools/bookmarks';
+export {
+  calendarTools,
+  calendarCreateTool,
+  calendarListTool,
+  calendarDeleteTool,
+  calendarTodayTool,
+  createCalendarToolExecutors,
+  registerCalendarTools,
+} from './tools/calendar';
 export {
   voiceTools,
   voiceEnableTool,

@@ -3803,6 +3803,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
   // Show session selector modal
   if (showSessionSelector) {
+    // Load persisted subagent sessions from the store
+    const subagentSessions = registry.getStore().listSubagentSessions();
     return (
       <Box flexDirection="column" padding={1}>
         <SessionSelector
@@ -3811,6 +3813,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           onSelect={handleSessionSwitch}
           onNew={handleNewSession}
           onCancel={() => setShowSessionSelector(false)}
+          subagentSessions={subagentSessions}
         />
       </Box>
     );

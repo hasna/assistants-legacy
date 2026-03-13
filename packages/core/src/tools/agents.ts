@@ -9,6 +9,7 @@ import type { Tool, Assistant } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import type { SubassistantManager, SubassistantConfig, SubassistantJob, SubassistantInfo } from '../agent/subagent-manager';
 import type { AssistantManager } from '../identity';
+import { getAgentDefinition, loadAgentDefinitions, type AgentDefinition } from '../agents';
 
 // ============================================
 // Types
@@ -149,6 +150,38 @@ export const assistantJobStatusTool: Tool = {
   },
 };
 
+export const subagentHistoryTool: Tool = {
+  name: 'subagent_history',
+  description: 'Query the audit trail of past subagent executions. Returns recent subagent activity including task, tool calls, result, duration, and status.',
+  parameters: {
+    type: 'object',
+    properties: {
+      parentSessionId: {
+        type: 'string',
+        description: 'Filter by parent session ID (default: current session)',
+      },
+      since: {
+        type: 'string',
+        description: 'Only entries after this ISO date (e.g. "2026-03-13T00:00:00Z")',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum number of entries to return (default: 20, max: 100)',
+      },
+      status: {
+        type: 'string',
+        description: 'Filter by status: "completed", "failed", or "timeout"',
+        enum: ['completed', 'failed', 'timeout'],
+      },
+      id: {
+        type: 'string',
+        description: 'Get a specific subagent entry by ID (ignores other filters)',
+      },
+    },
+    required: [],
+  },
+};
+
 // ============================================
 // Tool array for convenience
 // ============================================
@@ -158,6 +191,7 @@ export const assistantTools: Tool[] = [
   assistantListTool,
   assistantDelegateTool,
   assistantJobStatusTool,
+  subagentHistoryTool,
 ];
 
 // ============================================
@@ -179,6 +213,12 @@ interface AssistantListResponse {
     name: string;
     description?: string;
     isActive: boolean;
+  }>;
+  agentDefinitions?: Array<{
+    name: string;
+    description: string;
+    scope?: string;
+    tools?: string[];
   }>;
   activeSubassistants: Array<{
     id: string;
@@ -317,6 +357,9 @@ export function createAssistantToolExecutors(
       const assistants = assistantManager?.listAssistants() ?? [];
       const activeAssistantId = assistantManager?.getActiveId();
 
+      // Also load file-based agent definitions
+      const agentDefs = loadAgentDefinitions(context.getCwd());
+
       const response: AssistantListResponse = {
         assistants: assistants.map((a) => ({
           id: a.id,
@@ -324,6 +367,14 @@ export function createAssistantToolExecutors(
           description: a.description,
           isActive: a.id === activeAssistantId,
         })),
+        agentDefinitions: agentDefs.length > 0
+          ? agentDefs.map((d) => ({
+              name: d.name,
+              description: d.description,
+              scope: d.scope,
+              tools: d.tools,
+            }))
+          : undefined,
         activeSubassistants: [],
         asyncJobs: [],
       };
@@ -356,20 +407,11 @@ export function createAssistantToolExecutors(
 
     assistant_delegate: async (input: Record<string, unknown>): Promise<string> => {
       const manager = context.getSubassistantManager();
-      const assistantManager = context.getAssistantManager();
 
       if (!manager) {
         const response: AssistantDelegateResponse = {
           success: false,
           error: 'Assistant delegation is not enabled',
-        };
-        return JSON.stringify(response, null, 2);
-      }
-
-      if (!assistantManager) {
-        const response: AssistantDelegateResponse = {
-          success: false,
-          error: 'Assistant manager not available',
         };
         return JSON.stringify(response, null, 2);
       }
@@ -395,42 +437,80 @@ export function createAssistantToolExecutors(
         return JSON.stringify(response, null, 2);
       }
 
-      // Find assistant by name or ID
-      const assistants = assistantManager.listAssistants();
-      const assistant = assistants.find(
-        (a) =>
-          a.id === assistantQuery ||
-          a.name.toLowerCase() === assistantQuery.toLowerCase()
-      );
+      // First check DB-backed assistants, then fall back to file-based agent definitions
+      const assistantManager = context.getAssistantManager();
+      let assistant: Assistant | undefined;
+      let agentDef: AgentDefinition | null = null;
 
+      if (assistantManager) {
+        const assistants = assistantManager.listAssistants();
+        assistant = assistants.find(
+          (a) =>
+            a.id === assistantQuery ||
+            a.name.toLowerCase() === assistantQuery.toLowerCase()
+        );
+      }
+
+      // Fall back to agent definitions (JSON files in ~/.assistants/agents/ or .assistants/agents/)
       if (!assistant) {
+        agentDef = getAgentDefinition(assistantQuery, context.getCwd());
+      }
+
+      if (!assistant && !agentDef) {
+        const availableNames: string[] = [];
+        if (assistantManager) {
+          availableNames.push(...assistantManager.listAssistants().map((a) => a.name));
+        }
+        const agentDefs = loadAgentDefinitions(context.getCwd());
+        availableNames.push(...agentDefs.map((d) => d.name));
+
         const response: AssistantDelegateResponse = {
           success: false,
-          error: `Assistant "${assistantQuery}" not found. Available: ${assistants.map((a) => a.name).join(', ')}`,
+          error: `Assistant "${assistantQuery}" not found. Available: ${availableNames.join(', ') || '(none)'}`,
         };
         return JSON.stringify(response, null, 2);
       }
 
-      // Build config for delegation
-      // Use assistant's enabled tools if specified
-      const tools = assistant.settings.enabledTools ?? undefined;
+      // Build config for delegation from either source
+      let tools: string[] | undefined;
+      let enhancedContext: string;
+      let delegateName: string;
 
-      // Build enhanced context with assistant info
-      const enhancedContext = [
-        `Delegated to assistant: ${assistant.name}`,
-        assistant.description ? `Description: ${assistant.description}` : null,
-        assistant.settings.systemPromptAddition
-          ? `Instructions: ${assistant.settings.systemPromptAddition}`
-          : null,
-        contextStr ? `\nAdditional context:\n${contextStr}` : null,
-      ]
-        .filter(Boolean)
-        .join('\n');
+      if (agentDef) {
+        // Using file-based agent definition
+        delegateName = agentDef.name;
+        tools = agentDef.tools;
+        enhancedContext = [
+          `Delegated to agent: ${agentDef.name}`,
+          agentDef.description ? `Description: ${agentDef.description}` : null,
+          agentDef.systemPrompt ? `Instructions: ${agentDef.systemPrompt}` : null,
+          contextStr ? `\nAdditional context:\n${contextStr}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n');
+      } else {
+        // Using DB-backed assistant
+        delegateName = assistant!.name;
+        tools = assistant!.settings.enabledTools ?? undefined;
+        enhancedContext = [
+          `Delegated to assistant: ${assistant!.name}`,
+          assistant!.description ? `Description: ${assistant!.description}` : null,
+          assistant!.settings.systemPromptAddition
+            ? `Instructions: ${assistant!.settings.systemPromptAddition}`
+            : null,
+          contextStr ? `\nAdditional context:\n${contextStr}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n');
+      }
 
       const config: SubassistantConfig = {
         task,
         tools,
         context: enhancedContext,
+        maxTurns: agentDef?.maxTurns,
+        minTurns: agentDef?.minTurns,
+        workUntilDone: agentDef?.workUntilDone,
         parentSessionId: context.getSessionId(),
         depth: context.getDepth(),
         cwd: context.getCwd(),
@@ -442,7 +522,7 @@ export function createAssistantToolExecutors(
         const response: AssistantDelegateResponse = {
           success: false,
           error: canSpawn.reason,
-          assistant: assistant.name,
+          assistant: delegateName,
         };
         return JSON.stringify(response, null, 2);
       }
@@ -453,15 +533,15 @@ export function createAssistantToolExecutors(
           const response: AssistantDelegateResponse = {
             success: true,
             jobId,
-            assistant: assistant.name,
-            result: `Delegated to ${assistant.name}. Job ID: ${jobId}`,
+            assistant: delegateName,
+            result: `Delegated to ${delegateName}. Job ID: ${jobId}`,
           };
           return JSON.stringify(response, null, 2);
         } catch (error) {
           const response: AssistantDelegateResponse = {
             success: false,
             error: error instanceof Error ? error.message : String(error),
-            assistant: assistant.name,
+            assistant: delegateName,
           };
           return JSON.stringify(response, null, 2);
         }
@@ -471,10 +551,68 @@ export function createAssistantToolExecutors(
           success: result.success,
           result: result.result,
           error: result.error,
-          assistant: assistant.name,
+          assistant: delegateName,
         };
         return JSON.stringify(response, null, 2);
       }
+    },
+
+    subagent_history: async (input: Record<string, unknown>): Promise<string> => {
+      const manager = context.getSubassistantManager();
+
+      if (!manager) {
+        return JSON.stringify({ error: 'Subassistant system not available' }, null, 2);
+      }
+
+      const auditLog = manager.getAuditLog();
+
+      // If a specific ID is requested, return just that entry
+      if (typeof input.id === 'string' && input.id.trim()) {
+        const entry = auditLog.getEntry(input.id.trim());
+        if (!entry) {
+          return JSON.stringify({ error: `No subagent entry found with ID: ${input.id}` }, null, 2);
+        }
+        return JSON.stringify(entry, null, 2);
+      }
+
+      // Query with filters
+      const limit = Math.min(
+        typeof input.limit === 'number' ? input.limit : 20,
+        100
+      );
+
+      const entries = auditLog.query({
+        parentSessionId:
+          typeof input.parentSessionId === 'string'
+            ? input.parentSessionId
+            : undefined,
+        since: typeof input.since === 'string' ? input.since : undefined,
+        limit,
+        status: typeof input.status === 'string'
+          ? (input.status as 'completed' | 'failed' | 'timeout')
+          : undefined,
+      });
+
+      // Return a summary view (omit full tool call details for brevity)
+      const summary = entries.map((e) => ({
+        id: e.id,
+        parentSessionId: e.parentSessionId,
+        task: e.task.length > 120 ? e.task.slice(0, 117) + '...' : e.task,
+        status: e.status,
+        turns: e.turns,
+        toolCallCount: e.toolCalls.length,
+        duration: e.duration,
+        startedAt: e.startedAt,
+        completedAt: e.completedAt,
+        result: e.result
+          ? e.result.length > 200
+            ? e.result.slice(0, 197) + '...'
+            : e.result
+          : undefined,
+        errors: e.errors,
+      }));
+
+      return JSON.stringify({ count: summary.length, entries: summary }, null, 2);
     },
 
     assistant_job_status: async (input: Record<string, unknown>): Promise<string> => {

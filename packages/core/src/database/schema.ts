@@ -449,10 +449,12 @@ export const SCHEMA_STATEMENTS: string[] = [
     updated_at INTEGER NOT NULL,
     assistant_id TEXT,
     label TEXT,
-    status TEXT NOT NULL DEFAULT 'active'
+    status TEXT NOT NULL DEFAULT 'active',
+    parent_session_id TEXT
   )`,
 
   `CREATE INDEX IF NOT EXISTS idx_persisted_sessions_status ON persisted_sessions(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_persisted_sessions_parent ON persisted_sessions(parent_session_id)`,
 
   // ============================================
   // Jobs (from jobs/job-store.ts, JSON -> SQL)
@@ -925,4 +927,22 @@ export const SCHEMA_STATEMENTS: string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_workflow_executions_status ON workflow_executions(status)`,
   `CREATE INDEX IF NOT EXISTS idx_workflow_executions_name ON workflow_executions(workflow_name)`,
+
+  // ============================================
+  // Calendar Events (from tools/calendar.ts)
+  // ============================================
+  `CREATE TABLE IF NOT EXISTS calendar_events (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_time INTEGER NOT NULL,
+    end_time INTEGER,
+    all_day INTEGER NOT NULL DEFAULT 0,
+    location TEXT,
+    tags TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_calendar_events_end ON calendar_events(end_time)`,
 ];

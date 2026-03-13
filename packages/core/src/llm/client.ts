@@ -1,4 +1,4 @@
-import type { Message, Tool, StreamChunk, LLMConfig } from '@hasna/assistants-shared';
+import type { Message, Tool, StreamChunk, LLMConfig, EffortLevel } from '@hasna/assistants-shared';
 import { getProviderInfo, type LLMProvider } from '@hasna/assistants-shared';
 import { getProviderForModel } from './models';
 
@@ -19,6 +19,16 @@ export interface LLMClient {
    * Get the model name
    */
   getModel(): string;
+
+  /**
+   * Get the current effort/thinking level
+   */
+  getEffortLevel?(): EffortLevel;
+
+  /**
+   * Set the effort/thinking level at runtime
+   */
+  setEffortLevel?(level: EffortLevel): void;
 }
 
 /**

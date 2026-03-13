@@ -70,6 +70,7 @@ const DEFAULT_CONFIG: AssistantsConfig = {
     provider: 'anthropic',
     model: 'claude-opus-4-5-20251101',
     maxTokens: 8192,
+    effortLevel: 'medium',
   },
   voice: {
     enabled: false,

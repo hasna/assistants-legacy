@@ -126,6 +126,8 @@ export interface CommandContext {
   switchAssistant?: (assistantId: string) => Promise<void>;
   switchIdentity?: (identityId: string) => Promise<void>;
   switchModel?: (modelId: string) => Promise<void>;
+  getEffortLevel?: () => import('@hasna/assistants-shared').EffortLevel;
+  setEffortLevel?: (level: import('@hasna/assistants-shared').EffortLevel) => void;
   getActiveProjectId?: () => string | null;
   setActiveProjectId?: (projectId: string | null) => void;
   setProjectContext?: (content: string | null) => void;

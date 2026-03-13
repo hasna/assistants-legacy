@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import type { SessionInfo } from '@hasna/assistants-core';
+import type { PersistedSessionData } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 interface SessionSelectorProps {
@@ -9,6 +10,8 @@ interface SessionSelectorProps {
   onSelect: (sessionId: string) => void;
   onNew: () => void | Promise<void>;
   onCancel: () => void;
+  /** Persisted subagent sessions (shown under their parent with a prefix) */
+  subagentSessions?: PersistedSessionData[];
 }
 
 /**
@@ -47,18 +50,65 @@ function formatPath(cwd: string): string {
   return cwd;
 }
 
+/**
+ * Build a flat display list: parent sessions with their subagent children interleaved
+ */
+interface DisplayEntry {
+  type: 'session' | 'subagent';
+  session?: SessionInfo;
+  subagent?: PersistedSessionData;
+  /** 1-based index for interactive selection (only for sessions, not subagents) */
+  sessionIndex?: number;
+}
+
+function buildDisplayList(
+  sessions: SessionInfo[],
+  subagentSessions: PersistedSessionData[]
+): DisplayEntry[] {
+  // Group subagent sessions by parent
+  const subagentsByParent = new Map<string, PersistedSessionData[]>();
+  for (const sub of subagentSessions) {
+    if (!sub.parentSessionId) continue;
+    const existing = subagentsByParent.get(sub.parentSessionId) ?? [];
+    existing.push(sub);
+    subagentsByParent.set(sub.parentSessionId, existing);
+  }
+
+  const entries: DisplayEntry[] = [];
+  let sessionIdx = 0;
+
+  for (const session of sessions) {
+    sessionIdx++;
+    entries.push({ type: 'session', session, sessionIndex: sessionIdx });
+
+    // Add child subagent sessions right after their parent
+    const children = subagentsByParent.get(session.id);
+    if (children) {
+      for (const child of children) {
+        entries.push({ type: 'subagent', subagent: child });
+      }
+    }
+  }
+
+  return entries;
+}
+
 export function SessionSelector({
   sessions,
   activeSessionId,
   onSelect,
   onNew,
   onCancel,
+  subagentSessions = [],
 }: SessionSelectorProps) {
+  const displayList = buildDisplayList(sessions, subagentSessions);
+  // Selectable items = sessions + "new" option (subagent entries are display-only for now)
+  const selectableCount = sessions.length;
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
-    setSelectedIndex((prev) => Math.min(prev, sessions.length));
-  }, [sessions.length]);
+    setSelectedIndex((prev) => Math.min(prev, selectableCount));
+  }, [selectableCount]);
 
   useInput((input, key) => {
     // 'n' or 'N' for new session - check first to prioritize
@@ -75,7 +125,7 @@ export function SessionSelector({
 
     // Enter: select current option
     if (key.return) {
-      if (selectedIndex >= sessions.length) {
+      if (selectedIndex >= selectableCount) {
         // "New session" option or out of bounds
         onNew();
       } else {
@@ -91,17 +141,20 @@ export function SessionSelector({
     }
 
     if (key.downArrow) {
-      setSelectedIndex((prev) => Math.min(sessions.length, prev + 1)); // +1 for "new" option
+      setSelectedIndex((prev) => Math.min(selectableCount, prev + 1)); // +1 for "new" option
       return;
     }
 
     // Number keys for quick selection (1-9)
     const num = parseInt(input, 10);
-    if (!isNaN(num) && num >= 1 && num <= sessions.length) {
+    if (!isNaN(num) && num >= 1 && num <= selectableCount) {
       onSelect(sessions[num - 1].id);
       return;
     }
   });
+
+  // Track which session index we're at for selection highlighting
+  let currentSessionIdx = -1;
 
   return (
     <Box flexDirection="column" paddingY={1}>
@@ -109,33 +162,53 @@ export function SessionSelector({
         <Text bold>Sessions</Text>
       </Box>
 
-      {sessions.map((session, index) => {
-        const isActive = session.id === activeSessionId;
-        const isSelected = index === selectedIndex;
-        const prefix = isActive ? '[*]' : '   ';
-        const time = formatSessionTime(session.updatedAt);
-        const path = formatPath(session.cwd);
-        const processing = session.isProcessing ? ' (processing)' : '';
-        const displayName = session.label || path;
+      {displayList.map((entry, i) => {
+        if (entry.type === 'session' && entry.session) {
+          currentSessionIdx++;
+          const session = entry.session;
+          const isActive = session.id === activeSessionId;
+          const isSelected = currentSessionIdx === selectedIndex;
+          const prefix = isActive ? '[*]' : '   ';
+          const time = formatSessionTime(session.updatedAt);
+          const path = formatPath(session.cwd);
+          const processing = session.isProcessing ? ' (processing)' : '';
+          const displayName = session.label || path;
 
-        return (
-          <Box key={session.id}>
-            <Text
-              inverse={isSelected}
-              color={isActive ? 'green' : undefined}
-              dimColor={!isSelected && !isActive}
-            >
-              {prefix} {index + 1}. {time}  {displayName}{processing}
-            </Text>
-          </Box>
-        );
+          return (
+            <Box key={session.id}>
+              <Text
+                inverse={isSelected}
+                color={isActive ? 'green' : undefined}
+                dimColor={!isSelected && !isActive}
+              >
+                {prefix} {entry.sessionIndex}. {time}  {displayName}{processing}
+              </Text>
+            </Box>
+          );
+        }
+
+        if (entry.type === 'subagent' && entry.subagent) {
+          const sub = entry.subagent;
+          const time = formatSessionTime(sub.updatedAt);
+          const statusTag = sub.status === 'completed' ? ' (done)' : sub.status === 'active' ? ' (running)' : '';
+
+          return (
+            <Box key={sub.id} paddingLeft={3}>
+              <Text dimColor color="cyan">
+                {'     '}&#8627; {time}  {sub.label || 'subagent'}{statusTag}
+              </Text>
+            </Box>
+          );
+        }
+
+        return null;
       })}
 
       {/* New session option */}
       <Box marginTop={1}>
         <Text
-          inverse={selectedIndex === sessions.length}
-          dimColor={selectedIndex !== sessions.length}
+          inverse={selectedIndex === selectableCount}
+          dimColor={selectedIndex !== selectableCount}
         >
             + New session (n)
         </Text>
@@ -143,7 +216,7 @@ export function SessionSelector({
 
       <Box marginTop={1}>
         <Text dimColor>
-          Enter to select | Esc to cancel | 1-{sessions.length} to switch | n for new
+          Enter to select | Esc to cancel | 1-{selectableCount} to switch | n for new
         </Text>
       </Box>
     </Box>

@@ -11,6 +11,8 @@
 import { generateId } from '@hasna/assistants-shared';
 import type { StreamChunk, Tool, HookInput, HookOutput } from '@hasna/assistants-shared';
 import type { LLMClient } from '../llm/client';
+import type { SessionStore } from '../sessions/store';
+import { SubagentAuditLog, type SubagentLogEntry, type SubagentToolCallEntry } from '../agents/audit-log';
 
 // ============================================
 // Types
@@ -111,6 +113,8 @@ export interface SubassistantManagerContext {
   getLLMConfig?: () => import('@hasna/assistants-shared').LLMConfig | null;
   /** Fire a hook and return the result (optional - for SubassistantStart/Stop hooks) */
   fireHook?: (input: HookInput) => Promise<HookOutput | null>;
+  /** Session store for persisting subagent sessions (optional) */
+  sessionStore?: SessionStore;
 }
 
 export interface SubassistantLoopConfig {
@@ -175,6 +179,9 @@ export class SubassistantManager {
   private activeTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private asyncJobs: Map<string, SubassistantJob> = new Map();
   private context: SubassistantManagerContext;
+  private auditLog: SubagentAuditLog;
+  /** Accumulates tool calls per subagent during execution */
+  private pendingToolCalls: Map<string, SubagentToolCallEntry[]> = new Map();
 
   constructor(config: SubassistantManagerConfig, context: SubassistantManagerContext) {
     this.config = {
@@ -187,6 +194,7 @@ export class SubassistantManager {
       forbiddenTools: config.forbiddenTools ?? FORBIDDEN_SUBASSISTANT_TOOLS,
     };
     this.context = context;
+    this.auditLog = new SubagentAuditLog();
   }
 
   /**
@@ -307,6 +315,12 @@ export class SubassistantManager {
 
     // Reserve slot immediately to avoid race with concurrent spawns
     this.activeSubassistants.set(subassistantId, info);
+
+    // Initialize tool call accumulator for audit logging
+    this.pendingToolCalls.set(subassistantId, []);
+
+    // Persist subagent session to the store
+    this.persistSubagentSession(subassistantId, config, 'active');
 
     // Fire SubassistantStart hook if available
     if (this.context.fireHook) {
@@ -443,10 +457,18 @@ export class SubassistantManager {
       );
       return finalResult;
     } finally {
+      // Write audit log entry before cleanup
+      this.writeAuditEntry(subassistantId, config, info);
+
       // Clean up all tracking for this subassistant
       this.cancelTimeout(subassistantId);
       this.activeSubassistants.delete(subassistantId);
       this.activeRunners.delete(subassistantId);
+      this.pendingToolCalls.delete(subassistantId);
+
+      // Persist completed subagent session
+      const finalStatus = info.status === 'completed' ? 'completed' : 'closed';
+      this.persistSubagentSession(subassistantId, config, finalStatus as any);
     }
   }
 
@@ -579,9 +601,63 @@ export class SubassistantManager {
     return cleaned;
   }
 
+  /**
+   * Record a tool call made by a subagent (called from the subagent loop).
+   */
+  recordToolCall(subassistantId: string, toolCall: SubagentToolCallEntry): void {
+    const calls = this.pendingToolCalls.get(subassistantId);
+    if (calls) {
+      calls.push(toolCall);
+    }
+  }
+
+  /**
+   * Get the audit log instance for querying history.
+   */
+  getAuditLog(): SubagentAuditLog {
+    return this.auditLog;
+  }
+
   // ============================================
   // Private Methods
   // ============================================
+
+  /**
+   * Write an audit log entry for a completed subagent.
+   */
+  private writeAuditEntry(
+    subassistantId: string,
+    config: SubassistantConfig,
+    info: SubassistantInfo,
+  ): void {
+    try {
+      const completedAt = info.completedAt ?? Date.now();
+      const startedAt = info.startedAt;
+      const toolCalls = this.pendingToolCalls.get(subassistantId) ?? [];
+
+      const logEntry: SubagentLogEntry = {
+        id: subassistantId,
+        parentSessionId: config.parentSessionId,
+        task: config.task,
+        toolCalls,
+        turns: info.result?.turns ?? 0,
+        result: info.result?.result,
+        errors: info.result?.error ? [info.result.error] : undefined,
+        duration: completedAt - startedAt,
+        startedAt: new Date(startedAt).toISOString(),
+        completedAt: new Date(completedAt).toISOString(),
+        status: info.status === 'completed'
+          ? 'completed'
+          : info.status === 'timeout'
+            ? 'timeout'
+            : 'failed',
+      };
+
+      this.auditLog.log(logEntry);
+    } catch {
+      // Non-critical — audit logging is best-effort
+    }
+  }
 
   private async runAsyncJob(job: SubassistantJob): Promise<void> {
     try {
@@ -661,6 +737,38 @@ export class SubassistantManager {
     }
 
     return resultWithId;
+  }
+
+  /**
+   * Persist a subagent session to the session store
+   */
+  private persistSubagentSession(
+    subassistantId: string,
+    config: SubassistantConfig,
+    status: 'active' | 'background' | 'closed' | 'completed'
+  ): void {
+    const store = this.context.sessionStore;
+    if (!store) return;
+
+    try {
+      // Truncate task to 50 chars for the label
+      const label = config.task.length > 50
+        ? config.task.slice(0, 47) + '...'
+        : config.task;
+
+      store.save({
+        id: `subassistant-${subassistantId}`,
+        cwd: config.cwd,
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+        assistantId: null,
+        label,
+        status,
+        parentSessionId: config.parentSessionId,
+      });
+    } catch {
+      // Non-critical — persistence is best-effort
+    }
   }
 
   private createTimeout(ms: number, runner: SubassistantRunner, subassistantId: string): Promise<SubassistantResult> {

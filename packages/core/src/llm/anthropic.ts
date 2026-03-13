@@ -1,10 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMClient } from './client';
-import type { Message, Tool, StreamChunk, LLMConfig, ToolCall } from '@hasna/assistants-shared';
+import type { Message, Tool, StreamChunk, LLMConfig, ToolCall, EffortLevel } from '@hasna/assistants-shared';
 import { getProviderInfo } from '@hasna/assistants-shared';
 import { ErrorCodes, LLMError } from '../errors';
 import { LLMRetryConfig, withRetry } from '../utils/retry';
 import { resolveApiKey } from './provider-utils';
+
+/** Default thinking budget tokens for extended thinking (overridable via MAX_THINKING_TOKENS env) */
+const DEFAULT_THINKING_BUDGET = 10000;
 
 /**
  * Anthropic Claude client
@@ -13,6 +16,7 @@ export class AnthropicClient implements LLMClient {
   private client: Anthropic;
   private model: string;
   private maxTokens: number;
+  private effortLevel: EffortLevel;
 
   constructor(config: LLMConfig) {
     const apiKey = resolveApiKey('anthropic', config.apiKey);
@@ -30,6 +34,15 @@ export class AnthropicClient implements LLMClient {
     this.client = new Anthropic({ apiKey });
     this.model = config.model;
     this.maxTokens = config.maxTokens || 8192;
+    this.effortLevel = config.effortLevel || 'medium';
+  }
+
+  getEffortLevel(): EffortLevel {
+    return this.effortLevel;
+  }
+
+  setEffortLevel(level: EffortLevel): void {
+    this.effortLevel = level;
   }
 
   getModel(): string {
@@ -53,16 +66,27 @@ export class AnthropicClient implements LLMClient {
           ? `${this.getDefaultSystemPrompt()}\n\n---\n\n${systemPrompt}`
           : this.getDefaultSystemPrompt();
 
+      // Build request params based on effort level
+      const requestParams: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: this.effortLevel === 'low' ? Math.min(this.maxTokens, 4096) : this.maxTokens,
+        system: combinedSystem,
+        messages: anthropicMessages,
+        tools: anthropicTools,
+      };
+
+      // Enable extended thinking for high effort
+      if (this.effortLevel === 'high') {
+        const thinkingBudget = parseInt(process.env.MAX_THINKING_TOKENS || '', 10) || DEFAULT_THINKING_BUDGET;
+        requestParams.thinking = { type: 'enabled', budget_tokens: thinkingBudget };
+        // Extended thinking requires higher max_tokens (must be > budget_tokens)
+        requestParams.max_tokens = Math.max(this.maxTokens, thinkingBudget + 4096);
+      }
+
       const stream = await withRetry(
         async () => {
           try {
-            return this.client.messages.stream({
-              model: this.model,
-              max_tokens: this.maxTokens,
-              system: combinedSystem,
-              messages: anthropicMessages,
-              tools: anthropicTools,
-            });
+            return this.client.messages.stream(requestParams as Parameters<typeof this.client.messages.stream>[0]);
           } catch (error) {
             throw toLLMError(error);
           }
@@ -93,6 +117,8 @@ export class AnthropicClient implements LLMClient {
             };
           } else if (event.delta.type === 'input_json_delta') {
             toolInputJson += event.delta.partial_json;
+          } else if ((event.delta as { type: string }).type === 'thinking_delta') {
+            // Extended thinking content — silently consumed (model uses it internally)
           }
         } else if (event.type === 'content_block_stop') {
           if (currentToolCall && currentToolCall.id && currentToolCall.name) {

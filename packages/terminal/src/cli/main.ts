@@ -17,6 +17,7 @@ export interface ParsedOptions {
   resume: string | null;
   cwdProvided: boolean;
   permissionMode: 'normal' | 'plan' | 'auto-accept' | null;
+  worktree: string | boolean | null;
   errors: string[];
 }
 
@@ -49,6 +50,7 @@ export function parseArgs(argv: string[]): ParsedOptions {
     resume: null,
     cwdProvided: false,
     permissionMode: null,
+    worktree: null,
     errors: [],
   };
 
@@ -229,6 +231,19 @@ export function parseArgs(argv: string[]): ParsedOptions {
       continue;
     }
 
+    // Worktree (isolated working directory)
+    if (arg === '--worktree') {
+      const nextArg = args[i + 1];
+      if (nextArg === undefined || isFlag(nextArg)) {
+        // No name provided — auto-generate
+        options.worktree = true;
+      } else {
+        options.worktree = nextArg;
+        i++;
+      }
+      continue;
+    }
+
     // Unknown arg - treat as positional
     if (!arg.startsWith('-')) {
       positionalArgs.push(arg);
@@ -319,6 +334,7 @@ Headless Mode:
   -c, --continue               Continue the most recent conversation
   -r, --resume <id_or_name>    Resume a session by ID or name
   --cwd <path>                 Set working directory
+  --worktree [name]            Run in an isolated git worktree (auto-cleaned on exit)
   --permission-mode <mode>     Permission mode: normal, plan (read-only), auto-accept
 
 Examples:

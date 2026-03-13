@@ -49,6 +49,7 @@ import { VerificationSessionStore } from '../sessions/verification';
 import { nativeHookRegistry, HookStore, HookTester } from '../hooks';
 import { createSkill, type SkillScope } from '../skills/create';
 import { SkillInstaller } from '../skills/installer';
+import { PackageInstaller } from '../packages/installer';
 import {
   listJobs,
   listJobsForSession,
@@ -80,6 +81,12 @@ import {
   listTemplates,
   createIdentityFromTemplate,
 } from '../identity/templates';
+import {
+  loadAgentDefinitions,
+  getAgentDefinition,
+  saveAgentDefinition,
+  deleteAgentDefinition,
+} from '../agents';
 
 // Version lookup - prefer explicit env to avoid stale hardcoded values
 const VERSION =
@@ -190,6 +197,7 @@ export class BuiltinCommands {
     loader.register(this.initCommand());
     loader.register(this.costCommand());
     loader.register(this.modelCommand());
+    loader.register(this.effortCommand());
     loader.register(this.skillsCommand(loader));
     loader.register(this.memoryCommand());
     loader.register(this.hooksCommand());
@@ -220,6 +228,11 @@ export class BuiltinCommands {
     loader.register(this.undoCommand());
     loader.register(this.treeCommand());
     loader.register(this.modeCommand());
+    loader.register(this.installCommand());
+    loader.register(this.removeCommand());
+    loader.register(this.packagesCommand());
+    loader.register(this.agentsCommand());
+    loader.register(this.exportCommand());
   }
 
   /**
@@ -282,6 +295,8 @@ export class BuiltinCommands {
 
         message += '**Configuration and Models**\n';
         message += '  - `/model` opens interactive model selection.\n';
+        message += '  - `/effort` sets thinking depth (low, medium, high).\n';
+        message += '  - `/mode` switches permission mode (normal, plan, auto).\n';
         message += '  - `/config` manages user/project/local config.\n';
         message += '  - `/memory`, `/context`, `/hooks`, and `/guardrails` control behavior and safety.\n\n';
 
@@ -7081,6 +7096,83 @@ Please summarize the last interaction and suggest 2-3 next steps.
   }
 
   /**
+   * /effort - Show or change the effort/thinking level
+   */
+  private effortCommand(): Command {
+    return {
+      name: 'effort',
+      description: 'Show or change effort level (low, medium, high). High enables extended thinking.',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const trimmed = args.trim().toLowerCase();
+
+        // /effort — show current level
+        if (!trimmed) {
+          const current = context.getEffortLevel?.() || 'medium';
+          let message = `\n**Effort Level:** ${current}\n\n`;
+          message += '**Levels:**\n';
+          message += '  `low`    — Faster responses, reduced max tokens\n';
+          message += '  `medium` — Default behavior\n';
+          message += '  `high`   — Extended thinking enabled (deeper reasoning)\n\n';
+          message += 'Usage: `/effort low` · `/effort medium` · `/effort high`\n';
+          if (process.env.MAX_THINKING_TOKENS) {
+            message += `\nThinking budget: ${process.env.MAX_THINKING_TOKENS} tokens (from MAX_THINKING_TOKENS)\n`;
+          }
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /effort help
+        if (trimmed === 'help') {
+          let message = '\n**Effort Commands**\n\n';
+          message += '  `/effort`        Show current effort level\n';
+          message += '  `/effort low`    Faster responses, reduced max tokens\n';
+          message += '  `/effort medium` Default behavior\n';
+          message += '  `/effort high`   Extended thinking (deeper reasoning)\n\n';
+          message += 'Set `MAX_THINKING_TOKENS` env var to override thinking budget (default: 10000).\n';
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /effort <level>
+        const validLevels = ['low', 'medium', 'high'] as const;
+        if (!validLevels.includes(trimmed as typeof validLevels[number])) {
+          context.emit('text', `Invalid effort level: "${trimmed}". Use: low, medium, high\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const level = trimmed as 'low' | 'medium' | 'high';
+
+        if (!context.setEffortLevel) {
+          context.emit('text', 'Effort level switching not available in this context.\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const previous = context.getEffortLevel?.() || 'medium';
+        context.setEffortLevel(level);
+
+        let message = `\nEffort level: **${previous}** → **${level}**\n`;
+        if (level === 'high') {
+          const budget = parseInt(process.env.MAX_THINKING_TOKENS || '', 10) || 10000;
+          message += `Extended thinking enabled (budget: ${budget.toLocaleString()} tokens)\n`;
+        } else if (level === 'low') {
+          message += 'Reduced max tokens for faster responses.\n';
+        }
+
+        context.emit('text', message);
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
    * /memory - Manage persistent memories
    */
   private memoryCommand(): Command {
@@ -8662,6 +8754,511 @@ Please summarize the last interaction and suggest 2-3 next steps.
       connectors: context.connectors,
     });
     context.setProjectContext(projectContext);
+  }
+
+  /**
+   * /install - Install a package from npm or git
+   */
+  private installCommand(): Command {
+    return {
+      name: 'install',
+      description: 'Install a package (npm:@foo/tools or git:github.com/user/repo)',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const tokens = args.trim().split(/\s+/);
+        const source = tokens[0];
+
+        if (!source) {
+          context.emit('text', 'Usage: /install <source> [--local]\n');
+          context.emit('text', '\nExamples:\n');
+          context.emit('text', '  /install npm:@foo/tools\n');
+          context.emit('text', '  /install git:github.com/user/repo\n');
+          context.emit('text', '  /install some-npm-package --local\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const local = tokens.includes('--local') || tokens.includes('-l');
+
+        try {
+          context.emit('text', `\nInstalling ${source}...\n`);
+          const result = await PackageInstaller.installPackage(source, { local });
+          context.emit('text', `Installed "${result.name}" (${result.source}, v${result.version})\n`);
+          context.emit('text', `Location: ${result.path}\n`);
+          context.emit('text', `Scope: ${local ? 'local' : 'global'}\n`);
+        } catch (error) {
+          context.emit('text', `Failed to install: ${error instanceof Error ? error.message : String(error)}\n`);
+        }
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
+   * /remove - Remove an installed package
+   */
+  private removeCommand(): Command {
+    return {
+      name: 'remove',
+      aliases: ['uninstall'],
+      description: 'Remove an installed package',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const tokens = args.trim().split(/\s+/);
+        const name = tokens[0];
+
+        if (!name) {
+          context.emit('text', 'Usage: /remove <package-name> [--local]\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const local = tokens.includes('--local') || tokens.includes('-l');
+
+        try {
+          await PackageInstaller.removePackage(name, { local });
+          context.emit('text', `\nRemoved "${name}" from ${local ? 'local' : 'global'} packages.\n`);
+        } catch (error) {
+          context.emit('text', `Failed to remove: ${error instanceof Error ? error.message : String(error)}\n`);
+        }
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
+   * /packages - List installed packages
+   */
+  private packagesCommand(): Command {
+    return {
+      name: 'packages',
+      description: 'List installed packages',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const tokens = args.trim().split(/\s+/).filter(Boolean);
+        const subcommand = tokens[0];
+
+        // /packages update [--local]
+        if (subcommand === 'update') {
+          const local = tokens.includes('--local') || tokens.includes('-l');
+          try {
+            context.emit('text', `\nUpdating ${local ? 'local' : 'global'} packages...\n`);
+            const result = await PackageInstaller.updatePackages({ local });
+            if (result.updated.length > 0) {
+              context.emit('text', `Updated: ${result.updated.join(', ')}\n`);
+            }
+            if (result.errors.length > 0) {
+              for (const err of result.errors) {
+                context.emit('text', `Error: ${err}\n`);
+              }
+            }
+            if (result.updated.length === 0 && result.errors.length === 0) {
+              context.emit('text', 'No packages to update.\n');
+            }
+          } catch (error) {
+            context.emit('text', `Failed to update: ${error instanceof Error ? error.message : String(error)}\n`);
+          }
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /packages [list] — default: list all packages
+        const lines: string[] = ['\n**Installed packages:**\n'];
+
+        for (const scope of ['global', 'local'] as const) {
+          const isLocal = scope === 'local';
+          try {
+            const packages = await PackageInstaller.listPackages({ local: isLocal });
+            if (packages.length > 0) {
+              lines.push(`\n_${scope} (${isLocal ? '.assistants/packages/' : '~/.assistants/packages/'})_`);
+              for (const pkg of packages) {
+                lines.push(`  ${pkg.name} (${pkg.source}) v${pkg.version}`);
+              }
+            }
+          } catch {
+            // Skip scope if error
+          }
+        }
+
+        if (lines.length === 1) {
+          lines.push('No packages installed.');
+          lines.push('\nUse /install <source> to install a package.');
+        }
+
+        context.emit('text', lines.join('\n') + '\n');
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
+   * /export - Export current conversation in portable markdown or JSON format
+   */
+  private exportCommand(): Command {
+    return {
+      name: 'export',
+      description: 'Export current conversation to markdown or JSON file',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const arg = args.trim().toLowerCase();
+
+        if (arg === 'help') {
+          context.emit('text', [
+            '\nUsage:',
+            '  /export          — Export as portable markdown (default)',
+            '  /export md       — Export as portable markdown',
+            '  /export json     — Export as raw JSON',
+            '  /export help     — Show this help',
+            '',
+          ].join('\n') + '\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const format = arg === 'json' ? 'json' : 'md';
+        const storageDir = context.getStorageDir?.() || getConfigDir();
+        const exportsDir = join(storageDir, 'exports');
+
+        if (!existsSync(exportsDir)) {
+          mkdirSync(exportsDir, { recursive: true });
+        }
+
+        const messages = context.messages || [];
+        const sessionId = context.sessionId;
+        const model = context.getModel?.() || 'unknown';
+        const now = new Date();
+        const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const filename = `${sessionId}-${dateStr}.${format}`;
+        const filePath = join(exportsDir, filename);
+
+        if (format === 'json') {
+          const data = {
+            sessionId,
+            model,
+            exportedAt: now.toISOString(),
+            messageCount: messages.length,
+            tokenUsage: this.tokenUsage,
+            messages,
+          };
+          writeFileSync(filePath, JSON.stringify(data, null, 2));
+        } else {
+          const lines: string[] = [];
+
+          // Header
+          lines.push('# Conversation Export');
+          lines.push('');
+          lines.push(`- **Session**: ${sessionId}`);
+          lines.push(`- **Date**: ${now.toISOString()}`);
+          lines.push(`- **Model**: ${model}`);
+          lines.push('');
+          lines.push('---');
+          lines.push('');
+
+          // Messages
+          let messageCount = 0;
+          for (const msg of messages as Array<{ role: string; content: unknown; tool_calls?: unknown[]; tool_call_id?: string; name?: string }>) {
+            const role = msg.role || 'unknown';
+
+            if (role === 'system') {
+              continue; // Skip system messages in portable export
+            }
+
+            messageCount++;
+            const roleName = role === 'user' ? 'User' : role === 'assistant' ? 'Assistant' : role === 'tool' ? 'Tool Result' : role;
+            lines.push(`## ${roleName}`);
+            lines.push('');
+
+            // Handle content
+            if (typeof msg.content === 'string') {
+              lines.push(msg.content);
+            } else if (Array.isArray(msg.content)) {
+              for (const part of msg.content as Array<{ type: string; text?: string; tool_use_id?: string; content?: string }>) {
+                if (part.type === 'text' && part.text) {
+                  lines.push(part.text);
+                } else if (part.type === 'tool_result' && part.content) {
+                  lines.push(`### Tool Result (${part.tool_use_id || 'unknown'})`);
+                  lines.push('');
+                  lines.push('```');
+                  lines.push(typeof part.content === 'string' ? part.content : JSON.stringify(part.content, null, 2));
+                  lines.push('```');
+                }
+              }
+            } else if (msg.content != null) {
+              lines.push(String(msg.content));
+            }
+            lines.push('');
+
+            // Handle tool calls (assistant messages with tool_use blocks)
+            if (Array.isArray(msg.tool_calls)) {
+              for (const call of msg.tool_calls as Array<{ function?: { name: string; arguments: string }; id?: string }>) {
+                if (call.function) {
+                  lines.push(`### Tool Call: ${call.function.name}`);
+                  lines.push('');
+                  lines.push('```json');
+                  try {
+                    lines.push(JSON.stringify(JSON.parse(call.function.arguments), null, 2));
+                  } catch {
+                    lines.push(call.function.arguments);
+                  }
+                  lines.push('```');
+                  lines.push('');
+                }
+              }
+            }
+          }
+
+          // Footer
+          lines.push('---');
+          lines.push('');
+          lines.push(`_${messageCount} messages exported. Tokens used: ${this.tokenUsage.totalTokens.toLocaleString()}_`);
+          lines.push('');
+
+          writeFileSync(filePath, lines.join('\n'));
+        }
+
+        context.emit('text', `\nConversation exported to:\n  ${filePath}\n`);
+        context.emit('done');
+        return { handled: true };
+      },
+    };
+  }
+
+  /**
+   * /agents - Manage named subagent definitions
+   */
+  private agentsCommand(): Command {
+    return {
+      name: 'agents',
+      aliases: ['agent'],
+      description: 'List, create, and delete named subagent definitions',
+      builtin: true,
+      selfHandled: true,
+      content: '',
+      handler: async (args, context) => {
+        const tokens = splitArgs(args || '');
+        const subcommand = tokens.shift()?.toLowerCase();
+
+        // /agents create <name> [options]
+        if (subcommand === 'create') {
+          let name: string | undefined;
+          let description: string | undefined;
+          let tools: string[] | undefined;
+          let systemPrompt: string | undefined;
+          let maxTurns: number | undefined;
+          let minTurns: number | undefined;
+          let workUntilDone: boolean | undefined;
+          let scope: 'global' | 'project' = 'project';
+          let interactive = false;
+
+          for (let i = 0; i < tokens.length; i += 1) {
+            const token = tokens[i];
+            if (!token) continue;
+            if (token.startsWith('--')) {
+              switch (token) {
+                case '--global':
+                  scope = 'global';
+                  break;
+                case '--project':
+                  scope = 'project';
+                  break;
+                case '--desc':
+                case '--description':
+                  description = tokens[i + 1];
+                  i += 1;
+                  break;
+                case '--tools': {
+                  const list = tokens[i + 1] || '';
+                  tools = list.split(',').map((t) => t.trim()).filter(Boolean);
+                  i += 1;
+                  break;
+                }
+                case '--prompt':
+                case '--system-prompt':
+                  systemPrompt = tokens[i + 1];
+                  i += 1;
+                  break;
+                case '--max-turns':
+                  maxTurns = parseInt(tokens[i + 1] || '', 10) || undefined;
+                  i += 1;
+                  break;
+                case '--min-turns':
+                  minTurns = parseInt(tokens[i + 1] || '', 10) || undefined;
+                  i += 1;
+                  break;
+                case '--work-until-done':
+                  workUntilDone = true;
+                  break;
+                case '--interactive':
+                case '--ask':
+                  interactive = true;
+                  break;
+                default:
+                  break;
+              }
+            } else if (!name) {
+              name = token;
+            }
+          }
+
+          if (!name) {
+            context.emit('text', 'Usage: /agents create <name> [--global] [--desc "..."] [--tools a,b,c] [--prompt "..."]\n');
+            context.emit('done');
+            return { handled: true };
+          }
+
+          // Interactive mode: delegate to LLM to interview user
+          if (interactive || (!description && !systemPrompt)) {
+            const known: string[] = [];
+            if (description) known.push(`description: ${description}`);
+            if (tools && tools.length > 0) known.push(`tools: ${tools.join(', ')}`);
+            if (systemPrompt) known.push(`systemPrompt: provided`);
+            if (maxTurns !== undefined) known.push(`maxTurns: ${maxTurns}`);
+
+            const missing: string[] = [];
+            if (!description) missing.push('description (what does this agent specialize in?)');
+            if (!systemPrompt) missing.push('systemPrompt (instructions for the agent)');
+            if (!tools || tools.length === 0) missing.push('tools (comma-separated list, optional)');
+
+            const knownBlock = known.length > 0 ? `Known values:\n- ${known.join('\n- ')}\n\n` : '';
+            const missingBlock = missing.length > 0 ? `Ask for:\n- ${missing.join('\n- ')}\n\n` : '';
+
+            context.emit('done');
+            return {
+              handled: false,
+              prompt:
+                `We are creating a new agent definition named "${name}" (scope: ${scope}).\n\n${knownBlock}${missingBlock}` +
+                'Use the ask_user tool to interview the user and collect the missing fields. ' +
+                'Then create the agent definition JSON file. The file should be saved at: ' +
+                `${scope === 'global' ? '~/.assistants' : '.assistants'}/agents/${name}.json\n` +
+                'Required fields: name, description. Optional: tools, systemPrompt, maxTurns, minTurns, workUntilDone.',
+            };
+          }
+
+          try {
+            const filePath = saveAgentDefinition(
+              { name, description: description || '', tools, systemPrompt, maxTurns, minTurns, workUntilDone },
+              scope,
+              context.cwd,
+            );
+            context.emit('text', `\nCreated agent "${name}" (${scope}).\nLocation: ${filePath}\n`);
+          } catch (error) {
+            context.emit('text', `Failed to create agent: ${error instanceof Error ? error.message : String(error)}\n`);
+          }
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /agents delete <name>
+        if (subcommand === 'delete' || subcommand === 'rm' || subcommand === 'remove') {
+          const name = tokens.shift()?.trim();
+          if (!name) {
+            context.emit('text', 'Usage: /agents delete <name>\n');
+            context.emit('done');
+            return { handled: true };
+          }
+
+          const deletedPath = deleteAgentDefinition(name, context.cwd);
+          if (deletedPath) {
+            context.emit('text', `\nDeleted agent "${name}".\nRemoved: ${deletedPath}\n`);
+          } else {
+            context.emit('text', `\nAgent "${name}" not found.\n`);
+          }
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /agents show <name>
+        if (subcommand === 'show' || subcommand === 'info') {
+          const name = tokens.shift()?.trim();
+          if (!name) {
+            context.emit('text', 'Usage: /agents show <name>\n');
+            context.emit('done');
+            return { handled: true };
+          }
+
+          const def = getAgentDefinition(name, context.cwd);
+          if (!def) {
+            context.emit('text', `\nAgent "${name}" not found.\n`);
+            context.emit('done');
+            return { handled: true };
+          }
+
+          let message = `\n**Agent: ${def.name}**\n`;
+          message += `Description: ${def.description || '(none)'}\n`;
+          message += `Scope: ${def.scope || 'unknown'}\n`;
+          if (def.filePath) message += `File: ${def.filePath}\n`;
+          if (def.tools && def.tools.length > 0) message += `Tools: ${def.tools.join(', ')}\n`;
+          if (def.systemPrompt) message += `System prompt: ${def.systemPrompt.slice(0, 200)}${def.systemPrompt.length > 200 ? '...' : ''}\n`;
+          if (def.maxTurns !== undefined) message += `Max turns: ${def.maxTurns}\n`;
+          if (def.minTurns !== undefined) message += `Min turns: ${def.minTurns}\n`;
+          if (def.workUntilDone) message += `Work until done: yes\n`;
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /agents help
+        if (subcommand === 'help') {
+          let message = '\n**/agents commands**\n\n';
+          message += '/agents                     List all agent definitions\n';
+          message += '/agents show <name>         Show details for an agent\n';
+          message += '/agents create <name>       Create a new agent definition\n';
+          message += '/agents delete <name>       Delete an agent definition\n';
+          message += '\nOptions for create:\n';
+          message += '  --project              Save to project .assistants/agents/ (default)\n';
+          message += '  --global               Save to ~/.assistants/agents/\n';
+          message += '  --desc "..."           Description\n';
+          message += '  --tools a,b,c          Comma-separated tool names\n';
+          message += '  --prompt "..."         System prompt / instructions\n';
+          message += '  --max-turns N          Maximum turns (default: 25)\n';
+          message += '  --min-turns N          Minimum turns (default: 3)\n';
+          message += '  --work-until-done      Keep going until explicitly done\n';
+          message += '  --interactive          Ask follow-up questions\n';
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        // /agents (no args) --- list all
+        if (!subcommand || subcommand === 'list' || subcommand === 'ls') {
+          const defs = loadAgentDefinitions(context.cwd);
+          if (defs.length === 0) {
+            context.emit('text', '\nNo agent definitions found.\n');
+            context.emit('text', 'Create one with: /agents create <name>\n');
+            context.emit('text', 'Agent definitions are JSON files in ~/.assistants/agents/ (global) or .assistants/agents/ (project).\n');
+            context.emit('done');
+            return { handled: true };
+          }
+
+          let message = '\n**Agent definitions:**\n\n';
+          for (const def of defs) {
+            const scopeTag = def.scope === 'global' ? ' (global)' : ' (project)';
+            const toolsTag = def.tools && def.tools.length > 0 ? ` [${def.tools.length} tools]` : '';
+            message += `  ${def.name}${scopeTag}${toolsTag} -- ${def.description || '(no description)'}\n`;
+          }
+          message += `\n${defs.length} agent(s) total. Use /agents show <name> for details.\n`;
+          context.emit('text', message);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        context.emit('text', `Unknown /agents subcommand: ${subcommand}\n`);
+        context.emit('text', 'Use /agents help for available commands.\n');
+        context.emit('done');
+        return { handled: true };
+      },
+    };
   }
 }
 
