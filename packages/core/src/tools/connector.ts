@@ -804,7 +804,7 @@ export class ConnectorBridge {
       const args = (input.args as string[]) || [];
       const options = (input.options as Record<string, unknown>) || {};
       const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
-      const timeoutMs = Number(options.timeoutMs || options.timeout || 15000);
+      const timeoutMs = Number(options.timeoutMs || options.timeout || 30000);
 
       if (signal?.aborted) {
         throw new ConnectorError('Command aborted', {
@@ -882,7 +882,7 @@ export class ConnectorBridge {
         const timer = setTimeout(() => {
           timedOut = true;
           proc.kill();
-        }, Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
+        }, Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 30000);
 
         try {
           const [stdout, stderr] = await Promise.all([
@@ -904,7 +904,7 @@ export class ConnectorBridge {
 
           if (timedOut) {
             throw new ConnectorError(
-              `Command timed out after ${Math.round((Number.isFinite(timeoutMs) ? timeoutMs : 15000) / 1000)}s.`,
+              `Command timed out after ${Math.round((Number.isFinite(timeoutMs) ? timeoutMs : 30000) / 1000)}s.`,
               {
                 connectorName: connector.name,
                 command,
