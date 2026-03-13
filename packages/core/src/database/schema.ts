@@ -4,6 +4,42 @@
  * All tables live in a single ~/.assistants/assistants.db file.
  * Tables are grouped by domain but share the same connection
  * with WAL mode, busy_timeout, and foreign keys enabled.
+ *
+ * ## Table Groups
+ *
+ * | Group          | Tables                                    | Purpose                                    |
+ * |----------------|-------------------------------------------|--------------------------------------------|
+ * | Meta           | _schema_version, _backups                 | Schema versioning and backup tracking      |
+ * | Config         | config                                    | Runtime key-value config (scope-aware)      |
+ * | Sessions       | sessions, session_messages                | Conversation history per session            |
+ * | Memory (KV)    | memory                                    | Simple key-value store (per-assistant)      |
+ * | Memory (Rich)  | memories, memory_access_log               | Scoped memories with importance/tags/audit  |
+ * | Contacts       | contacts, contact_emails, contact_phones, | Address book with multi-value fields        |
+ * |                | contact_addresses, contact_social,         |                                            |
+ * |                | contact_tags, contact_groups,              |                                            |
+ * |                | contact_group_members                     |                                            |
+ * | Channels       | channels, channel_members, channel_messages| Multi-assistant broadcast messaging        |
+ * | Orders         | stores, orders, order_items               | E-commerce order tracking                  |
+ * | Telephony      | phone_numbers, call_logs, sms_logs        | Phone/SMS communication logs               |
+ * | Webhooks       | webhook_events                            | Inbound webhook event storage              |
+ * | Heartbeat      | heartbeat_state                           | Agent liveness and state persistence        |
+ * | Scheduler      | schedules                                 | Recurring task scheduling (cron-based)      |
+ * | Budget         | budget_usage                              | Token/cost usage tracking per session       |
+ * | Jobs           | jobs                                      | Background job queue with status tracking   |
+ * | Wallet         | wallet_entries                            | Credential and secret storage               |
+ * | Inbox          | inbox_messages, inbox_attachments          | Email inbox message cache                  |
+ * | Assistants     | assistants, assistant_identities          | Multi-assistant registry and identity mgmt  |
+ * | Tasks          | tasks                                     | Task management (todos, work items)         |
+ * | Feedback       | feedback                                  | User feedback collection                   |
+ * | Swarm          | swarm_tasks, swarm_agent_state            | Multi-agent coordination and dispatch       |
+ *
+ * ## Scope System
+ *
+ * Several tables use `scope` + `scope_id` for multi-tenant isolation:
+ * - `global`: Shared across all assistants (scope_id = NULL)
+ * - `shared`: Shared within a project (scope_id = project path)
+ * - `private`: Per-assistant (scope_id = assistant ID)
+ * - `session`: Per-session (scope_id = session ID)
  */
 
 // Schema version - bump when adding migrations

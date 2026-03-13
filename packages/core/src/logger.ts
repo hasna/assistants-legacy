@@ -62,8 +62,10 @@ export class Logger {
 
     try {
       appendFileSync(this.logFile, line);
-    } catch {
-      // Ignore write errors
+    } catch (err) {
+      // Surface write errors on stderr so permission/disk issues don't go unnoticed
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[assistants-logger] Failed to write log: ${msg}\n`);
     }
   }
 
