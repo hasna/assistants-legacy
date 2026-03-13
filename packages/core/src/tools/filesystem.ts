@@ -1,8 +1,8 @@
 import type { Tool, WorkspaceConfig } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
-import { join, resolve, dirname, sep } from 'path';
+import { join, resolve, dirname, sep, isAbsolute } from 'path';
 import { homedir } from 'os';
-import { mkdir } from 'fs/promises';
+import { mkdir, copyFile, stat } from 'fs/promises';
 import { getProjectDataDir } from '../config';
 import { getRuntime } from '../runtime';
 import { ErrorCodes, ToolExecutionError } from '../errors';
@@ -104,6 +104,7 @@ export class FilesystemTools {
     registry.register(this.globTool, this.globExecutor);
     registry.register(this.grepTool, this.grepExecutor);
     registry.register(this.readPdfTool, this.readPdfExecutor);
+    registry.register(this.fileCopyTool, this.fileCopyExecutor);
   }
 
   /**
@@ -378,7 +379,12 @@ export class FilesystemTools {
     let resolvedPath: string;
     let allowedRoot: string;
 
-    if (mode === 'sandbox') {
+    // Allow writing to /tmp in all modes (for throwaway helper scripts)
+    const tmpResolved = isAbsolute(filename) ? resolve(filename) : null;
+    if (tmpResolved && isWithinDir(tmpResolved, '/tmp')) {
+      resolvedPath = tmpResolved;
+      allowedRoot = '/tmp';
+    } else if (mode === 'sandbox') {
       // Sandbox mode: restrict to scripts folder (original behavior)
       const scriptsFolder = getScriptsFolder(baseCwd, input.sessionId as string | undefined);
       // Sanitize filename - remove any path traversal attempts
@@ -909,6 +915,290 @@ export class FilesystemTools {
       if (error instanceof ToolExecutionError) throw error;
       throw new ToolExecutionError(error instanceof Error ? error.message : String(error), {
         toolName: 'read_pdf',
+        toolInput: input,
+        code: ErrorCodes.TOOL_EXECUTION_FAILED,
+        recoverable: true,
+        retryable: false,
+      });
+    }
+  };
+
+  // ============================================
+  // File Copy Tool (import external files into workspace)
+  // ============================================
+
+  /**
+   * Safe source directories from which files can be copied into the workspace.
+   * Only these locations (and the project's .assistants-data/) are allowed as sources.
+   */
+  private static readonly COPY_ALLOWED_SOURCES = [
+    '/tmp',
+    join(homedir(), '.connect'),
+    join(homedir(), 'Downloads'),
+  ];
+
+  static readonly fileCopyTool: Tool = {
+    name: 'file_copy',
+    description:
+      'Copy a file from an allowed external location into the project workspace. ' +
+      'Allowed source locations: /tmp, ~/.connect/*, ~/Downloads, and the project .assistants-data/ directory. ' +
+      'The destination must be within the current workspace (sandbox scripts folder, project directory, or custom path depending on workspace.mode).',
+    parameters: {
+      type: 'object',
+      properties: {
+        source: {
+          type: 'string',
+          description: 'Absolute path to the source file (must be in /tmp, ~/.connect, ~/Downloads, or .assistants-data/)',
+        },
+        destination: {
+          type: 'string',
+          description: 'Destination path within the workspace (relative or absolute)',
+        },
+        cwd: {
+          type: 'string',
+          description: 'Base working directory for the project (optional)',
+        },
+      },
+      required: ['source', 'destination'],
+    },
+  };
+
+  static readonly fileCopyExecutor: ToolExecutor = async (input) => {
+    const baseCwd = (input.cwd as string) || process.cwd();
+    const rawSource = String(input.source || '').trim();
+    const rawDestination = String(input.destination || '').trim();
+
+    if (!rawSource) {
+      throw new ToolExecutionError('Source path is required', {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Provide an absolute path to the source file.',
+      });
+    }
+
+    if (!rawDestination) {
+      throw new ToolExecutionError('Destination path is required', {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Provide a destination path within the workspace.',
+      });
+    }
+
+    // Resolve source path (supports ~ expansion)
+    const sourcePath = FilesystemTools.resolveInputPath(baseCwd, rawSource);
+
+    // --- Validate source: must be in an allowed source directory ---
+    const allowedSources = [
+      ...FilesystemTools.COPY_ALLOWED_SOURCES,
+      getProjectDataDir(baseCwd),
+    ];
+
+    let sourceAllowed = false;
+    for (const allowed of allowedSources) {
+      if (isWithinDir(sourcePath, allowed)) {
+        sourceAllowed = true;
+        break;
+      }
+    }
+
+    if (!sourceAllowed) {
+      getSecurityLogger().log({
+        eventType: 'path_violation',
+        severity: 'high',
+        details: {
+          tool: 'file_copy',
+          path: sourcePath,
+          reason: 'Source path not in allowed locations',
+        },
+        sessionId: (input.sessionId as string) || 'unknown',
+      });
+      throw new ToolExecutionError(
+        `Source path is not in an allowed location. Allowed: /tmp, ~/.connect, ~/Downloads, .assistants-data/. Got: ${sourcePath}`,
+        {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Copy files only from /tmp, ~/.connect/*, ~/Downloads, or .assistants-data/.',
+        }
+      );
+    }
+
+    // Check source against protected paths (e.g. if someone puts sensitive files in /tmp)
+    const sourceSafety = await isPathSafe(sourcePath, 'read', { cwd: baseCwd, allowedPaths: allowedSources });
+    if (!sourceSafety.safe) {
+      getSecurityLogger().log({
+        eventType: 'path_violation',
+        severity: 'high',
+        details: {
+          tool: 'file_copy',
+          path: sourcePath,
+          reason: sourceSafety.reason || 'Blocked source path',
+        },
+        sessionId: (input.sessionId as string) || 'unknown',
+      });
+      throw new ToolExecutionError(sourceSafety.reason || 'Blocked source path', {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.TOOL_PERMISSION_DENIED,
+        recoverable: false,
+        retryable: false,
+      });
+    }
+
+    // Verify source file exists
+    try {
+      const srcStat = await stat(sourcePath);
+      if (!srcStat.isFile()) {
+        throw new ToolExecutionError(`Source is not a file: ${sourcePath}`, {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Provide a path to a regular file, not a directory.',
+        });
+      }
+    } catch (error) {
+      if (error instanceof ToolExecutionError) throw error;
+      throw new ToolExecutionError(`Source file not found: ${sourcePath}`, {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.TOOL_EXECUTION_FAILED,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Check the source file path and try again.',
+      });
+    }
+
+    // --- Resolve and validate destination (same logic as write tool) ---
+    const mode = currentWorkspaceConfig.mode || 'sandbox';
+    let resolvedDest: string;
+    let allowedRoot: string;
+
+    if (mode === 'sandbox') {
+      const scriptsFolder = getScriptsFolder(baseCwd, input.sessionId as string | undefined);
+      const sanitizedDest = rawDestination
+        .replace(/\.\.[/\\]/g, '')
+        .replace(/\.\./g, '')
+        .replace(/^[/\\]+/, '');
+      resolvedDest = join(scriptsFolder, sanitizedDest);
+      allowedRoot = scriptsFolder;
+
+      if (!isInScriptsFolder(resolvedDest, baseCwd, input.sessionId as string | undefined)) {
+        throw new ToolExecutionError(`Cannot copy outside scripts folder. Files are saved to ${scriptsFolder}`, {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Copy only within the project scripts folder.',
+        });
+      }
+    } else if (mode === 'project') {
+      resolvedDest = FilesystemTools.resolveInputPath(baseCwd, rawDestination);
+      allowedRoot = resolve(baseCwd);
+
+      if (!isWithinDir(resolvedDest, allowedRoot)) {
+        throw new ToolExecutionError(`Cannot copy outside the project directory (${allowedRoot}).`, {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Provide a destination within the project directory.',
+        });
+      }
+    } else if (mode === 'custom') {
+      const customPath = currentWorkspaceConfig.customPath;
+      if (!customPath) {
+        throw new ToolExecutionError('Workspace mode is "custom" but no customPath is configured.', {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_EXECUTION_FAILED,
+          recoverable: false,
+          retryable: false,
+          suggestion: 'Set workspace.customPath to an absolute path in config.',
+        });
+      }
+      allowedRoot = resolve(customPath);
+      resolvedDest = FilesystemTools.resolveInputPath(allowedRoot, rawDestination);
+
+      if (!isWithinDir(resolvedDest, allowedRoot)) {
+        throw new ToolExecutionError(`Cannot copy outside the custom workspace (${allowedRoot}).`, {
+          toolName: 'file_copy',
+          toolInput: input,
+          code: ErrorCodes.TOOL_PERMISSION_DENIED,
+          recoverable: false,
+          retryable: false,
+          suggestion: `Provide a destination within ${allowedRoot}.`,
+        });
+      }
+    } else {
+      throw new ToolExecutionError(`Unknown workspace mode: "${mode}".`, {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.VALIDATION_OUT_OF_RANGE,
+        recoverable: false,
+        retryable: false,
+      });
+    }
+
+    // Block dangerous destination directories
+    const dangerousReason = isDangerousPath(resolvedDest);
+    if (dangerousReason) {
+      throw new ToolExecutionError(dangerousReason, {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.TOOL_PERMISSION_DENIED,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Choose a different destination that avoids system directories.',
+      });
+    }
+
+    // Validate destination path safety for writes
+    const destSafety = await isPathSafe(resolvedDest, 'write', { cwd: baseCwd });
+    if (!destSafety.safe) {
+      getSecurityLogger().log({
+        eventType: 'path_violation',
+        severity: 'high',
+        details: {
+          tool: 'file_copy',
+          path: resolvedDest,
+          reason: destSafety.reason || 'Blocked destination path',
+        },
+        sessionId: (input.sessionId as string) || 'unknown',
+      });
+      throw new ToolExecutionError(destSafety.reason || 'Blocked destination path', {
+        toolName: 'file_copy',
+        toolInput: input,
+        code: ErrorCodes.TOOL_PERMISSION_DENIED,
+        recoverable: false,
+        retryable: false,
+      });
+    }
+
+    // Perform the copy
+    try {
+      const destDir = dirname(resolvedDest);
+      await mkdir(destDir, { recursive: true });
+      await copyFile(sourcePath, resolvedDest);
+
+      const srcStat = await stat(resolvedDest);
+      const sizeKB = (srcStat.size / 1024).toFixed(1);
+      return `Successfully copied ${sourcePath} → ${resolvedDest} (${sizeKB} KB)`;
+    } catch (error) {
+      if (error instanceof ToolExecutionError) throw error;
+      throw new ToolExecutionError(error instanceof Error ? error.message : String(error), {
+        toolName: 'file_copy',
         toolInput: input,
         code: ErrorCodes.TOOL_EXECUTION_FAILED,
         recoverable: true,
