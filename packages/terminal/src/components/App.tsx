@@ -2835,49 +2835,8 @@ export function App({ cwd, version }: AppProps) {
     return result;
   }, [messages, wrapChars, renderWidth]);
 
-  // Keep the last assistant response in the dynamic viewport so it's always visible.
-  // Only user messages and PREVIOUS assistant responses go to <Static> scrollback.
-  const [lastResponseMessages, setLastResponseMessages] = useState<DisplayMessage[]>([]);
-
-  useEffect(() => {
-    if (displayMessages.length === 0) return;
-
-    // Find the last user message index
-    let lastUserIdx = -1;
-    for (let i = displayMessages.length - 1; i >= 0; i--) {
-      if (displayMessages[i].role === 'user') {
-        lastUserIdx = i;
-        break;
-      }
-    }
-
-    // Everything AFTER the last user message that's an assistant message stays dynamic
-    const dynamicIds = new Set<string>();
-    const dynamicMsgs: DisplayMessage[] = [];
-    if (lastUserIdx >= 0) {
-      for (let i = lastUserIdx + 1; i < displayMessages.length; i++) {
-        if (displayMessages[i].role === 'assistant') {
-          dynamicIds.add(displayMessages[i].id);
-          dynamicMsgs.push(displayMessages[i]);
-        }
-      }
-    }
-
-    // Push everything else to <Static> (user messages + older assistant messages)
-    const next: DisplayMessage[] = [];
-    for (const message of displayMessages) {
-      if (staticMessageIdsRef.current.has(message.id)) continue;
-      if (dynamicIds.has(message.id)) continue;
-      staticMessageIdsRef.current.add(message.id);
-      next.push(message);
-    }
-
-    if (next.length > 0) {
-      setStaticMessages((prev) => [...prev, ...next]);
-    }
-
-    setLastResponseMessages(dynamicMsgs);
-  }, [displayMessages]);
+  // No longer using <Static> — all messages render dynamically in the viewport.
+  // This avoids tmux scrollback issues where Static content is invisible.
 
   const reservedLines = 12;
   const dynamicBudget = Math.max(6, rows - reservedLines);
@@ -2905,14 +2864,7 @@ export function App({ cwd, version }: AppProps) {
     const activityBudget = Math.max(4, dynamicBudget - streamingLineCount);
     return trimActivityLogByLines(activityLog, wrapChars, renderWidth, activityBudget);
   }, [activityLog, wrapChars, renderWidth, dynamicBudget, streamingLineCount]);
-  // Show the last assistant response in the dynamic panel (held back from <Static>)
-  // Trim to fit the dynamic budget so long responses don't overflow the viewport
-  const lastResponseTrim = useMemo(() => {
-    if (lastResponseMessages.length === 0 || isProcessing) return { messages: lastResponseMessages, trimmed: false };
-    return trimDisplayMessagesByLines(lastResponseMessages, dynamicBudget, renderWidth);
-  }, [lastResponseMessages, isProcessing, dynamicBudget, renderWidth]);
-  const combinedStreamingMessages = streamingMessages.length > 0 ? streamingMessages : lastResponseTrim.messages;
-  const showDynamicPanel = isProcessing || activityTrim.entries.length > 0 || lastResponseMessages.length > 0;
+  // All messages render dynamically — no <Static>, no lastResponseMessages needed
 
   // Process queue when not busy (not processing and no pending tools)
   // queueFlushTrigger forces re-evaluation when processing completes (done/error)
@@ -5784,49 +5736,18 @@ export function App({ cwd, version }: AppProps) {
 
       {/* Messages area — flexGrow fills available space between header and footer */}
       <Box flexDirection="column" flexGrow={1}>
-        {/* Historical messages - rendered with Static for native terminal scrollback */}
-        <Static key={staticResetKey} items={staticMessages}>
-          {(message) => (
-            <Messages
-              key={message.id}
-              messages={[message]}
-              currentResponse={undefined}
-              streamingMessages={[]}
-              currentToolCall={undefined}
-              lastToolResult={undefined}
-              activityLog={[]}
-              queuedMessageIds={queuedMessageIds}
-              verboseTools={verboseTools}
-            />
-          )}
-        </Static>
-
-        {/* Current streaming content and activity - rendered dynamically */}
-        {showDynamicPanel && (
-          <>
-            {isProcessing && streamingTrimmed && (
-              <Box marginBottom={1}>
-                <Text dimColor>⋯ showing latest output</Text>
-              </Box>
-            )}
-            {isProcessing && activityTrim.trimmed && (
-              <Box marginBottom={1}>
-                <Text dimColor>⋯ showing latest activity</Text>
-              </Box>
-            )}
-            <Messages
-              key="streaming"
-              messages={[]}
-              currentResponse={undefined}
-              streamingMessages={combinedStreamingMessages}
-              currentToolCall={undefined}
-              lastToolResult={undefined}
-              activityLog={isProcessing ? activityTrim.entries : []}
-              queuedMessageIds={queuedMessageIds}
-              verboseTools={verboseTools}
-            />
-          </>
-        )}
+        {/* All messages rendered dynamically (no <Static> — it breaks in tmux) */}
+        <Messages
+          key="all-messages"
+          messages={displayMessages}
+          currentResponse={undefined}
+          streamingMessages={isProcessing ? streamingMessages : []}
+          currentToolCall={undefined}
+          lastToolResult={undefined}
+          activityLog={isProcessing ? activityTrim.entries : []}
+          queuedMessageIds={queuedMessageIds}
+          verboseTools={verboseTools}
+        />
       </Box>
 
       {/* Ask-user simple interview */}
