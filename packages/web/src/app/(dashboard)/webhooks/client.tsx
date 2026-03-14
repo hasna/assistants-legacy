@@ -68,7 +68,8 @@ const columns: ColumnDef<WebhookRow>[] = [
     accessorKey: "url",
     header: "URL",
     cell: ({ row }) => {
-      const url = row.original.url
+      const url = row.original.url ?? ""
+      if (!url) return <span className="text-muted-foreground">—</span>
       return (
         <span className="font-mono text-xs" title={url}>
           {url.length > 40 ? url.slice(0, 40) + "\u2026" : url}

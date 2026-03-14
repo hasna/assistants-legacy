@@ -51,6 +51,13 @@ export default function NewChatPage() {
           <ModelSelector value={model} onChange={setModel} />
         </header>
 
+        {/* Streaming progress bar */}
+        {isStreaming && (
+          <div className="h-0.5 w-full bg-muted overflow-hidden shrink-0">
+            <div className="h-full bg-primary animate-[stream_1.5s_ease-in-out_infinite]" style={{ width: '30%' }} />
+          </div>
+        )}
+
         {/* Messages or empty state with suggestions */}
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">

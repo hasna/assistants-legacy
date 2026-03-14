@@ -7,7 +7,9 @@ export default function SessionsPage() {
     const db = getDb()
     data = db
       .prepare(
-        "SELECT id, cwd, started_at, updated_at, label, status FROM persisted_sessions ORDER BY updated_at DESC LIMIT 500"
+        `SELECT s.id, s.cwd, s.started_at, s.updated_at, s.label, s.status,
+          (SELECT COUNT(*) FROM session_messages sm WHERE sm.session_id = s.id) as message_count
+         FROM persisted_sessions s ORDER BY s.updated_at DESC LIMIT 500`
       )
       .all() as SessionRow[]
   } catch {

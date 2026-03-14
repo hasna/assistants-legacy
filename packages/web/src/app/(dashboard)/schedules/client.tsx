@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
@@ -237,10 +238,95 @@ const columns: ColumnDef<ScheduleRow>[] = [
   },
 ]
 
-export function SchedulesClient({ data }: { data: ScheduleRow[] }) {
+function NewScheduleForm({ onClose }: { onClose: () => void }) {
+  const [command, setCommand] = useState("")
+  const [scheduleType, setScheduleType] = useState<'interval' | 'cron' | 'once'>('interval')
+  const [intervalValue, setIntervalValue] = useState("60")
+  const [intervalUnit, setIntervalUnit] = useState("seconds")
+  const [cronExpression, setCronExpression] = useState("*/5 * * * *")
+  const [saving, setSaving] = useState(false)
+  const router = useRouter()
+
+  const save = async () => {
+    if (!command.trim()) { toast.error("Command is required"); return }
+    setSaving(true)
+    const res = await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: command.trim(), scheduleType, intervalValue: parseInt(intervalValue), intervalUnit, cronExpression }),
+    })
+    setSaving(false)
+    if (res.ok) { toast.success("Schedule created"); onClose(); router.refresh() }
+    else toast.error("Failed to create schedule")
+  }
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Schedules</h1>
+    <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm">New Schedule</h3>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="text-xs text-muted-foreground">Command *</label>
+          <input className="w-full rounded border px-2 py-1.5 text-sm mt-0.5" placeholder="/my-skill or /command" value={command} onChange={e => setCommand(e.target.value)} />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-muted-foreground">Schedule Type</label>
+          <div className="flex rounded-lg border overflow-hidden text-xs mt-0.5">
+            {(['interval', 'cron', 'once'] as const).map(t => (
+              <button key={t} onClick={() => setScheduleType(t)} className={`px-3 py-1.5 flex-1 ${scheduleType === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+        {scheduleType === 'interval' && (
+          <>
+            <div>
+              <label className="text-xs text-muted-foreground">Every</label>
+              <input type="number" min={1} className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalValue} onChange={e => setIntervalValue(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Unit</label>
+              <select className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value)}>
+                <option value="seconds">seconds</option>
+                <option value="minutes">minutes</option>
+                <option value="hours">hours</option>
+              </select>
+            </div>
+          </>
+        )}
+        {scheduleType === 'cron' && (
+          <div className="col-span-2">
+            <label className="text-xs text-muted-foreground">Cron Expression</label>
+            <input className="w-full rounded border px-2 py-1 text-sm mt-0.5 font-mono" placeholder="*/5 * * * *" value={cronExpression} onChange={e => setCronExpression(e.target.value)} />
+            <p className="text-xs text-muted-foreground mt-0.5">Format: minute hour day month weekday</p>
+          </div>
+        )}
+        {scheduleType === 'once' && (
+          <div className="col-span-2">
+            <label className="text-xs text-muted-foreground">Runs immediately (once)</label>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={save} disabled={saving} className="rounded bg-primary text-primary-foreground px-4 py-1.5 text-sm hover:bg-primary/90 disabled:opacity-50">{saving ? "Creating…" : "Create Schedule"}</button>
+        <button onClick={onClose} className="rounded border px-4 py-1.5 text-sm hover:bg-accent">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+export function SchedulesClient({ data }: { data: ScheduleRow[] }) {
+  const [showNew, setShowNew] = useState(false)
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Schedules</h1>
+        <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90">
+          + New Schedule
+        </button>
+      </div>
+      {showNew && <NewScheduleForm onClose={() => setShowNew(false)} />}
       <DataTable
         columns={columns}
         data={data}

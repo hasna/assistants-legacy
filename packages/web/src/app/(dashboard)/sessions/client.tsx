@@ -14,6 +14,7 @@ export interface SessionRow {
   updated_at: number
   label: string | null
   status: string
+  message_count?: number
 }
 
 function formatDate(date: string | number | null): string {
@@ -89,6 +90,15 @@ const columns: ColumnDef<SessionRow>[] = [
     cell: ({ row }) => formatDate(row.original.updated_at),
   },
   {
+    accessorKey: "message_count",
+    header: "Msgs",
+    cell: ({ row }) => {
+      const count = row.original.message_count
+      if (count == null || count === 0) return <span className="text-muted-foreground">—</span>
+      return <span className="tabular-nums text-sm">{count}</span>
+    },
+  },
+  {
     id: "actions",
     header: "",
     cell: ({ row }) => (
@@ -140,21 +150,75 @@ function SessionDetail({ session, onClose }: { session: SessionRow; onClose: () 
   )
 }
 
+function getDateGroup(ts: number): string {
+  const d = new Date(ts < 1e12 ? ts * 1000 : ts)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today.getTime() - 86400000)
+  const weekAgo = new Date(today.getTime() - 7 * 86400000)
+  const sessionDate = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  if (sessionDate >= today) return 'Today'
+  if (sessionDate >= yesterday) return 'Yesterday'
+  if (sessionDate >= weekAgo) return 'This Week'
+  return 'Older'
+}
+
 export function SessionsClient({ data }: { data: SessionRow[] }) {
   useAutoRefresh()
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [groupBy, setGroupBy] = useState(true)
+
+  // Group sessions by date
+  const groups = groupBy ? (() => {
+    const map = new Map<string, SessionRow[]>()
+    const order = ['Today', 'Yesterday', 'This Week', 'Older']
+    for (const s of data) {
+      const g = getDateGroup(s.updated_at)
+      if (!map.has(g)) map.set(g, [])
+      map.get(g)!.push(s)
+    }
+    return order.filter(g => map.has(g)).map(g => ({ label: g, sessions: map.get(g)! }))
+  })() : null
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="cwd"
-        filterPlaceholder="Filter by directory..."
-        onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
-        expandedRow={expanded}
-        renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
-      />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
+        <button
+          onClick={() => setGroupBy(!groupBy)}
+          className={`text-xs border rounded-lg px-2.5 py-1.5 ${groupBy ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+        >
+          {groupBy ? '⊟ Grouped' : '⊞ Group by date'}
+        </button>
+      </div>
+      {groupBy && groups ? (
+        <div className="flex flex-col gap-6">
+          {groups.map(({ label, sessions }) => (
+            <div key={label}>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">{label} ({sessions.length})</div>
+              <DataTable
+                columns={columns}
+                data={sessions}
+                filterColumn="cwd"
+                filterPlaceholder="Filter by directory..."
+                onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
+                expandedRow={expanded}
+                renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          filterColumn="cwd"
+          filterPlaceholder="Filter by directory..."
+          onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
+          expandedRow={expanded}
+          renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
+        />
+      )}
     </div>
   )
 }
