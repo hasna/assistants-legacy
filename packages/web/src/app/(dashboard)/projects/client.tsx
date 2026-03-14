@@ -60,14 +60,28 @@ const columns: ColumnDef<ProjectRow>[] = [
 
 export function ProjectsClient({ data }: { data: ProjectRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Projects</h1>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+        <p className="text-muted-foreground text-sm">
+          Registered projects with their paths and context configurations.
+        </p>
+      </div>
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No projects registered yet. Projects are created automatically when
+            you start a session in a directory.
+          </p>
+        </div>
+      ) : (
       <DataTable
         columns={columns}
         data={data}
         filterColumn="name"
         filterPlaceholder="Filter by name..."
       />
+      )}
     </div>
   )
 }
