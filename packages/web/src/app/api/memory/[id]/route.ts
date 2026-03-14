@@ -3,9 +3,10 @@ import { getDb } from '@/lib/db'
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await req.json() as { value?: string; importance?: number; category?: string; summary?: string }
     const db = getDb()
     const now = new Date().toISOString()
@@ -17,7 +18,7 @@ export async function PATCH(
     if (body.category !== undefined) { fields.push('category = ?'); values.push(body.category) }
     if (body.summary !== undefined) { fields.push('summary = ?'); values.push(body.summary) }
     fields.push('updated_at = ?'); values.push(now)
-    values.push(params.id)
+    values.push(id)
 
     db.prepare(`UPDATE memories SET ${fields.join(', ')} WHERE id = ?`).run(...values)
     return NextResponse.json({ ok: true })
@@ -28,10 +29,11 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    getDb().prepare('DELETE FROM memories WHERE id = ?').run(params.id)
+    const { id } = await params
+    getDb().prepare('DELETE FROM memories WHERE id = ?').run(id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

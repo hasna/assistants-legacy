@@ -3,12 +3,12 @@ import { getDb } from '@/lib/db'
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await req.json() as { status?: string }
     const db = getDb()
-    const id = params.id
+    const { id } = await params
 
     if (body.status) {
       const valid = ['pending', 'in_progress', 'completed', 'failed', 'cancelled']
@@ -31,11 +31,12 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const db = getDb()
-    db.prepare('DELETE FROM tasks WHERE id = ?').run(params.id)
+    db.prepare('DELETE FROM tasks WHERE id = ?').run(id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

@@ -3,12 +3,12 @@ import { getDb } from '@/lib/db'
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { action } = await req.json() as { action: 'pause' | 'resume' | 'delete' }
     const db = getDb()
-    const id = params.id
+    const { id } = await params
 
     if (action === 'pause') {
       db.prepare("UPDATE schedules SET status = 'paused' WHERE id = ?").run(id)
