@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getMemories } from '@/lib/db';
+import { getMemories, getDb } from '@/lib/db';
+import { randomUUID } from 'crypto';
 
 export async function GET(request: Request) {
   try {
@@ -35,5 +36,35 @@ export async function GET(request: Request) {
       { error: 'Failed to fetch memories' },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json() as {
+      key: string; value: string; scope?: string; category?: string; importance?: number; summary?: string
+    }
+    if (!body.key || !body.value) {
+      return NextResponse.json({ error: 'key and value are required' }, { status: 400 })
+    }
+    const db = getDb()
+    const id = randomUUID()
+    const now = new Date().toISOString()
+    db.prepare(`
+      INSERT INTO memories (id, scope, scope_id, category, key, value, summary, importance, tags, source, status, created_at, updated_at)
+      VALUES (?, ?, '', ?, ?, ?, ?, ?, '[]', 'dashboard', 'active', ?, ?)
+    `).run(
+      id,
+      body.scope ?? 'private',
+      body.category ?? 'fact',
+      body.key,
+      body.value,
+      body.summary ?? null,
+      body.importance ?? 5,
+      now, now
+    )
+    return NextResponse.json({ ok: true, id })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

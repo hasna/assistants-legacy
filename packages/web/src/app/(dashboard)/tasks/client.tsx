@@ -1,9 +1,11 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "@/lib/toast"
 
 export interface TaskRow {
   id: string
@@ -100,6 +102,36 @@ const columns: ColumnDef<TaskRow>[] = [
     accessorKey: "completed_at",
     header: "Completed",
     cell: ({ row }) => formatDate(row.original.completed_at),
+  },
+  {
+    id: "status_action",
+    header: "",
+    cell: function StatusCell({ row }) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const router = useRouter()
+      const s = row.original.status.toLowerCase()
+
+      const advance = async () => {
+        const next = s === "pending" ? "in_progress" : s === "in_progress" ? "completed" : null
+        if (!next) return
+        const res = await fetch(`/api/tasks/${row.original.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: next }),
+        })
+        if (res.ok) { toast.success(`→ ${next}`); router.refresh() }
+        else toast.error("Failed to update status")
+      }
+
+      if (s === "completed" || s === "failed" || s === "cancelled") return null
+      const label = s === "pending" ? "▶ Start" : "✓ Done"
+      const cls = s === "pending" ? "hover:bg-blue-50 hover:text-blue-700" : "hover:bg-green-50 hover:text-green-700"
+      return (
+        <button onClick={(e) => { e.stopPropagation(); advance() }} className={`text-xs border rounded px-2 py-1 ${cls}`}>
+          {label}
+        </button>
+      )
+    },
   },
 ]
 

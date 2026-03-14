@@ -71,6 +71,9 @@ interface DataTableProps<TData, TValue> {
   filterColumn?: string
   filterPlaceholder?: string
   bulkActions?: BulkAction<TData>[]
+  onRowClick?: (row: TData) => void
+  expandedRow?: string | null
+  renderExpanded?: (row: TData) => React.ReactNode
 }
 
 // Checkbox column prepended automatically when row selection is enabled
@@ -160,6 +163,9 @@ export function DataTable<TData, TValue>({
   filterColumn,
   filterPlaceholder = "Filter...",
   bulkActions,
+  onRowClick,
+  expandedRow,
+  renderExpanded,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -304,22 +310,26 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="data-[state=selected]:bg-muted/50"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const rowData = row.original as { id?: string }
+                const isExpanded = expandedRow && rowData.id === expandedRow
+                return (
+                  <React.Fragment key={row.id}>
+                    <TableRow
+                      data-state={row.getIsSelected() && "selected"}
+                      className={`data-[state=selected]:bg-muted/50 ${onRowClick ? "cursor-pointer hover:bg-muted/30" : ""} ${isExpanded ? "bg-muted/20" : ""}`}
+                      onClick={() => onRowClick?.(row.original)}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {isExpanded && renderExpanded && renderExpanded(row.original)}
+                  </React.Fragment>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
