@@ -1,5 +1,6 @@
 "use client"
 
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
@@ -89,6 +90,7 @@ const columns: ColumnDef<TaskRow>[] = [
 ]
 
 export function TasksClient({ data }: { data: TaskRow[] }) {
+  useAutoRefresh()
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight mb-1">Tasks</h1>

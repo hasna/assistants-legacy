@@ -4,6 +4,76 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
 
+/**
+ * Parse raw schedule JSON string into a human-readable description.
+ * e.g. {"kind":"interval","interval":120,"unit":"seconds"} → "Every 2 minutes"
+ */
+function parseSchedule(raw: string): { label: string; type: string } {
+  try {
+    const s = JSON.parse(raw) as Record<string, unknown>
+    const kind = String(s.kind ?? "")
+
+    if (kind === "interval") {
+      const interval = Number(s.interval ?? 0)
+      const unit = String(s.unit ?? "seconds")
+      let seconds = interval
+      if (unit === "minutes") seconds = interval * 60
+      if (unit === "hours") seconds = interval * 3600
+
+      if (seconds < 60) return { label: `Every ${seconds}s`, type: "interval" }
+      if (seconds < 3600) return { label: `Every ${Math.round(seconds / 60)}m`, type: "interval" }
+      return { label: `Every ${Math.round(seconds / 3600)}h`, type: "interval" }
+    }
+
+    if (kind === "cron") {
+      const cron = String(s.cron ?? "")
+      // Simple human labels for common cron patterns
+      const cronMap: Record<string, string> = {
+        "* * * * *": "Every minute",
+        "*/5 * * * *": "Every 5 min",
+        "*/10 * * * *": "Every 10 min",
+        "*/15 * * * *": "Every 15 min",
+        "*/30 * * * *": "Every 30 min",
+        "0 * * * *": "Every hour",
+        "0 0 * * *": "Daily midnight",
+        "0 9 * * *": "Daily 9am",
+        "0 9 * * 1": "Weekly Mon 9am",
+      }
+      return { label: cronMap[cron] ?? `Cron: ${cron}`, type: "cron" }
+    }
+
+    if (kind === "once" && s.at) {
+      const date = new Date(String(s.at))
+      return {
+        label: `Once: ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`,
+        type: "once",
+      }
+    }
+
+    if (kind === "random") {
+      const min = s.minInterval ?? "?"
+      const max = s.maxInterval ?? "?"
+      const unit = s.unit ?? "min"
+      return { label: `Random ${min}–${max} ${unit}`, type: "random" }
+    }
+
+    return { label: raw.slice(0, 40), type: kind || "unknown" }
+  } catch {
+    return { label: raw.slice(0, 40), type: "unknown" }
+  }
+}
+
+function scheduleTypeBadge(type: string) {
+  const colors: Record<string, string> = {
+    interval: "bg-blue-100 text-blue-800",
+    cron: "bg-purple-100 text-purple-800",
+    once: "bg-gray-100 text-gray-700",
+    random: "bg-orange-100 text-orange-800",
+  }
+  const cls = colors[type] ?? "bg-gray-100 text-gray-600"
+  return <Badge className={cls}>{type}</Badge>
+}
+
 export interface ScheduleRow {
   id: string
   project_path: string
@@ -60,10 +130,19 @@ const columns: ColumnDef<ScheduleRow>[] = [
   },
   {
     accessorKey: "schedule",
+    header: "Type",
+    cell: ({ row }) => {
+      const { type } = parseSchedule(row.original.schedule)
+      return scheduleTypeBadge(type)
+    },
+  },
+  {
+    id: "schedule_human",
     header: "Schedule",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.schedule}</code>
-    ),
+    cell: ({ row }) => {
+      const { label } = parseSchedule(row.original.schedule)
+      return <span className="text-sm font-medium">{label}</span>
+    },
   },
   {
     accessorKey: "status",

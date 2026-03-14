@@ -1,5 +1,6 @@
 "use client"
 
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
@@ -70,12 +71,34 @@ const columns: ColumnDef<HeartbeatRow>[] = [
     header: "Action",
     cell: ({ row }) => {
       const val = row.original.action
-      if (!val) return "\u2014"
-      return (
-        <span className="text-sm" title={val}>
-          {val.length > 60 ? val.slice(0, 60) + "\u2026" : val}
-        </span>
-      )
+      if (!val) return <span className="text-muted-foreground">—</span>
+      // Try to parse JSON and extract a readable summary
+      try {
+        const parsed = JSON.parse(val) as Record<string, unknown>
+        const sessionId = parsed.sessionId as string | undefined
+        const state = parsed.state as string | undefined
+        const lastTool = parsed.lastTool as string | undefined
+        const lastMessage = parsed.lastMessage as string | undefined
+
+        const parts: string[] = []
+        if (state) parts.push(state)
+        if (lastTool) parts.push(`tool: ${lastTool}`)
+        if (lastMessage) parts.push(`"${String(lastMessage).slice(0, 40)}"`)
+        if (sessionId) parts.push(`sess ${sessionId.slice(0, 6)}`)
+
+        const summary = parts.join(" · ") || val.slice(0, 60)
+        return (
+          <span className="text-sm" title={val}>
+            {summary.length > 70 ? summary.slice(0, 70) + "…" : summary}
+          </span>
+        )
+      } catch {
+        return (
+          <span className="text-sm font-mono text-xs text-muted-foreground" title={val}>
+            {val.length > 60 ? val.slice(0, 60) + "…" : val}
+          </span>
+        )
+      }
     },
   },
   {
@@ -86,6 +109,7 @@ const columns: ColumnDef<HeartbeatRow>[] = [
 ]
 
 export function HeartbeatClient({ data }: { data: HeartbeatRow[] }) {
+  useAutoRefresh()
   return (
     <div className="flex flex-col gap-4">
       <div>

@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
 import { Inter, Sora, JetBrains_Mono } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${sora.variable} ${jetbrains.variable}`}>
       <body className="min-h-screen bg-background font-[family-name:var(--font-body)] text-foreground antialiased">
         {children}
+        <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client"
 
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
@@ -77,6 +78,7 @@ const columns: ColumnDef<SessionRow>[] = [
 ]
 
 export function SessionsClient({ data }: { data: SessionRow[] }) {
+  useAutoRefresh()
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>

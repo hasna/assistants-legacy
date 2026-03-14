@@ -1,5 +1,6 @@
 "use client"
 
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import type { MemoryRow } from "./page"
@@ -77,6 +78,7 @@ const columns: ColumnDef<MemoryRow>[] = [
 ]
 
 export function MemoryClient({ data }: { data: MemoryRow[] }) {
+  useAutoRefresh()
   return (
     <div className="flex flex-col gap-4">
       <div>
