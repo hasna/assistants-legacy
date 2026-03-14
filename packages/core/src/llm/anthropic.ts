@@ -142,13 +142,17 @@ export class AnthropicClient implements LLMClient {
       // Get final usage from stream
       const finalMessage = await stream.finalMessage();
       if (finalMessage.usage) {
+        const cacheRead = (finalMessage.usage as any).cache_read_input_tokens || 0;
+        const cacheCreation = (finalMessage.usage as any).cache_creation_input_tokens || 0;
         yield {
           type: 'usage',
           usage: {
             inputTokens: finalMessage.usage.input_tokens,
             outputTokens: finalMessage.usage.output_tokens,
-            totalTokens: finalMessage.usage.input_tokens + finalMessage.usage.output_tokens,
+            totalTokens: finalMessage.usage.input_tokens + finalMessage.usage.output_tokens + cacheRead + cacheCreation,
             maxContextTokens: 200000,
+            ...(cacheRead > 0 && { cacheReadTokens: cacheRead }),
+            ...(cacheCreation > 0 && { cacheWriteTokens: cacheCreation }),
           },
         };
       }

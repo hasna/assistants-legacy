@@ -169,11 +169,15 @@ export class ClaudeAgentLoop {
           } else {
             // Update token usage from result if available
             if (msg.usage) {
+              const cacheRead = (msg.usage as any).cache_read_input_tokens || 0;
+              const cacheCreation = (msg.usage as any).cache_creation_input_tokens || 0;
               this.tokenUsage = {
                 inputTokens: this.tokenUsage.inputTokens + (msg.usage.input_tokens || 0),
                 outputTokens: this.tokenUsage.outputTokens + (msg.usage.output_tokens || 0),
-                totalTokens: this.tokenUsage.totalTokens + (msg.usage.input_tokens || 0) + (msg.usage.output_tokens || 0),
+                totalTokens: this.tokenUsage.totalTokens + (msg.usage.input_tokens || 0) + (msg.usage.output_tokens || 0) + cacheRead + cacheCreation,
                 maxContextTokens: this.tokenUsage.maxContextTokens,
+                cacheReadTokens: (this.tokenUsage.cacheReadTokens || 0) + cacheRead,
+                cacheWriteTokens: (this.tokenUsage.cacheWriteTokens || 0) + cacheCreation,
               };
               this.emitChunk({ type: 'usage', usage: this.tokenUsage });
             }

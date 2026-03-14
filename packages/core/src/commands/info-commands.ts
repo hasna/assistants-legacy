@@ -329,17 +329,28 @@ export function costCommand(tokenUsage: TokenUsage): Command {
 
       const inputCost = (usage.inputTokens / 1_000_000) * inputCostPer1M;
       const outputCost = (usage.outputTokens / 1_000_000) * outputCostPer1M;
-      const totalCost = inputCost + outputCost;
+      const cacheReadCost = usage.cacheReadTokens
+        ? (usage.cacheReadTokens / 1_000_000) * inputCostPer1M * 0.1
+        : 0;
+      const cacheWriteCost = usage.cacheWriteTokens
+        ? (usage.cacheWriteTokens / 1_000_000) * inputCostPer1M * 1.25
+        : 0;
+      const totalCost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
 
-      // Cache savings (if applicable)
-      const cacheReadCostPer1M = inputCostPer1M * 0.1; // ~10% of input cost
+      // Cache savings vs paying full input price for cached tokens
       const cacheSavings = usage.cacheReadTokens
-        ? ((usage.cacheReadTokens / 1_000_000) * (inputCostPer1M - cacheReadCostPer1M))
+        ? ((usage.cacheReadTokens / 1_000_000) * inputCostPer1M * 0.9)
         : 0;
 
       let message = '\n**Estimated Session Cost**\n\n';
       message += `Input tokens: ${usage.inputTokens.toLocaleString()} (~$${inputCost.toFixed(4)})\n`;
       message += `Output tokens: ${usage.outputTokens.toLocaleString()} (~$${outputCost.toFixed(4)})\n`;
+      if (usage.cacheReadTokens) {
+        message += `Cache read tokens: ${usage.cacheReadTokens.toLocaleString()} (~$${cacheReadCost.toFixed(4)})\n`;
+      }
+      if (usage.cacheWriteTokens) {
+        message += `Cache write tokens: ${usage.cacheWriteTokens.toLocaleString()} (~$${cacheWriteCost.toFixed(4)})\n`;
+      }
       message += `**Total: ~$${totalCost.toFixed(4)}**\n`;
 
       if (cacheSavings > 0) {
