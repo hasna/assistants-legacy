@@ -10,14 +10,23 @@ const columns: ColumnDef<SkillRow>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.name}</span>
+      <div>
+        <span className="font-medium">{row.original.name}</span>
+        {row.original.argumentHint && (
+          <span className="ml-1 text-xs text-muted-foreground">
+            {row.original.argumentHint}
+          </span>
+        )}
+      </div>
     ),
   },
   {
-    accessorKey: "path",
-    header: "Path",
+    accessorKey: "description",
+    header: "Description",
     cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.path}</span>
+      <span className="text-sm text-muted-foreground">
+        {row.original.description ?? "—"}
+      </span>
     ),
   },
   {
@@ -34,6 +43,32 @@ const columns: ColumnDef<SkillRow>[] = [
       >
         {row.original.type}
       </Badge>
+    ),
+  },
+  {
+    accessorKey: "triggers",
+    header: "Triggers",
+    cell: ({ row }) => {
+      const triggers = row.original.triggers
+      if (!triggers.length) return <span className="text-muted-foreground">—</span>
+      return (
+        <div className="flex flex-wrap gap-1">
+          {triggers.map((t) => (
+            <Badge key={t} variant="secondary" className="text-xs">
+              {t}
+            </Badge>
+          ))}
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: "path",
+    header: "Path",
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px] block">
+        {row.original.path}
+      </span>
     ),
   },
 ]

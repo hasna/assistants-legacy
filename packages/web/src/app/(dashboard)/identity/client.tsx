@@ -51,14 +51,30 @@ const columns: ColumnDef<IdentityRow>[] = [
 
 export function IdentityClient({ data }: { data: IdentityRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Identity</h1>
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="key"
-        filterPlaceholder="Filter by key..."
-      />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Identity</h1>
+        <p className="text-muted-foreground text-sm">
+          Assistant identity configuration — name, persona, and scope settings.
+        </p>
+      </div>
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No identity records found. Configure your assistant in{" "}
+            <code className="bg-muted rounded px-1 py-0.5 text-xs">
+              ~/.assistants/config.json
+            </code>
+          </p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          filterColumn="key"
+          filterPlaceholder="Filter by key..."
+        />
+      )}
     </div>
   )
 }
