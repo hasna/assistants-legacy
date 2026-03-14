@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { MessageList } from '@/components/chat/MessageList';
 import { ModelSelector } from '@/components/chat/ModelSelector';
@@ -8,6 +9,7 @@ import { SessionSidebar } from '@/components/chat/SessionSidebar';
 import { SessionSearch } from '@/components/chat/SessionSearch';
 import { useChat } from '@/hooks/use-chat';
 import { useSessions } from '@/hooks/use-sessions';
+import { useRouter } from 'next/navigation';
 import { DEFAULT_MODEL } from '@/lib/models';
 
 const SUGGESTIONS = [
@@ -20,11 +22,24 @@ const SUGGESTIONS = [
 ];
 
 export default function NewChatPage() {
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get('resume');
+
+  const router = useRouter();
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
-  const { messages, isStreaming, error, sendMessage, stopStreaming } = useChat();
+  const [resumedSessionId, setResumedSessionId] = useState<string | null>(null);
+  const { messages, isStreaming, error, sendMessage, stopStreaming, loadMessages } = useChat(resumedSessionId ?? undefined);
   const { grouped } = useSessions();
+
+  // Load session if ?resume=<id> param is present
+  useEffect(() => {
+    if (resumeId && resumeId !== resumedSessionId) {
+      setResumedSessionId(resumeId);
+      loadMessages(resumeId);
+    }
+  }, [resumeId, resumedSessionId, loadMessages]);
 
   const handleExport = (format: 'markdown' | 'json') => {
     if (format === 'markdown') {
@@ -48,8 +63,8 @@ export default function NewChatPage() {
         grouped={grouped}
         isCollapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onSelectSession={(id) => { window.location.href = `/chat?resume=${id}`; }}
-        onNewChat={() => { window.location.href = '/chat'; }}
+        onSelectSession={(id) => router.push(`/chat?resume=${id}`)}
+        onNewChat={() => { router.push('/chat'); }}
       />
 
       <div className="flex flex-1 flex-col min-w-0">
@@ -63,7 +78,9 @@ export default function NewChatPage() {
             >
               ☰
             </button>
-            <h1 className="text-sm font-medium">New Chat</h1>
+            <h1 className="text-sm font-medium">
+              {resumedSessionId ? `Session ${resumedSessionId.slice(0, 8)}…` : 'New Chat'}
+            </h1>
           </div>
           <ModelSelector value={model} onChange={setModel} />
         </header>
