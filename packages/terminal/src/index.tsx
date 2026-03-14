@@ -215,6 +215,46 @@ if (subcommand === 'sessions') {
   process.exit(0);
 }
 
+if (subcommand === 'serve') {
+  const port = parseInt(process.argv[3] || process.env.ASSISTANTS_WEB_PORT || '3000', 10);
+  const { execSync } = await import('child_process');
+  const { join } = await import('path');
+  const { existsSync } = await import('fs');
+
+  // Find the web package relative to the CLI binary location
+  const possibleWebDirs = [
+    join(import.meta.dir, '..', '..', '..', 'web'),          // monorepo dev
+    join(import.meta.dir, '..', 'web'),                       // dist structure
+    join(process.env.HOME || '', '.assistants', 'web'),        // installed
+  ];
+
+  const webDir = possibleWebDirs.find(d => existsSync(join(d, 'package.json')));
+
+  if (!webDir) {
+    console.error('Web dashboard not found. Install @hasna/assistants with web support.');
+    console.error('Tried:', possibleWebDirs.join(', '));
+    process.exit(1);
+  }
+
+  const nextBin = join(webDir, 'node_modules', '.bin', 'next');
+  const isBuilt = existsSync(join(webDir, '.next'));
+
+  if (!isBuilt) {
+    console.log('Building web dashboard (first run)...');
+    try {
+      execSync(`bun run build`, { cwd: webDir, stdio: 'inherit' });
+    } catch {
+      console.error('Build failed. Trying dev mode instead...');
+      execSync(`bun run dev -- -p ${port}`, { cwd: webDir, stdio: 'inherit' });
+      process.exit(0);
+    }
+  }
+
+  console.log(`Starting web dashboard on http://localhost:${port}`);
+  execSync(`${nextBin} start -p ${port}`, { cwd: webDir, stdio: 'inherit' });
+  process.exit(0);
+}
+
 const options = parseArgs(process.argv);
 
 // Handle parsing errors
@@ -240,6 +280,7 @@ Usage:
   assistants [options]                    Start interactive mode
   assistants -p "<prompt>" [options]      Run in headless mode
   assistants mcp [--claude|--codex|--print]  Install MCP server
+  assistants serve [port]                 Start web dashboard (default: 3000)
   assistants config [cwd]                 Show current configuration
   assistants sessions [list|<id>]         List or inspect sessions
 

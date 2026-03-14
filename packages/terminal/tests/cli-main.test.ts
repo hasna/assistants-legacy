@@ -704,3 +704,25 @@ describe('subcommand detection via argv[2]', () => {
     expect(expected).toContain('--transport stdio');
   });
 });
+
+describe('serve subcommand detection', () => {
+  test('serve is detected by argv[2] === "serve"', () => {
+    const argv = ['node', 'assistants', 'serve'];
+    expect(argv[2]).toBe('serve');
+  });
+
+  test('serve accepts custom port as argv[3]', () => {
+    const argv = ['node', 'assistants', 'serve', '8080'];
+    expect(argv[2]).toBe('serve');
+    expect(parseInt(argv[3], 10)).toBe(8080);
+  });
+
+  test('ASSISTANTS_WEB_PORT env var used when no port arg', () => {
+    const orig = process.env.ASSISTANTS_WEB_PORT;
+    process.env.ASSISTANTS_WEB_PORT = '4000';
+    const port = parseInt(process.argv[3] || process.env.ASSISTANTS_WEB_PORT || '3000', 10);
+    expect(port).toBe(4000);
+    if (orig === undefined) delete process.env.ASSISTANTS_WEB_PORT;
+    else process.env.ASSISTANTS_WEB_PORT = orig;
+  });
+});

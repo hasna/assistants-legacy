@@ -319,6 +319,10 @@ assistants - Your personal AI assistant
 Usage:
   assistants [options]                    Start interactive mode
   assistants -p "<prompt>" [options]      Run in headless mode
+  assistants mcp [--claude|--codex|--print]  Install MCP server
+  assistants serve [port]                 Start web dashboard (default: 3000)
+  assistants config [cwd]                 Show current configuration
+  assistants sessions [list|<id>]         List or inspect sessions
 
 Options:
   -h, --help                   Show this help message
