@@ -5,6 +5,8 @@
  * Provides API endpoints for the menu bar app and external integrations.
  */
 
+import { SessionStorage } from '../logger';
+
 export interface LocalAPIServerOptions {
   port?: number;
   onChat?: (message: string) => Promise<AsyncIterable<string>>;
@@ -184,6 +186,28 @@ export class LocalAPIServer {
           Connection: 'keep-alive',
         },
       });
+    }
+
+    // GET /api/sessions
+    if (path === '/api/sessions' && req.method === 'GET') {
+      const url = new URL(req.url);
+      const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '20', 10), 100);
+      const sessions = SessionStorage.listAllSessions().slice(0, limit);
+      return new Response(JSON.stringify({ sessions, total: sessions.length }), { headers: jsonHeaders });
+    }
+
+    // GET /api/sessions/:id
+    const sessionMatch = path.match(/^\/api\/sessions\/([^/]+)$/);
+    if (sessionMatch && req.method === 'GET') {
+      const sessionId = sessionMatch[1];
+      const data = SessionStorage.loadSession(sessionId);
+      if (!data) {
+        return new Response(
+          JSON.stringify({ error: `Session "${sessionId}" not found` }),
+          { status: 404, headers: jsonHeaders }
+        );
+      }
+      return new Response(JSON.stringify(data), { headers: jsonHeaders });
     }
 
     // 404

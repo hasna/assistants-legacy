@@ -17,6 +17,11 @@ const mockNotifications = [
   { id: 'n1', message: 'Hello from agent', timestamp: Date.now(), type: 'info' },
 ];
 
+const mockSessions = [
+  { id: 'sess-abc', startedAt: '2026-03-14T06:00:00.000Z', messageCount: 5, cwd: '/project' },
+  { id: 'sess-xyz', startedAt: '2026-03-14T07:00:00.000Z', messageCount: 12, cwd: '/other' },
+];
+
 beforeAll(() => {
   server = Bun.serve({
     port: TEST_PORT,
@@ -31,6 +36,19 @@ beforeAll(() => {
 
       if (url.pathname === '/api/notifications') {
         return new Response(JSON.stringify({ notifications: mockNotifications }), { headers });
+      }
+
+      if (url.pathname === '/api/sessions' && req.method === 'GET') {
+        const limit = parseInt(url.searchParams.get('limit') ?? '20', 10);
+        const slice = mockSessions.slice(0, limit);
+        return new Response(JSON.stringify({ sessions: slice, total: slice.length }), { headers });
+      }
+
+      const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/);
+      if (sessionMatch && req.method === 'GET') {
+        const sess = mockSessions.find(s => s.id === sessionMatch[1]);
+        if (!sess) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers });
+        return new Response(JSON.stringify({ ...sess, messages: [] }), { headers });
       }
 
       if (url.pathname === '/api/chat' && req.method === 'POST') {
@@ -122,6 +140,31 @@ describe('AssistantsClient', () => {
     const result = await new AssistantsClient({ port: TEST_PORT }).chat('');
     // Empty message triggers 400
     expect(result.error).toBeDefined();
+  });
+});
+
+describe('sessions', () => {
+  test('listSessions returns all sessions', async () => {
+    const sessions = await client().listSessions();
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0].id).toBe('sess-abc');
+    expect(sessions[1].messageCount).toBe(12);
+  });
+
+  test('listSessions respects limit', async () => {
+    const sessions = await client().listSessions(1);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].id).toBe('sess-abc');
+  });
+
+  test('getSession returns session data', async () => {
+    const sess = await client().getSession('sess-abc');
+    expect((sess as { id: string }).id).toBe('sess-abc');
+    expect(Array.isArray((sess as { messages: unknown[] }).messages)).toBe(true);
+  });
+
+  test('getSession throws on missing session', async () => {
+    await expect(client().getSession('no-such-session')).rejects.toThrow('not found');
   });
 });
 

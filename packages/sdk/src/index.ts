@@ -34,6 +34,14 @@ export interface Notification {
   type: string;
 }
 
+export interface SessionInfo {
+  id: string;
+  startedAt?: string;
+  messageCount?: number;
+  assistantId?: string;
+  cwd?: string;
+}
+
 export interface ChatOptions {
   /** Called for each streamed text chunk */
   onChunk?: (chunk: string) => void;
@@ -88,6 +96,26 @@ export class AssistantsClient {
     if (!res.ok) throw new Error(`Notifications failed: ${res.status}`);
     const data = await res.json() as { notifications: Notification[] };
     return data.notifications;
+  }
+
+  /**
+   * List recent sessions (up to `limit`, default 20).
+   */
+  async listSessions(limit = 20): Promise<SessionInfo[]> {
+    const res = await this.fetch(`/api/sessions?limit=${limit}`);
+    if (!res.ok) throw new Error(`List sessions failed: ${res.status}`);
+    const data = await res.json() as { sessions: SessionInfo[] };
+    return data.sessions;
+  }
+
+  /**
+   * Get the messages and metadata for a specific session.
+   */
+  async getSession(sessionId: string): Promise<Record<string, unknown>> {
+    const res = await this.fetch(`/api/sessions/${encodeURIComponent(sessionId)}`);
+    if (res.status === 404) throw new Error(`Session "${sessionId}" not found`);
+    if (!res.ok) throw new Error(`Get session failed: ${res.status}`);
+    return res.json() as Promise<Record<string, unknown>>;
   }
 
   /**
