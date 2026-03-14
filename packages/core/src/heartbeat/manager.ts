@@ -126,6 +126,7 @@ export class HeartbeatManager {
         ...this.stats,
         uptimeSeconds,
       },
+      ...(this.config.projectId ? { projectId: this.config.projectId } : {}),
     };
 
     for (const listener of this.listeners) {

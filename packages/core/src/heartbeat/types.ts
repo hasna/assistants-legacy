@@ -13,6 +13,8 @@ export interface Heartbeat {
   state: AssistantState;
   lastActivity: string;
   stats: HeartbeatStats;
+  /** Project identifier — enables agent-project binding (Option D) */
+  projectId?: string;
 }
 
 export interface HeartbeatConfig {
@@ -28,6 +30,8 @@ export interface HeartbeatConfig {
   watchdogEnabled?: boolean;
   /** Watchdog polling interval in ms. */
   watchdogIntervalMs?: number;
+  /** Project identifier — included in every heartbeat for agent-project binding */
+  projectId?: string;
 }
 
 export interface PersistedState {
