@@ -240,6 +240,7 @@ export class AssistantLoop {
   private pendingTelephonyContext: string | null = null;
   private pendingOrdersContext: string | null = null;
   private pendingMemoryContext: string | null = null;
+  private pendingTasksContext: string | null = null;
   private identityContext: string | null = null;
   private projectContext: string | null = null;
   private activeProjectId: string | null = null;
@@ -1088,6 +1089,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       await this.injectMemoryContext(userMessage);
       // Inject environment context (datetime, cwd, etc.)
       await this.injectContextInfo();
+      // Inject pending tasks from todos if TODOS_URL is set
+      await this.injectTasksContext();
     } catch (error) {
       // If injection fails, reset isRunning before re-throwing
       this.isRunning = false;
@@ -3495,6 +3498,27 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     }
   }
 
+  /**
+   * Inject pending tasks from @hasna/todos REST API into context.
+   * Only runs when TODOS_URL is set. Silent on failure.
+   */
+  private async injectTasksContext(): Promise<void> {
+    if (!process.env.TODOS_URL) return;
+
+    try {
+      // Only update tasks context on first turn (they don't change per message)
+      if (this.pendingTasksContext !== null) return;
+
+      const { buildTasksContextPrompt } = await import('../tasks/context-builder');
+      const content = await buildTasksContextPrompt();
+      if (content) {
+        this.pendingTasksContext = content;
+      }
+    } catch {
+      // Non-critical — silently skip if todos is unavailable
+    }
+  }
+
   private startHeartbeat(): void {
     if (!this.config) return;
     if (this.config.scheduler?.enabled === false) return;
@@ -3681,6 +3705,11 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     // Add memory injection if available
     if (this.pendingMemoryContext) {
       parts.push(this.pendingMemoryContext);
+    }
+
+    // Add tasks context if TODOS_URL is configured
+    if (this.pendingTasksContext) {
+      parts.push(this.pendingTasksContext);
     }
 
     for (const msg of messages) {
