@@ -87,14 +87,27 @@ const columns: ColumnDef<HeartbeatRow>[] = [
 
 export function HeartbeatClient({ data }: { data: HeartbeatRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Heartbeat</h1>
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="session_id"
-        filterPlaceholder="Filter by session ID..."
-      />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Heartbeat</h1>
+        <p className="text-muted-foreground text-sm">
+          Session heartbeat history — state, context usage, and activity log.
+        </p>
+      </div>
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No heartbeat history yet. Heartbeats are recorded while the assistant is active.
+          </p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          filterColumn="session_id"
+          filterPlaceholder="Filter by session ID..."
+        />
+      )}
     </div>
   )
 }
