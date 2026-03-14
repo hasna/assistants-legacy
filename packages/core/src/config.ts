@@ -335,13 +335,31 @@ function mergeConfig(base: AssistantsConfig, override?: Partial<AssistantsConfig
  * Get the path to the assistants config directory
  */
 export function getConfigDir(): string {
+  // Priority: ASSISTANTS_DIR > ASSISTANTS_PROFILE > default ~/.assistants
   const assistantsOverride = process.env.ASSISTANTS_DIR;
   if (assistantsOverride && assistantsOverride.trim()) {
     return assistantsOverride;
   }
+
+  const profile = process.env.ASSISTANTS_PROFILE;
   const envHome = process.env.HOME || process.env.USERPROFILE;
   const homeDir = envHome && envHome.trim().length > 0 ? envHome : homedir();
+
+  if (profile && profile.trim()) {
+    // ~/.assistants/profiles/<profile>
+    return join(homeDir, '.assistants', 'profiles', profile.trim());
+  }
+
   return join(homeDir, '.assistants');
+}
+
+/**
+ * Get the active profile name, if any.
+ * Returns undefined when using the default profile.
+ */
+export function getActiveProfile(): string | undefined {
+  const profile = process.env.ASSISTANTS_PROFILE;
+  return profile && profile.trim() ? profile.trim() : undefined;
 }
 
 /**

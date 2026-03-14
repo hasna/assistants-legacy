@@ -259,11 +259,21 @@ export function createClient(options?: AssistantsClientOptions): AssistantsClien
  * Create an AssistantsClient from environment variables.
  *
  * Reads:
- *   ASSISTANTS_PORT  — port (default: 3456)
- *   ASSISTANTS_HOST  — host (default: 127.0.0.1)
+ *   ASSISTANTS_PORT     — port (default: 3456)
+ *   ASSISTANTS_HOST     — host (default: 127.0.0.1)
+ *   ASSISTANTS_PROFILE  — named profile (affects config directory resolution on the server)
  */
 export function fromEnv(): AssistantsClient {
   const port = process.env.ASSISTANTS_PORT ? parseInt(process.env.ASSISTANTS_PORT, 10) : undefined;
   const host = process.env.ASSISTANTS_HOST ?? undefined;
   return new AssistantsClient({ port, host });
+}
+
+/**
+ * Get the currently active profile name from ASSISTANTS_PROFILE env var.
+ * Returns undefined when using the default profile.
+ */
+export function getActiveProfile(): string | undefined {
+  const profile = process.env.ASSISTANTS_PROFILE;
+  return profile && profile.trim() ? profile.trim() : undefined;
 }

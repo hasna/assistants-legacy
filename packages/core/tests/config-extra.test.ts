@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { ensureConfigDir, loadHooksConfig, loadSystemPrompt, loadConfig, getTempFolder, getConfigDir } from '../src/config';
+import { ensureConfigDir, loadHooksConfig, loadSystemPrompt, loadConfig, getTempFolder, getConfigDir, getActiveProfile } from '../src/config';
 
 let tempDir: string;
 let originalAssistantsDir: string | undefined;
@@ -145,6 +145,61 @@ describe('config helpers', () => {
     } finally {
       process.env.ASSISTANTS_DIR = originalAssistantsDir;
       process.env.HOME = originalHome;
+    }
+  });
+
+  test('ASSISTANTS_PROFILE routes to ~/.assistants/profiles/<name>', () => {
+    const originalProfile = process.env.ASSISTANTS_PROFILE;
+    const originalDir = process.env.ASSISTANTS_DIR;
+    const originalHome = process.env.HOME;
+    const homeDir = join(tempDir, 'profile-home');
+    mkdirSync(homeDir, { recursive: true });
+
+    delete process.env.ASSISTANTS_DIR;
+    process.env.ASSISTANTS_PROFILE = 'work';
+    process.env.HOME = homeDir;
+
+    try {
+      expect(getConfigDir()).toBe(join(homeDir, '.assistants', 'profiles', 'work'));
+    } finally {
+      process.env.ASSISTANTS_DIR = originalDir;
+      process.env.ASSISTANTS_PROFILE = originalProfile;
+      process.env.HOME = originalHome;
+    }
+  });
+
+  test('ASSISTANTS_DIR takes priority over ASSISTANTS_PROFILE', () => {
+    const originalDir = process.env.ASSISTANTS_DIR;
+    const originalProfile = process.env.ASSISTANTS_PROFILE;
+
+    process.env.ASSISTANTS_DIR = tempDir;
+    process.env.ASSISTANTS_PROFILE = 'work';
+
+    try {
+      expect(getConfigDir()).toBe(tempDir);
+    } finally {
+      process.env.ASSISTANTS_DIR = originalDir;
+      process.env.ASSISTANTS_PROFILE = originalProfile;
+    }
+  });
+
+  test('getActiveProfile returns profile name when set', () => {
+    const originalProfile = process.env.ASSISTANTS_PROFILE;
+    process.env.ASSISTANTS_PROFILE = 'personal';
+    try {
+      expect(getActiveProfile()).toBe('personal');
+    } finally {
+      process.env.ASSISTANTS_PROFILE = originalProfile;
+    }
+  });
+
+  test('getActiveProfile returns undefined when no profile set', () => {
+    const originalProfile = process.env.ASSISTANTS_PROFILE;
+    delete process.env.ASSISTANTS_PROFILE;
+    try {
+      expect(getActiveProfile()).toBeUndefined();
+    } finally {
+      if (originalProfile) process.env.ASSISTANTS_PROFILE = originalProfile;
     }
   });
 });

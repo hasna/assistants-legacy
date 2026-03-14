@@ -349,7 +349,7 @@ export {
 export type { ModelDefinition } from './llm/models';
 
 // Config
-export { loadConfig, getConfigPath, getConfigDir, getProjectConfigDir, getProjectDataDir } from './config';
+export { loadConfig, getConfigPath, getConfigDir, getProjectConfigDir, getProjectDataDir, getActiveProfile } from './config';
 export { getConfigValue, setConfigValue, isOnboardingCompleted, markOnboardingCompleted, isFirstGreetingShown, markFirstGreetingShown } from './config-store';
 
 // Inbox
