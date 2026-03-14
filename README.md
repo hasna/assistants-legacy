@@ -90,6 +90,10 @@ assistants serve 8080
 assistants report
 assistants report 30 --markdown
 
+# Health check (API key, config, MCP, integrations)
+assistants doctor
+assistants doctor --json
+
 # Show current configuration
 assistants config
 
