@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
@@ -135,11 +136,74 @@ const columns: ColumnDef<TaskRow>[] = [
   },
 ]
 
+function NewTaskForm({ onClose }: { onClose: () => void }) {
+  const [description, setDescription] = useState("")
+  const [priority, setPriority] = useState("normal")
+  const [saving, setSaving] = useState(false)
+  const router = useRouter()
+
+  const save = async () => {
+    if (!description.trim()) { toast.error("Description is required"); return }
+    setSaving(true)
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: description.trim(), priority, status: "pending" }),
+    })
+    setSaving(false)
+    if (res.ok) { toast.success("Task created"); onClose(); router.refresh() }
+    else toast.error("Failed to create task")
+  }
+
+  return (
+    <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm">New Task</h3>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div>
+          <label className="text-xs text-muted-foreground">Description *</label>
+          <textarea
+            className="w-full rounded border px-2 py-1.5 text-sm mt-0.5 h-20 resize-none"
+            placeholder="What needs to be done?"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && e.metaKey) save() }}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Priority</label>
+          <select className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={priority} onChange={e => setPriority(e.target.value)}>
+            <option value="low">low</option>
+            <option value="normal">normal</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={save} disabled={saving} className="rounded bg-primary text-primary-foreground px-4 py-1.5 text-sm hover:bg-primary/90 disabled:opacity-50">
+          {saving ? "Creating…" : "Create Task"}
+        </button>
+        <button onClick={onClose} className="rounded border px-4 py-1.5 text-sm hover:bg-accent">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
 export function TasksClient({ data }: { data: TaskRow[] }) {
   useAutoRefresh()
+  const [showNew, setShowNew] = useState(false)
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Tasks</h1>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+        <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90">
+          + New Task
+        </button>
+      </div>
+      {showNew && <NewTaskForm onClose={() => setShowNew(false)} />}
       <DataTable
         columns={columns}
         data={data}
