@@ -177,3 +177,59 @@ bunx @hasna/assistants
 1. Edit `config/hooks.json` or `.assistants/hooks.json`
 2. Add hook configuration under the appropriate event
 3. Hooks are loaded on startup and merged from multiple sources
+
+## Recommended Agent Workflow
+
+When working on open-assistants as an AI agent, follow this standard session protocol
+to stay in sync with the @hasna ecosystem.
+
+### Session Start
+
+```bash
+# 1. Claim a task (if working from the task queue)
+todos claim <your-agent-name> --project open-assistants
+
+# 2. Load project context from persistent memory
+mementos recall --project open-assistants
+
+# 3. Announce presence in the coordination space
+conversations heartbeat --status "working on open-assistants"
+conversations send-to-space open-assistants-dev "starting work on <task>"
+```
+
+### Session End
+
+```bash
+# 1. Upload any evidence files (test output, screenshots, etc.)
+attachments upload ./test-output.txt --tag open-assistants
+
+# 2. Complete the task with evidence
+todos done <task-id> --attach-ids <attachment-id>
+
+# 3. Save key learnings to persistent memory
+mementos save --key "session-outcome" --value "what was built/fixed"
+
+# 4. Post a summary to the dev space
+conversations send-to-space open-assistants-dev "shipped X: <summary>"
+```
+
+### Coordination
+
+- **Space**: Join `open-assistants-dev` for dev coordination
+- **Check DMs** before starting work — another agent may have context
+- **Use mementos** to avoid re-discovering things between sessions
+- **Register agent project**: `mementos update-agent --active-project open-assistants`
+
+### Package Ecosystem
+
+This project integrates with the @hasna ecosystem:
+
+| Package | Use for |
+|---------|---------|
+| `@hasna/todos` | Task management — claim/complete work items |
+| `@hasna/mementos` | Persistent memory — save learnings across sessions |
+| `@hasna/conversations` | Agent communication — DMs and spaces |
+| `@hasna/sessions` | Session search — find past work |
+| `@hasna/attachments` | Evidence upload — attach files to task completions |
+| `@hasna/economy` | Cost tracking — monitor API spend |
+| `@hasna/assistants-sdk` | SDK client — connect to local assistant REST API |
