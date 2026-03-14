@@ -45,9 +45,11 @@ export interface MemoryEntry {
 export interface SessionInfo {
   id: string;
   startedAt?: string;
+  updatedAt?: string;
   messageCount?: number;
   assistantId?: string;
   cwd?: string;
+  label?: string;
 }
 
 export interface ChatOptions {
