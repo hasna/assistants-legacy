@@ -12,6 +12,8 @@
  */
 
 export interface AssistantsClientOptions {
+  /** Full base URL — overrides host + port when set (e.g. "http://localhost:3456") */
+  baseUrl?: string;
   /** Port the assistant API server is listening on (default: 3456) */
   port?: number;
   /** Host (default: 127.0.0.1) */
@@ -71,9 +73,13 @@ export class AssistantsClient {
   private timeoutMs: number;
 
   constructor(options: AssistantsClientOptions = {}) {
-    const host = options.host ?? '127.0.0.1';
-    const port = options.port ?? 3456;
-    this.baseUrl = `http://${host}:${port}`;
+    if (options.baseUrl) {
+      this.baseUrl = options.baseUrl.replace(/\/$/, '');
+    } else {
+      const host = options.host ?? '127.0.0.1';
+      const port = options.port ?? 3456;
+      this.baseUrl = `http://${host}:${port}`;
+    }
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
@@ -260,12 +266,15 @@ export function createClient(options?: AssistantsClientOptions): AssistantsClien
 /**
  * Create an AssistantsClient from environment variables.
  *
- * Reads:
+ * Priority order:
+ *   ASSISTANTS_URL      — full base URL, takes precedence over port/host
  *   ASSISTANTS_PORT     — port (default: 3456)
  *   ASSISTANTS_HOST     — host (default: 127.0.0.1)
  *   ASSISTANTS_PROFILE  — named profile (affects config directory resolution on the server)
  */
 export function fromEnv(): AssistantsClient {
+  const url = process.env.ASSISTANTS_URL;
+  if (url) return new AssistantsClient({ baseUrl: url });
   const port = process.env.ASSISTANTS_PORT ? parseInt(process.env.ASSISTANTS_PORT, 10) : undefined;
   const host = process.env.ASSISTANTS_HOST ?? undefined;
   return new AssistantsClient({ port, host });

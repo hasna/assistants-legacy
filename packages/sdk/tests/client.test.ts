@@ -251,4 +251,29 @@ describe('fromEnv', () => {
     const c = fromEnv();
     expect(c).toBeInstanceOf(AssistantsClient);
   });
+
+  test('ASSISTANTS_URL takes priority over port/host', async () => {
+    const origUrl = process.env.ASSISTANTS_URL;
+    process.env.ASSISTANTS_URL = `http://127.0.0.1:${TEST_PORT}`;
+    delete process.env.ASSISTANTS_PORT;
+    try {
+      const c = fromEnv();
+      expect(await c.isAlive()).toBe(true);
+    } finally {
+      if (origUrl === undefined) delete process.env.ASSISTANTS_URL;
+      else process.env.ASSISTANTS_URL = origUrl;
+    }
+  });
+});
+
+describe('baseUrl option', () => {
+  test('baseUrl overrides host+port', async () => {
+    const c = new AssistantsClient({ baseUrl: `http://127.0.0.1:${TEST_PORT}` });
+    expect(await c.isAlive()).toBe(true);
+  });
+
+  test('baseUrl trailing slash is stripped', async () => {
+    const c = new AssistantsClient({ baseUrl: `http://127.0.0.1:${TEST_PORT}/` });
+    expect(await c.isAlive()).toBe(true);
+  });
 });
