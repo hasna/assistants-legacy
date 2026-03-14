@@ -13,23 +13,95 @@ if (!hasRuntime()) {
   setRuntime(bunRuntime);
 }
 
+// ─── Tool documentation (returned only via describe_tools) ───────────────────
+
+const TOOL_DOCS: Record<string, { description: string; params: string }> = {
+  chat: {
+    description: 'Send a message to the AI assistant and get a response. The assistant can use tools like bash, file read/write, web search, etc. Supports multi-turn sessions via session_id.',
+    params: 'message: string — message to send\ncwd?: string — working directory (default: cwd)\nsystem_prompt?: string — custom system prompt\nallowed_tools?: string[] — tools to auto-approve (e.g. ["Read","Write","Bash"])\nsession_id?: string — resume an existing session',
+  },
+  run_prompt: {
+    description: 'Run a one-shot prompt against the assistant and return the result as text. No interactive session is created.',
+    params: 'prompt: string — prompt to run\ncwd?: string — working directory\nsystem_prompt?: string — custom system prompt\nallowed_tools?: string[] — tools to auto-approve\ntimeout_ms?: number — timeout in milliseconds',
+  },
+  list_sessions: {
+    description: 'List previous assistant sessions that can be resumed with the chat tool.',
+    params: 'limit?: number — max sessions to return (default 20)',
+  },
+  list_skills: {
+    description: 'List available assistant skills (SKILL.md files) from built-in and project-level skill directories.',
+    params: 'cwd?: string — working directory to search for project-level skills',
+  },
+  execute_skill: {
+    description: 'Execute a named skill with arguments. The skill prompt is expanded and sent to the assistant.',
+    params: 'skill_name: string — name of the skill to execute\narguments?: string — space-separated arguments\ncwd?: string — working directory\nallowed_tools?: string[] — tools to auto-approve',
+  },
+  get_session: {
+    description: 'Get the messages and details of a specific session by ID.',
+    params: 'session_id: string — the session ID to retrieve',
+  },
+  describe_tools: {
+    description: 'Get full documentation for one or more tools. Call with no arguments to document all tools.',
+    params: 'names?: string[] — tool names to describe (omit for all)',
+  },
+  search_tools: {
+    description: 'Search for tools by keyword across names and descriptions.',
+    params: 'query: string — keyword to search for',
+  },
+};
+
 const server = new McpServer({
   name: 'assistants',
   version: '0.1.0',
 });
 
-// ─── chat ────────────────────────────────────────────────────────────────────
-// Send a message to the assistant and get a response
+// ─── describe_tools ───────────────────────────────────────────────────────────
+
+server.tool(
+  'describe_tools',
+  'Get full docs for tools. No args = all tools.',
+  { names: z.array(z.string()).optional() },
+  async ({ names }) => {
+    const keys = names?.length ? names : Object.keys(TOOL_DOCS);
+    const lines = keys.flatMap((k) => {
+      const doc = TOOL_DOCS[k];
+      if (!doc) return [`**${k}**: not found`];
+      return [`## ${k}\n${doc.description}\n\n**Params:**\n${doc.params}`];
+    });
+    return { content: [{ type: 'text' as const, text: lines.join('\n\n---\n\n') }] };
+  }
+);
+
+// ─── search_tools ─────────────────────────────────────────────────────────────
+
+server.tool(
+  'search_tools',
+  'Search tools by keyword.',
+  { query: z.string() },
+  async ({ query }) => {
+    const q = query.toLowerCase();
+    const matches = Object.entries(TOOL_DOCS).filter(([name, doc]) =>
+      name.includes(q) || doc.description.toLowerCase().includes(q) || doc.params.toLowerCase().includes(q)
+    );
+    if (matches.length === 0) {
+      return { content: [{ type: 'text' as const, text: `No tools matched "${query}".` }] };
+    }
+    const lines = matches.map(([name, doc]) => `**${name}**: ${doc.description.split('.')[0]}.`);
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  }
+);
+
+// ─── chat ─────────────────────────────────────────────────────────────────────
 
 server.tool(
   'chat',
-  'Send a message to the AI assistant and get a response. The assistant can use tools like bash, file read/write, web search, etc.',
+  'Send a message to the assistant. Use describe_tools("chat") for full docs.',
   {
-    message: z.string().describe('The message to send to the assistant'),
-    cwd: z.string().optional().describe('Working directory for the assistant (defaults to current directory)'),
-    system_prompt: z.string().optional().describe('Custom system prompt to use'),
-    allowed_tools: z.array(z.string()).optional().describe('Tools to auto-approve (e.g. ["Read", "Write", "Bash"])'),
-    session_id: z.string().optional().describe('Resume a specific session by ID'),
+    message: z.string(),
+    cwd: z.string().optional(),
+    system_prompt: z.string().optional(),
+    allowed_tools: z.array(z.string()).optional(),
+    session_id: z.string().optional(),
   },
   async ({ message, cwd, system_prompt, allowed_tools, session_id }) => {
     const workingDir = cwd || process.cwd();
@@ -99,18 +171,17 @@ server.tool(
   }
 );
 
-// ─── run_prompt ──────────────────────────────────────────────────────────────
-// Run a one-shot prompt and return the result
+// ─── run_prompt ───────────────────────────────────────────────────────────────
 
 server.tool(
   'run_prompt',
-  'Run a one-shot prompt against the assistant and return the result as text. No interactive session.',
+  'Run a one-shot prompt. Use describe_tools("run_prompt") for full docs.',
   {
-    prompt: z.string().describe('The prompt to run'),
-    cwd: z.string().optional().describe('Working directory'),
-    system_prompt: z.string().optional().describe('Custom system prompt'),
-    allowed_tools: z.array(z.string()).optional().describe('Tools to auto-approve'),
-    timeout_ms: z.number().optional().describe('Timeout in milliseconds'),
+    prompt: z.string(),
+    cwd: z.string().optional(),
+    system_prompt: z.string().optional(),
+    allowed_tools: z.array(z.string()).optional(),
+    timeout_ms: z.number().optional(),
   },
   async ({ prompt, cwd, system_prompt, allowed_tools, timeout_ms }) => {
     const workingDir = cwd || process.cwd();
@@ -157,15 +228,12 @@ server.tool(
   }
 );
 
-// ─── list_sessions ───────────────────────────────────────────────────────────
-// List previous assistant sessions
+// ─── list_sessions ────────────────────────────────────────────────────────────
 
 server.tool(
   'list_sessions',
-  'List previous assistant sessions that can be resumed.',
-  {
-    limit: z.number().optional().describe('Max sessions to return (default 20)'),
-  },
+  'List resumable assistant sessions.',
+  { limit: z.number().optional() },
   async ({ limit }) => {
     const sessions = SessionStorage.listAllSessions();
     const maxResults = limit || 20;
@@ -187,15 +255,12 @@ server.tool(
   }
 );
 
-// ─── list_skills ─────────────────────────────────────────────────────────────
-// List available skills
+// ─── list_skills ──────────────────────────────────────────────────────────────
 
 server.tool(
   'list_skills',
-  'List available assistant skills (SKILL.md files).',
-  {
-    cwd: z.string().optional().describe('Working directory to search for project-level skills'),
-  },
+  'List available assistant skills.',
+  { cwd: z.string().optional() },
   async ({ cwd }) => {
     const { SkillLoader } = await import('@hasna/assistants-core');
     const workingDir = cwd || process.cwd();
@@ -218,17 +283,16 @@ server.tool(
   }
 );
 
-// ─── execute_skill ───────────────────────────────────────────────────────────
-// Execute a specific skill
+// ─── execute_skill ────────────────────────────────────────────────────────────
 
 server.tool(
   'execute_skill',
-  'Execute a named skill with arguments. The skill prompt is expanded and sent to the assistant.',
+  'Execute a named skill with arguments.',
   {
-    skill_name: z.string().describe('Name of the skill to execute'),
-    arguments: z.string().optional().describe('Arguments to pass to the skill'),
-    cwd: z.string().optional().describe('Working directory'),
-    allowed_tools: z.array(z.string()).optional().describe('Tools to auto-approve'),
+    skill_name: z.string(),
+    arguments: z.string().optional(),
+    cwd: z.string().optional(),
+    allowed_tools: z.array(z.string()).optional(),
   },
   async ({ skill_name, arguments: args, cwd, allowed_tools }) => {
     const { SkillLoader, SkillExecutor } = await import('@hasna/assistants-core');
@@ -249,7 +313,6 @@ server.tool(
       return { content: [{ type: 'text' as const, text: `Skill "${skill_name}" not found.` }], isError: true };
     }
 
-    // Run the expanded prompt through the assistant
     const client = new EmbeddedClient(workingDir, {
       allowedTools: allowed_tools,
     });
@@ -282,15 +345,12 @@ server.tool(
   }
 );
 
-// ─── get_session ─────────────────────────────────────────────────────────────
-// Get details of a specific session
+// ─── get_session ──────────────────────────────────────────────────────────────
 
 server.tool(
   'get_session',
-  'Get the messages and details of a specific session.',
-  {
-    session_id: z.string().describe('The session ID to retrieve'),
-  },
+  'Get messages and details of a session by ID.',
+  { session_id: z.string() },
   async ({ session_id }) => {
     const data = SessionStorage.loadSession(session_id);
 
@@ -321,7 +381,7 @@ server.tool(
   }
 );
 
-// ─── Start server ────────────────────────────────────────────────────────────
+// ─── Start server ─────────────────────────────────────────────────────────────
 
 async function main() {
   const transport = new StdioServerTransport();
