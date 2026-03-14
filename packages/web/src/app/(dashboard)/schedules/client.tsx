@@ -1,8 +1,10 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "@/lib/toast"
 
 /**
  * Parse raw schedule JSON string into a human-readable description.
@@ -165,7 +167,48 @@ const columns: ColumnDef<ScheduleRow>[] = [
   },
   {
     accessorKey: "project_path",
-    header: "Project Path",
+    header: "Project",
+    cell: ({ row }) => {
+      const p = row.original.project_path
+      if (!p) return <span className="text-muted-foreground">—</span>
+      const parts = p.replace(/\\/g, "/").split("/")
+      const name = parts[parts.length - 1] || p
+      return <span className="text-xs" title={p}>{name}</span>
+    },
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: function ActionsCell({ row }) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const router = useRouter()
+      const isActive = row.original.status === "active"
+
+      const handle = async (action: "pause" | "resume" | "delete") => {
+        const res = await fetch(`/api/schedules/${row.original.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        })
+        if (res.ok) {
+          toast.success(action === "delete" ? "Schedule deleted" : action === "pause" ? "Schedule paused" : "Schedule resumed")
+          router.refresh()
+        } else {
+          toast.error(`Failed to ${action} schedule`)
+        }
+      }
+
+      return (
+        <div className="flex items-center gap-1">
+          {isActive ? (
+            <button onClick={() => handle("pause")} className="rounded px-2 py-1 text-xs border hover:bg-accent" title="Pause">⏸</button>
+          ) : (
+            <button onClick={() => handle("resume")} className="rounded px-2 py-1 text-xs border hover:bg-accent" title="Resume">▶</button>
+          )}
+          <button onClick={() => { if (confirm("Delete this schedule?")) handle("delete") }} className="rounded px-2 py-1 text-xs border hover:bg-red-50 hover:text-red-600" title="Delete">🗑</button>
+        </div>
+      )
+    },
   },
 ]
 

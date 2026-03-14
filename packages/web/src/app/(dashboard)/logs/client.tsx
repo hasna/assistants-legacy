@@ -113,17 +113,24 @@ export function LogsClient({ data }: { data: LogRow[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Security Logs</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Guardrail Logs</h1>
         <p className="text-muted-foreground text-sm">
           Guardrail evaluations and security audit trail.
         </p>
       </div>
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">No guardrail evaluations yet.</p>
+          <p className="text-muted-foreground text-xs mt-1">These appear when guardrail rules are triggered during a session.</p>
+        </div>
+      ) : (
       <DataTable
         columns={columns}
         data={data}
         filterColumn="rule_name"
         filterPlaceholder="Filter by rule name..."
       />
+      )}
     </div>
   )
 }

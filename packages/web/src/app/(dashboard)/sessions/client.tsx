@@ -4,6 +4,7 @@ import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 export interface SessionRow {
   id: string
@@ -85,6 +86,19 @@ const columns: ColumnDef<SessionRow>[] = [
     accessorKey: "updated_at",
     header: "Updated",
     cell: ({ row }) => formatDate(row.original.updated_at),
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => (
+      <Link
+        href={`/chat?resume=${row.original.id}`}
+        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent transition-colors"
+        title="Resume this session in Chat"
+      >
+        ↩ Resume
+      </Link>
+    ),
   },
 ]
 
