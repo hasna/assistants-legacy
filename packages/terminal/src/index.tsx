@@ -255,6 +255,78 @@ if (subcommand === 'serve') {
   process.exit(0);
 }
 
+if (subcommand === 'report') {
+  const days = parseInt(process.argv[3] || '7', 10);
+  const isJson = process.argv.includes('--json');
+  const isMarkdown = process.argv.includes('--markdown');
+
+  const { SessionStorage } = await import('@hasna/assistants-core');
+  const sessions = SessionStorage.listAllSessions();
+
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const recent = sessions.filter(s => new Date(s.updatedAt || s.startedAt).getTime() >= cutoff);
+
+  // Aggregate stats
+  const totalMessages = recent.reduce((sum, s) => sum + (s.messageCount ?? 0), 0);
+  const byDate: Record<string, number> = {};
+  for (const s of recent) {
+    const date = (s.updatedAt || s.startedAt).slice(0, 10);
+    byDate[date] = (byDate[date] || 0) + 1;
+  }
+  const avgPerDay = recent.length / Math.max(days, 1);
+
+  // Build sparkline
+  const sortedDates = Object.keys(byDate).sort();
+  const counts = sortedDates.map(d => byDate[d]);
+  const maxCount = Math.max(...counts, 1);
+  const bars = '▁▂▃▄▅▆▇█';
+  const sparkline = counts.map(c => bars[Math.floor((c / maxCount) * (bars.length - 1))]).join('');
+
+  const report = {
+    days,
+    totalSessions: sessions.length,
+    recentSessions: recent.length,
+    recentMessages: totalMessages,
+    avgSessionsPerDay: Math.round(avgPerDay * 10) / 10,
+    sparkline,
+    topProjects: Object.entries(
+      recent.reduce((acc, s) => {
+        const proj = s.cwd?.split('/').pop() ?? 'unknown';
+        acc[proj] = (acc[proj] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).sort((a, b) => b[1] - a[1]).slice(0, 5),
+  };
+
+  if (isJson) {
+    console.log(JSON.stringify(report, null, 2));
+  } else if (isMarkdown) {
+    console.log(`## assistants report — last ${days} days\n`);
+    console.log(`| Metric | Value |`);
+    console.log(`|--------|-------|`);
+    console.log(`| Sessions (recent) | ${report.recentSessions} |`);
+    console.log(`| Sessions (total) | ${report.totalSessions} |`);
+    console.log(`| Messages | ${report.recentMessages} |`);
+    console.log(`| Avg/day | ${report.avgSessionsPerDay} |`);
+    if (report.topProjects.length > 0) {
+      console.log(`\n**Top projects:** ${report.topProjects.map(([k, v]) => `${k} (${v})`).join(', ')}`);
+    }
+  } else {
+    console.log(`assistants report — last ${days} days\n`);
+    console.log(`  Sessions:   ${report.recentSessions} recent · ${report.totalSessions} total`);
+    console.log(`  Messages:   ${report.recentMessages}`);
+    console.log(`  Avg/day:    ${report.avgSessionsPerDay}`);
+    if (sparkline) console.log(`  Activity:   ${sparkline}`);
+    if (report.topProjects.length > 0) {
+      console.log(`\n  Top projects:`);
+      for (const [proj, count] of report.topProjects) {
+        console.log(`    ${proj.padEnd(30)} ${count} sessions`);
+      }
+    }
+  }
+  process.exit(0);
+}
+
 const options = parseArgs(process.argv);
 
 // Handle parsing errors
@@ -281,6 +353,7 @@ Usage:
   assistants -p "<prompt>" [options]      Run in headless mode
   assistants mcp [--claude|--codex|--print]  Install MCP server
   assistants serve [port]                 Start web dashboard (default: 3000)
+  assistants report [days]                Activity report (default: 7 days)
   assistants config [cwd]                 Show current configuration
   assistants sessions [list|<id>]         List or inspect sessions
 

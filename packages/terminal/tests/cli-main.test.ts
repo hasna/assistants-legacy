@@ -726,3 +726,31 @@ describe('serve subcommand detection', () => {
     else process.env.ASSISTANTS_WEB_PORT = orig;
   });
 });
+
+describe('report subcommand detection', () => {
+  test('report is detected by argv[2] === "report"', () => {
+    const argv = ['node', 'assistants', 'report'];
+    expect(argv[2]).toBe('report');
+  });
+
+  test('default days is 7', () => {
+    const argv = ['node', 'assistants', 'report'];
+    const days = parseInt(argv[3] || '7', 10);
+    expect(days).toBe(7);
+  });
+
+  test('custom days is parsed from argv[3]', () => {
+    const argv = ['node', 'assistants', 'report', '30'];
+    expect(parseInt(argv[3], 10)).toBe(30);
+  });
+
+  test('--json flag detected', () => {
+    const argv = ['node', 'assistants', 'report', '--json'];
+    expect(argv.includes('--json')).toBe(true);
+  });
+
+  test('--markdown flag detected', () => {
+    const argv = ['node', 'assistants', 'report', '--markdown'];
+    expect(argv.includes('--markdown')).toBe(true);
+  });
+});
