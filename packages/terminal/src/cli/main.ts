@@ -320,6 +320,7 @@ Usage:
   assistants [options]                    Start interactive mode
   assistants -p "<prompt>" [options]      Run in headless mode
   assistants mcp [--claude|--codex|--print]  Install MCP server
+  assistants doctor [--json]              Health check (API key, config, integrations)
   assistants serve [port]                 Start web dashboard (default: 3000)
   assistants report [days]                Activity report (default: 7 days)
   assistants config [cwd]                 Show current configuration

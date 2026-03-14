@@ -215,6 +215,106 @@ if (subcommand === 'sessions') {
   process.exit(0);
 }
 
+if (subcommand === 'doctor') {
+  const isJson = process.argv.includes('--json');
+  const { getConfigDir, getActiveProfile } = await import('@hasna/assistants-core');
+  const { existsSync } = await import('fs');
+  const { join } = await import('path');
+
+  const checks: Array<{ name: string; ok: boolean; detail?: string }> = [];
+
+  // API key
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+  const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+  checks.push({
+    name: 'LLM API key',
+    ok: hasAnthropicKey || hasOpenAIKey,
+    detail: hasAnthropicKey ? 'ANTHROPIC_API_KEY set' : hasOpenAIKey ? 'OPENAI_API_KEY set' : 'Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set',
+  });
+
+  // Config directory
+  const configDir = getConfigDir();
+  checks.push({
+    name: 'Config directory',
+    ok: existsSync(configDir),
+    detail: configDir,
+  });
+
+  // Profile
+  const profile = getActiveProfile();
+  checks.push({
+    name: 'Profile',
+    ok: true,
+    detail: profile ? `ASSISTANTS_PROFILE=${profile}` : 'default (no profile set)',
+  });
+
+  // Database
+  const dbPath = join(configDir, 'assistants.db');
+  checks.push({
+    name: 'Database',
+    ok: existsSync(dbPath),
+    detail: existsSync(dbPath) ? dbPath : `Not found at ${dbPath} (will be created on first run)`,
+  });
+
+  // MCP server binary
+  let mcpInstalled = false;
+  try {
+    const { execSync } = await import('child_process');
+    execSync('which assistants-mcp', { stdio: 'pipe' });
+    mcpInstalled = true;
+  } catch { /* not installed */ }
+  checks.push({
+    name: 'MCP server (assistants-mcp)',
+    ok: mcpInstalled,
+    detail: mcpInstalled ? 'installed' : 'not found — run: bun add -g @hasna/assistants-mcp',
+  });
+
+  // TODOS_URL connectivity
+  if (process.env.TODOS_URL) {
+    let todosOk = false;
+    let todosDetail = '';
+    try {
+      const r = await fetch(`${process.env.TODOS_URL}/api/health`, { signal: AbortSignal.timeout(2000) });
+      todosOk = r.ok;
+      todosDetail = r.ok ? `${process.env.TODOS_URL} — OK` : `${process.env.TODOS_URL} — HTTP ${r.status}`;
+    } catch {
+      todosDetail = `${process.env.TODOS_URL} — unreachable`;
+    }
+    checks.push({ name: 'todos integration (TODOS_URL)', ok: todosOk, detail: todosDetail });
+  }
+
+  // SESSIONS_URL connectivity
+  if (process.env.SESSIONS_URL) {
+    let sessionsOk = false;
+    let sessionsDetail = '';
+    try {
+      const r = await fetch(`${process.env.SESSIONS_URL}/api/health`, { signal: AbortSignal.timeout(2000) });
+      sessionsOk = r.ok;
+      sessionsDetail = r.ok ? `${process.env.SESSIONS_URL} — OK` : `${process.env.SESSIONS_URL} — HTTP ${r.status}`;
+    } catch {
+      sessionsDetail = `${process.env.SESSIONS_URL} — unreachable`;
+    }
+    checks.push({ name: 'sessions integration (SESSIONS_URL)', ok: sessionsOk, detail: sessionsDetail });
+  }
+
+  // Version
+  checks.push({ name: 'Version', ok: true, detail: `assistants v${VERSION}` });
+
+  if (isJson) {
+    console.log(JSON.stringify({ checks, passing: checks.filter(c => c.ok).length, total: checks.length }, null, 2));
+  } else {
+    console.log('assistants doctor\n');
+    for (const c of checks) {
+      const icon = c.ok ? '✓' : '✗';
+      console.log(`  ${icon}  ${c.name}${c.detail ? `: ${c.detail}` : ''}`);
+    }
+    const passing = checks.filter(c => c.ok).length;
+    const failing = checks.filter(c => !c.ok).length;
+    console.log(`\n  ${passing}/${checks.length} checks passed${failing > 0 ? ` — ${failing} issue(s) to fix` : ' — all good!'}`);
+  }
+  process.exit(checks.some(c => !c.ok) ? 1 : 0);
+}
+
 if (subcommand === 'serve') {
   const port = parseInt(process.argv[3] || process.env.ASSISTANTS_WEB_PORT || '3000', 10);
   const { execSync } = await import('child_process');
@@ -352,6 +452,7 @@ Usage:
   assistants [options]                    Start interactive mode
   assistants -p "<prompt>" [options]      Run in headless mode
   assistants mcp [--claude|--codex|--print]  Install MCP server
+  assistants doctor [--json]              Health check (API key, config, integrations)
   assistants serve [port]                 Start web dashboard (default: 3000)
   assistants report [days]                Activity report (default: 7 days)
   assistants config [cwd]                 Show current configuration
