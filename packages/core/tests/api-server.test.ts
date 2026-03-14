@@ -410,4 +410,160 @@ describe('LocalAPIServer', () => {
       expect(data.error).toBe('Internal error');
     });
   });
+
+  describe('POST /api/notifications', () => {
+    test('adds notification and returns ok + id', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'test notification', type: 'success' }),
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { ok: boolean; id: string };
+      expect(data.ok).toBe(true);
+      expect(data.id).toMatch(/^n-/);
+    });
+
+    test('returns 400 when message is missing', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'info' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test('pushed notification appears in GET /api/notifications', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      await fetch(`http://127.0.0.1:${port}/api/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'hello from outside', type: 'info' }),
+      });
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/notifications`);
+      const data = await res.json() as { notifications: Array<{ message: string }> };
+      expect(data.notifications.some(n => n.message === 'hello from outside')).toBe(true);
+    });
+
+    test('defaults type to info when not provided', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      await fetch(`http://127.0.0.1:${port}/api/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'no type' }),
+      });
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/notifications`);
+      const data = await res.json() as { notifications: Array<{ type: string; message: string }> };
+      const n = data.notifications.find(x => x.message === 'no type');
+      expect(n?.type).toBe('info');
+    });
+  });
+
+  describe('GET /api/memories', () => {
+    test('returns empty memories when no onMemories handler', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/memories`);
+      expect(res.status).toBe(200);
+      const data = await res.json() as { memories: unknown[] };
+      expect(Array.isArray(data.memories)).toBe(true);
+      expect(data.memories).toHaveLength(0);
+    });
+
+    test('calls onMemories handler and returns results', async () => {
+      const port = getPort();
+      let capturedQuery: string | undefined;
+      let capturedLimit: number | undefined;
+
+      server = new LocalAPIServer({
+        port,
+        onMemories: async (q, limit) => {
+          capturedQuery = q;
+          capturedLimit = limit;
+          return [{ key: 'foo', value: 'bar' }];
+        },
+      });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/memories?q=foo&limit=5`);
+      expect(res.status).toBe(200);
+      const data = await res.json() as { memories: Array<{ key: string }>; total: number };
+      expect(data.memories).toHaveLength(1);
+      expect(data.memories[0].key).toBe('foo');
+      expect(data.total).toBe(1);
+      expect(capturedQuery).toBe('foo');
+      expect(capturedLimit).toBe(5);
+    });
+
+    test('clamps limit to 100', async () => {
+      const port = getPort();
+      let capturedLimit: number | undefined;
+
+      server = new LocalAPIServer({
+        port,
+        onMemories: async (_, limit) => {
+          capturedLimit = limit;
+          return [];
+        },
+      });
+      server.start();
+
+      await fetch(`http://127.0.0.1:${port}/api/memories?limit=999`);
+      expect(capturedLimit).toBe(100);
+    });
+  });
+
+  describe('GET /api/sessions + /api/sessions/:id', () => {
+    test('returns sessions array', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/sessions`);
+      expect(res.status).toBe(200);
+      const data = await res.json() as { sessions: unknown[]; total: number };
+      expect(Array.isArray(data.sessions)).toBe(true);
+      expect(typeof data.total).toBe('number');
+    });
+
+    test('respects limit query param', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/sessions?limit=1`);
+      expect(res.status).toBe(200);
+      const data = await res.json() as { sessions: unknown[] };
+      expect(data.sessions.length).toBeLessThanOrEqual(1);
+    });
+
+    test('GET /api/sessions/:id returns 404 for unknown session', async () => {
+      const port = getPort();
+      server = new LocalAPIServer({ port });
+      server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/sessions/no-such-session-xyz`);
+      expect(res.status).toBe(404);
+      const data = await res.json() as { error: string };
+      expect(data.error).toContain('no-such-session-xyz');
+    });
+  });
 });
