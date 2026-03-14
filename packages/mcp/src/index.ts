@@ -13,6 +13,10 @@ if (!hasRuntime()) {
   setRuntime(bunRuntime);
 }
 
+// Read version from package.json at startup (never hardcode)
+const pkgJson = await import('../package.json', { with: { type: 'json' } });
+const MCP_VERSION: string = pkgJson.default?.version ?? '0.0.0';
+
 // ─── Tool documentation (returned only via describe_tools) ───────────────────
 
 const TOOL_DOCS: Record<string, { description: string; params: string }> = {
@@ -52,7 +56,7 @@ const TOOL_DOCS: Record<string, { description: string; params: string }> = {
 
 const server = new McpServer({
   name: 'assistants',
-  version: '0.1.0',
+  version: MCP_VERSION,
 });
 
 // ─── describe_tools ───────────────────────────────────────────────────────────
