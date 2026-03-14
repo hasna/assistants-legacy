@@ -13,6 +13,10 @@ export interface MemoryEntry {
   scope?: string;
   category?: string;
   importance?: number;
+  summary?: string | null;
+  tags?: string[];
+  source?: string;
+  id?: string;
 }
 
 export interface LocalAPIServerOptions {
@@ -220,15 +224,19 @@ export class LocalAPIServer {
       });
     }
 
-    // GET /api/memories?q=<query>&limit=<n>
+    // GET /api/memories?q=<query>&limit=<n>&scope=<scope>&category=<category>
     if (path === '/api/memories' && req.method === 'GET') {
       if (!this.onMemories) {
         return new Response(JSON.stringify({ memories: [] }), { headers: jsonHeaders });
       }
       const url = new URL(req.url);
-      const query = url.searchParams.get('q') ?? undefined;
+      const query = url.searchParams.get('q') ?? url.searchParams.get('search') ?? undefined;
+      const scope = url.searchParams.get('scope') ?? undefined;
+      const category = url.searchParams.get('category') ?? undefined;
       const limit = parseInt(url.searchParams.get('limit') ?? '20', 10);
-      const memories = await this.onMemories(query, Math.min(limit, 100));
+      let memories = await this.onMemories(query, Math.min(limit, 100));
+      if (scope) memories = memories.filter(m => m.scope === scope);
+      if (category) memories = memories.filter(m => m.category === category);
       return new Response(JSON.stringify({ memories, total: memories.length }), { headers: jsonHeaders });
     }
 

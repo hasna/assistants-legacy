@@ -1,6 +1,6 @@
 {
   "name": "@hasna/assistants-sdk",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Zero-dependency TypeScript SDK for @hasna/assistants — connect to a local assistant API",
   "license": "Apache-2.0",
   "type": "module",

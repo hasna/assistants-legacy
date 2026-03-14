@@ -42,6 +42,21 @@ export interface MemoryEntry {
   scope?: string;
   category?: string;
   importance?: number;
+  summary?: string | null;
+  tags?: string[];
+  source?: string;
+  id?: string;
+}
+
+export interface GetMemoriesOptions {
+  /** Keyword to filter memories by key/value/summary */
+  query?: string;
+  /** Filter by scope: 'global', 'shared', or 'private' */
+  scope?: string;
+  /** Filter by category: 'preference', 'fact', 'knowledge', or 'history' */
+  category?: string;
+  /** Max results (default 20) */
+  limit?: number;
 }
 
 export interface SessionInfo {
@@ -116,12 +131,18 @@ export class AssistantsClient {
 
   /**
    * Get memories from the running assistant's memory store.
-   * @param query - Optional keyword to filter memories
-   * @param limit - Max results (default 20)
+   * Supports filtering by query keyword, scope, category, and limit.
    */
-  async getMemories(query?: string, limit = 20): Promise<MemoryEntry[]> {
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (query) params.set('q', query);
+  async getMemories(queryOrOptions?: string | GetMemoriesOptions, limit = 20): Promise<MemoryEntry[]> {
+    const options: GetMemoriesOptions = typeof queryOrOptions === 'string'
+      ? { query: queryOrOptions, limit }
+      : { limit, ...queryOrOptions };
+
+    const params = new URLSearchParams({ limit: String(options.limit ?? limit) });
+    if (options.query) params.set('q', options.query);
+    if (options.scope) params.set('scope', options.scope);
+    if (options.category) params.set('category', options.category);
+
     const res = await this.fetch(`/api/memories?${params}`);
     if (!res.ok) throw new Error(`Get memories failed: ${res.status}`);
     const data = await res.json() as { memories: MemoryEntry[] };
