@@ -241,6 +241,7 @@ export class AssistantLoop {
   private pendingOrdersContext: string | null = null;
   private pendingMemoryContext: string | null = null;
   private pendingTasksContext: string | null = null;
+  private pendingSessionsContext: string | null = null;
   private identityContext: string | null = null;
   private projectContext: string | null = null;
   private activeProjectId: string | null = null;
@@ -1091,6 +1092,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       await this.injectContextInfo();
       // Inject pending tasks from todos if TODOS_URL is set
       await this.injectTasksContext();
+      // Inject recent sessions if SESSIONS_URL is set
+      await this.injectSessionsContext();
     } catch (error) {
       // If injection fails, reset isRunning before re-throwing
       this.isRunning = false;
@@ -3519,6 +3522,27 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     }
   }
 
+  /**
+   * Inject recent sessions from @hasna/sessions REST API into context.
+   * Only runs when SESSIONS_URL is set. Silent on failure.
+   */
+  private async injectSessionsContext(): Promise<void> {
+    if (!process.env.SESSIONS_URL) return;
+
+    try {
+      // Only update sessions context on first turn
+      if (this.pendingSessionsContext !== null) return;
+
+      const { buildSessionsContextPrompt } = await import('../sessions/context-builder');
+      const content = await buildSessionsContextPrompt();
+      if (content) {
+        this.pendingSessionsContext = content;
+      }
+    } catch {
+      // Non-critical — silently skip if sessions is unavailable
+    }
+  }
+
   private startHeartbeat(): void {
     if (!this.config) return;
     if (this.config.scheduler?.enabled === false) return;
@@ -3710,6 +3734,11 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     // Add tasks context if TODOS_URL is configured
     if (this.pendingTasksContext) {
       parts.push(this.pendingTasksContext);
+    }
+
+    // Add sessions context if SESSIONS_URL is configured
+    if (this.pendingSessionsContext) {
+      parts.push(this.pendingSessionsContext);
     }
 
     for (const msg of messages) {

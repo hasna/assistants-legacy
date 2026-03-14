@@ -139,6 +139,8 @@ await c.notify('Build done', 'success')  // push notification
 - `ASSISTANTS_PORT` — port (default: 3456)
 - `ASSISTANTS_HOST` — host (default: 127.0.0.1)
 - `ASSISTANTS_PROFILE` — named profile (e.g. `work`, `personal`)
+- `TODOS_URL` — if set, injects pending tasks into every session context
+- `SESSIONS_URL` — if set, injects recent sessions into every session context
 
 **@hasna ecosystem port map** (for cross-tool SDK integration):
 | Tool | Port | SDK env var |
