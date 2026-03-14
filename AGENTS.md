@@ -140,6 +140,19 @@ await c.notify('Build done', 'success')  // push notification
 - `ASSISTANTS_HOST` — host (default: 127.0.0.1)
 - `ASSISTANTS_PROFILE` — named profile (e.g. `work`, `personal`)
 
+**@hasna ecosystem port map** (for cross-tool SDK integration):
+| Tool | Port | SDK env var |
+|------|------|-------------|
+| assistants (local API) | 3456 | `ASSISTANTS_URL` |
+| economy | 3456 | `ECONOMY_URL` |
+| configs | 3457 | `CONFIGS_URL` |
+| sessions | 3458 | `SESSIONS_URL` |
+| attachments | 3459 | `ATTACHMENTS_URL` |
+| emails | 3900 | `EMAILS_URL` |
+| todos | 19427 | `TODOS_URL` |
+| mementos | 19428 | `MEMENTOS_URL` |
+| assistants (web) | 3000 | `ASSISTANTS_WEB_PORT` |
+
 ### Option 3: Headless CLI
 
 ```bash
