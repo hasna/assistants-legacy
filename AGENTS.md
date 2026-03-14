@@ -78,3 +78,127 @@ This is the open-source version of the assistant. The goal is to make it:
 - UI components go in `packages/terminal/src/components/`
 - Core logic goes in `packages/core/src/`
 - Shared types go in `packages/shared/src/`
+
+---
+
+## Using open-assistants as an AI Agent Tool
+
+If you are an AI agent (Claude, Codex, or custom) wanting to **use** open-assistants
+as a tool, this section is for you.
+
+### Option 1: MCP Server (recommended for Claude Code / Claude Desktop)
+
+```bash
+# Install
+bun add -g @hasna/assistants @hasna/assistants-mcp
+
+# Register with Claude Code
+assistants mcp --claude
+# or: claude mcp add --transport stdio --scope user assistants -- assistants-mcp
+```
+
+**Available MCP tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `chat` | Multi-turn conversation with full tool access |
+| `run_prompt` | One-shot prompt (no session overhead) |
+| `list_sessions` | List resumable sessions |
+| `get_session` | Inspect a session's messages |
+| `list_skills` | List available skills |
+| `execute_skill` | Run a skill by name |
+| `describe_tools` | Get full tool documentation on demand |
+| `search_tools` | Find tools by keyword |
+
+Tools use **lean stubs** — call `describe_tools(["chat"])` for full parameter docs.
+
+### Option 2: REST API + SDK
+
+```bash
+# Start the assistant (exposes REST API on port 3456)
+assistants &
+
+# SDK
+bun add @hasna/assistants-sdk
+```
+
+```typescript
+import { fromEnv } from '@hasna/assistants-sdk';
+const c = fromEnv(); // reads ASSISTANTS_URL or ASSISTANTS_PORT
+
+await c.isAlive()                        // → true/false
+await c.ask('Summarize this repo')       // → string
+await c.chat('msg', { onChunk: ... })    // streaming
+await c.listSessions(10)                 // recent sessions
+await c.getMemories('architecture')      // memory query
+await c.notify('Build done', 'success')  // push notification
+```
+
+**Environment variables:**
+- `ASSISTANTS_URL` — full base URL (highest priority)
+- `ASSISTANTS_PORT` — port (default: 3456)
+- `ASSISTANTS_HOST` — host (default: 127.0.0.1)
+- `ASSISTANTS_PROFILE` — named profile (e.g. `work`, `personal`)
+
+### Option 3: Headless CLI
+
+```bash
+# One-shot query
+assistants -p "What does this codebase do?"
+
+# JSON output (for parsing by other agents)
+assistants -p "List all API endpoints" --output-format json
+
+# Streaming JSON events
+assistants -p "Analyze dependencies" --output-format stream-json
+
+# Auto-approve tools for automation
+assistants -p "Fix the failing test" --allowed-tools "Read,Edit,Bash"
+
+# Continue a specific session
+assistants -p "Continue" --resume <session-id>
+
+# Custom model
+assistants -p "..." --model claude-sonnet-4-6
+```
+
+### Agent Workflow Pattern
+
+```bash
+# Start work
+mementos memory-inject --project <project> --format compact  # load context
+assistants -p "$(todos show <task-id> --brief)"               # start session
+
+# Do work via MCP or SDK
+# ...
+
+# End work
+assistants sessions list  # find session ID
+sessions ingest           # archive to @hasna/sessions
+todos done <id>           # complete task with evidence
+mementos memory-save      # save key learnings
+```
+
+### Skills — Reusable Prompts
+
+```bash
+# Discover skills via MCP
+{"tool": "list_skills"}
+
+# Execute a skill
+{"tool": "execute_skill", "input": {"skill_name": "commit"}}
+{"tool": "execute_skill", "input": {"skill_name": "review-pr", "arguments": "123"}}
+```
+
+User skills: `~/.assistants/skills/<name>/SKILL.md`
+Project skills: `.assistants/skills/<name>/SKILL.md`
+
+### Dashboard
+
+```bash
+assistants serve         # starts web dashboard on port 3000
+assistants serve 8080    # custom port
+# ASSISTANTS_WEB_PORT=8080 assistants serve
+```
+
+Dashboard shows: chat, sessions, memory, tasks, skills, heartbeat, connectors, and more.
