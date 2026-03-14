@@ -57,7 +57,7 @@ assistants
 # Short alias
 ast
 
-# Run a one-off prompt
+# Run a one-off prompt (headless)
 assistants -p "What does this codebase do?"
 
 # JSON output
@@ -74,6 +74,37 @@ assistants --continue
 
 # Resume a specific session
 assistants --resume <session_id>
+```
+
+### Subcommands
+
+```bash
+# Install the MCP server into Claude Code
+assistants mcp --claude
+
+# Start the web dashboard (port 3000 by default)
+assistants serve
+assistants serve 8080
+
+# Activity report (last 7 days)
+assistants report
+assistants report 30 --markdown
+
+# Show current configuration
+assistants config
+
+# List recent sessions
+assistants sessions list
+assistants sessions <session_id>
+```
+
+### Profiles
+
+Isolate configuration and data per project or context:
+
+```bash
+ASSISTANTS_PROFILE=work assistants        # → ~/.assistants/profiles/work
+ASSISTANTS_PROFILE=personal assistants    # → ~/.assistants/profiles/personal
 ```
 
 ## Interactive Commands
@@ -152,6 +183,57 @@ Events: `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `SessionStart`, `Sessio
 └── hooks.json
 ```
 
+## MCP Server
+
+Install the MCP server so Claude Code (and other MCP clients) can use the assistant:
+
+```bash
+# Install globally
+bun add -g @hasna/assistants-mcp
+
+# Register with Claude Code
+assistants mcp --claude
+# or: claude mcp add --transport stdio --scope user assistants -- assistants-mcp
+```
+
+Set `ASSISTANTS_MCP_PROFILE` to control which tools are exposed:
+
+| Profile | Tools | Use when |
+|---------|-------|----------|
+| `minimal` | 3 | Just running prompts |
+| `standard` | 5 | Day-to-day use |
+| `full` (default) | 8 | All tools including skills |
+
+## SDK
+
+Connect to a running assistant from code or scripts:
+
+```bash
+bun add @hasna/assistants-sdk
+```
+
+```typescript
+import { fromEnv } from '@hasna/assistants-sdk';
+
+const client = fromEnv(); // reads ASSISTANTS_URL or ASSISTANTS_PORT
+
+// Health check
+await client.isAlive()
+
+// One-shot query
+const answer = await client.ask('What files are here?');
+
+// Streaming
+await client.chat('Explain this code', {
+  onChunk: (text) => process.stdout.write(text),
+});
+
+// Sessions, memories, notifications
+const sessions = await client.listSessions(10);
+const memories = await client.getMemories({ scope: 'shared', category: 'knowledge' });
+await client.notify('Build complete', 'success');
+```
+
 ## Programmatic Usage
 
 ```typescript
@@ -171,6 +253,15 @@ await client.send('What files are in this directory?');
 client.disconnect();
 ```
 
+## Web Dashboard
+
+```bash
+assistants serve        # starts on port 3000
+assistants serve 8080   # custom port
+```
+
+Browse sessions, memory, tasks, skills, schedules, and more at `http://localhost:3000`.
+
 ## Environment Variables
 
 | Variable | Required | Description |
@@ -179,6 +270,10 @@ client.disconnect();
 | `OPENAI_API_KEY` | No | Whisper STT + OpenAI models |
 | `ELEVENLABS_API_KEY` | No | Voice TTS |
 | `EXA_API_KEY` | No | Enhanced web search |
+| `ASSISTANTS_PROFILE` | No | Named profile (`work`, `personal`, etc.) |
+| `ASSISTANTS_MCP_PROFILE` | No | MCP tool set: `minimal`, `standard`, `full` |
+| `TODOS_URL` | No | Auto-inject pending tasks from @hasna/todos |
+| `SESSIONS_URL` | No | Auto-inject recent sessions from @hasna/sessions |
 
 ## Requirements
 
