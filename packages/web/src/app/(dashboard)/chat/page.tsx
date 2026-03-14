@@ -101,8 +101,29 @@ export default function NewChatPage() {
         {/* Error */}
         {error && (
           <div className="mx-auto w-full max-w-3xl px-4 shrink-0">
-            <div className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
-              {error}
+            <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+              <span className="shrink-0">⚠️</span>
+              <div>
+                <span className="font-medium">Error: </span>
+                {/* Parse and simplify JSON error messages */}
+                {(() => {
+                  try {
+                    // Strip HTTP status code prefix like "401 {..." or "500 {..."
+                    const jsonStr = error.replace(/^\d{3}\s+/, '')
+                    const parsed = JSON.parse(jsonStr) as { error?: { message?: string; type?: string }; message?: string }
+                    const msg = parsed?.error?.message || parsed?.message
+                    if (msg) return msg
+                    // Show friendly status-based messages
+                    if (error.startsWith('401')) return 'Authentication failed — check your API key in settings'
+                    if (error.startsWith('429')) return 'Rate limit reached — please wait a moment and try again'
+                    if (error.startsWith('500')) return 'Server error — please try again'
+                    return error
+                  } catch {
+                    if (error.startsWith('401')) return 'Authentication failed — check your API key in settings'
+                    return error
+                  }
+                })()}
+              </div>
             </div>
           </div>
         )}

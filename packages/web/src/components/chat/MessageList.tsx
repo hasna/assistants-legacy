@@ -86,8 +86,7 @@ export function MessageList({ messages, isStreaming, onExport }: MessageListProp
               </div>
             ) : (
               <div className="w-full">
-                <div className="flex items-start justify-between gap-2">
-                {/* Tool calls */}
+                {/* Tool calls — stacked vertically above content */}
                 {message.toolCalls &&
                   Array.isArray(message.toolCalls) &&
                   message.toolCalls.map((tc: unknown, i: number) => {
@@ -108,25 +107,24 @@ export function MessageList({ messages, isStreaming, onExport }: MessageListProp
                     );
                   })}
 
-                  {/* Message content */}
-                  <div className="flex-1">
-                  {message.content && (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                {/* Message content + copy */}
+                {message.content && (
+                  <div className="flex items-start justify-between gap-2 mt-1">
+                    <div className="flex-1 prose prose-sm max-w-none dark:prose-invert">
                       <MarkdownRenderer content={message.content} />
                     </div>
-                  )}
-
-                  {/* Streaming indicator */}
-                  {isStreaming && index === messages.length - 1 && !message.content && (
-                    <div className="flex items-center gap-1">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
-                    </div>
-                  )}
+                    <CopyButton text={message.content} />
                   </div>
-                  {message.content && <CopyButton text={message.content} />}
-                </div>
+                )}
+
+                {/* Streaming indicator */}
+                {isStreaming && index === messages.length - 1 && !message.content && !message.toolCalls?.length && (
+                  <div className="flex items-center gap-1 mt-2">
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+                  </div>
+                )}
               </div>
             )}
           </div>
