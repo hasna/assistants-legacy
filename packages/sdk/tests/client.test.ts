@@ -51,6 +51,18 @@ beforeAll(() => {
         return new Response(JSON.stringify({ ...sess, messages: [] }), { headers });
       }
 
+      if (url.pathname === '/api/memories' && req.method === 'GET') {
+        const q = url.searchParams.get('q');
+        const limit = parseInt(url.searchParams.get('limit') ?? '20', 10);
+        const all = [
+          { key: 'project-stack', value: 'Bun + Ink + Claude', scope: 'shared' },
+          { key: 'last-session', value: 'fixed auth bug', scope: 'private' },
+        ];
+        const filtered = q ? all.filter(m => m.key.includes(q) || String(m.value).includes(q)) : all;
+        const slice = filtered.slice(0, limit);
+        return new Response(JSON.stringify({ memories: slice, total: slice.length }), { headers });
+      }
+
       if (url.pathname === '/api/notifications' && req.method === 'POST') {
         const body = await req.json() as { message?: string; type?: string };
         if (!body.message) return new Response(JSON.stringify({ error: 'message required' }), { status: 400, headers });
@@ -171,6 +183,25 @@ describe('sessions', () => {
 
   test('getSession throws on missing session', async () => {
     await expect(client().getSession('no-such-session')).rejects.toThrow('not found');
+  });
+});
+
+describe('getMemories', () => {
+  test('returns all memories without query', async () => {
+    const memories = await client().getMemories();
+    expect(memories).toHaveLength(2);
+    expect(memories[0].key).toBe('project-stack');
+  });
+
+  test('filters memories by query', async () => {
+    const memories = await client().getMemories('project');
+    expect(memories).toHaveLength(1);
+    expect(memories[0].key).toBe('project-stack');
+  });
+
+  test('respects limit', async () => {
+    const memories = await client().getMemories(undefined, 1);
+    expect(memories).toHaveLength(1);
   });
 });
 

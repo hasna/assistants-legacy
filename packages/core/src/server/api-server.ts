@@ -7,10 +7,19 @@
 
 import { SessionStorage } from '../logger';
 
+export interface MemoryEntry {
+  key: string;
+  value: unknown;
+  scope?: string;
+  category?: string;
+  importance?: number;
+}
+
 export interface LocalAPIServerOptions {
   port?: number;
   onChat?: (message: string) => Promise<AsyncIterable<string>>;
   onStatus?: () => Promise<ServerStatus>;
+  onMemories?: (query?: string, limit?: number) => Promise<MemoryEntry[]>;
 }
 
 export interface ServerStatus {
@@ -26,12 +35,14 @@ export class LocalAPIServer {
   private startTime: number = Date.now();
   private onChat?: LocalAPIServerOptions['onChat'];
   private onStatus?: LocalAPIServerOptions['onStatus'];
+  private onMemories?: LocalAPIServerOptions['onMemories'];
   private notifications: Array<{ id: string; message: string; timestamp: number; type: string }> = [];
 
   constructor(options: LocalAPIServerOptions = {}) {
     this.port = options.port || 3456;
     this.onChat = options.onChat;
     this.onStatus = options.onStatus;
+    this.onMemories = options.onMemories;
   }
 
   /**
@@ -207,6 +218,18 @@ export class LocalAPIServer {
           Connection: 'keep-alive',
         },
       });
+    }
+
+    // GET /api/memories?q=<query>&limit=<n>
+    if (path === '/api/memories' && req.method === 'GET') {
+      if (!this.onMemories) {
+        return new Response(JSON.stringify({ memories: [] }), { headers: jsonHeaders });
+      }
+      const url = new URL(req.url);
+      const query = url.searchParams.get('q') ?? undefined;
+      const limit = parseInt(url.searchParams.get('limit') ?? '20', 10);
+      const memories = await this.onMemories(query, Math.min(limit, 100));
+      return new Response(JSON.stringify({ memories, total: memories.length }), { headers: jsonHeaders });
     }
 
     // GET /api/sessions

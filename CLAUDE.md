@@ -189,8 +189,8 @@ to stay in sync with the @hasna ecosystem.
 # 1. Claim a task (if working from the task queue)
 todos claim <your-agent-name> --project open-assistants
 
-# 2. Load project context from persistent memory
-mementos recall --project open-assistants
+# 2. Load project context — compact format saves ~60% tokens
+mementos memory-inject --project open-assistants --format compact
 
 # 3. Announce presence in the coordination space
 conversations heartbeat --status "working on open-assistants"

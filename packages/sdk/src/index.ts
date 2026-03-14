@@ -34,6 +34,14 @@ export interface Notification {
   type: string;
 }
 
+export interface MemoryEntry {
+  key: string;
+  value: unknown;
+  scope?: string;
+  category?: string;
+  importance?: number;
+}
+
 export interface SessionInfo {
   id: string;
   startedAt?: string;
@@ -96,6 +104,20 @@ export class AssistantsClient {
     if (!res.ok) throw new Error(`Notifications failed: ${res.status}`);
     const data = await res.json() as { notifications: Notification[] };
     return data.notifications;
+  }
+
+  /**
+   * Get memories from the running assistant's memory store.
+   * @param query - Optional keyword to filter memories
+   * @param limit - Max results (default 20)
+   */
+  async getMemories(query?: string, limit = 20): Promise<MemoryEntry[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (query) params.set('q', query);
+    const res = await this.fetch(`/api/memories?${params}`);
+    if (!res.ok) throw new Error(`Get memories failed: ${res.status}`);
+    const data = await res.json() as { memories: MemoryEntry[] };
+    return data.memories;
   }
 
   /**
