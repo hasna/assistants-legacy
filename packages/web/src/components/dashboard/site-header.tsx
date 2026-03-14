@@ -103,7 +103,20 @@ export function SiteHeader() {
           )}
           <h1 className="font-medium">{title}</h1>
         </div>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
+          {/* Cmd+K hint — clicking also opens the palette */}
+          <button
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
+              window.dispatchEvent(event)
+            }}
+            className="hidden md:flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
+            title="Search pages (⌘K)"
+          >
+            <span>🔍</span>
+            <span>Search…</span>
+            <kbd className="rounded border border-border bg-background px-1 py-0.5 font-mono text-[10px]">⌘K</kbd>
+          </button>
           <DarkModeToggle />
         </div>
       </div>

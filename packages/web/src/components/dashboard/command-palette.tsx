@@ -60,19 +60,8 @@ export function CommandPalette() {
     router.push(href)
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={handleOpen}
-        className="hidden sm:flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
-        title="Search (⌘K)"
-      >
-        <span>🔍</span>
-        <span>Search…</span>
-        <kbd className="ml-1 rounded border border-border bg-background px-1 text-xs">⌘K</kbd>
-      </button>
-    )
-  }
+  // No visible trigger button — use ⌘K keyboard shortcut to open
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" onClick={handleClose}>

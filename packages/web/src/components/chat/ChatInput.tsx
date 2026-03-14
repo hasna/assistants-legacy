@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
-import { ArrowUp, Paperclip, Globe, Square } from 'lucide-react';
+import { ArrowUp, Paperclip, Square } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -100,16 +100,6 @@ export function ChatInput({
               {model}
             </button>
 
-            {/* Search past sessions */}
-            <button
-              type="button"
-              onClick={onSearchClick}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              title="Search past sessions"
-            >
-              <Globe className="h-3 w-3" />
-              <span>Search</span>
-            </button>
           </div>
 
           {/* Send / Stop button */}

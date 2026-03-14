@@ -24,8 +24,9 @@ export default function DashboardLayout({
       }
     >
       <AppSidebar />
-      <CommandPalette />
       <SidebarInset>
+        {/* Command palette — keyboard shortcut ⌘K, no visible button needed */}
+        <CommandPalette />
         {!isChat && <SiteHeader />}
         <div className={isChat ? "flex flex-1 flex-col overflow-hidden" : "flex flex-1 flex-col overflow-auto"}>
           <div className={isChat ? "flex flex-1 flex-col" : "flex flex-1 flex-col gap-4 p-4 lg:p-6"}>
