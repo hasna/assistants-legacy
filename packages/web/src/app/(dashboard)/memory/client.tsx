@@ -55,7 +55,19 @@ const columns: ColumnDef<MemoryRow>[] = [
   },
   {
     accessorKey: "importance",
-    header: "Importance",
+    header: "Imp.",
+    cell: ({ row }) => {
+      const score = row.original.importance
+      if (score == null) return <span className="text-muted-foreground">—</span>
+      let cls = "bg-gray-100 text-gray-600"
+      if (score >= 8) cls = "bg-red-100 text-red-700 font-bold"
+      else if (score >= 5) cls = "bg-yellow-100 text-yellow-700"
+      return (
+        <span className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 text-xs font-medium ${cls}`}>
+          {score}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "tags",

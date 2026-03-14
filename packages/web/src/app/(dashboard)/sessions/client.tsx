@@ -53,7 +53,18 @@ const columns: ColumnDef<SessionRow>[] = [
   },
   {
     accessorKey: "cwd",
-    header: "Working Directory",
+    header: "Project",
+    cell: ({ row }) => {
+      const cwd = row.original.cwd
+      if (!cwd) return <span className="text-muted-foreground">—</span>
+      const parts = cwd.replace(/\\/g, "/").split("/")
+      const name = parts[parts.length - 1] || parts[parts.length - 2] || cwd
+      return (
+        <span className="text-sm font-medium" title={cwd}>
+          {name}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "label",

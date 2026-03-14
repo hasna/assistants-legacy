@@ -67,6 +67,13 @@ const columns: ColumnDef<TaskRow>[] = [
   {
     accessorKey: "priority",
     header: "Priority",
+    cell: ({ row }) => {
+      const p = (row.original.priority ?? "").toLowerCase()
+      if (p === "high" || p === "critical") return <Badge className="bg-red-100 text-red-800">{row.original.priority}</Badge>
+      if (p === "medium" || p === "normal") return <Badge className="bg-yellow-100 text-yellow-800">{row.original.priority}</Badge>
+      if (p === "low") return <Badge className="bg-gray-100 text-gray-600">{row.original.priority}</Badge>
+      return <Badge variant="outline">{row.original.priority || "—"}</Badge>
+    },
   },
   {
     accessorKey: "assignee",
@@ -75,7 +82,14 @@ const columns: ColumnDef<TaskRow>[] = [
   },
   {
     accessorKey: "project_path",
-    header: "Project Path",
+    header: "Project",
+    cell: ({ row }) => {
+      const path = row.original.project_path
+      if (!path) return <span className="text-muted-foreground">—</span>
+      const parts = path.replace(/\\/g, "/").split("/")
+      const name = parts[parts.length - 1] || parts[parts.length - 2] || path
+      return <span className="text-sm font-medium" title={path}>{name}</span>
+    },
   },
   {
     accessorKey: "created_at",
