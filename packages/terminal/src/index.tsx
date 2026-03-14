@@ -113,6 +113,108 @@ function enableSynchronizedOutput(): () => void {
 // Re-export parseArgs and main for testing
 export { parseArgs, main };
 
+// ─── Subcommand dispatch (before arg parsing) ────────────────────────────────
+
+const subcommand = process.argv[2];
+
+if (subcommand === 'mcp') {
+  const sub = process.argv[3];
+  const mcpCmd = 'claude mcp add --transport stdio --scope user assistants -- assistants-mcp';
+  const codexBlock = `[mcp_servers.assistants]\ncommand = "assistants-mcp"\nargs = []`;
+  const geminiBlock = `"assistants": { "command": "assistants-mcp", "args": [] }`;
+
+  if (sub === '--claude') {
+    const { execSync } = await import('child_process');
+    try {
+      execSync(mcpCmd, { stdio: 'inherit' });
+      console.log('\n✓ Installed into Claude Code. Restart Claude Code to load the server.');
+    } catch {
+      console.error('Failed to run claude mcp add. Is Claude Code installed?');
+      console.error(`Run manually: ${mcpCmd}`);
+      process.exit(1);
+    }
+  } else if (sub === '--codex') {
+    console.log('Add to ~/.codex/config.toml:\n');
+    console.log(codexBlock);
+  } else if (sub === '--gemini') {
+    console.log('Add to ~/.gemini/settings.json under mcpServers:\n');
+    console.log(geminiBlock);
+  } else if (sub === '--print') {
+    console.log(mcpCmd);
+  } else {
+    console.log(`assistants mcp — install the @hasna/assistants-mcp server
+
+Usage:
+  assistants mcp --claude    Install into Claude Code (recommended)
+  assistants mcp --codex     Print Codex config block
+  assistants mcp --gemini    Print Gemini config block
+  assistants mcp --print     Print the raw install command
+
+The MCP server provides: chat, run_prompt, list_sessions, get_session,
+list_skills, execute_skill, describe_tools, search_tools.
+
+Requires: assistants-mcp installed globally (bun add -g @hasna/assistants-mcp)`);
+  }
+  process.exit(0);
+}
+
+if (subcommand === 'config') {
+  const { loadConfig, getConfigDir, getActiveProfile } = await import('@hasna/assistants-core');
+  const cwd = process.argv[3] || process.cwd();
+  const profile = getActiveProfile();
+  const config = await loadConfig(cwd);
+  console.log(`Config directory: ${getConfigDir()}${profile ? ` (profile: ${profile})` : ''}`);
+  console.log(`CWD: ${cwd}\n`);
+  console.log(JSON.stringify({
+    llm: config.llm,
+    voice: { enabled: config.voice?.enabled },
+    scheduler: config.scheduler,
+    heartbeat: { enabled: config.heartbeat?.enabled, intervalMs: config.heartbeat?.intervalMs },
+    context: { maxContextTokens: config.context?.maxContextTokens },
+    validation: config.validation,
+  }, null, 2));
+  process.exit(0);
+}
+
+if (subcommand === 'sessions') {
+  const { SessionStorage } = await import('@hasna/assistants-core');
+  const sub = process.argv[3];
+  const limit = parseInt(process.argv[4] || '20', 10);
+
+  if (!sub || sub === 'list') {
+    const sessions = SessionStorage.listAllSessions().slice(0, limit);
+    if (sessions.length === 0) {
+      console.log('No sessions found.');
+    } else {
+      console.log(`Sessions (${sessions.length}):\n`);
+      for (const s of sessions) {
+        const date = s.startedAt ? new Date(s.startedAt).toLocaleString() : 'unknown';
+        const msgs = s.messageCount ?? 0;
+        const label = s.label ? ` "${s.label}"` : '';
+        console.log(`  ${s.id}${label}  (${msgs} msgs, ${date})`);
+      }
+    }
+  } else {
+    // Treat as session ID
+    const data = SessionStorage.loadSession(sub);
+    if (!data) {
+      console.error(`Session "${sub}" not found.`);
+      process.exit(1);
+    }
+    console.log(`Session: ${sub}`);
+    console.log(`Started: ${data.startedAt || 'unknown'}`);
+    console.log(`CWD: ${data.cwd || 'unknown'}`);
+    const messages = (data.messages || []) as Array<{ role: string; content: unknown }>;
+    console.log(`Messages: ${messages.length}\n`);
+    for (const m of messages.slice(-10)) {
+      const role = m.role === 'user' ? 'User' : 'Assistant';
+      const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      console.log(`[${role}] ${text.slice(0, 200)}${text.length > 200 ? '…' : ''}\n`);
+    }
+  }
+  process.exit(0);
+}
+
 const options = parseArgs(process.argv);
 
 // Handle parsing errors
@@ -137,6 +239,9 @@ assistants - Your personal AI assistant
 Usage:
   assistants [options]                    Start interactive mode
   assistants -p "<prompt>" [options]      Run in headless mode
+  assistants mcp [--claude|--codex|--print]  Install MCP server
+  assistants config [cwd]                 Show current configuration
+  assistants sessions [list|<id>]         List or inspect sessions
 
 Options:
   -h, --help                   Show this help message
