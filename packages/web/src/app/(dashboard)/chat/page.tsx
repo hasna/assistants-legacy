@@ -24,6 +24,18 @@ export default function NewChatPage() {
   const { messages, isStreaming, error, sendMessage, stopStreaming } = useChat();
   const { grouped } = useSessions();
 
+  const handleExport = (format: 'markdown' | 'json') => {
+    if (format === 'markdown') {
+      const md = messages.map(m => `**${m.role === 'user' ? 'You' : 'Assistant'}:**\n\n${m.content}`).join('\n\n---\n\n')
+      const blob = new Blob([md], { type: 'text/markdown' })
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `chat-${Date.now()}.md`; a.click()
+    } else {
+      const json = JSON.stringify(messages, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `chat-${Date.now()}.json`; a.click()
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Session history sidebar */}
@@ -78,7 +90,7 @@ export default function NewChatPage() {
             </div>
           </div>
         ) : (
-          <MessageList messages={messages} isStreaming={isStreaming} />
+          <MessageList messages={messages} isStreaming={isStreaming} onExport={messages.length > 0 ? handleExport : undefined} />
         )}
 
         {/* Error */}

@@ -126,6 +126,9 @@ export function ChatInput({
 
       <p className="mt-2 text-center text-xs text-muted-foreground">
         Assistants can make mistakes. Verify important information.
+        <span className="ml-2 opacity-50">
+          <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-mono">⌘↵</kbd> to send
+        </span>
       </p>
     </div>
   );
