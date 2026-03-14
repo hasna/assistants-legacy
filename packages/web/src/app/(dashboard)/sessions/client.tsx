@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
@@ -102,8 +103,46 @@ const columns: ColumnDef<SessionRow>[] = [
   },
 ]
 
+function SessionDetail({ session, onClose }: { session: SessionRow; onClose: () => void }) {
+  const cwd = session.cwd
+  const parts = cwd.replace(/\\/g, "/").split("/")
+  const projectName = parts[parts.length - 1] || cwd
+
+  return (
+    <tr>
+      <td colSpan={8} className="bg-muted/30 px-4 py-4 border-b">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{session.label || projectName}</span>
+              {session.status && (
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${session.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                  {session.status}
+                </span>
+              )}
+            </div>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+            <div><span className="text-muted-foreground">ID:</span> <code className="ml-1 font-mono">{session.id}</code></div>
+            <div><span className="text-muted-foreground">Working Dir:</span> <span className="ml-1 font-mono text-xs break-all">{cwd}</span></div>
+            <div><span className="text-muted-foreground">Started:</span> <span className="ml-1">{new Date(session.started_at < 1e12 ? session.started_at * 1000 : session.started_at).toLocaleString()}</span></div>
+            <div><span className="text-muted-foreground">Updated:</span> <span className="ml-1">{new Date(session.updated_at < 1e12 ? session.updated_at * 1000 : session.updated_at).toLocaleString()}</span></div>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <Link href={`/chat?resume=${session.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90">
+              ↩ Resume in Chat
+            </Link>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export function SessionsClient({ data }: { data: SessionRow[] }) {
   useAutoRefresh()
+  const [expanded, setExpanded] = useState<string | null>(null)
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>
@@ -112,6 +151,9 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
         data={data}
         filterColumn="cwd"
         filterPlaceholder="Filter by directory..."
+        onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
+        expandedRow={expanded}
+        renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
       />
     </div>
   )

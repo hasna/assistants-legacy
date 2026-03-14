@@ -192,24 +192,87 @@ function NewTaskForm({ onClose }: { onClose: () => void }) {
   )
 }
 
+const KANBAN_COLS = [
+  { status: 'pending', label: 'Pending', cls: 'border-yellow-200 bg-yellow-50/30' },
+  { status: 'in_progress', label: 'In Progress', cls: 'border-blue-200 bg-blue-50/30' },
+  { status: 'completed', label: 'Completed', cls: 'border-green-200 bg-green-50/30' },
+  { status: 'failed', label: 'Failed', cls: 'border-red-200 bg-red-50/30' },
+]
+
+function KanbanBoard({ data }: { data: TaskRow[] }) {
+  const router = useRouter()
+  const byStatus = (status: string) => data.filter(t => t.status === status)
+
+  const advance = async (id: string, next: string) => {
+    const res = await fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    })
+    if (res.ok) { toast.success(`→ ${next}`); router.refresh() }
+  }
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {KANBAN_COLS.map(col => {
+        const tasks = byStatus(col.status)
+        return (
+          <div key={col.status} className={`rounded-xl border-2 ${col.cls} p-3 flex flex-col gap-2`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{col.label}</span>
+              <span className="rounded-full bg-background border px-1.5 py-0.5 text-xs font-medium">{tasks.length}</span>
+            </div>
+            {tasks.length === 0 && (
+              <div className="text-xs text-muted-foreground text-center py-4 rounded-lg border border-dashed">Empty</div>
+            )}
+            {tasks.slice(0, 15).map(t => (
+              <div key={t.id} className="rounded-lg border bg-background p-3 text-xs shadow-sm">
+                <p className="font-medium line-clamp-2 mb-2">{t.description}</p>
+                <div className="flex items-center justify-between gap-1">
+                  {t.priority !== 'normal' && (
+                    <span className={`px-1 py-0.5 rounded text-xs ${t.priority === 'high' || t.priority === 'critical' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{t.priority}</span>
+                  )}
+                  <div className="ml-auto flex gap-1">
+                    {col.status === 'pending' && <button onClick={() => advance(t.id, 'in_progress')} className="text-xs border rounded px-1.5 py-0.5 hover:bg-blue-50 hover:text-blue-700">▶</button>}
+                    {col.status === 'in_progress' && <button onClick={() => advance(t.id, 'completed')} className="text-xs border rounded px-1.5 py-0.5 hover:bg-green-50 hover:text-green-700">✓</button>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function TasksClient({ data }: { data: TaskRow[] }) {
   useAutoRefresh()
   const [showNew, setShowNew] = useState(false)
+  const [view, setView] = useState<'table' | 'board'>('table')
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-        <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90">
-          + New Task
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border overflow-hidden text-xs">
+            <button onClick={() => setView('table')} className={`px-2.5 py-1.5 ${view === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}>≡ Table</button>
+            <button onClick={() => setView('board')} className={`px-2.5 py-1.5 ${view === 'board' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}>⊞ Board</button>
+          </div>
+          <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90">
+            + New Task
+          </button>
+        </div>
       </div>
       {showNew && <NewTaskForm onClose={() => setShowNew(false)} />}
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="description"
-        filterPlaceholder="Filter by description..."
-      />
+      {view === 'board' ? <KanbanBoard data={data} /> : (
+        <DataTable
+          columns={columns}
+          data={data}
+          filterColumn="description"
+          filterPlaceholder="Filter by description..."
+        />
+      )}
     </div>
   )
 }

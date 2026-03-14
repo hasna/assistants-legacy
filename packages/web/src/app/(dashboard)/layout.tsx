@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { SiteHeader } from "@/components/dashboard/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { CommandPalette } from "@/components/dashboard/command-palette"
 
 export default function DashboardLayout({
   children,
@@ -23,6 +24,7 @@ export default function DashboardLayout({
       }
     >
       <AppSidebar />
+      <CommandPalette />
       <SidebarInset>
         {!isChat && <SiteHeader />}
         <div className={isChat ? "flex flex-1 flex-col overflow-hidden" : "flex flex-1 flex-col overflow-auto"}>

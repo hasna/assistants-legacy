@@ -165,6 +165,8 @@ export function MemoryClient({ data }: { data: MemoryRow[] }) {
   useAutoRefresh()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<string>("")
+  const [scopeFilter, setScopeFilter] = useState<string>("")
   const router = useRouter()
 
   const handleDelete = async (id: string) => {
@@ -173,6 +175,12 @@ export function MemoryClient({ data }: { data: MemoryRow[] }) {
     if (res.ok) { toast.success("Memory deleted"); setExpanded(null); router.refresh() }
     else toast.error("Failed to delete")
   }
+
+  const filtered = data.filter(m => {
+    if (categoryFilter && m.category !== categoryFilter) return false
+    if (scopeFilter && m.scope !== scopeFilter) return false
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -186,11 +194,42 @@ export function MemoryClient({ data }: { data: MemoryRow[] }) {
         </button>
       </div>
 
+      {/* Filters row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <select
+          className="rounded-lg border px-2.5 py-1.5 text-sm bg-background"
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+        >
+          <option value="">All categories</option>
+          <option value="preference">preference</option>
+          <option value="fact">fact</option>
+          <option value="knowledge">knowledge</option>
+          <option value="history">history</option>
+        </select>
+        <select
+          className="rounded-lg border px-2.5 py-1.5 text-sm bg-background"
+          value={scopeFilter}
+          onChange={e => setScopeFilter(e.target.value)}
+        >
+          <option value="">All scopes</option>
+          <option value="global">global</option>
+          <option value="shared">shared</option>
+          <option value="private">private</option>
+        </select>
+        {(categoryFilter || scopeFilter) && (
+          <button onClick={() => { setCategoryFilter(""); setScopeFilter("") }} className="text-xs text-muted-foreground hover:text-foreground border rounded-lg px-2 py-1.5">
+            × Clear filters
+          </button>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} of {data.length}</span>
+      </div>
+
       {showNew && <NewMemoryForm onClose={() => setShowNew(false)} />}
 
       <DataTable
         columns={columns}
-        data={data}
+        data={filtered}
         filterColumn="key"
         filterPlaceholder="Filter by key..."
         onRowClick={(row) => setExpanded(expanded === row.id ? null : row.id)}
