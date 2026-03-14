@@ -176,6 +176,29 @@ export function DataTable<TData, TValue>({
     pageIndex: 0,
     pageSize: 20,
   })
+  const [focusedIndex, setFocusedIndex] = React.useState<number>(-1)
+
+  // J/K keyboard navigation
+  React.useEffect(() => {
+    if (!onRowClick) return
+    const handler = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setFocusedIndex(i => Math.min(i + 1, data.length - 1))
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setFocusedIndex(i => Math.max(i - 1, 0))
+      } else if (e.key === 'Enter' && focusedIndex >= 0) {
+        e.preventDefault()
+        const row = data[focusedIndex]
+        if (row) onRowClick(row)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onRowClick, data, focusedIndex])
 
   // Prepend select column
   const allColumns = React.useMemo(
@@ -310,15 +333,16 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => {
+              table.getRowModel().rows.map((row, rowIndex) => {
                 const rowData = row.original as { id?: string }
                 const isExpanded = expandedRow && rowData.id === expandedRow
+                const isFocused = onRowClick && focusedIndex === rowIndex
                 return (
                   <React.Fragment key={row.id}>
                     <TableRow
                       data-state={row.getIsSelected() && "selected"}
-                      className={`data-[state=selected]:bg-muted/50 ${onRowClick ? "cursor-pointer hover:bg-muted/30" : ""} ${isExpanded ? "bg-muted/20" : ""}`}
-                      onClick={() => onRowClick?.(row.original)}
+                      className={`data-[state=selected]:bg-muted/50 ${onRowClick ? "cursor-pointer hover:bg-muted/30" : ""} ${isExpanded ? "bg-muted/20" : ""} ${isFocused ? "ring-2 ring-primary/40 ring-inset" : ""}`}
+                      onClick={() => { onRowClick?.(row.original); setFocusedIndex(rowIndex) }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>

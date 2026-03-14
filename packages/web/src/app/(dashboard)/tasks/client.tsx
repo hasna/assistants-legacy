@@ -246,10 +246,49 @@ function KanbanBoard({ data }: { data: TaskRow[] }) {
   )
 }
 
+function TaskDetailRow({ task, onClose }: { task: TaskRow; onClose: () => void }) {
+  const router = useRouter()
+  const advance = async (next: string) => {
+    const res = await fetch(`/api/tasks/${task.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: next }) })
+    if (res.ok) { toast.success(`→ ${next}`); router.refresh() }
+    else toast.error("Failed")
+  }
+  const s = task.status.toLowerCase()
+  return (
+    <tr>
+      <td colSpan={9} className="bg-muted/30 px-4 py-4 border-b">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm">{task.description.slice(0, 80)}{task.description.length > 80 ? '…' : ''}</span>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+            <div><span className="text-muted-foreground">ID:</span> <code className="ml-1 font-mono">{task.id}</code></div>
+            <div><span className="text-muted-foreground">Status:</span> <strong className="ml-1">{task.status}</strong></div>
+            <div><span className="text-muted-foreground">Priority:</span> <strong className="ml-1">{task.priority || '—'}</strong></div>
+            <div><span className="text-muted-foreground">Assignee:</span> <span className="ml-1">{task.assignee || '—'}</span></div>
+            {task.project_path && <div className="col-span-2"><span className="text-muted-foreground">Project:</span> <code className="ml-1 text-xs font-mono">{task.project_path}</code></div>}
+            {task.result && <div className="col-span-2"><span className="text-muted-foreground">Result:</span> <span className="ml-1">{task.result.slice(0, 200)}</span></div>}
+          </div>
+          {task.description.length > 80 && (
+            <p className="text-xs text-muted-foreground bg-background rounded border p-2">{task.description}</p>
+          )}
+          <div className="flex gap-2">
+            {s === 'pending' && <button onClick={() => advance('in_progress')} className="text-xs rounded border px-3 py-1 hover:bg-blue-50 hover:text-blue-700">▶ Start</button>}
+            {s === 'in_progress' && <button onClick={() => advance('completed')} className="text-xs rounded border px-3 py-1 hover:bg-green-50 hover:text-green-700">✓ Complete</button>}
+            {(s === 'pending' || s === 'in_progress') && <button onClick={() => advance('cancelled')} className="text-xs rounded border px-3 py-1 hover:bg-red-50 hover:text-red-600">✕ Cancel</button>}
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export function TasksClient({ data }: { data: TaskRow[] }) {
   useAutoRefresh()
   const [showNew, setShowNew] = useState(false)
   const [view, setView] = useState<'table' | 'board'>('table')
+  const [expanded, setExpanded] = useState<string | null>(null)
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -271,6 +310,9 @@ export function TasksClient({ data }: { data: TaskRow[] }) {
           data={data}
           filterColumn="description"
           filterPlaceholder="Filter by description..."
+          onRowClick={(row) => setExpanded(expanded === (row as TaskRow).id ? null : (row as TaskRow).id)}
+          expandedRow={expanded}
+          renderExpanded={(row) => <TaskDetailRow task={row as TaskRow} onClose={() => setExpanded(null)} />}
         />
       )}
     </div>
