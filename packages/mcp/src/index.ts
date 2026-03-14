@@ -54,6 +54,31 @@ const TOOL_DOCS: Record<string, { description: string; params: string }> = {
   },
 };
 
+// ─── MCP Profile (token optimization) ────────────────────────────────────────
+// Set ASSISTANTS_MCP_PROFILE=minimal|standard|full to control tool surface.
+//
+// minimal  (3 tools): describe_tools, search_tools, run_prompt
+// standard (5 tools): + chat, list_sessions
+// full     (8 tools, default): all tools
+//
+// Use minimal when you just need to run prompts. Use describe_tools to load
+// full documentation on demand without paying for all tool schemas.
+
+const MCP_PROFILE = (process.env.ASSISTANTS_MCP_PROFILE || 'full').toLowerCase();
+
+const PROFILE_TOOLS: Record<string, Set<string>> = {
+  minimal:  new Set(['describe_tools', 'search_tools', 'run_prompt']),
+  standard: new Set(['describe_tools', 'search_tools', 'run_prompt', 'chat', 'list_sessions']),
+  full:     new Set(Object.keys(TOOL_DOCS)),
+};
+
+const activeTools = PROFILE_TOOLS[MCP_PROFILE] ?? PROFILE_TOOLS.full;
+
+function registerTool(name: string, description: string, schema: object, handler: (args: any) => Promise<any>) {
+  if (!activeTools.has(name)) return;
+  (server.tool as any)(name, description, schema, handler);
+}
+
 const server = new McpServer({
   name: 'assistants',
   version: MCP_VERSION,
@@ -97,7 +122,7 @@ server.tool(
 
 // ─── chat ─────────────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'chat',
   'Send a message to the assistant. Use describe_tools("chat") for full docs.',
   {
@@ -177,7 +202,7 @@ server.tool(
 
 // ─── run_prompt ───────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'run_prompt',
   'Run a one-shot prompt. Use describe_tools("run_prompt") for full docs.',
   {
@@ -234,7 +259,7 @@ server.tool(
 
 // ─── list_sessions ────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'list_sessions',
   'List resumable assistant sessions.',
   { limit: z.number().optional() },
@@ -261,7 +286,7 @@ server.tool(
 
 // ─── list_skills ──────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'list_skills',
   'List available assistant skills.',
   { cwd: z.string().optional() },
@@ -289,7 +314,7 @@ server.tool(
 
 // ─── execute_skill ────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'execute_skill',
   'Execute a named skill with arguments.',
   {
@@ -351,7 +376,7 @@ server.tool(
 
 // ─── get_session ──────────────────────────────────────────────────────────────
 
-server.tool(
+registerTool(
   'get_session',
   'Get messages and details of a session by ID.',
   { session_id: z.string() },

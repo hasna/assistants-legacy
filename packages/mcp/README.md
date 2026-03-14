@@ -2,6 +2,24 @@
 
 MCP (Model Context Protocol) server for running AI assistants. Connect your assistants to Claude Desktop, Cursor, or any MCP-compatible client.
 
+## MCP Profiles (token optimization)
+
+Set `ASSISTANTS_MCP_PROFILE` to control how many tools are exposed:
+
+| Profile | Tools | Use when |
+|---------|-------|----------|
+| `minimal` | 3 | Just running prompts — saves ~63% token cost |
+| `standard` | 5 | Day-to-day use — chat + session management |
+| `full` (default) | 8 | All tools including skills |
+
+```bash
+# In your MCP client config or environment
+ASSISTANTS_MCP_PROFILE=standard assistants-mcp
+ASSISTANTS_MCP_PROFILE=minimal assistants-mcp   # only run_prompt + discovery tools
+```
+
+All profiles include `describe_tools` and `search_tools` for on-demand discovery.
+
 ## Install
 
 ```bash
