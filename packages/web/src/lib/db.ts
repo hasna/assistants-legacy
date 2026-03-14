@@ -39,9 +39,17 @@ export function getSubscribersDb(): Database.Database {
 
 let assistantsDb: Database.Database | null = null;
 
+function getAssistantsDir(): string {
+  // Respect ASSISTANTS_DIR > ASSISTANTS_PROFILE > default
+  if (process.env.ASSISTANTS_DIR) return process.env.ASSISTANTS_DIR;
+  const profile = process.env.ASSISTANTS_PROFILE;
+  if (profile) return join(homedir(), '.assistants', 'profiles', profile);
+  return join(homedir(), '.assistants');
+}
+
 export function getDb(): Database.Database {
   if (!assistantsDb) {
-    const assistantsDir = join(homedir(), '.assistants');
+    const assistantsDir = getAssistantsDir();
     mkdirSync(assistantsDir, { recursive: true });
     const dbPath = join(assistantsDir, 'assistants.db');
     assistantsDb = new Database(dbPath, { readonly: false });
