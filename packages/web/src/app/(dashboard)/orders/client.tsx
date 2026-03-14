@@ -102,7 +102,7 @@ const columns: ColumnDef<OrderRow>[] = [
 export function OrdersClient({ data }: { data: OrderRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Orders</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Orders</h1>
       <DataTable
         columns={columns}
         data={data}

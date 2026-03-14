@@ -127,7 +127,7 @@ export function AssistantsClient({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Assistants</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Assistants</h1>
 
       {hasConfig && (
         <div className="mb-8">

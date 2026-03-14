@@ -62,7 +62,7 @@ const columns: ColumnDef<GuardrailRow>[] = [
 export function GuardrailsClient({ data }: { data: GuardrailRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Guardrails</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Guardrails</h1>
       <DataTable
         columns={columns}
         data={data}

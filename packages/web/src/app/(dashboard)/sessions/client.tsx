@@ -79,7 +79,7 @@ const columns: ColumnDef<SessionRow>[] = [
 export function SessionsClient({ data }: { data: SessionRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Sessions</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>
       <DataTable
         columns={columns}
         data={data}

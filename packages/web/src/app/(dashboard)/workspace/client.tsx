@@ -88,7 +88,7 @@ const columns: ColumnDef<WorkspaceRow>[] = [
 export function WorkspaceClient({ data }: { data: WorkspaceRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Workspaces</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Workspaces</h1>
       <DataTable
         columns={columns}
         data={data}

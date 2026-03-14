@@ -91,7 +91,7 @@ const columns: ColumnDef<TaskRow>[] = [
 export function TasksClient({ data }: { data: TaskRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Tasks</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Tasks</h1>
       <DataTable
         columns={columns}
         data={data}

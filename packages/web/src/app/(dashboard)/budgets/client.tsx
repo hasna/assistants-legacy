@@ -65,7 +65,7 @@ const columns: ColumnDef<BudgetRow>[] = [
 export function BudgetsClient({ data }: { data: BudgetRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Budgets</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Budgets</h1>
       <DataTable
         columns={columns}
         data={data}

@@ -45,7 +45,7 @@ const columns: ColumnDef<SecretRow>[] = [
 export function SecretsClient({ data }: { data: SecretRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Secrets</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Secrets</h1>
       <DataTable
         columns={columns}
         data={data}

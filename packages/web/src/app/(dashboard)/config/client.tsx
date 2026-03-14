@@ -59,7 +59,7 @@ const columns: ColumnDef<ConfigRow>[] = [
 export function ConfigClient({ data }: { data: ConfigRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Config</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Config</h1>
       <DataTable
         columns={columns}
         data={data}

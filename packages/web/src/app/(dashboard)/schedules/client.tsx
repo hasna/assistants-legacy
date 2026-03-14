@@ -93,7 +93,7 @@ const columns: ColumnDef<ScheduleRow>[] = [
 export function SchedulesClient({ data }: { data: ScheduleRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Schedules</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Schedules</h1>
       <DataTable
         columns={columns}
         data={data}

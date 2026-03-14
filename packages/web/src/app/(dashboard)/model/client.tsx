@@ -53,14 +53,30 @@ const columns: ColumnDef<ModelConfigRow>[] = [
 
 export function ModelClient({ data }: { data: ModelConfigRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Model Configuration</h1>
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="key"
-        filterPlaceholder="Filter by key..."
-      />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Model Configuration</h1>
+        <p className="text-muted-foreground text-sm">
+          LLM model settings stored across global and project scopes.
+        </p>
+      </div>
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No model configuration found. Set your model in{" "}
+            <code className="bg-muted rounded px-1 py-0.5 text-xs">
+              ~/.assistants/config.json
+            </code>
+          </p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          filterColumn="key"
+          filterPlaceholder="Filter by key..."
+        />
+      )}
     </div>
   )
 }

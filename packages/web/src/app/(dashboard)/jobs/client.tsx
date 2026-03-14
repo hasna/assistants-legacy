@@ -85,7 +85,7 @@ const columns: ColumnDef<JobRow>[] = [
 export function JobsClient({ data }: { data: JobRow[] }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Jobs</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">Jobs</h1>
       <DataTable
         columns={columns}
         data={data}
