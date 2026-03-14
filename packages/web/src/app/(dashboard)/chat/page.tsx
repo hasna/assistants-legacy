@@ -30,7 +30,7 @@ export default function NewChatPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const [resumedSessionId, setResumedSessionId] = useState<string | null>(null);
-  const { messages, isStreaming, error, sendMessage, stopStreaming, loadMessages } = useChat(resumedSessionId ?? undefined);
+  const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages, loadMessages } = useChat(resumedSessionId ?? undefined);
   const { grouped } = useSessions();
 
   // Load session if ?resume=<id> param is present
@@ -64,7 +64,7 @@ export default function NewChatPage() {
         isCollapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onSelectSession={(id) => router.push(`/chat?resume=${id}`)}
-        onNewChat={() => { router.push('/chat'); }}
+        onNewChat={() => { clearMessages(); setResumedSessionId(null); router.push('/chat'); }}
       />
 
       <div className="flex flex-1 flex-col min-w-0">
