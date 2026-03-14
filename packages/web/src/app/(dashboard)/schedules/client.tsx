@@ -83,6 +83,7 @@ export interface ScheduleRow {
   schedule: string
   status: string
   session_id: string | null
+  data: string | null
   next_run_at: string | null
   last_run_at: string | null
   run_count: number
@@ -159,11 +160,35 @@ const columns: ColumnDef<ScheduleRow>[] = [
   {
     accessorKey: "last_run_at",
     header: "Last Run",
-    cell: ({ row }) => formatDate(row.original.last_run_at),
+    cell: ({ row }) => {
+      const date = formatDate(row.original.last_run_at)
+      // Try to parse last result from data JSON
+      let resultIcon: string | null = null
+      try {
+        const d = JSON.parse(row.original.data ?? '{}') as Record<string, unknown>
+        const lastResult = d.lastResult ?? d.result ?? d.last_result
+        if (typeof lastResult === 'string') {
+          const r = lastResult.toLowerCase()
+          if (r === 'success' || r === 'completed' || r === 'ok') resultIcon = '✓'
+          else if (r === 'error' || r === 'failed' || r === 'failure') resultIcon = '✗'
+        }
+      } catch { /**/ }
+      return (
+        <div className="flex items-center gap-1.5">
+          {resultIcon && (
+            <span className={`text-xs font-bold ${resultIcon === '✓' ? 'text-green-600' : 'text-red-600'}`}>{resultIcon}</span>
+          )}
+          <span>{date}</span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "run_count",
-    header: "Run Count",
+    header: "Runs",
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums">{row.original.run_count ?? 0}</span>
+    ),
   },
   {
     accessorKey: "project_path",

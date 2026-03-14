@@ -55,16 +55,39 @@ const columns: ColumnDef<HeartbeatRow>[] = [
   {
     accessorKey: "energy",
     header: "Energy",
-    cell: ({ row }) =>
-      row.original.energy != null ? row.original.energy : "\u2014",
+    cell: ({ row }) => {
+      const e = row.original.energy
+      if (e == null) return <span className="text-muted-foreground">—</span>
+      const pct = Math.min(100, Math.max(0, e))
+      const cls = pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+      return (
+        <div className="flex items-center gap-2 min-w-[60px]">
+          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+            <div className={`h-full rounded-full ${cls}`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-xs tabular-nums w-8 text-right">{pct}%</span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "context_tokens",
-    header: "Context Tokens",
-    cell: ({ row }) =>
-      row.original.context_tokens != null
-        ? row.original.context_tokens.toLocaleString()
-        : "\u2014",
+    header: "Context",
+    cell: ({ row }) => {
+      const tokens = row.original.context_tokens
+      if (tokens == null) return <span className="text-muted-foreground">—</span>
+      const maxCtx = 200_000
+      const pct = Math.min(100, Math.round((tokens / maxCtx) * 100))
+      const cls = pct >= 80 ? 'bg-red-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-blue-500'
+      return (
+        <div className="flex items-center gap-2 min-w-[80px]">
+          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+            <div className={`h-full rounded-full ${cls}`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-xs tabular-nums">{(tokens / 1000).toFixed(1)}k</span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "action",

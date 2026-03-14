@@ -1,9 +1,29 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
 import type { ConnectorRow } from "./page"
+
+// Check if a connector binary is reachable by running `<name> --version`
+function useConnectorStatus(connectorName: string) {
+  const [status, setStatus] = useState<'checking' | 'ok' | 'unavailable'>('checking')
+  useEffect(() => {
+    fetch(`/api/connectors/status?name=${encodeURIComponent(connectorName)}`, { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json() as Promise<{ ok: boolean }>)
+      .then(d => setStatus(d.ok ? 'ok' : 'unavailable'))
+      .catch(() => setStatus('unavailable'))
+  }, [connectorName])
+  return status
+}
+
+function StatusDot({ name }: { name: string }) {
+  const status = useConnectorStatus(name)
+  if (status === 'checking') return <span className="inline-block w-2 h-2 rounded-full bg-gray-300 animate-pulse" title="Checking…" />
+  if (status === 'ok') return <span className="inline-block w-2 h-2 rounded-full bg-green-500" title="Reachable" />
+  return <span className="inline-block w-2 h-2 rounded-full bg-red-400" title="Not reachable" />
+}
 
 function formatDate(date: string | number | null): string {
   if (!date) return "\u2014"
@@ -32,6 +52,11 @@ function parseData(raw: string): { name?: string; version?: string; description?
 }
 
 const columns: ColumnDef<ConnectorRow>[] = [
+  {
+    id: "status",
+    header: "",
+    cell: ({ row }) => <StatusDot name={row.original.key} />,
+  },
   {
     accessorKey: "key",
     header: "Connector",
