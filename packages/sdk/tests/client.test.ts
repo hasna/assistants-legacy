@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeAll, afterAll, mock } from 'bun:test';
-import { AssistantsClient, createClient } from '../src/index';
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { AssistantsClient, createClient, fromEnv } from '../src/index';
 
 // ─── Mock server ─────────────────────────────────────────────────────────────
 
@@ -49,6 +49,12 @@ beforeAll(() => {
         const sess = mockSessions.find(s => s.id === sessionMatch[1]);
         if (!sess) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers });
         return new Response(JSON.stringify({ ...sess, messages: [] }), { headers });
+      }
+
+      if (url.pathname === '/api/notifications' && req.method === 'POST') {
+        const body = await req.json() as { message?: string; type?: string };
+        if (!body.message) return new Response(JSON.stringify({ error: 'message required' }), { status: 400, headers });
+        return new Response(JSON.stringify({ ok: true, id: 'n-test-1' }), { headers });
       }
 
       if (url.pathname === '/api/chat' && req.method === 'POST') {
@@ -168,6 +174,16 @@ describe('sessions', () => {
   });
 });
 
+describe('notify', () => {
+  test('pushes a notification without error', async () => {
+    await expect(client().notify('test message')).resolves.toBeUndefined();
+  });
+
+  test('accepts custom notification type', async () => {
+    await expect(client().notify('warning message', 'warning')).resolves.toBeUndefined();
+  });
+});
+
 describe('createClient factory', () => {
   test('creates AssistantsClient with default options', () => {
     const c = createClient({ port: TEST_PORT });
@@ -177,5 +193,31 @@ describe('createClient factory', () => {
   test('isAlive works from factory-created client', async () => {
     const c = createClient({ port: TEST_PORT });
     expect(await c.isAlive()).toBe(true);
+  });
+});
+
+describe('fromEnv', () => {
+  const origPort = process.env.ASSISTANTS_PORT;
+  const origHost = process.env.ASSISTANTS_HOST;
+
+  afterAll(() => {
+    if (origPort === undefined) delete process.env.ASSISTANTS_PORT;
+    else process.env.ASSISTANTS_PORT = origPort;
+    if (origHost === undefined) delete process.env.ASSISTANTS_HOST;
+    else process.env.ASSISTANTS_HOST = origHost;
+  });
+
+  test('reads ASSISTANTS_PORT from env', async () => {
+    process.env.ASSISTANTS_PORT = String(TEST_PORT);
+    delete process.env.ASSISTANTS_HOST;
+    const c = fromEnv();
+    expect(await c.isAlive()).toBe(true);
+  });
+
+  test('uses defaults when env vars are unset', () => {
+    delete process.env.ASSISTANTS_PORT;
+    delete process.env.ASSISTANTS_HOST;
+    const c = fromEnv();
+    expect(c).toBeInstanceOf(AssistantsClient);
   });
 });

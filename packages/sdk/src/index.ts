@@ -119,6 +119,19 @@ export class AssistantsClient {
   }
 
   /**
+   * Push a notification to the running assistant.
+   * The notification will appear in `getNotifications()` results.
+   */
+  async notify(message: string, type: string = 'info'): Promise<void> {
+    const res = await this.fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, type }),
+    });
+    if (!res.ok) throw new Error(`Notify failed: ${res.status}`);
+  }
+
+  /**
    * Send a message to the assistant and stream the response.
    *
    * @param message - The message to send
@@ -211,11 +224,24 @@ export class AssistantsClient {
   }
 }
 
-// ─── Convenience factory ────────────────────────────────────────────────────
+// ─── Convenience factories ──────────────────────────────────────────────────
 
 /**
  * Create an AssistantsClient connected to the default local port.
  */
 export function createClient(options?: AssistantsClientOptions): AssistantsClient {
   return new AssistantsClient(options);
+}
+
+/**
+ * Create an AssistantsClient from environment variables.
+ *
+ * Reads:
+ *   ASSISTANTS_PORT  — port (default: 3456)
+ *   ASSISTANTS_HOST  — host (default: 127.0.0.1)
+ */
+export function fromEnv(): AssistantsClient {
+  const port = process.env.ASSISTANTS_PORT ? parseInt(process.env.ASSISTANTS_PORT, 10) : undefined;
+  const host = process.env.ASSISTANTS_HOST ?? undefined;
+  return new AssistantsClient({ port, host });
 }

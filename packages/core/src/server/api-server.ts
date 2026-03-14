@@ -133,6 +133,27 @@ export class LocalAPIServer {
       );
     }
 
+    // POST /api/notifications
+    if (path === '/api/notifications' && req.method === 'POST') {
+      const body = await req.json() as { message?: string; type?: string };
+      if (!body.message || typeof body.message !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'message is required' }),
+          { status: 400, headers: jsonHeaders }
+        );
+      }
+      const notification = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        message: body.message,
+        timestamp: Date.now(),
+        type: body.type ?? 'info',
+      };
+      this.notifications.push(notification);
+      // Keep last 100 notifications
+      if (this.notifications.length > 100) this.notifications.splice(0, this.notifications.length - 100);
+      return new Response(JSON.stringify({ ok: true, id: notification.id }), { headers: jsonHeaders });
+    }
+
     // POST /api/chat
     if (path === '/api/chat' && req.method === 'POST') {
       if (!this.onChat) {
