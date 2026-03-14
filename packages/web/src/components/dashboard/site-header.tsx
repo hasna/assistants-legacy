@@ -65,9 +65,25 @@ function DarkModeToggle() {
   )
 }
 
+// Map section paths to parent groups for breadcrumbs
+const sectionGroups: Record<string, string> = {
+  "/tasks": "Management", "/schedules": "Management", "/jobs": "Management",
+  "/projects": "Management", "/plans": "Management", "/orders": "Management",
+  "/config": "Configuration", "/model": "Configuration", "/hooks": "Configuration",
+  "/skills": "Configuration", "/connectors": "Configuration", "/guardrails": "Configuration",
+  "/budgets": "Configuration",
+  "/memory": "Data & Memory", "/logs": "Data & Memory",
+  "/channels": "Communication", "/webhooks": "Communication", "/contacts": "Communication",
+  "/messages": "Communication",
+  "/assistants": "Identity & Assistants", "/identity": "Identity & Assistants",
+  "/wallet": "Credentials", "/secrets": "Credentials",
+  "/heartbeat": "Monitoring",
+}
+
 export function SiteHeader() {
   const pathname = usePathname()
   const title = pageTitles[pathname] || "Dashboard"
+  const parentGroup = sectionGroups[pathname]
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -77,7 +93,16 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">{title}</h1>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-sm">
+          {parentGroup && (
+            <>
+              <span className="text-muted-foreground">{parentGroup}</span>
+              <span className="text-muted-foreground">/</span>
+            </>
+          )}
+          <h1 className="font-medium">{title}</h1>
+        </div>
         <div className="ml-auto flex items-center gap-1">
           <DarkModeToggle />
         </div>

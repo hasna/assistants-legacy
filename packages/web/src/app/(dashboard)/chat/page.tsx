@@ -5,6 +5,7 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { MessageList } from '@/components/chat/MessageList';
 import { ModelSelector } from '@/components/chat/ModelSelector';
 import { SessionSidebar } from '@/components/chat/SessionSidebar';
+import { SessionSearch } from '@/components/chat/SessionSearch';
 import { useChat } from '@/hooks/use-chat';
 import { useSessions } from '@/hooks/use-sessions';
 import { DEFAULT_MODEL } from '@/lib/models';
@@ -21,6 +22,7 @@ const SUGGESTIONS = [
 export default function NewChatPage() {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
   const { messages, isStreaming, error, sendMessage, stopStreaming } = useChat();
   const { grouped } = useSessions();
 
@@ -38,6 +40,9 @@ export default function NewChatPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
+      {/* Session search overlay */}
+      {showSearch && <SessionSearch onClose={() => setShowSearch(false)} />}
+
       {/* Session history sidebar */}
       <SessionSidebar
         grouped={grouped}
@@ -109,6 +114,7 @@ export default function NewChatPage() {
           isStreaming={isStreaming}
           model={model}
           onModelChange={setModel}
+          onSearchClick={() => setShowSearch(true)}
         />
       </div>
     </div>

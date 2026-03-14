@@ -76,11 +76,22 @@ const columns: ColumnDef<SkillRow>[] = [
 export function SkillsClient({ data }: { data: SkillRow[] }) {
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Skills</h1>
-        <p className="text-muted-foreground text-sm">
-          Discovered skills from user and built-in directories.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Skills</h1>
+          <p className="text-muted-foreground text-sm">
+            Discovered skills from user and built-in directories.
+          </p>
+        </div>
+        <a
+          href="https://github.com/hasna/open-skills"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
+          title="Browse and install skills from the @hasna/skills registry"
+        >
+          ⚡ Install from Registry
+        </a>
       </div>
       {data.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">

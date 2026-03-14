@@ -10,6 +10,7 @@ interface ChatInputProps {
   disabled?: boolean;
   model?: string;
   onModelChange?: (model: string) => void;
+  onSearchClick?: () => void;
 }
 
 export function ChatInput({
@@ -19,6 +20,7 @@ export function ChatInput({
   disabled = false,
   model = 'Auto',
   onModelChange,
+  onSearchClick,
 }: ChatInputProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -98,10 +100,12 @@ export function ChatInput({
               {model}
             </button>
 
-            {/* Sources */}
+            {/* Search past sessions */}
             <button
               type="button"
+              onClick={onSearchClick}
               className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title="Search past sessions"
             >
               <Globe className="h-3 w-3" />
               <span>Search</span>

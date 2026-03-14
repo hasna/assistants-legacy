@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
+import { toast } from "@/lib/toast"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
@@ -167,6 +169,20 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
   useAutoRefresh()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [groupBy, setGroupBy] = useState(true)
+  const router = useRouter()
+
+  const bulkDelete = async (rows: SessionRow[]) => {
+    if (!confirm(`Delete ${rows.length} session${rows.length > 1 ? 's' : ''}?`)) return
+    const res = await fetch('/api/sessions', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: rows.map(r => r.id) }),
+    })
+    if (res.ok) { toast.success(`Deleted ${rows.length} session${rows.length > 1 ? 's' : ''}`); router.refresh() }
+    else toast.error('Failed to delete')
+  }
+
+  const bulkActions = [{ label: '🗑 Delete selected', onClick: bulkDelete, variant: 'destructive' as const }]
 
   // Group sessions by date
   const groups = groupBy ? (() => {
@@ -201,6 +217,7 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
                 data={sessions}
                 filterColumn="cwd"
                 filterPlaceholder="Filter by directory..."
+                bulkActions={bulkActions}
                 onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
                 expandedRow={expanded}
                 renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
@@ -214,6 +231,7 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
           data={data}
           filterColumn="cwd"
           filterPlaceholder="Filter by directory..."
+          bulkActions={bulkActions}
           onRowClick={(row) => setExpanded(expanded === (row as SessionRow).id ? null : (row as SessionRow).id)}
           expandedRow={expanded}
           renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}

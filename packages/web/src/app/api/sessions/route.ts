@@ -48,3 +48,16 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { ids } = await request.json() as { ids: string[] }
+    if (!ids?.length) return NextResponse.json({ error: 'ids required' }, { status: 400 })
+    const db = getDb()
+    const placeholders = ids.map(() => '?').join(',')
+    db.prepare(`DELETE FROM persisted_sessions WHERE id IN (${placeholders})`).run(...ids)
+    return NextResponse.json({ ok: true, deleted: ids.length })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
