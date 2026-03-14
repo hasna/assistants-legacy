@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun --format esm",
+    "prepublishOnly": "bun run build",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

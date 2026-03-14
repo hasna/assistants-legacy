@@ -349,7 +349,7 @@ export {
 export type { ModelDefinition } from './llm/models';
 
 // Config
-export { loadConfig, getConfigPath, getConfigDir, getProjectConfigDir, getProjectDataDir, getActiveProfile } from './config';
+export { loadConfig, getConfigPath, getConfigDir, getProjectConfigDir, getProjectDataDir, getActiveProfile, getTempFolder, loadSystemPrompt, loadHooksConfig, ensureConfigDir } from './config';
 export { getConfigValue, setConfigValue, isOnboardingCompleted, markOnboardingCompleted, isFirstGreetingShown, markFirstGreetingShown } from './config-store';
 
 // Inbox
@@ -390,7 +390,7 @@ export * from './telephony';
 
 // Server
 export { LocalAPIServer } from './server/api-server';
-export type { LocalAPIServerOptions, ServerStatus } from './server/api-server';
+export type { LocalAPIServerOptions, ServerStatus, MemoryEntry } from './server/api-server';
 
 // Client
 export { EmbeddedClient } from './client';
