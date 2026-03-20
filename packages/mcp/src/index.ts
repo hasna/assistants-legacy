@@ -5,6 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 
@@ -407,6 +408,65 @@ registerTool(
     return {
       content: [{ type: 'text' as const, text: header + lines.join('\n\n') }],
     };
+  }
+);
+
+// ─── Per-assistant roles ──────────────────────────────────────────────────────
+
+registerTool(
+  'set_project_role',
+  'Set a per-project role for an assistant. Appended to globalRole, never replaces it.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string', description: 'Assistant/agent name' },
+      project_id: { type: 'string', description: 'Project ID or name' },
+      role: { type: 'string', description: 'Role text to append for this project' },
+    },
+    required: ['agent_name', 'project_id', 'role'],
+  },
+  async (args: { agent_name: string; project_id: string; role: string }) => {
+    const cwd = process.cwd();
+    const filePath = setProjectRole(args.agent_name, args.project_id, args.role, cwd);
+    return { content: [{ type: 'text' as const, text: `Project role set for ${args.agent_name} on ${args.project_id}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'remove_project_role',
+  'Remove a per-project role from an assistant.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string' },
+      project_id: { type: 'string' },
+    },
+    required: ['agent_name', 'project_id'],
+  },
+  async (args: { agent_name: string; project_id: string }) => {
+    const cwd = process.cwd();
+    const filePath = removeProjectRole(args.agent_name, args.project_id, cwd);
+    return { content: [{ type: 'text' as const, text: `Project role removed for ${args.agent_name} on ${args.project_id}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'get_effective_prompt',
+  'Get the effective system prompt for an assistant (globalRole + projectRole + systemPrompt).',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string' },
+      project_id: { type: 'string', description: 'Optional project context' },
+    },
+    required: ['agent_name'],
+  },
+  async (args: { agent_name: string; project_id?: string }) => {
+    const cwd = process.cwd();
+    const def = loadAgentDefinitions(cwd).find(d => d.name === args.agent_name);
+    if (!def) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_name}` }], isError: true };
+    const prompt = getEffectiveSystemPrompt(def, args.project_id);
+    return { content: [{ type: 'text' as const, text: prompt || '(no prompt set)' }] };
   }
 );
 

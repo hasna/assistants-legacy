@@ -27,6 +27,18 @@ export interface AgentDefinition {
   tools?: string[];
   /** System prompt / instructions for the agent */
   systemPrompt?: string;
+  /**
+   * Global role definition — applies everywhere.
+   * Prepended to systemPrompt as identity context.
+   * Example: "You are a senior TypeScript developer focused on testing."
+   */
+  globalRole?: string;
+  /**
+   * Per-project role overrides — keyed by project ID or name.
+   * Appended to globalRole (never replaces it).
+   * Example: { "platform-alumia": "In this project, focus on the web API routes." }
+   */
+  projectRoles?: Record<string, string>;
   /** Maximum turns the agent can take (default: 25) */
   maxTurns?: number;
   /** Minimum turns before the agent can return (default: 3) */
@@ -185,4 +197,70 @@ export function deleteAgentDefinition(
   }
 
   return null;
+}
+
+/**
+ * Get the effective system prompt for an agent in a given project context.
+ *
+ * Composition order:
+ *   1. globalRole (if set) — identity/base role
+ *   2. projectRoles[projectId] (if set) — project-specific addendum
+ *   3. systemPrompt (if set) — task-specific instructions
+ *
+ * This lets you separate stable identity (globalRole) from per-project focus
+ * (projectRoles) from task instructions (systemPrompt).
+ */
+export function getEffectiveSystemPrompt(
+  def: AgentDefinition,
+  projectId?: string,
+): string {
+  const parts: string[] = [];
+
+  if (def.globalRole) parts.push(def.globalRole);
+
+  if (projectId && def.projectRoles) {
+    const projectRole = def.projectRoles[projectId];
+    if (projectRole) parts.push(projectRole);
+  }
+
+  if (def.systemPrompt) parts.push(def.systemPrompt);
+
+  return parts.join('\n\n');
+}
+
+/**
+ * Set a per-project role on an agent definition file.
+ * Updates the JSON on disk.
+ */
+export function setProjectRole(
+  name: string,
+  projectId: string,
+  role: string,
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (!raw.projectRoles) raw.projectRoles = {};
+  raw.projectRoles[projectId] = role;
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
+}
+
+/**
+ * Remove a per-project role from an agent definition file.
+ */
+export function removeProjectRole(
+  name: string,
+  projectId: string,
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (raw.projectRoles) delete raw.projectRoles[projectId];
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
 }

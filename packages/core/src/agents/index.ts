@@ -3,6 +3,9 @@ export {
   getAgentDefinition,
   saveAgentDefinition,
   deleteAgentDefinition,
+  getEffectiveSystemPrompt,
+  setProjectRole,
+  removeProjectRole,
   type AgentDefinition,
 } from './definitions';
 
