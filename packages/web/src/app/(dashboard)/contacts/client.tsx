@@ -1,104 +1,126 @@
 "use client"
 
+import { useState } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
-import type { ContactRow } from "./page"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { ContactRow, CompanyRow } from "./page"
 
 function formatDate(date: string | number | null): string {
   if (!date) return "\u2014"
   const d = new Date(typeof date === "number" && date < 1e12 ? date * 1000 : date)
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
-const columns: ColumnDef<ContactRow>[] = [
+const contactColumns: ColumnDef<ContactRow>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
-  {
-    accessorKey: "name",
+    accessorKey: "display_name",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.name}</span>
+      <div>
+        <span className="font-medium">{row.original.display_name || `${row.original.first_name ?? ""} ${row.original.last_name ?? ""}`.trim() || "—"}</span>
+        {row.original.job_title && <span className="ml-1.5 text-xs text-muted-foreground">{row.original.job_title}</span>}
+      </div>
     ),
   },
   {
-    accessorKey: "company",
+    accessorKey: "company_name",
     header: "Company",
-    cell: ({ row }) =>
-      row.original.company || (
-        <span className="text-muted-foreground">{"\u2014"}</span>
-      ),
+    cell: ({ row }) => row.original.company_name ?? <span className="text-muted-foreground">—</span>,
   },
   {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) =>
-      row.original.title || (
-        <span className="text-muted-foreground">{"\u2014"}</span>
-      ),
-  },
-  {
-    accessorKey: "relationship",
-    header: "Relationship",
-    cell: ({ row }) =>
-      row.original.relationship || (
-        <span className="text-muted-foreground">{"\u2014"}</span>
-      ),
-  },
-  {
-    accessorKey: "favorite",
-    header: "Favorite",
+    accessorKey: "primary_email",
+    header: "Email",
     cell: ({ row }) => (
-      <span className={row.original.favorite ? "text-green-600" : "text-muted-foreground"}>
-        {row.original.favorite ? "\u2713" : "\u2717"}
+      <span className="text-sm text-muted-foreground">
+        {row.original.primary_email ?? "—"}
       </span>
     ),
   },
   {
-    accessorKey: "notes",
-    header: "Notes",
+    accessorKey: "primary_phone",
+    header: "Phone",
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">
+        {row.original.primary_phone ?? "—"}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
     cell: ({ row }) => {
-      const text = row.original.notes
-      if (!text) return <span className="text-muted-foreground">{"\u2014"}</span>
-      return (
-        <span className="max-w-xs truncate" title={text}>
-          {text.length > 60 ? text.slice(0, 60) + "\u2026" : text}
-        </span>
-      )
+      const s = row.original.status
+      if (!s || s === "active") return null
+      return <Badge variant="outline">{s}</Badge>
     },
   },
   {
-    accessorKey: "created_at",
-    header: "Created",
-    cell: ({ row }) => formatDate(row.original.created_at),
+    accessorKey: "updated_at",
+    header: "Updated",
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{formatDate(row.original.updated_at)}</span>,
   },
 ]
 
-export function ContactsClient({ data }: { data: ContactRow[] }) {
+const companyColumns: ColumnDef<CompanyRow>[] = [
+  {
+    accessorKey: "name",
+    header: "Company",
+    cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+  },
+  {
+    accessorKey: "domain",
+    header: "Domain",
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground font-mono">{row.original.domain ?? "—"}</span>
+    ),
+  },
+  {
+    accessorKey: "industry",
+    header: "Industry",
+    cell: ({ row }) => row.original.industry ?? <span className="text-muted-foreground">—</span>,
+  },
+  {
+    accessorKey: "created_at",
+    header: "Added",
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{formatDate(row.original.created_at)}</span>,
+  },
+]
+
+const emptyState = (label: string, cmd: string) => (
+  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+    <p className="text-muted-foreground text-sm">
+      No {label} yet. Use the <code className="bg-muted rounded px-1 py-0.5 text-xs">{cmd}</code> tool or @hasna/contacts CLI.
+    </p>
+  </div>
+)
+
+export function ContactsClient({ contacts, companies }: { contacts: ContactRow[]; companies: CompanyRow[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
         <p className="text-muted-foreground text-sm">
-          Your address book and contact directory.
+          Stored in <code className="bg-muted rounded px-1 py-0.5 text-xs">~/.contacts/contacts.db</code> via @hasna/contacts
         </p>
       </div>
-      <DataTable
-        columns={columns}
-        data={data}
-        filterColumn="name"
-        filterPlaceholder="Filter by name..."
-      />
+      <Tabs defaultValue="contacts">
+        <TabsList>
+          <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="companies">Companies ({companies.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="contacts" className="mt-4">
+          {contacts.length === 0 ? emptyState("contacts", "contacts_create") : (
+            <DataTable columns={contactColumns} data={contacts} filterColumn="display_name" filterPlaceholder="Filter by name..." />
+          )}
+        </TabsContent>
+        <TabsContent value="companies" className="mt-4">
+          {companies.length === 0 ? emptyState("companies", "contacts_companies_create") : (
+            <DataTable columns={companyColumns} data={companies} filterColumn="name" filterPlaceholder="Filter by company..." />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -578,11 +578,9 @@ export class AssistantLoop {
       registerWalletTools(this.toolRegistry, () => this.walletManager);
     }
 
-    // Initialize secrets if enabled
+    // Initialize secrets if enabled — SDK adapter manages its own DB state
     if (this.config?.secrets?.enabled) {
-      const { id: assistantId } = this.getAssistantIdentity();
-      this.secretsManager = createSecretsManager(assistantId, this.config.secrets, this.storageDir);
-      registerSecretsTools(this.toolRegistry, () => this.secretsManager);
+      registerSecretsTools(this.toolRegistry);
     }
 
     // Initialize messages if enabled (native + conversations SDK)
