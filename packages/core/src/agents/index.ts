@@ -7,6 +7,7 @@ export {
   setProjectRole,
   removeProjectRole,
   setAgentModelConfig,
+  syncToClaudeAgents,
   type AgentDefinition,
 } from './definitions';
 

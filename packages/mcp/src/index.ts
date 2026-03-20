@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
-import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig } from '@hasna/assistants-core';
+import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 
@@ -491,6 +491,27 @@ registerTool(
       reasoningLevel: args.reasoning_level as 'max' | 'high' | 'medium' | 'low' | undefined,
     }, cwd);
     return { content: [{ type: 'text' as const, text: `Model config updated for ${args.agent_name}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'sync_to_claude_agents',
+  'Sync all assistant definitions to .claude/agents/ directory as Claude Code markdown files with YAML frontmatter. Push direction: assistants MCP → .claude/agents.',
+  {
+    type: 'object',
+    properties: {
+      target_dir: { type: 'string', description: 'Target directory (default: .claude/agents in cwd)' },
+    },
+  },
+  async (args: { target_dir?: string }) => {
+    const cwd = process.cwd();
+    const result = syncToClaudeAgents(cwd, args.target_dir);
+    const lines = [
+      `Synced ${result.synced.length} agent(s) to ${args.target_dir ?? '.claude/agents/'}`,
+      ...result.synced.map(p => `  ✓ ${p}`),
+      ...result.errors.map(e => `  ✗ ${e}`),
+    ];
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   }
 );
 

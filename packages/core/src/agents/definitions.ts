@@ -266,6 +266,58 @@ export function setProjectRole(
 }
 
 /**
+ * Sync agent definitions to `.claude/agents/` as Claude Code markdown files.
+ * Format: YAML frontmatter (name, model, provider, etc.) + markdown body (system prompt).
+ *
+ * @param agents - Agent definitions to sync (defaults to all loaded agents)
+ * @param targetDir - Target directory (default: `.claude/agents` in cwd)
+ * @param cwd - Working directory for loading agents
+ */
+export function syncToClaudeAgents(
+  cwd: string,
+  targetDir?: string,
+): { synced: string[]; errors: string[] } {
+  const agents = loadAgentDefinitions(cwd);
+  const agentsDir = targetDir ?? join(cwd, '.claude', 'agents');
+
+  mkdirSync(agentsDir, { recursive: true });
+
+  const synced: string[] = [];
+  const errors: string[] = [];
+
+  for (const agent of agents) {
+    try {
+      const frontmatter: Record<string, string | number | boolean | undefined> = {
+        name: agent.name,
+        description: agent.description,
+      };
+      if (agent.model) frontmatter.model = agent.model;
+      if (agent.provider) frontmatter.provider = agent.provider;
+      if (agent.reasoningLevel) frontmatter.reasoning_level = agent.reasoningLevel;
+      if (agent.maxTurns !== undefined) frontmatter.max_turns = agent.maxTurns;
+      if (agent.tools?.length) frontmatter.tools = agent.tools.join(', ');
+
+      // Build the effective system prompt as the markdown body
+      const body = getEffectiveSystemPrompt(agent);
+
+      const yamlLines = Object.entries(frontmatter)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => `${k}: ${v}`);
+
+      const content = ['---', ...yamlLines, '---', '', body || ''].join('\n');
+
+      const outPath = join(agentsDir, `${agent.name}.md`);
+      writeFileSync(outPath, content, 'utf-8');
+      synced.push(outPath);
+    } catch (e) {
+      errors.push(`${agent.name}: ${String(e)}`);
+    }
+  }
+
+  return { synced, errors };
+}
+
+/**
  * Set provider/model/reasoningLevel on an agent definition file.
  */
 export function setAgentModelConfig(
