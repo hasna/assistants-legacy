@@ -411,6 +411,71 @@ registerTool(
   }
 );
 
+// ─── Agent lifecycle ──────────────────────────────────────────────────────────
+
+// In-memory agent registry for assistants MCP
+const mcpAgentRegistry = new Map<string, { id: string; name: string; last_seen_at: string; project_id?: string }>();
+
+registerTool(
+  'register_agent',
+  'Register an agent session for attribution. Returns agent_id.',
+  {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Agent name' },
+      session_id: { type: 'string', description: 'Session identifier' },
+    },
+    required: ['name'],
+  },
+  async (args: { name: string; session_id?: string }) => {
+    const existing = [...mcpAgentRegistry.values()].find(a => a.name === args.name);
+    if (existing) {
+      existing.last_seen_at = new Date().toISOString();
+      return { content: [{ type: 'text' as const, text: JSON.stringify({ agent_id: existing.id, name: existing.name, last_seen_at: existing.last_seen_at }) }] };
+    }
+    const id = Math.random().toString(36).slice(2, 10);
+    const agent = { id, name: args.name, last_seen_at: new Date().toISOString() };
+    mcpAgentRegistry.set(id, agent);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(agent) }] };
+  }
+);
+
+registerTool(
+  'heartbeat',
+  'Update agent last_seen_at to signal active session.',
+  {
+    type: 'object',
+    properties: { agent_id: { type: 'string' } },
+    required: ['agent_id'],
+  },
+  async (args: { agent_id: string }) => {
+    const agent = mcpAgentRegistry.get(args.agent_id);
+    if (!agent) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_id}` }], isError: true };
+    agent.last_seen_at = new Date().toISOString();
+    return { content: [{ type: 'text' as const, text: `♥ ${agent.name} — active at ${agent.last_seen_at}` }] };
+  }
+);
+
+registerTool(
+  'set_focus',
+  'Set the active project context for this agent session.',
+  {
+    type: 'object',
+    properties: {
+      agent_id: { type: 'string' },
+      project_id: { type: 'string', description: 'Project to focus on (omit to clear)' },
+    },
+    required: ['agent_id'],
+  },
+  async (args: { agent_id: string; project_id?: string }) => {
+    const agent = mcpAgentRegistry.get(args.agent_id);
+    if (!agent) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_id}` }], isError: true };
+    agent.project_id = args.project_id;
+    const msg = args.project_id ? `Focus set: ${args.project_id}` : 'Focus cleared';
+    return { content: [{ type: 'text' as const, text: msg }] };
+  }
+);
+
 // ─── Per-assistant roles ──────────────────────────────────────────────────────
 
 registerTool(
