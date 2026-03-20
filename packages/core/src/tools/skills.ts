@@ -4,8 +4,9 @@ import { ToolExecutionError, ErrorCodes } from '../errors';
 import { createSkill, type SkillScope } from '../skills/create';
 import type { SkillLoader } from '../skills/loader';
 import { SkillExecutor } from '../skills/executor';
-import { SkillInstaller, type InstallScope } from '../skills/installer';
 // Registry functions moved to tools/skills-registry.ts (loaded dynamically to avoid side effects)
+// Install/uninstall now use the @hasna/skills SDK via registry-adapter (installSkillFromRegistry, removeAgentInstalledSkill)
+// Skill listing augments SkillLoader results with SDK-installed skills from ~/.claude/skills/
 
 function normalizeScope(input: unknown): SkillScope | null {
   if (!input) return null;
@@ -148,7 +149,19 @@ export function createSkillListTool(getLoader: () => SkillLoader | null) {
       });
     }
     const cwd = typeof input.cwd === 'string' && input.cwd.trim().length > 0 ? input.cwd : process.cwd();
+
+    // Load from legacy .skill/ directories
     await loader.loadAll(cwd, { includeContent: false });
+
+    // Also load from SDK-installed skill directories (~/.claude/skills/, .claude/skills/)
+    try {
+      const { getAgentSkillsDirs } = await import('../skills/registry-adapter');
+      const agentDirs = await getAgentSkillsDirs('both', cwd);
+      await Promise.all(agentDirs.map(dir => loader.loadFromDirectory(dir, { includeContent: false })));
+    } catch {
+      // SDK unavailable — continue with legacy results only
+    }
+
     const descriptions = loader.getSkillDescriptions();
     return descriptions || 'No skills loaded.';
   };
@@ -193,6 +206,13 @@ export function createSkillReadTool(getLoader: () => SkillLoader | null) {
         retryable: false,
       });
     }
+    // Try SDK-installed paths first, then fall back to SkillLoader
+    try {
+      const { getAgentSkillsDirs } = await import('../skills/registry-adapter');
+      const agentDirs = await getAgentSkillsDirs('both', process.cwd());
+      await Promise.all(agentDirs.map(dir => loader.loadFromDirectory(dir, { includeContent: true })));
+    } catch {}
+
     const skill = await loader.ensureSkillContent(name);
     if (!skill) {
       throw new ToolExecutionError(`Skill "${name}" not found.`, {
@@ -311,17 +331,17 @@ export function createSkillExecuteTool(getLoader: () => SkillLoader | null) {
 export class SkillInstallTool {
   static readonly tool: Tool = {
     name: 'skill_install',
-    description: 'Install an npm skill package (@hasnaxyz/skill-*) into .skill/.',
+    description: 'Install a skill from the @hasna/skills registry into the claude skills directory (~/.claude/skills/ or .claude/skills/).',
     parameters: {
       type: 'object',
       properties: {
         name: {
           type: 'string',
-          description: 'Skill name (e.g. "deepresearch") — automatically prefixed with @hasnaxyz/skill-.',
+          description: 'Skill name from the registry (e.g. "deepresearch", "commit", "review-pr").',
         },
         scope: {
           type: 'string',
-          description: 'Where to install: project (.skill/) or global (~/.skill/).',
+          description: 'Where to install: global (~/.claude/skills/) or project (.claude/skills/). Defaults to global.',
           enum: ['project', 'global'],
         },
         cwd: {
@@ -342,30 +362,35 @@ export class SkillInstallTool {
         code: ErrorCodes.TOOL_EXECUTION_FAILED,
         recoverable: true,
         retryable: false,
-        suggestion: 'Provide a skill name, e.g. "deepresearch".',
+        suggestion: 'Provide a skill name from the registry, e.g. "deepresearch".',
       });
     }
 
-    const scope: InstallScope = (String(input.scope || '').trim().toLowerCase() as InstallScope) || 'project';
-    if (scope !== 'project' && scope !== 'global') {
-      throw new ToolExecutionError('Scope must be "project" or "global".', {
+    const rawScope = String(input.scope || '').trim().toLowerCase();
+    const scope: 'project' | 'global' = rawScope === 'project' ? 'project' : 'global';
+    const cwd = String(input.cwd || process.cwd());
+
+    // Use @hasna/skills SDK to install into ~/.claude/skills/ or .claude/skills/
+    const { installSkillFromRegistry } = await import('../skills/registry-adapter');
+    const result = await installSkillFromRegistry(rawName, scope, cwd);
+
+    if (!result.success) {
+      throw new ToolExecutionError(result.error ?? 'Skill installation failed.', {
         toolName: 'skill_install',
         toolInput: input,
         code: ErrorCodes.TOOL_EXECUTION_FAILED,
         recoverable: true,
-        retryable: false,
+        retryable: true,
+        suggestion: `Check that "${rawName}" exists in the registry with skills_registry_search.`,
       });
     }
 
-    const cwd = String(input.cwd || process.cwd());
-
-    const result = await SkillInstaller.install({ name: rawName, scope, cwd });
-
+    const { getAgentSkillsDirs } = await import('../skills/registry-adapter');
+    const [installDir] = await getAgentSkillsDirs(scope, cwd);
     return [
-      `Installed skill "${result.name}" (${result.packageName}@${result.version}).`,
-      `Location: ${result.skillDir}`,
-      `Scope: ${scope}`,
-      `Invoke with: /${result.name} [args]`,
+      `Installed skill "${rawName}" (${scope} scope).`,
+      `Location: ${installDir}/skill-${rawName}/SKILL.md`,
+      `Invoke with: /${rawName} [args] or skill_execute name="${rawName}"`,
     ].join('\n');
   };
 }
@@ -373,7 +398,7 @@ export class SkillInstallTool {
 export class SkillUninstallTool {
   static readonly tool: Tool = {
     name: 'skill_uninstall',
-    description: 'Uninstall an npm skill package from .skill/.',
+    description: 'Uninstall a skill installed via the @hasna/skills SDK from the claude skills directory.',
     parameters: {
       type: 'object',
       properties: {
@@ -383,7 +408,7 @@ export class SkillUninstallTool {
         },
         scope: {
           type: 'string',
-          description: 'Where to uninstall from: project (.skill/) or global (~/.skill/).',
+          description: 'Where to uninstall from: global (~/.claude/skills/) or project (.claude/skills/). Defaults to global.',
           enum: ['project', 'global'],
         },
         cwd: {
@@ -407,22 +432,25 @@ export class SkillUninstallTool {
       });
     }
 
-    const scope: InstallScope = (String(input.scope || '').trim().toLowerCase() as InstallScope) || 'project';
-    if (scope !== 'project' && scope !== 'global') {
-      throw new ToolExecutionError('Scope must be "project" or "global".', {
+    const rawScope = String(input.scope || '').trim().toLowerCase();
+    const scope: 'project' | 'global' = rawScope === 'project' ? 'project' : 'global';
+    const cwd = String(input.cwd || process.cwd());
+
+    const { removeAgentInstalledSkill } = await import('../skills/registry-adapter');
+    const removed = await removeAgentInstalledSkill(rawName, scope, cwd);
+
+    if (!removed) {
+      throw new ToolExecutionError(`Skill "${rawName}" not found in ${scope} scope.`, {
         toolName: 'skill_uninstall',
         toolInput: input,
-        code: ErrorCodes.TOOL_EXECUTION_FAILED,
+        code: ErrorCodes.TOOL_NOT_FOUND,
         recoverable: true,
         retryable: false,
+        suggestion: 'Use skills_list to see installed skills.',
       });
     }
 
-    const cwd = String(input.cwd || process.cwd());
-
-    await SkillInstaller.uninstall(rawName, scope, cwd);
-
-    return `Uninstalled skill "${rawName}" from ${scope} scope.`;
+    return `Uninstalled skill "${rawName}" from ${scope} scope (~/.claude/skills/ or .claude/skills/).`;
   };
 }
 

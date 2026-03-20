@@ -75,6 +75,15 @@ export class AnthropicClient implements LLMClient {
         tools: anthropicTools,
       };
 
+      // Apply temperature override if set via --temperature flag or env var
+      const tempEnv = process.env.ASSISTANTS_TEMPERATURE;
+      if (tempEnv) {
+        const t = parseFloat(tempEnv);
+        if (Number.isFinite(t) && t >= 0 && t <= 2) {
+          requestParams.temperature = t;
+        }
+      }
+
       // Enable extended thinking for high effort
       if (this.effortLevel === 'high') {
         const thinkingBudget = parseInt(process.env.MAX_THINKING_TOKENS || '', 10) || DEFAULT_THINKING_BUDGET;

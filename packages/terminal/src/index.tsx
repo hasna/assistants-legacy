@@ -117,6 +117,66 @@ export { parseArgs, main };
 
 const subcommand = process.argv[2];
 
+if (subcommand === 'autocomplete') {
+  const shell = (process.argv[3] || 'zsh').toLowerCase();
+
+  const subcommands = ['mcp', 'doctor', 'serve', 'report', 'config', 'sessions', 'search', 'autocomplete'];
+  const flags = [
+    '--help', '-h', '--version', '-v',
+    '--print', '-p', '--output-format', '--allowed-tools', '--system-prompt',
+    '--json-schema', '--headless-timeout-ms', '--continue', '-c', '--resume', '-r',
+    '--cwd', '--worktree', '--permission-mode', '--temperature', '--cost-limit', '--no-memory',
+  ];
+
+  if (shell === 'zsh') {
+    console.log(`# assistants zsh completion
+# Add to ~/.zshrc: source <(assistants autocomplete zsh)
+
+_assistants() {
+  local -a subcommands flags
+  subcommands=(${subcommands.map(s => `'${s}'`).join(' ')})
+  flags=(${flags.map(f => `'${f}'`).join(' ')})
+
+  if (( CURRENT == 2 )); then
+    _arguments '1: :($subcommands $flags)'
+  else
+    _arguments '*: :($flags)'
+  fi
+}
+
+compdef _assistants assistants`);
+  } else if (shell === 'bash') {
+    console.log(`# assistants bash completion
+# Add to ~/.bashrc: source <(assistants autocomplete bash)
+
+_assistants_completions() {
+  local cur="\${COMP_WORDS[COMP_CWORD]}"
+  local words="${[...subcommands, ...flags].join(' ')}"
+  COMPREPLY=( $(compgen -W "$words" -- "$cur") )
+}
+
+complete -F _assistants_completions assistants`);
+  } else if (shell === 'fish') {
+    const subcmdCompletions = subcommands.map(s => `complete -c assistants -n "__fish_use_subcommand" -a ${s}`).join('\n');
+    const flagCompletions = flags.map(f => `complete -c assistants -l ${f.replace(/^-+/, '')}`).join('\n');
+    console.log(`# assistants fish completion
+# Save to ~/.config/fish/completions/assistants.fish
+
+${subcmdCompletions}
+${flagCompletions}`);
+  } else {
+    console.error(`Unknown shell "${shell}". Supported: zsh, bash, fish`);
+    process.exit(1);
+  }
+
+  if (shell !== 'zsh') {
+    // Already printed above
+  } else {
+    console.error(`\nAdd to ~/.zshrc:\n  source <(assistants autocomplete zsh)`);
+  }
+  process.exit(0);
+}
+
 if (subcommand === 'mcp') {
   const sub = process.argv[3];
   const mcpCmd = 'claude mcp add --transport stdio --scope user assistants -- assistants-mcp';
@@ -173,6 +233,51 @@ if (subcommand === 'config') {
     context: { maxContextTokens: config.context?.maxContextTokens },
     validation: config.validation,
   }, null, 2));
+  process.exit(0);
+}
+
+if (subcommand === 'search') {
+  const query = process.argv.slice(3).join(' ').trim();
+  if (!query) {
+    console.error('Usage: assistants search <query>');
+    console.error('Search session message history for a keyword or phrase.');
+    process.exit(1);
+  }
+
+  const { SessionStorage } = await import('@hasna/assistants-core');
+  const sessions = SessionStorage.listAllSessions();
+  const q = query.toLowerCase();
+
+  const matches: Array<{ sessionId: string; label?: string; startedAt?: string; role: string; excerpt: string }> = [];
+
+  for (const info of sessions) {
+    const data = SessionStorage.loadSession(info.id, info.assistantId);
+    if (!data?.messages) continue;
+    for (const m of data.messages as Array<{ role: string; content: unknown }>) {
+      const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      if (text.toLowerCase().includes(q)) {
+        const idx = text.toLowerCase().indexOf(q);
+        const start = Math.max(0, idx - 60);
+        const end = Math.min(text.length, idx + query.length + 60);
+        const excerpt = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+        matches.push({ sessionId: info.id, label: info.label ?? undefined, startedAt: info.startedAt ?? undefined, role: m.role, excerpt });
+        break; // one match per session is enough for the overview
+      }
+    }
+  }
+
+  if (matches.length === 0) {
+    console.log(`No sessions found matching "${query}".`);
+  } else {
+    console.log(`\nFound ${matches.length} session(s) matching "${query}":\n`);
+    for (const m of matches) {
+      const date = m.startedAt ? new Date(m.startedAt).toLocaleString() : 'unknown';
+      const label = m.label ? ` "${m.label}"` : '';
+      console.log(`  ${m.sessionId}${label}  (${date})  [${m.role}]`);
+      console.log(`  ${m.excerpt}\n`);
+    }
+    console.log(`Use "assistants sessions <id>" to view a full session.`);
+  }
   process.exit(0);
 }
 
@@ -457,6 +562,7 @@ Usage:
   assistants report [days]                Activity report (default: 7 days)
   assistants config [cwd]                 Show current configuration
   assistants sessions [list|<id>]         List or inspect sessions
+  assistants search <query>               Search session message history
 
 Options:
   -h, --help                   Show this help message

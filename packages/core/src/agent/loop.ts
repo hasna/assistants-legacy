@@ -556,6 +556,9 @@ export class AssistantLoop {
     this.toolRegistry.register(TmuxTools.tool, TmuxTools.executor);
     this.toolRegistry.register(DiffTool.tool, DiffTool.executor);
 
+    // Startup schema validation — warn on any malformed tool schemas (never throws)
+    this.toolRegistry.validateAll();
+
     // Initialize inbox if enabled
     if (this.config?.inbox?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();

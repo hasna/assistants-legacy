@@ -6,23 +6,48 @@ import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
 import type { ConnectorRow } from "./page"
 
-// Check if a connector binary is reachable by running `<name> --version`
+// Check if a connector binary is reachable by calling /api/connectors/status
 function useConnectorStatus(connectorName: string) {
   const [status, setStatus] = useState<'checking' | 'ok' | 'unavailable'>('checking')
+  const [lastChecked, setLastChecked] = useState<Date | null>(null)
+  const [key, setKey] = useState(0)
+
   useEffect(() => {
+    setStatus('checking')
     fetch(`/api/connectors/status?name=${encodeURIComponent(connectorName)}`, { signal: AbortSignal.timeout(3000) })
       .then(r => r.json() as Promise<{ ok: boolean }>)
-      .then(d => setStatus(d.ok ? 'ok' : 'unavailable'))
-      .catch(() => setStatus('unavailable'))
-  }, [connectorName])
-  return status
+      .then(d => { setStatus(d.ok ? 'ok' : 'unavailable'); setLastChecked(new Date()) })
+      .catch(() => { setStatus('unavailable'); setLastChecked(new Date()) })
+  }, [connectorName, key])
+
+  return { status, lastChecked, retest: () => setKey(k => k + 1) }
 }
 
 function StatusDot({ name }: { name: string }) {
-  const status = useConnectorStatus(name)
-  if (status === 'checking') return <span className="inline-block w-2 h-2 rounded-full bg-gray-300 animate-pulse" title="Checking…" />
-  if (status === 'ok') return <span className="inline-block w-2 h-2 rounded-full bg-green-500" title="Reachable" />
-  return <span className="inline-block w-2 h-2 rounded-full bg-red-400" title="Not reachable" />
+  const { status, lastChecked, retest } = useConnectorStatus(name)
+  const dotClass = status === 'checking'
+    ? 'bg-gray-300 animate-pulse'
+    : status === 'ok' ? 'bg-green-500' : 'bg-red-400'
+  const label = status === 'checking' ? 'Checking…' : status === 'ok' ? 'Reachable' : 'Not reachable'
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`inline-block w-2 h-2 rounded-full ${dotClass}`} title={label} />
+      {lastChecked && (
+        <span className="text-xs text-muted-foreground hidden lg:inline">
+          {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      )}
+      <button
+        onClick={retest}
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        title="Retest connection"
+        disabled={status === 'checking'}
+      >
+        ↻
+      </button>
+    </div>
+  )
 }
 
 function formatDate(date: string | number | null): string {
@@ -54,7 +79,7 @@ function parseData(raw: string): { name?: string; version?: string; description?
 const columns: ColumnDef<ConnectorRow>[] = [
   {
     id: "status",
-    header: "",
+    header: "Status",
     cell: ({ row }) => <StatusDot name={row.original.key} />,
   },
   {
