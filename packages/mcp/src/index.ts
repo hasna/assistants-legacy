@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
-import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions } from '@hasna/assistants-core';
+import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 
@@ -467,6 +467,30 @@ registerTool(
     if (!def) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_name}` }], isError: true };
     const prompt = getEffectiveSystemPrompt(def, args.project_id);
     return { content: [{ type: 'text' as const, text: prompt || '(no prompt set)' }] };
+  }
+);
+
+registerTool(
+  'set_agent_model',
+  'Set provider, model ID, and reasoning level for an assistant.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string', description: 'Assistant/agent name' },
+      provider: { type: 'string', description: 'LLM provider: anthropic, openai, google, etc.' },
+      model: { type: 'string', description: 'Model ID e.g. claude-opus-4-6, gpt-5.2' },
+      reasoning_level: { type: 'string', enum: ['max', 'high', 'medium', 'low'], description: 'Reasoning level for extended thinking' },
+    },
+    required: ['agent_name'],
+  },
+  async (args: { agent_name: string; provider?: string; model?: string; reasoning_level?: string }) => {
+    const cwd = process.cwd();
+    const filePath = setAgentModelConfig(args.agent_name, {
+      provider: args.provider,
+      model: args.model,
+      reasoningLevel: args.reasoning_level as 'max' | 'high' | 'medium' | 'low' | undefined,
+    }, cwd);
+    return { content: [{ type: 'text' as const, text: `Model config updated for ${args.agent_name}: ${filePath}` }] };
   }
 );
 

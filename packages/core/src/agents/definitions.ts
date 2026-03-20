@@ -28,6 +28,23 @@ export interface AgentDefinition {
   /** System prompt / instructions for the agent */
   systemPrompt?: string;
   /**
+   * LLM provider for this assistant (e.g. "anthropic", "openai", "google").
+   * Falls back to the global/default provider if unset.
+   */
+  provider?: string;
+  /**
+   * Model ID override (e.g. "claude-opus-4-6", "gpt-5.2", "gemini-2.5-flash").
+   * Falls back to the global/default model if unset.
+   */
+  model?: string;
+  /**
+   * Reasoning level for models that support extended thinking.
+   * Claude Code: "max" | "high" | "medium"
+   * OpenAI Codex: "high" | "medium" | "low"
+   * Falls back to global reasoning setting if unset.
+   */
+  reasoningLevel?: 'max' | 'high' | 'medium' | 'low';
+  /**
    * Global role definition — applies everywhere.
    * Prepended to systemPrompt as identity context.
    * Example: "You are a senior TypeScript developer focused on testing."
@@ -244,6 +261,25 @@ export function setProjectRole(
   const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
   if (!raw.projectRoles) raw.projectRoles = {};
   raw.projectRoles[projectId] = role;
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
+}
+
+/**
+ * Set provider/model/reasoningLevel on an agent definition file.
+ */
+export function setAgentModelConfig(
+  name: string,
+  config: { provider?: string; model?: string; reasoningLevel?: AgentDefinition['reasoningLevel'] },
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (config.provider !== undefined) raw.provider = config.provider;
+  if (config.model !== undefined) raw.model = config.model;
+  if (config.reasoningLevel !== undefined) raw.reasoningLevel = config.reasoningLevel;
   writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
   return def.filePath;
 }

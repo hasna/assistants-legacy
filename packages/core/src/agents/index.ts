@@ -6,6 +6,7 @@ export {
   getEffectiveSystemPrompt,
   setProjectRole,
   removeProjectRole,
+  setAgentModelConfig,
   type AgentDefinition,
 } from './definitions';
 
