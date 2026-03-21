@@ -99,6 +99,29 @@ export class ToolRegistry {
   }
 
   /**
+   * Validate all registered tool schemas and log warnings for any issues.
+   * Called at startup — does not throw, only warns.
+   */
+  validateAll(): void {
+    for (const [name, { tool }] of this.tools) {
+      const warnings: string[] = [];
+      if (!tool.description || tool.description.trim().length === 0) {
+        warnings.push('missing description');
+      }
+      const params = tool.parameters as { properties?: Record<string, { description?: string; type?: string }> } | undefined;
+      if (params?.properties) {
+        for (const [prop, def] of Object.entries(params.properties)) {
+          if (!def.description) warnings.push(`property "${prop}" missing description`);
+          if (!def.type) warnings.push(`property "${prop}" missing type`);
+        }
+      }
+      if (warnings.length > 0) {
+        console.warn(`[tool-registry] Schema warnings for "${name}": ${warnings.join(', ')}`);
+      }
+    }
+  }
+
+  /**
    * Unregister a tool
    */
   unregister(name: string): void {

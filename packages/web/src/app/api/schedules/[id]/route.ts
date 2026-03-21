@@ -6,25 +6,30 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { action } = await req.json() as { action: 'pause' | 'resume' | 'delete' }
-    const db = getDb()
-    const { id } = await params
+    const body = await req.json() as { action: string };
+    const action = body.action;
+    const db = getDb();
+    const { id } = await params;
 
-    if (action === 'pause') {
-      db.prepare("UPDATE schedules SET status = 'paused' WHERE id = ?").run(id)
-      return NextResponse.json({ ok: true, status: 'paused' })
+    if (!['pause', 'resume', 'delete'].includes(action)) {
+      return NextResponse.json({ error: 'action must be pause, resume, or delete' }, { status: 400 });
     }
-    if (action === 'resume') {
-      db.prepare("UPDATE schedules SET status = 'active' WHERE id = ?").run(id)
-      return NextResponse.json({ ok: true, status: 'active' })
-    }
+
     if (action === 'delete') {
-      db.prepare("DELETE FROM schedules WHERE id = ?").run(id)
-      return NextResponse.json({ ok: true })
+      const result = db.prepare("DELETE FROM schedules WHERE id = ?").run(id);
+      if (result.changes === 0) {
+        return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true });
     }
 
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const newStatus = action === 'pause' ? 'paused' : 'active';
+    const result = db.prepare("UPDATE schedules SET status = ? WHERE id = ?").run(newStatus, id);
+    if (result.changes === 0) {
+      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, status: newStatus });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update schedule' }, { status: 500 });
   }
 }

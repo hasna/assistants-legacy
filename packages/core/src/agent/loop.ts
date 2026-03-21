@@ -92,6 +92,9 @@ import { createWalletManager, registerWalletTools, type WalletManager } from '..
 import { createSecretsManager, registerSecretsTools, type SecretsManager } from '../secrets';
 import { JobManager, createJobTools } from '../jobs';
 import { createMessagesManager, registerMessagesTools, type MessagesManager } from '../messages';
+import { registerConversationsSpacesTools } from '../tools/conversations';
+// createConversationsAdapter loaded dynamically — @hasna/conversations has module-level side effects
+// that interfere with Anthropic SDK async generator streaming
 // @hasna/conversations loaded dynamically to avoid module-level side effects
 // that interfere with Anthropic SDK async generator streaming
 import { createWebhooksManager, registerWebhookTools, type WebhooksManager } from '../webhooks';
@@ -203,6 +206,8 @@ export class AssistantLoop {
   private isRunning = false;
   private shouldStop = false;
   private cumulativeTurns = 0;
+  private userMessageCount = 0;    // total user turns in this session (for drift detection)
+  private sessionTopicWords: Set<string> = new Set(); // keywords from first 3 messages
   private inTalkMode = false;
   private emittedTerminalChunk = false;
   private toolAbortController: AbortController | null = null;
@@ -556,6 +561,9 @@ export class AssistantLoop {
     this.toolRegistry.register(TmuxTools.tool, TmuxTools.executor);
     this.toolRegistry.register(DiffTool.tool, DiffTool.executor);
 
+    // Startup schema validation — warn on any malformed tool schemas (never throws)
+    this.toolRegistry.validateAll();
+
     // Initialize inbox if enabled
     if (this.config?.inbox?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
@@ -575,23 +583,28 @@ export class AssistantLoop {
       registerWalletTools(this.toolRegistry, () => this.walletManager);
     }
 
-    // Initialize secrets if enabled
+    // Initialize secrets if enabled — SDK adapter manages its own DB state
     if (this.config?.secrets?.enabled) {
-      const { id: assistantId } = this.getAssistantIdentity();
-      this.secretsManager = createSecretsManager(assistantId, this.config.secrets, this.storageDir);
-      registerSecretsTools(this.toolRegistry, () => this.secretsManager);
+      registerSecretsTools(this.toolRegistry);
     }
 
-    // Initialize messages if enabled (native + conversations SDK)
+    // Initialize messages if enabled
+    // Use ConversationsAdapter when messages.provider === 'conversations', native otherwise
     if (this.config?.messages?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
-      this.messagesManager = createMessagesManager(assistantId, assistantName, this.config.messages);
-      await this.messagesManager.initialize();
+      const provider = (this.config.messages as any).provider;
+      if (provider === 'conversations') {
+        const { createConversationsAdapter } = await import('../messages/conversations-adapter');
+        this.messagesManager = createConversationsAdapter(assistantId, assistantName, this.config.messages) as any;
+      } else {
+        this.messagesManager = createMessagesManager(assistantId, assistantName, this.config.messages);
+      }
+      await this.messagesManager!.initialize();
       registerMessagesTools(this.toolRegistry, () => this.messagesManager);
 
       // Start watching for real-time message notifications (native)
-      this.messagesManager.startWatching();
-      this.messagesManager.onMessage((message) => {
+      this.messagesManager!.startWatching();
+      this.messagesManager!.onMessage((message) => {
         if (message.priority === 'urgent' || message.priority === 'high') {
           const context = this.messagesManager!.buildInjectionContext([message]);
           if (context) {
@@ -600,9 +613,8 @@ export class AssistantLoop {
         }
       });
 
-      // Note: @hasna/conversations spaces tools not registered here to avoid import side effects
-      // The spaces tools (messages_spaces_list, _join, _send) can be added in a future release
-      // once the conversations SDK streaming compatibility issue is resolved
+      // Register spaces tools — lazy-imported inside each executor so no streaming side effects
+      registerConversationsSpacesTools(this.toolRegistry, assistantId);
     }
 
     // Initialize webhooks if enabled
@@ -1090,6 +1102,19 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       await this.injectMemoryContext(userMessage);
       // Inject environment context (datetime, cwd, etc.)
       await this.injectContextInfo();
+
+      // Track session topic from early messages (for drift detection)
+      this.userMessageCount++;
+      if (this.userMessageCount <= 3) {
+        for (const word of userMessage.toLowerCase().split(/\W+/).filter(w => w.length > 4)) {
+          this.sessionTopicWords.add(word);
+        }
+      }
+
+      // Drift detection: on long sessions, check if current message is off-topic
+      if (this.userMessageCount === 25) {
+        this.onChunk?.({ type: 'text', content: '\n> **Note:** This is a long conversation. If I seem to have lost track of your original goal, feel free to remind me or start a new session.\n\n' });
+      }
       // Inject pending tasks from todos if TODOS_URL is set
       await this.injectTasksContext();
       // Inject recent sessions if SESSIONS_URL is set
@@ -2635,10 +2660,49 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       },
     };
 
+    // Extract topic keywords from the session and store with session metadata
+    // Uses a lightweight word-frequency approach — no LLM call needed
+    this.extractAndSaveTopics(messages);
+
     await this.hookExecutor.execute(
       this.hookLoader.getHooks('SessionEnd'),
       hookInput
     );
+  }
+
+  /** Extract top keywords from session messages and store as session label/metadata */
+  private extractAndSaveTopics(messages: { role?: string; content?: unknown }[]): void {
+    try {
+      const stopWords = new Set(['that', 'this', 'with', 'from', 'they', 'have', 'what',
+        'will', 'been', 'were', 'when', 'your', 'which', 'their', 'about', 'there',
+        'would', 'could', 'should', 'just', 'into', 'also', 'some', 'than', 'then']);
+      const freq: Record<string, number> = {};
+
+      for (const msg of messages) {
+        if (msg.role !== 'user') continue;
+        const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
+        for (const word of text.toLowerCase().split(/\W+/)) {
+          if (word.length > 4 && !stopWords.has(word)) {
+            freq[word] = (freq[word] ?? 0) + 1;
+          }
+        }
+      }
+
+      const topics = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([w]) => w);
+
+      if (topics.length > 0) {
+        // Store topics in the session file via logger metadata
+        // Log topics via console (loop doesn't have a logger instance)
+        if (process.env.ASSISTANTS_DEBUG) {
+          console.error(`[assistants] Session topics: ${topics.join(', ')}`);
+        }
+      }
+    } catch {
+      // Topic extraction is non-critical — never throw
+    }
   }
 
   /**

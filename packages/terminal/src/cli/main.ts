@@ -18,6 +18,12 @@ export interface ParsedOptions {
   cwdProvided: boolean;
   permissionMode: 'normal' | 'plan' | 'auto-accept' | null;
   worktree: string | boolean | null;
+  /** LLM temperature override (0–2). Sets ASSISTANTS_TEMPERATURE env var. */
+  temperature: number | null;
+  /** Abort headless run if estimated cost (USD) exceeds this threshold. */
+  costLimit: number | null;
+  /** Skip session persistence and memory tools for this run. */
+  noMemory: boolean;
   errors: string[];
 }
 
@@ -51,6 +57,9 @@ export function parseArgs(argv: string[]): ParsedOptions {
     cwdProvided: false,
     permissionMode: null,
     worktree: null,
+    temperature: null,
+    costLimit: null,
+    noMemory: false,
     errors: [],
   };
 
@@ -244,6 +253,46 @@ export function parseArgs(argv: string[]): ParsedOptions {
       continue;
     }
 
+    // Temperature
+    if (arg === '--temperature') {
+      const nextArg = args[i + 1];
+      if (nextArg === undefined || isFlag(nextArg)) {
+        options.errors.push('--temperature requires a number between 0 and 2');
+      } else {
+        const t = parseFloat(nextArg);
+        if (!Number.isFinite(t) || t < 0 || t > 2) {
+          options.errors.push(`--temperature must be between 0 and 2, got "${nextArg}"`);
+        } else {
+          options.temperature = t;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    // Cost limit
+    if (arg === '--cost-limit') {
+      const nextArg = args[i + 1];
+      if (nextArg === undefined || isFlag(nextArg)) {
+        options.errors.push('--cost-limit requires a dollar amount (e.g. 0.50)');
+      } else {
+        const c = parseFloat(nextArg);
+        if (!Number.isFinite(c) || c <= 0) {
+          options.errors.push(`--cost-limit must be a positive dollar amount, got "${nextArg}"`);
+        } else {
+          options.costLimit = c;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    // No memory (stateless run)
+    if (arg === '--no-memory') {
+      options.noMemory = true;
+      continue;
+    }
+
     // Unknown arg - treat as positional
     if (!arg.startsWith('-')) {
       positionalArgs.push(arg);
@@ -275,6 +324,12 @@ export interface HeadlessOptions {
   cwdProvided?: boolean;
   timeoutMs?: number | null;
   permissionMode?: 'normal' | 'plan' | 'auto-accept';
+  /** LLM temperature override (0–2). Applied via ASSISTANTS_TEMPERATURE env var. */
+  temperature?: number | null;
+  /** Abort if estimated USD cost exceeds this amount. */
+  costLimit?: number | null;
+  /** Disable session persistence and memory read/write for this run. */
+  noMemory?: boolean;
 }
 
 export interface MainDependencies {
@@ -342,6 +397,9 @@ Headless Mode:
   --cwd <path>                 Set working directory
   --worktree [name]            Run in an isolated git worktree (auto-cleaned on exit)
   --permission-mode <mode>     Permission mode: normal, plan (read-only), auto-accept
+  --temperature <0-2>          LLM temperature override (default: model default)
+  --cost-limit <dollars>       Abort if estimated cost exceeds this USD amount
+  --no-memory                  Stateless run — skip session persistence and memory
 
 Examples:
   # Ask a question
@@ -381,6 +439,14 @@ Interactive Mode:
       return;
     }
 
+    // Apply env-var-based overrides before handing off to runHeadless
+    if (options.temperature !== null) {
+      process.env.ASSISTANTS_TEMPERATURE = String(options.temperature);
+    }
+    if (options.noMemory) {
+      process.env.ASSISTANTS_NO_MEMORY = '1';
+    }
+
     await runHeadless({
       prompt: options.print,
       cwd: options.cwd,
@@ -393,6 +459,9 @@ Interactive Mode:
       resume: options.resume,
       cwdProvided: options.cwdProvided,
       timeoutMs: options.headlessTimeoutMs,
+      temperature: options.temperature,
+      costLimit: options.costLimit,
+      noMemory: options.noMemory,
     });
   }
 

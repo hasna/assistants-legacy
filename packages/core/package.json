@@ -54,6 +54,8 @@
     "@hasna/connectors": "^0.2.7",
     "@hasna/todos": "^0.9.23",
     "@hasna/conversations": "^0.1.18",
+    "@hasna/secrets": "^0.1.0",
+    "@hasna/contacts": "^0.4.2",
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
     "@anthropic-ai/sdk": "^0.74.0",
     "@aws-sdk/client-s3": "^3.985.0",

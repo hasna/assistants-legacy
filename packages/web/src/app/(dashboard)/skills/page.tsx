@@ -1,4 +1,4 @@
-import { readdirSync, statSync, readFileSync } from "fs"
+import { existsSync, readdirSync, statSync, readFileSync } from "fs"
 import { join } from "path"
 import { homedir } from "os"
 import { SkillsClient } from "./client"
@@ -22,7 +22,8 @@ function parseSkillFrontmatter(content: string): {
   const fm = match[1]
 
   const desc = fm.match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? null
-  const hint = fm.match(/^argument_hint:\s*(.+)$/m)?.[1]?.trim() ??
+  const hint = fm.match(/^argument-hint:\s*(.+)$/m)?.[1]?.trim() ??
+               fm.match(/^argument_hint:\s*(.+)$/m)?.[1]?.trim() ??
                fm.match(/^argumentHint:\s*(.+)$/m)?.[1]?.trim() ?? null
   const triggerLine = fm.match(/^triggers:\s*\[(.+)\]/m)?.[1]
   const triggers = triggerLine
@@ -34,51 +35,58 @@ function parseSkillFrontmatter(content: string): {
 
 function scanSkillsDir(dir: string, type: string): SkillRow[] {
   const skills: SkillRow[] = []
+  if (!existsSync(dir)) return skills
   try {
-    const entries = readdirSync(dir)
-    for (const entry of entries) {
+    for (const entry of readdirSync(dir)) {
       const fullPath = join(dir, entry)
       try {
-        const stat = statSync(fullPath)
-        if (stat.isDirectory()) {
-          const skillFile = join(fullPath, "SKILL.md")
-          try {
-            statSync(skillFile)
-            let description: string | null = null
-            let argumentHint: string | null = null
-            let triggers: string[] = []
-            try {
-              const content = readFileSync(skillFile, "utf-8")
-              const parsed = parseSkillFrontmatter(content)
-              description = parsed.description
-              argumentHint = parsed.argumentHint
-              triggers = parsed.triggers
-            } catch {
-              /* cannot read SKILL.md */
-            }
-            skills.push({ name: entry, path: skillFile, type, description, argumentHint, triggers })
-          } catch {
-            /* SKILL.md not found in this directory */
-          }
-        }
-      } catch {
-        /* cannot stat entry */
-      }
+        if (!statSync(fullPath).isDirectory()) continue
+        const skillFile = join(fullPath, "SKILL.md")
+        if (!existsSync(skillFile)) continue
+        let description: string | null = null
+        let argumentHint: string | null = null
+        let triggers: string[] = []
+        try {
+          const parsed = parseSkillFrontmatter(readFileSync(skillFile, "utf-8"))
+          description = parsed.description
+          argumentHint = parsed.argumentHint
+          triggers = parsed.triggers
+        } catch { /* cannot read SKILL.md */ }
+        skills.push({ name: entry, path: skillFile, type, description, argumentHint, triggers })
+      } catch { /* cannot stat entry */ }
     }
-  } catch {
-    /* directory does not exist */
-  }
+  } catch { /* directory does not exist */ }
   return skills
 }
 
 export default function SkillsPage() {
-  const userSkillsDir = join(homedir(), ".assistants", "skills")
-  const builtinSkillsDir = join(process.cwd(), ".assistants", "skills")
+  const seen = new Set<string>()
+  const rows: SkillRow[] = []
 
-  const data: SkillRow[] = [
-    ...scanSkillsDir(userSkillsDir, "user"),
-    ...scanSkillsDir(builtinSkillsDir, "built-in"),
-  ]
+  function addSkills(dir: string, type: string) {
+    for (const row of scanSkillsDir(dir, type)) {
+      if (!seen.has(row.name)) {
+        seen.add(row.name)
+        rows.push(row)
+      }
+    }
+  }
 
-  return <SkillsClient data={data} />
+  // 1. Legacy built-in skills (.assistants/skills/)
+  addSkills(join(process.cwd(), ".assistants", "skills"), "built-in")
+
+  // 2. Legacy user skills (~/.assistants/skills/)
+  addSkills(join(homedir(), ".assistants", "skills"), "user")
+
+  // 3. @hasna/skills SDK — global agent skills (~/.claude/skills/)
+  addSkills(join(homedir(), ".claude", "skills"), "sdk-global")
+
+  // 4. @hasna/skills SDK — project agent skills (.claude/skills/)
+  addSkills(join(process.cwd(), ".claude", "skills"), "sdk-project")
+
+  // 5. Legacy .skill dirs
+  addSkills(join(homedir(), ".skill"), "skill-global")
+  addSkills(join(process.cwd(), ".skill"), "skill-project")
+
+  return <SkillsClient data={rows} />
 }

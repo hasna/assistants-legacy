@@ -80,3 +80,38 @@ export async function getInstalledRegistrySkills(scope: 'project' | 'global' = '
 export function getSkillRegistryTags(): string[] {
   return _skillsLib ? _skillsLib.getAllTags() : [];
 }
+
+/**
+ * Returns the file-system directories where @hasna/skills SDK installs
+ * skills for the claude agent (global: ~/.claude/skills, project: .claude/skills).
+ */
+export async function getAgentSkillsDirs(
+  scope: 'global' | 'project' | 'both' = 'both',
+  cwd?: string,
+): Promise<string[]> {
+  const lib = await getSkillsLib();
+  const dirs: string[] = [];
+  if (scope === 'global' || scope === 'both') {
+    dirs.push(lib.getAgentSkillsDir('claude', 'global'));
+  }
+  if (scope === 'project' || scope === 'both') {
+    dirs.push(lib.getAgentSkillsDir('claude', 'project', cwd ?? process.cwd()));
+  }
+  return dirs;
+}
+
+/**
+ * Remove a skill that was installed via installSkillForAgent.
+ */
+export async function removeAgentInstalledSkill(
+  name: string,
+  scope: 'project' | 'global' = 'global',
+  cwd?: string,
+): Promise<boolean> {
+  const lib = await getSkillsLib();
+  return lib.removeSkillForAgent(name, {
+    agent: 'claude',
+    scope,
+    projectDir: scope === 'project' ? cwd : undefined,
+  });
+}

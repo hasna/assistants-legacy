@@ -14,10 +14,16 @@ export async function POST(req: Request) {
     }
     if (!body.command?.trim()) return NextResponse.json({ error: 'command required' }, { status: 400 })
 
+    const validTypes = ['interval', 'cron', 'once'] as const;
+    if (!validTypes.includes(body.scheduleType as typeof validTypes[number])) {
+      return NextResponse.json({ error: 'scheduleType must be interval, cron, or once' }, { status: 400 });
+    }
+
     // Build schedule JSON
     let schedule: Record<string, unknown>
     if (body.scheduleType === 'interval') {
-      schedule = { kind: 'interval', interval: body.intervalValue ?? 60, unit: body.intervalUnit ?? 'seconds' }
+      const interval = typeof body.intervalValue === 'number' && body.intervalValue > 0 ? body.intervalValue : 60;
+      schedule = { kind: 'interval', interval, unit: body.intervalUnit ?? 'seconds' }
     } else if (body.scheduleType === 'cron') {
       if (!body.cronExpression) return NextResponse.json({ error: 'cron expression required' }, { status: 400 })
       schedule = { kind: 'cron', cron: body.cronExpression }
@@ -34,7 +40,7 @@ export async function POST(req: Request) {
     `).run(id, process.cwd(), body.command.trim(), JSON.stringify(schedule), now, now)
 
     return NextResponse.json({ ok: true, id })
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 })
   }
 }

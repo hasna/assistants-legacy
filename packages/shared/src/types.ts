@@ -1295,6 +1295,12 @@ export interface MessagesStorageConfig {
 export interface MessagesConfig {
   /** Whether messages are enabled (default: false) */
   enabled?: boolean;
+  /**
+   * Backend provider for messages.
+   * - 'local' (default): native SQLite storage via MessagesManager
+   * - 'conversations': use @hasna/conversations SDK (enables cross-agent DMs, spaces, presence)
+   */
+  provider?: 'local' | 'conversations';
   /** Auto-injection settings */
   injection?: MessagesInjectionConfig;
   /** Storage settings */

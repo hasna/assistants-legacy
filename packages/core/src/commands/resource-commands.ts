@@ -192,33 +192,8 @@ export function secretsCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const manager = context.getSecretsManager?.();
-      if (!manager) {
-        context.emit('text', 'Secrets management is not enabled. Configure secrets in config.json.\n');
-        context.emit('text', '\nTo enable:\n');
-        context.emit('text', '```json\n');
-        context.emit('text', '{\n');
-        context.emit('text', '  "secrets": {\n');
-        context.emit('text', '    "enabled": true,\n');
-        context.emit('text', '    "storage": { "provider": "local" }\n');
-        context.emit('text', '  }\n');
-        context.emit('text', '}\n');
-        context.emit('text', '```\n');
-        context.emit('text', '\nOptional AWS backend:\n');
-        context.emit('text', '```json\n');
-        context.emit('text', '{\n');
-        context.emit('text', '  "secrets": {\n');
-        context.emit('text', '    "enabled": true,\n');
-        context.emit('text', '    "storage": {\n');
-        context.emit('text', '      "provider": "aws",\n');
-        context.emit('text', '      "region": "us-east-1"\n');
-        context.emit('text', '    }\n');
-        context.emit('text', '  }\n');
-        context.emit('text', '}\n');
-        context.emit('text', '```\n');
-        context.emit('done');
-        return { handled: true };
-      }
+      // SDK adapter: always available (uses ~/.open-secrets/vault.db)
+      const { listSecrets, getSecretAnyScope, deleteSecret, exportSecrets } = await import('../secrets/sdk-adapter');
 
       const parts = splitArgs(args.trim());
       const subcommand = parts[0]?.toLowerCase() || '';
@@ -232,37 +207,28 @@ export function secretsCommand(): Command {
       // /secrets list [scope]
       if (subcommand === 'list') {
         try {
-          const scope = parts[1]?.toLowerCase() || 'all';
-          const secrets = await manager.list(scope as 'global' | 'assistant' | 'all');
+          const scope = (parts[1]?.toLowerCase() || 'all') as 'global' | 'assistant' | 'all';
+          const secrets = listSecrets(scope);
 
           if (secrets.length === 0) {
-            context.emit('text', 'No secrets stored.\n');
-            context.emit('text', 'Use /secrets add to add a secret.\n');
+            context.emit('text', 'No secrets stored.\nUse /secrets add to add a secret.\n');
           } else {
-            context.emit('text', `\n## Secrets (${secrets.length} secret${secrets.length === 1 ? '' : 's'})\n\n`);
-
-            // Group by scope
-            const globalSecrets = secrets.filter(s => s.scope === 'global');
-            const assistantSecrets = secrets.filter(s => s.scope === 'assistant');
-
+            context.emit('text', `\n## Secrets (${secrets.length})\n\n`);
+            const globalSecrets = secrets.filter(s => s.namespace === 'global');
+            const assistantSecrets = secrets.filter(s => s.namespace !== 'global');
             if (globalSecrets.length > 0) {
-              context.emit('text', '### Global Secrets\n');
-              for (const secret of globalSecrets) {
-                context.emit('text', `- **${secret.name}**${secret.description ? ` - ${secret.description}` : ''}\n`);
+              context.emit('text', '### Global\n');
+              for (const s of globalSecrets) {
+                context.emit('text', `- **${s.name}** [${s.type}]${s.label ? ` — ${s.label}` : ''}\n`);
               }
               context.emit('text', '\n');
             }
-
             if (assistantSecrets.length > 0) {
-              context.emit('text', '### Assistant Secrets\n');
-              for (const secret of assistantSecrets) {
-                context.emit('text', `- **${secret.name}**${secret.description ? ` - ${secret.description}` : ''}\n`);
+              context.emit('text', '### Assistant\n');
+              for (const s of assistantSecrets) {
+                context.emit('text', `- **${s.name}** [${s.type}]${s.label ? ` — ${s.label}` : ''}\n`);
               }
-              context.emit('text', '\n');
             }
-
-            const status = manager.getRateLimitStatus();
-            context.emit('text', `---\nRate limit: ${status.readsUsed}/${status.maxReads} reads this hour\n`);
           }
         } catch (error) {
           context.emit('text', `Error listing secrets: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -279,24 +245,16 @@ export function secretsCommand(): Command {
           context.emit('done');
           return { handled: true };
         }
-
         const scope = parts[2]?.toLowerCase() as 'global' | 'assistant' | undefined;
-
         try {
-          const value = await manager.get(name, scope, 'plain');
-          if (value === null) {
+          const entry = scope ? (await import('../secrets/sdk-adapter')).getSecret(name, scope) : getSecretAnyScope(name);
+          if (!entry) {
             context.emit('text', `Secret "${name}" not found.\n`);
           } else {
-            // Mask the value for display (show first 4 and last 4 chars if long enough)
-            const valueStr = String(value);
-            let maskedValue: string;
-            if (valueStr.length <= 8) {
-              maskedValue = '********';
-            } else {
-              maskedValue = valueStr.slice(0, 4) + '****' + valueStr.slice(-4);
-            }
-            context.emit('text', `\n**${name}**: ${maskedValue}\n`);
-            context.emit('text', '\nTo use the full value, call secrets_get tool with the secret name.\n');
+            const v = entry.value;
+            const masked = v.length <= 8 ? '********' : v.slice(0, 4) + '****' + v.slice(-4);
+            context.emit('text', `\n**${name}**: ${masked}\n`);
+            context.emit('text', '\nUse secrets_get tool for the full value.\n');
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -305,7 +263,7 @@ export function secretsCommand(): Command {
         return { handled: true };
       }
 
-      // /secrets set
+      // /secrets add|set
       if (subcommand === 'add' || subcommand === 'set') {
         context.emit('done');
         return { handled: true, showPanel: 'secrets', panelValue: 'add' };
@@ -319,16 +277,10 @@ export function secretsCommand(): Command {
           context.emit('done');
           return { handled: true };
         }
-
         const scope = (parts[2]?.toLowerCase() as 'global' | 'assistant') || 'assistant';
-
         try {
-          const result = await manager.delete(name, scope);
-          if (result.success) {
-            context.emit('text', `${result.message}\n`);
-          } else {
-            context.emit('text', `Error: ${result.message}\n`);
-          }
+          const deleted = deleteSecret(name, scope);
+          context.emit('text', deleted ? `Secret "${name}" deleted.\n` : `Secret "${name}" not found.\n`);
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
         }
@@ -336,22 +288,21 @@ export function secretsCommand(): Command {
         return { handled: true };
       }
 
-      // /secrets export [scope]
+      // /secrets export
       if (subcommand === 'export') {
-        const scope = (parts[1]?.toLowerCase() as 'global' | 'assistant' | 'all') || 'all';
-
         try {
-          const envLines = await manager.export(scope);
-          if (envLines.length === 0) {
+          const exported = exportSecrets(false);
+          const keys = Object.keys((exported as any).secrets ?? {});
+          if (keys.length === 0) {
             context.emit('text', 'No secrets to export.\n');
           } else {
-            context.emit('text', '\n## Secrets Export (env format)\n\n');
-            context.emit('text', '```bash\n');
-            for (const line of envLines) {
-              context.emit('text', `${line}\n`);
+            context.emit('text', '\n## Secrets Export\n\n```bash\n');
+            for (const key of keys) {
+              const entry = (exported as any).secrets[key];
+              const envName = String(key).replace(/[^A-Z0-9_]/gi, '_').toUpperCase();
+              context.emit('text', `${envName}=${entry.value}\n`);
             }
             context.emit('text', '```\n');
-            context.emit('text', '\nCopy these to your shell or .env file.\n');
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -362,20 +313,15 @@ export function secretsCommand(): Command {
 
       // /secrets status
       if (subcommand === 'status') {
-        const status = manager.getRateLimitStatus();
-        const credCheck = await manager.checkCredentials();
-        const storageMode = typeof (manager as any).getStorageMode === 'function'
-          ? (manager as any).getStorageMode()
-          : 'unknown';
-
-        context.emit('text', '\n## Secrets Status\n\n');
-        context.emit('text', `Storage: ${storageMode}\n`);
-        context.emit('text', `Credentials: ${credCheck.valid ? 'Valid' : 'Invalid'}\n`);
-        if (!credCheck.valid && credCheck.error) {
-          context.emit('text', `  Error: ${credCheck.error}\n`);
+        try {
+          const all = listSecrets('all');
+          context.emit('text', '\n## Secrets Status\n\n');
+          context.emit('text', `Storage: ~/.open-secrets/vault.db\n`);
+          context.emit('text', `Total secrets: ${all.length}\n`);
+          context.emit('text', `Global: ${all.filter(s => s.namespace === 'global').length} · Assistant: ${all.filter(s => s.namespace !== 'global').length}\n`);
+        } catch {
+          context.emit('text', 'Secrets vault not initialized yet.\n');
         }
-        context.emit('text', `Rate Limit: ${status.readsUsed}/${status.maxReads} reads used\n`);
-        context.emit('text', `Window Reset: ${status.windowResetMinutes} minutes\n`);
         context.emit('done');
         return { handled: true };
       }

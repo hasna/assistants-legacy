@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${sora.variable} ${jetbrains.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${jetbrains.variable}`}>
       <body className="min-h-screen bg-background font-[family-name:var(--font-body)] text-foreground antialiased">
         {children}
         <Toaster position="bottom-right" richColors closeButton />

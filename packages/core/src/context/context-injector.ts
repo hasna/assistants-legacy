@@ -325,11 +325,13 @@ export class ContextInjector {
     const dirName = basename(this.cwd);
     parts.push(dirName);
 
+    const { readFile, access } = await import('fs/promises');
+    const fileExists = async (p: string) => { try { await access(p); return true; } catch { return false; } };
+
     // Include package.json info if configured
     if (config?.includePackageJson) {
       try {
         const pkgPath = `${this.cwd}/package.json`;
-        const { readFile } = await import('fs/promises');
         const content = await readFile(pkgPath, 'utf-8');
         const pkg = JSON.parse(content);
         if (pkg.name && pkg.name !== dirName) {
@@ -341,6 +343,39 @@ export class ContextInjector {
       } catch {
         // No package.json or not readable
       }
+    }
+
+    // Detect tech stack from project files
+    const techStack: string[] = [];
+
+    // Monorepo detection
+    if (await fileExists(`${this.cwd}/pnpm-workspace.yaml`)) {
+      techStack.push('pnpm monorepo');
+    } else if (await fileExists(`${this.cwd}/lerna.json`)) {
+      techStack.push('lerna monorepo');
+    }
+    if (await fileExists(`${this.cwd}/turbo.json`)) {
+      techStack.push('turborepo');
+    }
+    if (await fileExists(`${this.cwd}/packages`)) {
+      techStack.push('packages/ layout');
+    }
+
+    // Runtime/language detection
+    if (await fileExists(`${this.cwd}/bun.lock`) || await fileExists(`${this.cwd}/bun.lockb`)) {
+      techStack.push('bun');
+    }
+    if (await fileExists(`${this.cwd}/tsconfig.json`)) {
+      techStack.push('typescript');
+    }
+
+    // Framework detection
+    if (await fileExists(`${this.cwd}/next.config.js`) || await fileExists(`${this.cwd}/next.config.ts`) || await fileExists(`${this.cwd}/next.config.mjs`)) {
+      techStack.push('next.js');
+    }
+
+    if (techStack.length > 0) {
+      parts.push(`[${techStack.join(', ')}]`);
     }
 
     // Include git info if configured

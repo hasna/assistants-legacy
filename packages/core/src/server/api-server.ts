@@ -6,6 +6,8 @@
  */
 
 import { SessionStorage } from '../logger';
+import { freemem, totalmem } from 'os';
+import { statfs } from 'fs';
 
 export interface MemoryEntry {
   key: string;
@@ -19,11 +21,23 @@ export interface MemoryEntry {
   id?: string;
 }
 
+export interface ToolInfo {
+  name: string;
+  description: string;
+  parameters?: unknown;
+}
+
 export interface LocalAPIServerOptions {
   port?: number;
   onChat?: (message: string) => Promise<AsyncIterable<string>>;
   onStatus?: () => Promise<ServerStatus>;
   onMemories?: (query?: string, limit?: number) => Promise<MemoryEntry[]>;
+  /** Return list of available tools with their schemas */
+  onListTools?: () => Promise<ToolInfo[]>;
+  /** Execute a named tool with the given args, return result string */
+  onExecuteTool?: (name: string, args: Record<string, unknown>) => Promise<string>;
+  /** Execute a named skill, return SSE stream */
+  onExecuteSkill?: (name: string, args: string) => Promise<AsyncIterable<string>>;
 }
 
 export interface ServerStatus {
@@ -40,6 +54,9 @@ export class LocalAPIServer {
   private onChat?: LocalAPIServerOptions['onChat'];
   private onStatus?: LocalAPIServerOptions['onStatus'];
   private onMemories?: LocalAPIServerOptions['onMemories'];
+  private onListTools?: LocalAPIServerOptions['onListTools'];
+  private onExecuteTool?: LocalAPIServerOptions['onExecuteTool'];
+  private onExecuteSkill?: LocalAPIServerOptions['onExecuteSkill'];
   private notifications: Array<{ id: string; message: string; timestamp: number; type: string }> = [];
 
   constructor(options: LocalAPIServerOptions = {}) {
@@ -47,6 +64,9 @@ export class LocalAPIServer {
     this.onChat = options.onChat;
     this.onStatus = options.onStatus;
     this.onMemories = options.onMemories;
+    this.onListTools = options.onListTools;
+    this.onExecuteTool = options.onExecuteTool;
+    this.onExecuteSkill = options.onExecuteSkill;
   }
 
   /**
@@ -260,6 +280,161 @@ export class LocalAPIServer {
         );
       }
       return new Response(JSON.stringify(data), { headers: jsonHeaders });
+    }
+
+    // GET /api/tools — list all registered tools with schemas
+    if (path === '/api/tools' && req.method === 'GET') {
+      if (!this.onListTools) {
+        return new Response(JSON.stringify({ tools: [], total: 0 }), { headers: jsonHeaders });
+      }
+      const tools = await this.onListTools();
+      return new Response(JSON.stringify({ tools, total: tools.length }), { headers: jsonHeaders });
+    }
+
+    // POST /api/tools/:name — execute a tool directly
+    const toolExecMatch = path.match(/^\/api\/tools\/([^/]+)$/);
+    if (toolExecMatch && req.method === 'POST') {
+      const toolName = decodeURIComponent(toolExecMatch[1]);
+      if (!this.onExecuteTool) {
+        return new Response(
+          JSON.stringify({ error: 'Tool execution not configured' }),
+          { status: 503, headers: jsonHeaders }
+        );
+      }
+      let args: Record<string, unknown> = {};
+      try {
+        const body = await req.json();
+        if (typeof body === 'object' && body !== null) args = body as Record<string, unknown>;
+      } catch { /* empty body is fine */ }
+      try {
+        const result = await this.onExecuteTool(toolName, args);
+        return new Response(JSON.stringify({ result }), { headers: jsonHeaders });
+      } catch (e) {
+        return new Response(
+          JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+          { status: 400, headers: jsonHeaders }
+        );
+      }
+    }
+
+    // GET /api/skills — list available skills (uses @hasna/skills SDK)
+    if (path === '/api/skills' && req.method === 'GET') {
+      try {
+        const { SkillLoader } = await import('../skills/loader');
+        const loader = new SkillLoader();
+        await loader.loadAll(process.cwd(), { includeContent: false });
+        const skills = loader.getSkills().map(s => ({
+          name: s.name,
+          description: s.description,
+          argumentHint: s.argumentHint,
+          source: s.source,
+        }));
+        return new Response(JSON.stringify({ skills, total: skills.length }), { headers: jsonHeaders });
+      } catch (e) {
+        return new Response(JSON.stringify({ skills: [], total: 0 }), { headers: jsonHeaders });
+      }
+    }
+
+    // POST /api/skills/:name — execute a skill (streaming SSE)
+    const skillExecMatch = path.match(/^\/api\/skills\/([^/]+)$/);
+    if (skillExecMatch && req.method === 'POST') {
+      const skillName = decodeURIComponent(skillExecMatch[1]);
+      if (!this.onExecuteSkill) {
+        return new Response(
+          JSON.stringify({ error: 'Skill execution not configured' }),
+          { status: 503, headers: jsonHeaders }
+        );
+      }
+      let skillArgs = '';
+      try {
+        const body = await req.json() as { arguments?: string };
+        skillArgs = body.arguments ?? '';
+      } catch { /* empty body */ }
+      const stream = await this.onExecuteSkill(skillName, skillArgs);
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: chunk })}\n\n`));
+            }
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
+          } catch (e) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: String(e) })}\n\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+      return new Response(readable, {
+        headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+      });
+    }
+
+    // GET /api/health — detailed health check
+    if (path === '/api/health' && req.method === 'GET') {
+      const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+      const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+      const freeMemMb = Math.round(freemem() / 1024 / 1024);
+      const totalMemMb = Math.round(totalmem() / 1024 / 1024);
+      let freeDiskMb: number | null = null;
+      try {
+        await new Promise<void>((resolve, reject) =>
+          statfs(process.cwd(), (err, stats) => {
+            if (err) { reject(err); return; }
+            freeDiskMb = Math.round((stats.bfree * stats.bsize) / 1024 / 1024);
+            resolve();
+          })
+        );
+      } catch { /* statfs unavailable */ }
+      const sessionsCount = SessionStorage.listAllSessions().length;
+      const health = {
+        ok: hasAnthropicKey || hasOpenAIKey,
+        api_keys: { anthropic: hasAnthropicKey, openai: hasOpenAIKey },
+        model: process.env.ASSISTANTS_MODEL ?? null,
+        memory_free_mb: freeMemMb,
+        memory_total_mb: totalMemMb,
+        disk_free_mb: freeDiskMb,
+        sessions_count: sessionsCount,
+        uptime_ms: Date.now() - this.startTime,
+        node_version: process.version,
+      };
+      return new Response(JSON.stringify(health), { headers: jsonHeaders });
+    }
+
+    // GET /api/metrics — token and tool usage stats from session history
+    if (path === '/api/metrics' && req.method === 'GET') {
+      const sessions = SessionStorage.listAllSessions();
+      let totalMessages = 0;
+      const toolCallCounts: Record<string, number> = {};
+
+      for (const info of sessions.slice(0, 200)) {
+        const data = SessionStorage.loadSession(info.id, info.assistantId);
+        if (!data?.messages) continue;
+        totalMessages += (data.messages as unknown[]).length;
+        // Count tool_use blocks in assistant messages
+        for (const m of data.messages as Array<{ role: string; content: unknown }>) {
+          if (m.role !== 'assistant') continue;
+          const content = Array.isArray(m.content) ? m.content : [];
+          for (const block of content as Array<{ type?: string; name?: string }>) {
+            if (block.type === 'tool_use' && block.name) {
+              toolCallCounts[block.name] = (toolCallCounts[block.name] ?? 0) + 1;
+            }
+          }
+        }
+      }
+
+      const topTools = Object.entries(toolCallCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, count]) => ({ name, count }));
+
+      return new Response(JSON.stringify({
+        total_sessions: sessions.length,
+        total_messages: totalMessages,
+        top_tools: topTools,
+        uptime_ms: Date.now() - this.startTime,
+      }), { headers: jsonHeaders });
     }
 
     // 404

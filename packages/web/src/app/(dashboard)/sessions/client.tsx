@@ -34,16 +34,16 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800">{status}</Badge>
+    return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800">{status}</Badge>
+    return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{status}</Badge>
+    return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">{status}</Badge>
   }
   return <Badge>{status}</Badge>
 }
@@ -182,7 +182,33 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
     else toast.error('Failed to delete')
   }
 
-  const bulkActions = [{ label: '🗑 Delete selected', onClick: bulkDelete, variant: 'destructive' as const }]
+  const bulkExport = (rows: SessionRow[]) => {
+    const json = JSON.stringify(rows, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `sessions-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Exported ${rows.length} session${rows.length > 1 ? 's' : ''}`)
+  }
+
+  const bulkArchive = async (rows: SessionRow[]) => {
+    const res = await fetch('/api/sessions/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: rows.map(r => r.id) }),
+    })
+    if (res.ok) { toast.success(`Archived ${rows.length} session${rows.length > 1 ? 's' : ''}`); router.refresh() }
+    else toast.error('Archive not available — delete instead')
+  }
+
+  const bulkActions = [
+    { label: '🗑 Delete selected', onClick: bulkDelete, variant: 'destructive' as const },
+    { label: '⬇ Export selected', onClick: bulkExport },
+    { label: '📦 Archive selected', onClick: bulkArchive },
+  ]
 
   // Group sessions by date
   const groups = groupBy ? (() => {
