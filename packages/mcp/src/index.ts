@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
-import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents } from '@hasna/assistants-core';
+import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 
@@ -574,6 +574,30 @@ registerTool(
     const lines = [
       `Synced ${result.synced.length} agent(s) to ${args.target_dir ?? '.claude/agents/'}`,
       ...result.synced.map(p => `  ✓ ${p}`),
+      ...result.errors.map(e => `  ✗ ${e}`),
+    ];
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  }
+);
+
+server.tool(
+  'sync_from_claude_agents',
+  'Reverse sync: import agent definitions from .claude/agents/*.md files back into assistants MCP. Conflict resolution: last-write-wins by file mtime. Pull direction: .claude/agents → assistants MCP.',
+  {
+    type: 'object',
+    properties: {
+      source_dir: { type: 'string', description: 'Source directory (default: .claude/agents in cwd)' },
+      scope: { type: 'string', enum: ['global', 'project'], description: 'Where to save imported agents (default: project)' },
+    },
+  },
+  async (args: { source_dir?: string; scope?: 'global' | 'project' }) => {
+    const cwd = process.cwd();
+    const result = syncFromClaudeAgents(cwd, args.source_dir, args.scope ?? 'project');
+    const lines = [
+      `Import complete from ${args.source_dir ?? '.claude/agents/'}`,
+      `  ${result.imported.length} imported, ${result.skipped.length} skipped (already newer), ${result.errors.length} errors`,
+      ...result.imported.map(p => `  ✓ ${p}`),
+      ...result.skipped.map(n => `  ↷ ${n} (existing is newer)`),
       ...result.errors.map(e => `  ✗ ${e}`),
     ];
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };

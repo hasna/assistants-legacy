@@ -11,7 +11,7 @@
 
 import { join } from 'path';
 import { homedir } from 'os';
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { getConfigDir, getProjectConfigDir } from '../config';
 
 // ============================================
@@ -315,6 +315,98 @@ export function syncToClaudeAgents(
   }
 
   return { synced, errors };
+}
+
+/**
+ * Reverse sync: read .claude/agents/*.md files and import them as agent definitions.
+ * Conflict resolution: last-write-wins based on file mtime vs stored definition mtime.
+ */
+export function syncFromClaudeAgents(
+  cwd: string,
+  sourceDir?: string,
+  scope: 'global' | 'project' = 'project',
+): { imported: string[]; skipped: string[]; errors: string[] } {
+  const agentsDir = sourceDir ?? join(cwd, '.claude', 'agents');
+  const imported: string[] = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+
+  if (!existsSync(agentsDir)) {
+    return { imported: [], skipped: [], errors: [`Source directory not found: ${agentsDir}`] };
+  }
+
+  let entries: string[];
+  try {
+    entries = readdirSync(agentsDir).filter(e => e.endsWith('.md'));
+  } catch (e) {
+    return { imported: [], skipped: [], errors: [String(e)] };
+  }
+
+  const existingDefs = new Map(loadAgentDefinitions(cwd).map(d => [d.name, d]));
+
+  for (const entry of entries) {
+    const filePath = join(agentsDir, entry);
+    const agentName = entry.replace(/\.md$/, '');
+
+    try {
+      const raw = readFileSync(filePath, 'utf-8');
+      const mtime = new Date(0);
+      try {
+        mtime.setTime(statSync(filePath).mtimeMs);
+      } catch { /* ignore */ }
+
+      // Parse YAML frontmatter
+      const fm: Record<string, string> = {};
+      let body = raw;
+      if (raw.startsWith('---')) {
+        const endIdx = raw.indexOf('\n---', 3);
+        if (endIdx !== -1) {
+          const yamlBlock = raw.slice(3, endIdx).trim();
+          body = raw.slice(endIdx + 4).trim();
+          for (const line of yamlBlock.split('\n')) {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx > 0) {
+              const k = line.slice(0, colonIdx).trim();
+              const v = line.slice(colonIdx + 1).trim();
+              fm[k] = v;
+            }
+          }
+        }
+      }
+
+      const name = fm.name ?? agentName;
+      const description = fm.description ?? '';
+      const tools = fm.tools ? fm.tools.split(',').map(t => t.trim()).filter(Boolean) : undefined;
+      const maxTurns = fm.max_turns ? parseInt(fm.max_turns, 10) : undefined;
+
+      // Check conflict: if existing def is newer, skip
+      const existing = existingDefs.get(name);
+      if (existing?.filePath) {
+        try {
+          const existingMtime = statSync(existing.filePath).mtimeMs;
+          if (existingMtime >= mtime.getTime()) {
+            skipped.push(name);
+            continue;
+          }
+        } catch { /* use import anyway */ }
+      }
+
+      const def: AgentDefinition = {
+        name,
+        description,
+        scope,
+        systemPrompt: body || undefined,
+        tools,
+        maxTurns,
+      };
+      const savedPath = saveAgentDefinition(def, scope, cwd);
+      imported.push(savedPath);
+    } catch (e) {
+      errors.push(`${agentName}: ${String(e)}`);
+    }
+  }
+
+  return { imported, skipped, errors };
 }
 
 /**
