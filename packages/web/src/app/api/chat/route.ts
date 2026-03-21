@@ -180,9 +180,9 @@ export async function POST(request: Request) {
       );
     }
 
-      const requestedModel = typeof model === 'string' ? model : '';
-      const selectedModel = WEB_MODEL_IDS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
-      const systemPrompt = `${await loadSystemPrompt(sessionId)}${UI_BLOCKS_PROMPT}`;
+    const requestedModel = typeof model === 'string' ? model : '';
+    const selectedModel = WEB_MODEL_IDS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
+    const systemPrompt = `${await loadSystemPrompt(sessionId)}${UI_BLOCKS_PROMPT}`;
 
     const { default: Anthropic } = await import('@anthropic-ai/sdk');
     const anthropic = new Anthropic({ apiKey });
@@ -202,7 +202,9 @@ export async function POST(request: Request) {
           db.prepare(`UPDATE persisted_sessions SET updated_at = ? WHERE id = ?`)
             .run(Date.now(), sessionId);
         }
-      } catch {}
+      } catch (e) {
+        console.warn('[chat] Failed to persist user message:', e instanceof Error ? e.message : e);
+      }
     }
 
     const encoder = new TextEncoder();
@@ -339,7 +341,9 @@ export async function POST(request: Request) {
                 INSERT OR IGNORE INTO session_messages (id, session_id, role, content, timestamp)
                 VALUES (?, ?, 'assistant', ?, ?)
               `).run(`msg-${Date.now()}-resp`, sessionId, fullResponse, Date.now());
-            } catch {}
+            } catch (e) {
+              console.warn('[chat] Failed to persist assistant response:', e instanceof Error ? e.message : e);
+            }
           }
 
           emit({ type: 'done' });

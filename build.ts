@@ -5,6 +5,7 @@
  */
 
 import { $ } from 'bun';
+import { existsSync } from 'fs';
 
 const outdir = './dist';
 
@@ -91,15 +92,21 @@ await Bun.write(outputFile, content);
 // Make executable
 await $`chmod +x ${outputFile}`;
 
-// Copy commands, skills, and ASSISTANTS.md
+// Copy commands, skills, workflows, and config to dist
 await $`mkdir -p ${outdir}/.assistants`;
-await $`cp -r .assistants/commands ${outdir}/.assistants/commands 2>/dev/null || true`;
-await $`cp -r .assistants/skills ${outdir}/.assistants/skills 2>/dev/null || true`;
-await $`cp -r .assistants/workflows ${outdir}/.assistants/workflows 2>/dev/null || true`;
-await $`cp .assistants/ASSISTANTS.md ${outdir}/.assistants/ASSISTANTS.md 2>/dev/null || true`;
+const assetsToCopy = [
+  { src: '.assistants/commands', dest: `${outdir}/.assistants/commands` },
+  { src: '.assistants/skills', dest: `${outdir}/.assistants/skills` },
+  { src: '.assistants/workflows', dest: `${outdir}/.assistants/workflows` },
+  { src: '.assistants/ASSISTANTS.md', dest: `${outdir}/.assistants/ASSISTANTS.md` },
+  { src: 'config', dest: `${outdir}/config` },
+];
 
-// Copy config directory
-await $`cp -r config ${outdir}/config 2>/dev/null || true`;
+for (const { src, dest } of assetsToCopy) {
+  if (existsSync(src)) {
+    await $`cp -r ${src} ${dest}`;
+  }
+}
 
 console.log('Build complete! Output in ./dist');
 console.log('Files:');

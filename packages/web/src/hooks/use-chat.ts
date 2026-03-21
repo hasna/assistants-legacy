@@ -52,6 +52,8 @@ export function useChat(sessionId?: string) {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
+      // Abort any in-flight stream before starting a new one
+      abortRef.current?.abort();
       abortRef.current = new AbortController();
 
       const allMessages = [...messages, userMessage].map(m => ({
