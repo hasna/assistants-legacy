@@ -380,6 +380,7 @@ export interface SavedSessionInfo {
   updatedAt: string;
   messageCount: number;
   assistantId?: string | null;
+  label?: string | null;
 }
 
 /**
