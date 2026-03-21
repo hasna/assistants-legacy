@@ -3,6 +3,12 @@ export {
   getAgentDefinition,
   saveAgentDefinition,
   deleteAgentDefinition,
+  getEffectiveSystemPrompt,
+  setProjectRole,
+  removeProjectRole,
+  setAgentModelConfig,
+  syncToClaudeAgents,
+  syncFromClaudeAgents,
   type AgentDefinition,
 } from './definitions';
 

@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 
@@ -859,6 +860,235 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
   }
 
   return server;
+}
+
+// ─── Agent lifecycle ──────────────────────────────────────────────────────────
+
+// In-memory agent registry for assistants MCP
+const mcpAgentRegistry = new Map<string, { id: string; name: string; last_seen_at: string; project_id?: string }>();
+
+registerTool(
+  'register_agent',
+  'Register an agent session for attribution. Returns agent_id.',
+  {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Agent name' },
+      session_id: { type: 'string', description: 'Session identifier' },
+    },
+    required: ['name'],
+  },
+  async (args: { name: string; session_id?: string }) => {
+    const existing = [...mcpAgentRegistry.values()].find(a => a.name === args.name);
+    if (existing) {
+      existing.last_seen_at = new Date().toISOString();
+      return { content: [{ type: 'text' as const, text: JSON.stringify({ agent_id: existing.id, name: existing.name, last_seen_at: existing.last_seen_at }) }] };
+    }
+    const id = Math.random().toString(36).slice(2, 10);
+    const agent = { id, name: args.name, last_seen_at: new Date().toISOString() };
+    mcpAgentRegistry.set(id, agent);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(agent) }] };
+  }
+);
+
+registerTool(
+  'heartbeat',
+  'Update agent last_seen_at to signal active session.',
+  {
+    type: 'object',
+    properties: { agent_id: { type: 'string' } },
+    required: ['agent_id'],
+  },
+  async (args: { agent_id: string }) => {
+    const agent = mcpAgentRegistry.get(args.agent_id);
+    if (!agent) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_id}` }], isError: true };
+    agent.last_seen_at = new Date().toISOString();
+    return { content: [{ type: 'text' as const, text: `♥ ${agent.name} — active at ${agent.last_seen_at}` }] };
+  }
+);
+
+registerTool(
+  'set_focus',
+  'Set the active project context for this agent session.',
+  {
+    type: 'object',
+    properties: {
+      agent_id: { type: 'string' },
+      project_id: { type: 'string', description: 'Project to focus on (omit to clear)' },
+    },
+    required: ['agent_id'],
+  },
+  async (args: { agent_id: string; project_id?: string }) => {
+    const agent = mcpAgentRegistry.get(args.agent_id);
+    if (!agent) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_id}` }], isError: true };
+    agent.project_id = args.project_id;
+    const msg = args.project_id ? `Focus set: ${args.project_id}` : 'Focus cleared';
+    return { content: [{ type: 'text' as const, text: msg }] };
+  }
+);
+
+// ─── Per-assistant roles ──────────────────────────────────────────────────────
+
+registerTool(
+  'set_project_role',
+  'Set a per-project role for an assistant. Appended to globalRole, never replaces it.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string', description: 'Assistant/agent name' },
+      project_id: { type: 'string', description: 'Project ID or name' },
+      role: { type: 'string', description: 'Role text to append for this project' },
+    },
+    required: ['agent_name', 'project_id', 'role'],
+  },
+  async (args: { agent_name: string; project_id: string; role: string }) => {
+    const cwd = process.cwd();
+    const filePath = setProjectRole(args.agent_name, args.project_id, args.role, cwd);
+    return { content: [{ type: 'text' as const, text: `Project role set for ${args.agent_name} on ${args.project_id}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'remove_project_role',
+  'Remove a per-project role from an assistant.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string' },
+      project_id: { type: 'string' },
+    },
+    required: ['agent_name', 'project_id'],
+  },
+  async (args: { agent_name: string; project_id: string }) => {
+    const cwd = process.cwd();
+    const filePath = removeProjectRole(args.agent_name, args.project_id, cwd);
+    return { content: [{ type: 'text' as const, text: `Project role removed for ${args.agent_name} on ${args.project_id}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'get_effective_prompt',
+  'Get the effective system prompt for an assistant (globalRole + projectRole + systemPrompt).',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string' },
+      project_id: { type: 'string', description: 'Optional project context' },
+    },
+    required: ['agent_name'],
+  },
+  async (args: { agent_name: string; project_id?: string }) => {
+    const cwd = process.cwd();
+    const def = loadAgentDefinitions(cwd).find(d => d.name === args.agent_name);
+    if (!def) return { content: [{ type: 'text' as const, text: `Agent not found: ${args.agent_name}` }], isError: true };
+    const prompt = getEffectiveSystemPrompt(def, args.project_id);
+    return { content: [{ type: 'text' as const, text: prompt || '(no prompt set)' }] };
+  }
+);
+
+registerTool(
+  'set_agent_model',
+  'Set provider, model ID, and reasoning level for an assistant.',
+  {
+    type: 'object',
+    properties: {
+      agent_name: { type: 'string', description: 'Assistant/agent name' },
+      provider: { type: 'string', description: 'LLM provider: anthropic, openai, google, etc.' },
+      model: { type: 'string', description: 'Model ID e.g. claude-opus-4-6, gpt-5.2' },
+      reasoning_level: { type: 'string', enum: ['max', 'high', 'medium', 'low'], description: 'Reasoning level for extended thinking' },
+    },
+    required: ['agent_name'],
+  },
+  async (args: { agent_name: string; provider?: string; model?: string; reasoning_level?: string }) => {
+    const cwd = process.cwd();
+    const filePath = setAgentModelConfig(args.agent_name, {
+      provider: args.provider,
+      model: args.model,
+      reasoningLevel: args.reasoning_level as 'max' | 'high' | 'medium' | 'low' | undefined,
+    }, cwd);
+    return { content: [{ type: 'text' as const, text: `Model config updated for ${args.agent_name}: ${filePath}` }] };
+  }
+);
+
+registerTool(
+  'sync_to_claude_agents',
+  'Sync all assistant definitions to .claude/agents/ directory as Claude Code markdown files with YAML frontmatter. Push direction: assistants MCP → .claude/agents.',
+  {
+    type: 'object',
+    properties: {
+      target_dir: { type: 'string', description: 'Target directory (default: .claude/agents in cwd)' },
+    },
+  },
+  async (args: { target_dir?: string }) => {
+    const cwd = process.cwd();
+    const result = syncToClaudeAgents(cwd, args.target_dir);
+    const lines = [
+      `Synced ${result.synced.length} agent(s) to ${args.target_dir ?? '.claude/agents/'}`,
+      ...result.synced.map(p => `  ✓ ${p}`),
+      ...result.errors.map(e => `  ✗ ${e}`),
+    ];
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  }
+);
+
+server.tool(
+  'sync_from_claude_agents',
+  'Reverse sync: import agent definitions from .claude/agents/*.md files back into assistants MCP. Conflict resolution: last-write-wins by file mtime. Pull direction: .claude/agents → assistants MCP.',
+  {
+    type: 'object',
+    properties: {
+      source_dir: { type: 'string', description: 'Source directory (default: .claude/agents in cwd)' },
+      scope: { type: 'string', enum: ['global', 'project'], description: 'Where to save imported agents (default: project)' },
+    },
+  },
+  async (args: { source_dir?: string; scope?: 'global' | 'project' }) => {
+    const cwd = process.cwd();
+    const result = syncFromClaudeAgents(cwd, args.source_dir, args.scope ?? 'project');
+    const lines = [
+      `Import complete from ${args.source_dir ?? '.claude/agents/'}`,
+      `  ${result.imported.length} imported, ${result.skipped.length} skipped (already newer), ${result.errors.length} errors`,
+      ...result.imported.map(p => `  ✓ ${p}`),
+      ...result.skipped.map(n => `  ↷ ${n} (existing is newer)`),
+      ...result.errors.map(e => `  ✗ ${e}`),
+    ];
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  }
+);
+
+// ─── CLI mode (remove/uninstall/rm) ─────────────────────────────────────────
+
+const firstArg = process.argv[2];
+if (firstArg === 'remove' || firstArg === 'rm' || firstArg === 'uninstall' || firstArg === 'delete') {
+  const sessionId = process.argv[3];
+  if (!sessionId) {
+    console.error(`Usage: assistants-mcp ${firstArg} <session_id>`);
+    process.exit(1);
+  }
+  try {
+    // Sessions are stored as JSON files in the sessions dir
+    const sessionData = SessionStorage.loadSession(sessionId);
+    if (!sessionData) {
+      console.error(`Session not found: ${sessionId}`);
+      process.exit(1);
+    }
+    // Delete the file
+    const { unlinkSync, existsSync } = await import('fs');
+    const { join } = await import('path');
+    const { homedir } = await import('os');
+    const sessionsDir = join(homedir(), '.assistants', 'sessions');
+    const sessionFile = join(sessionsDir, `${sessionId}.json`);
+    if (existsSync(sessionFile)) {
+      unlinkSync(sessionFile);
+      console.log(`✓ Session ${sessionId} removed`);
+    } else {
+      console.error(`Session file not found: ${sessionFile}`);
+      process.exit(1);
+    }
+  } catch (e) {
+    console.error(`Failed: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+  process.exit(0);
 }
 
 // ─── Start server ─────────────────────────────────────────────────────────────

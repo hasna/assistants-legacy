@@ -11,7 +11,7 @@
 
 import { join } from 'path';
 import { homedir } from 'os';
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { getConfigDir, getProjectConfigDir } from '../config';
 
 // ============================================
@@ -27,6 +27,35 @@ export interface AgentDefinition {
   tools?: string[];
   /** System prompt / instructions for the agent */
   systemPrompt?: string;
+  /**
+   * LLM provider for this assistant (e.g. "anthropic", "openai", "google").
+   * Falls back to the global/default provider if unset.
+   */
+  provider?: string;
+  /**
+   * Model ID override (e.g. "claude-opus-4-6", "gpt-5.2", "gemini-2.5-flash").
+   * Falls back to the global/default model if unset.
+   */
+  model?: string;
+  /**
+   * Reasoning level for models that support extended thinking.
+   * Claude Code: "max" | "high" | "medium"
+   * OpenAI Codex: "high" | "medium" | "low"
+   * Falls back to global reasoning setting if unset.
+   */
+  reasoningLevel?: 'max' | 'high' | 'medium' | 'low';
+  /**
+   * Global role definition — applies everywhere.
+   * Prepended to systemPrompt as identity context.
+   * Example: "You are a senior TypeScript developer focused on testing."
+   */
+  globalRole?: string;
+  /**
+   * Per-project role overrides — keyed by project ID or name.
+   * Appended to globalRole (never replaces it).
+   * Example: { "platform-alumia": "In this project, focus on the web API routes." }
+   */
+  projectRoles?: Record<string, string>;
   /** Maximum turns the agent can take (default: 25) */
   maxTurns?: number;
   /** Minimum turns before the agent can return (default: 3) */
@@ -185,4 +214,233 @@ export function deleteAgentDefinition(
   }
 
   return null;
+}
+
+/**
+ * Get the effective system prompt for an agent in a given project context.
+ *
+ * Composition order:
+ *   1. globalRole (if set) — identity/base role
+ *   2. projectRoles[projectId] (if set) — project-specific addendum
+ *   3. systemPrompt (if set) — task-specific instructions
+ *
+ * This lets you separate stable identity (globalRole) from per-project focus
+ * (projectRoles) from task instructions (systemPrompt).
+ */
+export function getEffectiveSystemPrompt(
+  def: AgentDefinition,
+  projectId?: string,
+): string {
+  const parts: string[] = [];
+
+  if (def.globalRole) parts.push(def.globalRole);
+
+  if (projectId && def.projectRoles) {
+    const projectRole = def.projectRoles[projectId];
+    if (projectRole) parts.push(projectRole);
+  }
+
+  if (def.systemPrompt) parts.push(def.systemPrompt);
+
+  return parts.join('\n\n');
+}
+
+/**
+ * Set a per-project role on an agent definition file.
+ * Updates the JSON on disk.
+ */
+export function setProjectRole(
+  name: string,
+  projectId: string,
+  role: string,
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (!raw.projectRoles) raw.projectRoles = {};
+  raw.projectRoles[projectId] = role;
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
+}
+
+/**
+ * Sync agent definitions to `.claude/agents/` as Claude Code markdown files.
+ * Format: YAML frontmatter (name, model, provider, etc.) + markdown body (system prompt).
+ *
+ * @param agents - Agent definitions to sync (defaults to all loaded agents)
+ * @param targetDir - Target directory (default: `.claude/agents` in cwd)
+ * @param cwd - Working directory for loading agents
+ */
+export function syncToClaudeAgents(
+  cwd: string,
+  targetDir?: string,
+): { synced: string[]; errors: string[] } {
+  const agents = loadAgentDefinitions(cwd);
+  const agentsDir = targetDir ?? join(cwd, '.claude', 'agents');
+
+  mkdirSync(agentsDir, { recursive: true });
+
+  const synced: string[] = [];
+  const errors: string[] = [];
+
+  for (const agent of agents) {
+    try {
+      const frontmatter: Record<string, string | number | boolean | undefined> = {
+        name: agent.name,
+        description: agent.description,
+      };
+      if (agent.model) frontmatter.model = agent.model;
+      if (agent.provider) frontmatter.provider = agent.provider;
+      if (agent.reasoningLevel) frontmatter.reasoning_level = agent.reasoningLevel;
+      if (agent.maxTurns !== undefined) frontmatter.max_turns = agent.maxTurns;
+      if (agent.tools?.length) frontmatter.tools = agent.tools.join(', ');
+
+      // Build the effective system prompt as the markdown body
+      const body = getEffectiveSystemPrompt(agent);
+
+      const yamlLines = Object.entries(frontmatter)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => `${k}: ${v}`);
+
+      const content = ['---', ...yamlLines, '---', '', body || ''].join('\n');
+
+      const outPath = join(agentsDir, `${agent.name}.md`);
+      writeFileSync(outPath, content, 'utf-8');
+      synced.push(outPath);
+    } catch (e) {
+      errors.push(`${agent.name}: ${String(e)}`);
+    }
+  }
+
+  return { synced, errors };
+}
+
+/**
+ * Reverse sync: read .claude/agents/*.md files and import them as agent definitions.
+ * Conflict resolution: last-write-wins based on file mtime vs stored definition mtime.
+ */
+export function syncFromClaudeAgents(
+  cwd: string,
+  sourceDir?: string,
+  scope: 'global' | 'project' = 'project',
+): { imported: string[]; skipped: string[]; errors: string[] } {
+  const agentsDir = sourceDir ?? join(cwd, '.claude', 'agents');
+  const imported: string[] = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+
+  if (!existsSync(agentsDir)) {
+    return { imported: [], skipped: [], errors: [`Source directory not found: ${agentsDir}`] };
+  }
+
+  let entries: string[];
+  try {
+    entries = readdirSync(agentsDir).filter(e => e.endsWith('.md'));
+  } catch (e) {
+    return { imported: [], skipped: [], errors: [String(e)] };
+  }
+
+  const existingDefs = new Map(loadAgentDefinitions(cwd).map(d => [d.name, d]));
+
+  for (const entry of entries) {
+    const filePath = join(agentsDir, entry);
+    const agentName = entry.replace(/\.md$/, '');
+
+    try {
+      const raw = readFileSync(filePath, 'utf-8');
+      const mtime = new Date(0);
+      try {
+        mtime.setTime(statSync(filePath).mtimeMs);
+      } catch { /* ignore */ }
+
+      // Parse YAML frontmatter
+      const fm: Record<string, string> = {};
+      let body = raw;
+      if (raw.startsWith('---')) {
+        const endIdx = raw.indexOf('\n---', 3);
+        if (endIdx !== -1) {
+          const yamlBlock = raw.slice(3, endIdx).trim();
+          body = raw.slice(endIdx + 4).trim();
+          for (const line of yamlBlock.split('\n')) {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx > 0) {
+              const k = line.slice(0, colonIdx).trim();
+              const v = line.slice(colonIdx + 1).trim();
+              fm[k] = v;
+            }
+          }
+        }
+      }
+
+      const name = fm.name ?? agentName;
+      const description = fm.description ?? '';
+      const tools = fm.tools ? fm.tools.split(',').map(t => t.trim()).filter(Boolean) : undefined;
+      const maxTurns = fm.max_turns ? parseInt(fm.max_turns, 10) : undefined;
+
+      // Check conflict: if existing def is newer, skip
+      const existing = existingDefs.get(name);
+      if (existing?.filePath) {
+        try {
+          const existingMtime = statSync(existing.filePath).mtimeMs;
+          if (existingMtime >= mtime.getTime()) {
+            skipped.push(name);
+            continue;
+          }
+        } catch { /* use import anyway */ }
+      }
+
+      const def: AgentDefinition = {
+        name,
+        description,
+        scope,
+        systemPrompt: body || undefined,
+        tools,
+        maxTurns,
+      };
+      const savedPath = saveAgentDefinition(def, scope, cwd);
+      imported.push(savedPath);
+    } catch (e) {
+      errors.push(`${agentName}: ${String(e)}`);
+    }
+  }
+
+  return { imported, skipped, errors };
+}
+
+/**
+ * Set provider/model/reasoningLevel on an agent definition file.
+ */
+export function setAgentModelConfig(
+  name: string,
+  config: { provider?: string; model?: string; reasoningLevel?: AgentDefinition['reasoningLevel'] },
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (config.provider !== undefined) raw.provider = config.provider;
+  if (config.model !== undefined) raw.model = config.model;
+  if (config.reasoningLevel !== undefined) raw.reasoningLevel = config.reasoningLevel;
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
+}
+
+/**
+ * Remove a per-project role from an agent definition file.
+ */
+export function removeProjectRole(
+  name: string,
+  projectId: string,
+  cwd: string,
+): string {
+  const def = loadAgentDefinitions(cwd).find(d => d.name === name);
+  if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
+
+  const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
+  if (raw.projectRoles) delete raw.projectRoles[projectId];
+  writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+  return def.filePath;
 }
