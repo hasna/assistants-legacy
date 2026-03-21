@@ -92,8 +92,9 @@ import { createWalletManager, registerWalletTools, type WalletManager } from '..
 import { createSecretsManager, registerSecretsTools, type SecretsManager } from '../secrets';
 import { JobManager, createJobTools } from '../jobs';
 import { createMessagesManager, registerMessagesTools, type MessagesManager } from '../messages';
-import { createConversationsAdapter } from '../messages/conversations-adapter';
 import { registerConversationsSpacesTools } from '../tools/conversations';
+// createConversationsAdapter loaded dynamically — @hasna/conversations has module-level side effects
+// that interfere with Anthropic SDK async generator streaming
 // @hasna/conversations loaded dynamically to avoid module-level side effects
 // that interfere with Anthropic SDK async generator streaming
 import { createWebhooksManager, registerWebhookTools, type WebhooksManager } from '../webhooks';
@@ -593,6 +594,7 @@ export class AssistantLoop {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
       const provider = (this.config.messages as any).provider;
       if (provider === 'conversations') {
+        const { createConversationsAdapter } = await import('../messages/conversations-adapter');
         this.messagesManager = createConversationsAdapter(assistantId, assistantName, this.config.messages) as any;
       } else {
         this.messagesManager = createMessagesManager(assistantId, assistantName, this.config.messages);

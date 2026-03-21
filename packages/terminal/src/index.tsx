@@ -656,6 +656,12 @@ if (subcommand === 'report') {
   process.exit(0);
 }
 
+if (subcommand === 'brains') {
+  const { runBrainsCommand } = await import('./commands/brains.js');
+  await runBrainsCommand(process.argv.slice(3));
+  process.exit(0);
+}
+
 const options = parseArgs(process.argv);
 
 // Handle parsing errors
