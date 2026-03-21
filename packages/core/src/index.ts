@@ -494,3 +494,14 @@ export type {
   DocumentSource,
   ConnectorsConfigShared,
 } from '@hasna/assistants-shared';
+
+// Training data gatherer (for @hasna/brains fine-tuning integration)
+export { gatherTrainingData } from './lib/gatherer';
+
+// Model config (active fine-tuned model ID)
+export {
+  getActiveModel,
+  setActiveModel,
+  clearActiveModel,
+  DEFAULT_MODEL,
+} from './lib/model-config';
