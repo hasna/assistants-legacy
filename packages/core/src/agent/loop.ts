@@ -93,6 +93,7 @@ import { createSecretsManager, registerSecretsTools, type SecretsManager } from 
 import { JobManager, createJobTools } from '../jobs';
 import { createMessagesManager, registerMessagesTools, type MessagesManager } from '../messages';
 import { registerConversationsSpacesTools } from '../tools/conversations';
+import { registerAllSdkTools } from '../tools/sdk-tools';
 // createConversationsAdapter loaded dynamically — @hasna/conversations has module-level side effects
 // that interfere with Anthropic SDK async generator streaming
 // @hasna/conversations loaded dynamically to avoid module-level side effects
@@ -560,6 +561,10 @@ export class AssistantLoop {
     this.toolRegistry.register(NotifyTool.tool, NotifyTool.executor);
     this.toolRegistry.register(TmuxTools.tool, TmuxTools.executor);
     this.toolRegistry.register(DiffTool.tool, DiffTool.executor);
+
+    // Register all @hasna/* SDK-backed tools (economy, sessions, emails, prompts, etc.)
+    // All imports are lazy inside executors — no module-level side effects
+    registerAllSdkTools(this.toolRegistry);
 
     // Startup schema validation — warn on any malformed tool schemas (never throws)
     this.toolRegistry.validateAll();
