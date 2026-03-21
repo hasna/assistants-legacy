@@ -580,6 +580,42 @@ registerTool(
   }
 );
 
+// ─── CLI mode (remove/uninstall/rm) ─────────────────────────────────────────
+
+const firstArg = process.argv[2];
+if (firstArg === 'remove' || firstArg === 'rm' || firstArg === 'uninstall' || firstArg === 'delete') {
+  const sessionId = process.argv[3];
+  if (!sessionId) {
+    console.error(`Usage: assistants-mcp ${firstArg} <session_id>`);
+    process.exit(1);
+  }
+  try {
+    // Sessions are stored as JSON files in the sessions dir
+    const sessionData = SessionStorage.loadSession(sessionId);
+    if (!sessionData) {
+      console.error(`Session not found: ${sessionId}`);
+      process.exit(1);
+    }
+    // Delete the file
+    const { unlinkSync, existsSync } = await import('fs');
+    const { join } = await import('path');
+    const { homedir } = await import('os');
+    const sessionsDir = join(homedir(), '.assistants', 'sessions');
+    const sessionFile = join(sessionsDir, `${sessionId}.json`);
+    if (existsSync(sessionFile)) {
+      unlinkSync(sessionFile);
+      console.log(`✓ Session ${sessionId} removed`);
+    } else {
+      console.error(`Session file not found: ${sessionFile}`);
+      process.exit(1);
+    }
+  } catch (e) {
+    console.error(`Failed: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 // ─── Start server ─────────────────────────────────────────────────────────────
 
 async function main() {
