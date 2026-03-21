@@ -7,6 +7,54 @@ import { Logger, SessionStorage, initAssistantsDir } from './logger';
 import type { Command } from './commands';
 
 /**
+ * Build a brief context summary from prior session messages to prepend on resume.
+ * Extracts the opening topic and the most recent exchanges — no LLM call needed.
+ * Returns null if there are too few messages to be worth summarising.
+ */
+function buildResumeContext(messages?: Message[]): string | null {
+  if (!messages || messages.length < 3) return null;
+
+  const userMessages = messages.filter((m) => m.role === 'user');
+  const assistantMessages = messages.filter((m) => m.role === 'assistant');
+  if (userMessages.length === 0) return null;
+
+  const truncate = (text: string, max = 200) =>
+    text.length > max ? text.slice(0, max) + '…' : text;
+
+  const getText = (m: Message) =>
+    typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+
+  // Opening context: first user message
+  const firstUser = truncate(getText(userMessages[0]));
+
+  // Recent context: last 2 user messages (if different from first)
+  const recentPairs: string[] = [];
+  const lastTwo = userMessages.slice(-2);
+  for (const m of lastTwo) {
+    const t = getText(m);
+    if (t !== getText(userMessages[0])) {
+      recentPairs.push(`User: ${truncate(t, 150)}`);
+    }
+  }
+
+  const lastAssistant = assistantMessages.at(-1);
+  if (lastAssistant) {
+    recentPairs.push(`Assistant: ${truncate(getText(lastAssistant), 150)}`);
+  }
+
+  const lines = [
+    `[Resuming previous conversation — ${messages.length} messages]`,
+    `Opening topic: ${firstUser}`,
+  ];
+  if (recentPairs.length > 0) {
+    lines.push('Most recent exchange:');
+    lines.push(...recentPairs);
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * The primary API for embedding the assistant in a host application.
  * Manages the full lifecycle: initialization, message sending, streaming
  * response chunks, tool execution, session persistence, and cleanup.
@@ -81,6 +129,13 @@ export class EmbeddedClient implements AssistantClient {
 
     this.logger.info('Session started', { cwd: this.cwd });
 
+    // When resuming a session, build a brief context summary and prepend to the system prompt
+    // so the assistant knows what was discussed without re-reading every message.
+    const resumeContext = buildResumeContext(options?.initialMessages);
+    const systemPrompt = resumeContext
+      ? [resumeContext, options?.systemPrompt].filter(Boolean).join('\n\n')
+      : options?.systemPrompt;
+
     const backend = options?.backend;
     const createAssistant = options?.assistantFactory ?? ((opts: ConstructorParameters<typeof AssistantLoop>[0]) => createAgentLoop(backend, opts));
     this.assistantLoop = createAssistant({
@@ -88,7 +143,7 @@ export class EmbeddedClient implements AssistantClient {
       sessionId,
       assistantId: options?.assistantId,
       allowedTools: options?.allowedTools,
-      extraSystemPrompt: options?.systemPrompt,
+      extraSystemPrompt: systemPrompt,
       model: options?.model,
       storageDir: this.basePath,
       workspaceId: this.workspaceId,

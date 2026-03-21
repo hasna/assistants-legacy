@@ -460,6 +460,130 @@ if (subcommand === 'serve') {
   process.exit(0);
 }
 
+if (subcommand === 'recall') {
+  const query = process.argv.slice(3).join(' ').trim();
+  if (!query) {
+    console.error('Usage: assistants recall <query>');
+    console.error('Search past conversations by topic, keyword, or question.');
+    console.error('Example: assistants recall "what did we discuss about the API design?"');
+    process.exit(1);
+  }
+
+  const { SessionStorage } = await import('@hasna/assistants-core');
+  const sessions = SessionStorage.listAllSessions();
+  const q = query.toLowerCase();
+
+  interface RecallMatch {
+    sessionId: string;
+    label?: string;
+    startedAt?: string;
+    cwd?: string;
+    excerpt: string;
+    role: string;
+    matchCount: number;
+  }
+  const matches: RecallMatch[] = [];
+
+  for (const info of sessions) {
+    const data = SessionStorage.loadSession(info.id, info.assistantId);
+    if (!data?.messages) continue;
+    let matchCount = 0;
+    let bestExcerpt = '';
+    let bestRole = 'assistant';
+
+    for (const m of data.messages as Array<{ role: string; content: unknown }>) {
+      const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      if (text.toLowerCase().includes(q)) {
+        matchCount++;
+        if (!bestExcerpt) {
+          const idx = text.toLowerCase().indexOf(q);
+          const start = Math.max(0, idx - 80);
+          const end = Math.min(text.length, idx + query.length + 80);
+          bestExcerpt = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+          bestRole = m.role;
+        }
+      }
+    }
+
+    if (matchCount > 0) {
+      matches.push({
+        sessionId: info.id,
+        label: info.label ?? undefined,
+        startedAt: info.startedAt ?? undefined,
+        cwd: info.cwd,
+        excerpt: bestExcerpt,
+        role: bestRole,
+        matchCount,
+      });
+    }
+  }
+
+  // Sort by match count (most relevant first)
+  matches.sort((a, b) => b.matchCount - a.matchCount);
+
+  if (matches.length === 0) {
+    console.log(`No conversations found matching "${query}".`);
+  } else {
+    console.log(`\nFound ${matches.length} conversation(s) matching "${query}":\n`);
+    for (const m of matches.slice(0, 10)) {
+      const date = m.startedAt ? new Date(m.startedAt).toLocaleString() : 'unknown';
+      const label = m.label ? ` "${m.label}"` : '';
+      const proj = m.cwd ? ` [${m.cwd.split('/').pop()}]` : '';
+      console.log(`  ${m.sessionId}${label}${proj}  ${date}  (${m.matchCount} match${m.matchCount > 1 ? 'es' : ''})`);
+      console.log(`  [${m.role}] ${m.excerpt}\n`);
+    }
+    console.log(`Resume a session: assistants -r <session-id>`);
+  }
+  process.exit(0);
+}
+
+if (subcommand === 'status') {
+  const { SessionStorage } = await import('@hasna/assistants-core');
+  const sessions = SessionStorage.listAllSessions();
+
+  console.log('\nassistants — status\n');
+  console.log(`  Sessions total:   ${sessions.length}`);
+
+  if (sessions.length > 0) {
+    const latest = sessions[0];
+    const date = latest.startedAt ? new Date(latest.startedAt).toLocaleString() : 'unknown';
+    const label = latest.label ? ` "${latest.label}"` : '';
+    console.log(`  Last session:     ${latest.id}${label}  (${date})`);
+  }
+
+  // Check if conversations is available — list online agents
+  try {
+    // @ts-ignore — @hasna/conversations may not be in terminal's dep tree
+    const { listAgents } = await import('@hasna/conversations');
+    const agents = (listAgents as Function)({ online_only: true }) as Array<{ agent: string; last_seen?: string }>;
+    if (agents.length > 0) {
+      console.log(`\n  Online agents (${agents.length}):`);
+      for (const a of agents.slice(0, 5)) {
+        const seen = a.last_seen ? new Date(a.last_seen).toLocaleTimeString() : 'unknown';
+        console.log(`    ${a.agent}  (last seen ${seen})`);
+      }
+    }
+  } catch { /* conversations not configured */ }
+
+  // Show config profile
+  try {
+    const { loadConfig, getConfigDir } = await import('@hasna/assistants-core');
+    const config = await loadConfig(process.cwd());
+    const model = config?.llm?.model ?? 'unknown';
+    console.log(`\n  Model:            ${model}`);
+    console.log(`  Config dir:       ${getConfigDir()}`);
+    if (config?.messages?.enabled) {
+      console.log(`  Messages:         enabled (provider: ${config.messages.provider ?? 'local'})`);
+    }
+    if ((config?.connectors as any)?.enabled) {
+      console.log(`  Connectors:       enabled`);
+    }
+  } catch { /* config not loaded */ }
+
+  console.log();
+  process.exit(0);
+}
+
 if (subcommand === 'report') {
   const days = parseInt(process.argv[3] || '7', 10);
   const isJson = process.argv.includes('--json');
@@ -563,6 +687,8 @@ Usage:
   assistants config [cwd]                 Show current configuration
   assistants sessions [list|<id>]         List or inspect sessions
   assistants search <query>               Search session message history
+  assistants recall <query>              Search past conversations by topic or question
+  assistants status                       Show sessions, online agents, model, and config
 
 Options:
   -h, --help                   Show this help message
