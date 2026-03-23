@@ -981,4 +981,15 @@ export const SCHEMA_STATEMENTS: string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start_time)`,
   `CREATE INDEX IF NOT EXISTS idx_calendar_events_end ON calendar_events(end_time)`,
+
+  // Feedback
+  `CREATE TABLE IF NOT EXISTS feedback (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    message TEXT NOT NULL,
+    email TEXT,
+    category TEXT DEFAULT 'general',
+    version TEXT,
+    machine_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
 ];

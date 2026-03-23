@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { registerCloudTools } from '@hasna/cloud';
 import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
@@ -858,6 +859,9 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
       );
     }
   }
+
+  // ─── Cloud ───────────────────────────────────────────────────────────────────
+  registerCloudTools(server, "assistants");
 
   return server;
 }

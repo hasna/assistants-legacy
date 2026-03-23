@@ -1,6 +1,5 @@
 {
   "name": "@hasna/assistants",
-
   "version": "1.1.101",
   "description": "Personal AI assistant that runs in your terminal — powered by Claude",
   "type": "module",
@@ -73,5 +72,8 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@hasna/cloud": "^0.1.0"
+  }
 }

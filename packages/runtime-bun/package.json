@@ -10,6 +10,9 @@
       "types": "./src/index.ts"
     }
   },
+  "dependencies": {
+    "@hasna/cloud": "^0.1.0"
+  },
   "peerDependencies": {
     "@hasna/assistants-core": "workspace:*"
   },
