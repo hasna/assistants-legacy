@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Text } from 'ink';
-import InkSpinner from 'ink-spinner';
 import { getRandomLoadingWord } from '@hasna/assistants-shared';
 
 interface ProcessingIndicatorProps {
@@ -69,10 +67,10 @@ export function ProcessingIndicator({
   const label = loadingWord;
 
   return (
-    <Box marginY={1}>
-      <Text dimColor>✶ </Text>
-      <Text dimColor> {label}... </Text>
-      <Text dimColor>({parts.join(' · ')})</Text>
-    </Box>
+    <box marginY={1}>
+      <text fg="gray">✶ </text>
+      <text fg="gray"> {label}... </text>
+      <text fg="gray">({parts.join(' · ')})</text>
+    </box>
   );
 }

@@ -1,35 +1,14 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { render } from 'ink';
-import { PassThrough } from 'stream';
+import { testRender } from '@opentui/react/test-utils';
 import { Messages } from '../src/components/Messages';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import type { DisplayMessage } from '../src/components/messageLines';
-
-const stripAnsi = (text: string) => text.replace(/\x1B\[[0-9;]*m/g, '');
-
-const createInkTestEnv = () => {
-  const stdout = new PassThrough();
-  (stdout as any).columns = 100;
-  let output = '';
-  stdout.on('data', (chunk) => {
-    output += String(chunk);
-  });
-  const stdin = new PassThrough() as any;
-  stdin.isTTY = true;
-  stdin.setRawMode = () => {};
-  stdin.ref = () => {};
-  stdin.unref = () => {};
-  stdin.resume = () => {};
-  stdin.pause = () => {};
-  return { stdout, stdin, getOutput: () => stripAnsi(output) };
-};
 
 const wait = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe('Tool Call UI - New Style', () => {
   test('single running tool call shows "Calling ToolName(context)"', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'read', input: { file_path: '/src/components/App.tsx' } } as any,
     ];
@@ -44,13 +23,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show "Calling Read(App.tsx)" format
     expect(output).toContain('Calling');
@@ -61,7 +39,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('single completed tool call shows "ToolName(context)" without Calling prefix', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'read', input: { file_path: '/src/factory.ts' } } as any,
     ];
@@ -79,13 +56,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show "Read(factory.ts)" without "Calling"
     expect(output).toContain('Read');
@@ -99,7 +75,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('2+ tool calls show compact summary when not verbose', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'grep', input: { pattern: 'createAgentLoop' } } as any,
       { id: 'tc2', name: 'grep', input: { pattern: 'ToolCallPanel' } } as any,
@@ -121,13 +96,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show compact summary
     expect(output).toContain('Searched 2 patterns');
@@ -136,7 +110,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('2+ running tool calls show "…" suffix', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'grep', input: { pattern: 'pattern1' } } as any,
       { id: 'tc2', name: 'read', input: { file_path: '/src/file.ts' } } as any,
@@ -156,13 +129,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show running summary with ellipsis
     expect(output).toContain('…');
@@ -170,7 +142,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('memory tool calls show compact memory summary', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'memory_recall', input: { key: 'user.timezone' } } as any,
       { id: 'tc2', name: 'memory_save', input: { key: 'project.stack', value: 'bun', category: 'fact' } } as any,
@@ -190,13 +161,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show memory-specific compact summary
     expect(output).toContain('Recalled 1 memory');
@@ -205,7 +175,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('verbose mode shows individual tool calls instead of summary', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'grep', input: { pattern: 'createAgentLoop' } } as any,
       { id: 'tc2', name: 'read', input: { file_path: '/src/Messages.tsx' } } as any,
@@ -225,13 +194,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} verboseTools={true} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} verboseTools={true} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show individual tool calls, not compact summary
     expect(output).toContain('Grep');
@@ -242,7 +210,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('no border characters in tool output', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'bash', input: { command: 'git status' } } as any,
     ];
@@ -260,13 +227,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should NOT have any border characters from old panels
     expect(output).not.toContain('╭');
@@ -277,7 +243,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('params shown with tree connector for running tools', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'grep', input: { pattern: 'ToolCallPanel', path: '/src/' } } as any,
     ];
@@ -292,13 +257,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show params with tree connector
     expect(output).toContain('└');
@@ -307,7 +271,6 @@ describe('Tool Call UI - New Style', () => {
   });
 
   test('error tool call shows red X icon', async () => {
-    const env = createInkTestEnv();
     const toolCalls: ToolCall[] = [
       { id: 'tc1', name: 'read', input: { file_path: '/nonexistent.ts' } } as any,
     ];
@@ -325,13 +288,12 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const instance = render(
-      <Messages messages={messages} />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Messages messages={messages} />, { width: 80, height: 24 }
     );
+    await renderOnce();
     await wait();
-    const output = env.getOutput();
-    instance.unmount();
+    const output = captureCharFrame();
 
     // Should show error icon
     expect(output).toContain('✗');

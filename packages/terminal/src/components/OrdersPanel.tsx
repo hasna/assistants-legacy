@@ -1,6 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type {
   OrdersManager,
   OrderListItem,
@@ -335,15 +333,15 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   });
 
   const tabBar = (
-    <Box marginBottom={1}>
+    <box marginBottom={1}>
       {MAIN_TABS.map((entry, index) => (
-        <Box key={entry} marginRight={1}>
-          <Text inverse={tab === entry}>
+        <box key={entry} marginRight={1}>
+          <text attributes={tab === entry ? 32 : undefined}>
             {`${index + 1}:${entry}`}
-          </Text>
-        </Box>
+          </text>
+        </box>
       ))}
-    </Box>
+    </box>
   );
 
   const controls = useMemo(() => {
@@ -366,24 +364,24 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   }, [tab, viewMode]);
 
   const header = (
-    <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <Text bold color="blue">Orders</Text>
-      <Text color="gray"> | {controls}</Text>
-    </Box>
+    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+      <text fg="blue"><b>Orders</b></text>
+      <text fg="gray"> | {controls}</text>
+    </box>
   );
 
   if (viewMode === 'order-create') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Create Order</Text>
-          <Text color="gray">Store can be existing or new. New stores are auto-registered.</Text>
-          <Text> </Text>
+        <box flexDirection="column" paddingX={1}>
+          <text><b>Create Order</b></text>
+          <text fg="gray">Store can be existing or new. New stores are auto-registered.</text>
+          <text> </text>
           {createOrderStep === 'store' ? (
-            <Box>
-              <Text>Store: </Text>
-              <TextInput
+            <box>
+              <text>Store: </text>
+              <input
                 value={createOrderStore}
                 onChange={setCreateOrderStore}
                 onSubmit={() => {
@@ -396,13 +394,13 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 placeholder="Store name"
                 focus
               />
-            </Box>
+            </box>
           ) : (
-            <Box flexDirection="column">
-              <Text>Store: {createOrderStore}</Text>
-              <Box>
-                <Text>Description: </Text>
-                <TextInput
+            <box flexDirection="column">
+              <text>Store: {createOrderStore}</text>
+              <box>
+                <text>Description: </text>
+                <input
                   value={createOrderDescription}
                   onChange={setCreateOrderDescription}
                   onSubmit={() => {
@@ -420,25 +418,25 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                   placeholder="Optional description"
                   focus
                 />
-              </Box>
-              <Text color="gray">Submit empty description to create without one.</Text>
-            </Box>
+              </box>
+              <text fg="gray">Submit empty description to create without one.</text>
+            </box>
           )}
-        </Box>
-      </Box>
+        </box>
+      </box>
     );
   }
 
   if (viewMode === 'store-add') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Add Store</Text>
-          <Text> </Text>
-          <Box>
-            <Text>Name: </Text>
-            <TextInput
+        <box flexDirection="column" paddingX={1}>
+          <text><b>Add Store</b></text>
+          <text> </text>
+          <box>
+            <text>Name: </text>
+            <input
               value={newStoreName}
               onChange={setNewStoreName}
               onSubmit={() => {
@@ -455,9 +453,9 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
               placeholder="Store name"
               focus
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
@@ -466,54 +464,54 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     const tracking = manager.getTracking(order.id);
 
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        {statusMessage ? <Box marginBottom={1}><Text color="yellow">{statusMessage}</Text></Box> : null}
-        {error ? <Box marginBottom={1}><Text color="red">Error: {error}</Text></Box> : null}
+        {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
+        {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
 
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Order Detail</Text>
-          <Text>ID: {order.id}</Text>
-          <Text>Store: {order.storeName}</Text>
-          <Box>
-            <Text>Status: </Text>
-            <Text color={statusColor(order.status)}>{order.status}</Text>
-          </Box>
-          {order.orderNumber ? <Text>Order #: {order.orderNumber}</Text> : null}
-          {order.description ? <Text>Description: {order.description}</Text> : null}
-          <Text>Total: {formatCurrency(order.totalAmount, order.currency)}</Text>
-          {order.shippingAddress ? <Text>Shipping: {order.shippingAddress}</Text> : null}
-          {order.paymentMethod ? <Text>Payment: {order.paymentMethod}</Text> : null}
-          {order.notes ? <Text>Notes: {order.notes}</Text> : null}
-          <Text>Created: {formatRelativeTime(order.createdAt)}</Text>
-          <Text>Updated: {formatRelativeTime(order.updatedAt)}</Text>
+        <box flexDirection="column" paddingX={1}>
+          <text><b>Order Detail</b></text>
+          <text>ID: {order.id}</text>
+          <text>Store: {order.storeName}</text>
+          <box>
+            <text>Status: </text>
+            <text fg={statusColor(order.status)}>{order.status}</text>
+          </box>
+          {order.orderNumber ? <text>Order #: {order.orderNumber}</text> : null}
+          {order.description ? <text>Description: {order.description}</text> : null}
+          <text>Total: {formatCurrency(order.totalAmount, order.currency)}</text>
+          {order.shippingAddress ? <text>Shipping: {order.shippingAddress}</text> : null}
+          {order.paymentMethod ? <text>Payment: {order.paymentMethod}</text> : null}
+          {order.notes ? <text>Notes: {order.notes}</text> : null}
+          <text>Created: {formatRelativeTime(order.createdAt)}</text>
+          <text>Updated: {formatRelativeTime(order.updatedAt)}</text>
 
           {tracking?.trackingNumber ? (
-            <Box flexDirection="column" marginTop={1}>
-              <Text bold>Tracking</Text>
-              <Text>Number: {tracking.trackingNumber}</Text>
-              {tracking.trackingUrl ? <Text>URL: {tracking.trackingUrl}</Text> : null}
-            </Box>
+            <box flexDirection="column" marginTop={1}>
+              <text><b>Tracking</b></text>
+              <text>Number: {tracking.trackingNumber}</text>
+              {tracking.trackingUrl ? <text>URL: {tracking.trackingUrl}</text> : null}
+            </box>
           ) : null}
 
-          <Box flexDirection="column" marginTop={1}>
-            <Text bold>{`Items (${items.length})`}</Text>
+          <box flexDirection="column" marginTop={1}>
+            <text><b>{`Items (${items.length})`}</b></text>
             {items.length === 0 ? (
-              <Text color="gray">No items.</Text>
+              <text fg="gray">No items.</text>
             ) : (
-              <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-                <Text bold>{`${fit('NAME', 24)} ${fit('QTY', 4, 'right')} ${fit('UNIT', 12, 'right')} ${fit('TOTAL', 12, 'right')} ${fit('STATUS', 10)}`}</Text>
+              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+                <text><b>{`${fit('NAME', 24)} ${fit('QTY', 4, 'right')} ${fit('UNIT', 12, 'right')} ${fit('TOTAL', 12, 'right')} ${fit('STATUS', 10)}`}</b></text>
                 {items.map((item) => {
                   const row = `${fit(item.name, 24)} ${fit(String(item.quantity), 4, 'right')} ${fit(formatCurrency(item.unitPrice, order.currency), 12, 'right')} ${fit(formatCurrency(item.totalPrice, order.currency), 12, 'right')} ${fit(item.status, 10)}`;
                   return (
-                    <Text key={item.id}>{row}</Text>
+                    <text key={item.id}>{row}</text>
                   );
                 })}
-              </Box>
+              </box>
             )}
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
@@ -521,35 +519,35 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     const recent = detailStore.orders;
 
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        {statusMessage ? <Box marginBottom={1}><Text color="yellow">{statusMessage}</Text></Box> : null}
-        {error ? <Box marginBottom={1}><Text color="red">Error: {error}</Text></Box> : null}
+        {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
+        {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
 
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Store Detail</Text>
-          <Text>ID: {detailStore.store.id}</Text>
-          <Text>Name: {detailStore.store.name}</Text>
-          <Text>Category: {detailStore.store.category}</Text>
-          {detailStore.store.url ? <Text>URL: {detailStore.store.url}</Text> : null}
-          <Text>Updated: {formatRelativeTime(detailStore.store.updatedAt)}</Text>
+        <box flexDirection="column" paddingX={1}>
+          <text><b>Store Detail</b></text>
+          <text>ID: {detailStore.store.id}</text>
+          <text>Name: {detailStore.store.name}</text>
+          <text>Category: {detailStore.store.category}</text>
+          {detailStore.store.url ? <text>URL: {detailStore.store.url}</text> : null}
+          <text>Updated: {formatRelativeTime(detailStore.store.updatedAt)}</text>
 
-          <Box flexDirection="column" marginTop={1}>
-            <Text bold>{`Recent Orders (${recent.length})`}</Text>
+          <box flexDirection="column" marginTop={1}>
+            <text><b>{`Recent Orders (${recent.length})`}</b></text>
             {recent.length === 0 ? (
-              <Text color="gray">No orders for this store yet.</Text>
+              <text fg="gray">No orders for this store yet.</text>
             ) : (
-              <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-                <Text bold>{`${fit('ID', 14)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</Text>
+              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+                <text><b>{`${fit('ID', 14)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</b></text>
                 {recent.slice(0, 20).map((order) => {
                   const row = `${fit(order.id, 14)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
-                  return <Text key={order.id}>{row}</Text>;
+                  return <text key={order.id}>{row}</text>;
                 })}
-              </Box>
+              </box>
             )}
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
@@ -566,32 +564,32 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   }, [orders]);
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {header}
       {tabBar}
 
       {tab === 'orders' ? (
-        <Box marginBottom={1}>
-          <Text color="gray">Status filter: </Text>
+        <box marginBottom={1}>
+          <text fg="gray">Status filter: </text>
           {STATUS_FILTERS.map((status, idx) => (
-            <Text key={status} inverse={idx === statusFilterIndex}>{` ${status} `}</Text>
+            <text key={status} attributes={idx === statusFilterIndex ? 32 : undefined}>{` ${status} `}</text>
           ))}
-        </Box>
+        </box>
       ) : null}
 
-      {statusMessage ? <Box marginBottom={1}><Text color="yellow">{statusMessage}</Text></Box> : null}
-      {error ? <Box marginBottom={1}><Text color="red">Error: {error}</Text></Box> : null}
+      {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
+      {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
 
       {tab === 'orders' ? (
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
           {filteredOrders.length === 0 ? (
-            <Text color="gray">No orders for this filter. Press n to create an order.</Text>
+            <text fg="gray">No orders for this filter. Press n to create an order.</text>
           ) : (
             <>
-              <Text bold>{`${fit('ID', 14)} ${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('ITEMS', 5, 'right')} ${fit('UPDATED', 10)}`}</Text>
+              <text><b>{`${fit('ID', 14)} ${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('ITEMS', 5, 'right')} ${fit('UPDATED', 10)}`}</b></text>
 
               {tableWindow.above > 0 ? (
-                <Text color="gray">{`... ${tableWindow.above} more above`}</Text>
+                <text fg="gray">{`... ${tableWindow.above} more above`}</text>
               ) : null}
 
               {visibleOrders.map((order, idx) => {
@@ -600,28 +598,28 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(order.id, 14)} ${fit(order.storeName, 18)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(String(order.itemCount), 5, 'right')} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
                 return (
-                  <Text key={order.id} inverse={isSelected}>{row}</Text>
+                  <text key={order.id} attributes={isSelected ? 32 : undefined}>{row}</text>
                 );
               })}
 
               {tableWindow.below > 0 ? (
-                <Text color="gray">{`... ${tableWindow.below} more below`}</Text>
+                <text fg="gray">{`... ${tableWindow.below} more below`}</text>
               ) : null}
             </>
           )}
-        </Box>
+        </box>
       ) : null}
 
       {tab === 'stores' ? (
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
           {stores.length === 0 ? (
-            <Text color="gray">No stores yet. Press a to add one.</Text>
+            <text fg="gray">No stores yet. Press a to add one.</text>
           ) : (
             <>
-              <Text bold>{`${fit('ID', 14)} ${fit('NAME', 22)} ${fit('CATEGORY', 12)} ${fit('ORD', 4, 'right')} ${fit('LAST', 10)}`}</Text>
+              <text><b>{`${fit('ID', 14)} ${fit('NAME', 22)} ${fit('CATEGORY', 12)} ${fit('ORD', 4, 'right')} ${fit('LAST', 10)}`}</b></text>
 
               {tableWindow.above > 0 ? (
-                <Text color="gray">{`... ${tableWindow.above} more above`}</Text>
+                <text fg="gray">{`... ${tableWindow.above} more above`}</text>
               ) : null}
 
               {visibleStores.map((store, idx) => {
@@ -630,51 +628,51 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(store.id, 14)} ${fit(store.name, 22)} ${fit(store.category, 12)} ${fit(String(store.orderCount), 4, 'right')} ${fit(formatRelativeTime(store.lastOrderAt), 10)}`;
                 return (
-                  <Text key={store.id} inverse={isSelected}>{row}</Text>
+                  <text key={store.id} attributes={isSelected ? 32 : undefined}>{row}</text>
                 );
               })}
 
               {tableWindow.below > 0 ? (
-                <Text color="gray">{`... ${tableWindow.below} more below`}</Text>
+                <text fg="gray">{`... ${tableWindow.below} more below`}</text>
               ) : null}
             </>
           )}
-        </Box>
+        </box>
       ) : null}
 
       {tab === 'overview' ? (
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-          <Text bold>Summary</Text>
-          <Text>{`Orders: ${orders.length}`}</Text>
-          <Text>{`Stores: ${stores.length}`}</Text>
-          <Text> </Text>
-          <Text bold>Status counts</Text>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <text><b>Summary</b></text>
+          <text>{`Orders: ${orders.length}`}</text>
+          <text>{`Stores: ${stores.length}`}</text>
+          <text> </text>
+          <text><b>Status counts</b></text>
           {Object.keys(overviewCounts).length === 0 ? (
-            <Text color="gray">No orders yet.</Text>
+            <text fg="gray">No orders yet.</text>
           ) : (
             STATUS_FILTERS.filter((status) => status !== 'all').map((status) => (
-              <Box key={status}>
-                <Text color={statusColor(status)}>{fit(status, 10)}</Text>
-                <Text>{overviewCounts[status] || 0}</Text>
-              </Box>
+              <box key={status}>
+                <text fg={statusColor(status)}>{fit(status, 10)}</text>
+                <text>{overviewCounts[status] || 0}</text>
+              </box>
             ))
           )}
 
-          <Text> </Text>
-          <Text bold>Recent orders</Text>
+          <text> </text>
+          <text><b>Recent orders</b></text>
           {orders.length === 0 ? (
-            <Text color="gray">No recent orders.</Text>
+            <text fg="gray">No recent orders.</text>
           ) : (
             <>
-              <Text bold>{`${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</Text>
+              <text><b>{`${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</b></text>
               {orders.slice(0, 6).map((order) => {
                 const row = `${fit(order.storeName, 18)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
-                return <Text key={order.id}>{row}</Text>;
+                return <text key={order.id}>{row}</text>;
               })}
             </>
           )}
-        </Box>
+        </box>
       ) : null}
-    </Box>
+    </box>
   );
 }

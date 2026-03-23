@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { Identity, CreateIdentityOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -731,59 +729,59 @@ export function IdentityPanel({
     if (completedFields.length === 0) return null;
 
     return (
-      <Box marginBottom={1} flexDirection="column">
+      <box marginBottom={1} flexDirection="column">
         {completedFields.map((field) => (
-          <Text key={field.label} dimColor>{field.label}: {field.value}</Text>
+          <text key={field.label} fg="gray">{field.label}: {field.value}</text>
         ))}
-      </Box>
+      </box>
     );
   };
 
   // Empty state
   if (identities.length === 0 && mode === 'list') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Identities</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Identities</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No identities found.</Text>
-          <Text dimColor>Press n to create a new identity.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>n new | q quit</Text>
-        </Box>
-      </Box>
+          <text fg="gray">No identities found.</text>
+          <text fg="gray">Press n to create a new identity.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">n new | q quit</text>
+        </box>
+      </box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Identity</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Identity</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Are you sure you want to delete "{deleteTarget.name}"?</Text>
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+          <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
@@ -796,24 +794,24 @@ export function IdentityPanel({
     const visibleOptions = allOptions.slice(templateRange.start, templateRange.end);
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Create Identity</Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Create Identity</b></text>
           {totalCreateOptions > MAX_VISIBLE_ITEMS && (
-            <Text dimColor> ({templateIndex + 1}/{totalCreateOptions})</Text>
+            <text fg="gray"> ({templateIndex + 1}/{totalCreateOptions})</text>
           )}
-        </Box>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
         >
           {templateRange.hasMore.above > 0 && (
-            <Box paddingY={0}>
-              <Text dimColor>  ↑ {templateRange.hasMore.above} more above</Text>
-            </Box>
+            <box paddingY={0}>
+              <text fg="gray">  ↑ {templateRange.hasMore.above} more above</text>
+            </box>
           )}
 
           {visibleOptions.map((option, visibleIdx) => {
@@ -823,29 +821,29 @@ export function IdentityPanel({
             const isCustom = actualIdx === 0;
 
             return (
-              <Box key={option.name} paddingY={0}>
-                <Text
-                  inverse={isSelected}
-                  dimColor={!isSelected}
-                  color={isCustom && isSelected ? 'cyan' : undefined}
+              <box key={option.name} paddingY={0}>
+                <text
+                  attributes={isSelected ? 32 : undefined}
+                  fg={!isSelected ? "gray" : undefined}
+                  fg={isCustom && isSelected ? 'cyan' : undefined}
                 >
                   {prefix}{option.name.padEnd(24)} {option.description}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })}
 
           {templateRange.hasMore.below > 0 && (
-            <Box paddingY={0}>
-              <Text dimColor>  ↓ {templateRange.hasMore.below} more below</Text>
-            </Box>
+            <box paddingY={0}>
+              <text fg="gray">  ↓ {templateRange.hasMore.below} more below</text>
+            </box>
           )}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>↑↓ select | Enter create | Esc back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">↑↓ select | Enter create | Esc back</text>
+        </box>
+      </box>
     );
   }
 
@@ -856,302 +854,302 @@ export function IdentityPanel({
     const stepLabel = `Step ${stepIdx + 1}/${FORM_STEPS.length}`;
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</Text>
-          <Text dimColor> - {stepLabel}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
+          <text fg="gray"> - {stepLabel}</text>
+        </box>
 
         {renderFormSummary()}
 
         {formStep === 'name' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Name: </text>
+              <input
                 value={formName}
                 onChange={setFormName}
                 onSubmit={handleFormNameSubmit}
-                focus
+                focused
                 placeholder="Identity name (required)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'displayName' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Display Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Display Name: </text>
+              <input
                 value={formDisplayName}
                 onChange={setFormDisplayName}
                 onSubmit={handleFormDisplayNameSubmit}
-                focus
+                focused
                 placeholder={`Display name (default: ${formName})...`}
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'title' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Role: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Role: </text>
+              <input
                 value={formTitle}
                 onChange={setFormTitle}
                 onSubmit={handleFormTitleSubmit}
-                focus
+                focused
                 placeholder="Role or title (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'company' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Company: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Company: </text>
+              <input
                 value={formCompany}
                 onChange={setFormCompany}
                 onSubmit={handleFormCompanySubmit}
-                focus
+                focused
                 placeholder="Company name (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'email' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Email: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Email: </text>
+              <input
                 value={formEmail}
                 onChange={setFormEmail}
                 onSubmit={handleFormEmailSubmit}
-                focus
+                focused
                 placeholder="Primary email (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'phone' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Phone: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Phone: </text>
+              <input
                 value={formPhone}
                 onChange={setFormPhone}
                 onSubmit={handleFormPhoneSubmit}
-                focus
+                focused
                 placeholder="Primary phone (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'addressStreet' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Address (Street): </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Address (Street): </text>
+              <input
                 value={formAddressStreet}
                 onChange={setFormAddressStreet}
                 onSubmit={handleFormAddressStreetSubmit}
-                focus
+                focused
                 placeholder="123 Main St (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'addressCity' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Address (City): </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Address (City): </text>
+              <input
                 value={formAddressCity}
                 onChange={setFormAddressCity}
                 onSubmit={handleFormAddressCitySubmit}
-                focus
+                focused
                 placeholder="City (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'addressState' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Address (State): </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Address (State): </text>
+              <input
                 value={formAddressState}
                 onChange={setFormAddressState}
                 onSubmit={handleFormAddressStateSubmit}
-                focus
+                focused
                 placeholder="State/Region (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'addressPostal' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Address (Postal): </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Address (Postal): </text>
+              <input
                 value={formAddressPostal}
                 onChange={setFormAddressPostal}
                 onSubmit={handleFormAddressPostalSubmit}
-                focus
+                focused
                 placeholder="Postal code (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'addressCountry' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Address (Country): </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Address (Country): </text>
+              <input
                 value={formAddressCountry}
                 onChange={setFormAddressCountry}
                 onSubmit={handleFormAddressCountrySubmit}
-                focus
+                focused
                 placeholder="Country (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'virtualAddress' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Virtual Address: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Virtual Address: </text>
+              <input
                 value={formVirtualAddress}
                 onChange={setFormVirtualAddress}
                 onSubmit={handleFormVirtualAddressSubmit}
-                focus
+                focused
                 placeholder="Handle, URL, or DID (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'communicationStyle' && (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text>Communication Style:</Text>
-            </Box>
-            <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text>Communication Style:</text>
+            </box>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
               {COMMUNICATION_STYLES.map((style, index) => (
-                <Box key={style} paddingY={0}>
-                  <Text
-                    inverse={index === formStyleIndex}
-                    color={index === formStyleIndex ? 'cyan' : undefined}
-                    dimColor={index !== formStyleIndex}
+                <box key={style} paddingY={0}>
+                  <text
+                    attributes={index === formStyleIndex ? 32 : undefined}
+                    fg={index === formStyleIndex ? 'cyan' : undefined}
+                    fg={index !== formStyleIndex ? "gray" : undefined}
                   >
                     {index === formStyleIndex ? '>' : ' '} {style}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               ))}
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>↑↓ select | Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">↑↓ select | Enter continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'responseLength' && (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text>Response Length:</Text>
-            </Box>
-            <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text>Response Length:</text>
+            </box>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
               {RESPONSE_LENGTHS.map((length, index) => (
-                <Box key={length} paddingY={0}>
-                  <Text
-                    inverse={index === formLengthIndex}
-                    color={index === formLengthIndex ? 'cyan' : undefined}
-                    dimColor={index !== formLengthIndex}
+                <box key={length} paddingY={0}>
+                  <text
+                    attributes={index === formLengthIndex ? 32 : undefined}
+                    fg={index === formLengthIndex ? 'cyan' : undefined}
+                    fg={index !== formLengthIndex ? "gray" : undefined}
                   >
                     {index === formLengthIndex ? '>' : ' '} {length}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               ))}
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>↑↓ select | Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">↑↓ select | Enter continue | Esc back</text>
+            </box>
+          </box>
         )}
 
         {formStep === 'context' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Context: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Context: </text>
+              <input
                 value={formContext}
                 onChange={setFormContext}
                 onSubmit={handleFormContextSubmit}
-                focus
+                focused
                 placeholder="Custom personality notes (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to {isEdit ? 'save' : 'create'} | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to {isEdit ? 'save' : 'create'} | Esc back</text>
+            </box>
+          </box>
         )}
 
         {isProcessing && (
-          <Box marginTop={1}>
-            <Text color="yellow">{isEdit ? 'Saving...' : 'Creating...'}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">{isEdit ? 'Saving...' : 'Creating...'}</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -1160,84 +1158,84 @@ export function IdentityPanel({
     const isActive = currentIdentity.id === activeIdentityId;
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{currentIdentity.name}</Text>
-          {currentIdentity.isDefault && <Text color="yellow"> (default)</Text>}
-          {isActive && <Text color="green"> (active)</Text>}
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{currentIdentity.name}</b></text>
+          {currentIdentity.isDefault && <text fg="yellow"> (default)</text>}
+          {isActive && <text fg="green"> (active)</text>}
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Box marginBottom={1}>
-            <Text bold>Profile</Text>
-          </Box>
-          <Box marginLeft={2}>
-            <Text dimColor>Display Name: </Text>
-            <Text>{currentIdentity.profile.displayName}</Text>
-          </Box>
+          <box marginBottom={1}>
+            <text><b>Profile</b></text>
+          </box>
+          <box marginLeft={2}>
+            <text fg="gray">Display Name: </text>
+            <text>{currentIdentity.profile.displayName}</text>
+          </box>
           {currentIdentity.profile.title && (
-            <Box marginLeft={2}>
-              <Text dimColor>Role: </Text>
-              <Text>{currentIdentity.profile.title}</Text>
-            </Box>
+            <box marginLeft={2}>
+              <text fg="gray">Role: </text>
+              <text>{currentIdentity.profile.title}</text>
+            </box>
           )}
           {currentIdentity.profile.company && (
-            <Box marginLeft={2}>
-              <Text dimColor>Company: </Text>
-              <Text>{currentIdentity.profile.company}</Text>
-            </Box>
+            <box marginLeft={2}>
+              <text fg="gray">Company: </text>
+              <text>{currentIdentity.profile.company}</text>
+            </box>
           )}
-          <Box marginLeft={2}>
-            <Text dimColor>Timezone: </Text>
-            <Text>{currentIdentity.profile.timezone}</Text>
-          </Box>
+          <box marginLeft={2}>
+            <text fg="gray">Timezone: </text>
+            <text>{currentIdentity.profile.timezone}</text>
+          </box>
 
-          <Box marginTop={1} marginBottom={1}>
-            <Text bold>Preferences</Text>
-          </Box>
-          <Box marginLeft={2}>
-            <Text dimColor>Language: </Text>
-            <Text>{currentIdentity.preferences.language}</Text>
-          </Box>
-          <Box marginLeft={2}>
-            <Text dimColor>Style: </Text>
-            <Text>{currentIdentity.preferences.communicationStyle}</Text>
-          </Box>
-          <Box marginLeft={2}>
-            <Text dimColor>Response: </Text>
-            <Text>{currentIdentity.preferences.responseLength}</Text>
-          </Box>
+          <box marginTop={1} marginBottom={1}>
+            <text><b>Preferences</b></text>
+          </box>
+          <box marginLeft={2}>
+            <text fg="gray">Language: </text>
+            <text>{currentIdentity.preferences.language}</text>
+          </box>
+          <box marginLeft={2}>
+            <text fg="gray">Style: </text>
+            <text>{currentIdentity.preferences.communicationStyle}</text>
+          </box>
+          <box marginLeft={2}>
+            <text fg="gray">Response: </text>
+            <text>{currentIdentity.preferences.responseLength}</text>
+          </box>
 
           {(currentIdentity.contacts.emails.length > 0 ||
             currentIdentity.contacts.phones.length > 0 ||
             currentIdentity.contacts.addresses.length > 0 ||
             (currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0)) && (
             <>
-              <Box marginTop={1} marginBottom={1}>
-                <Text bold>Contacts</Text>
-              </Box>
+              <box marginTop={1} marginBottom={1}>
+                <text><b>Contacts</b></text>
+              </box>
               {currentIdentity.contacts.emails.length > 0 && (
-                <Box marginLeft={2}>
-                  <Text dimColor>Email: </Text>
-                  <Text>{currentIdentity.contacts.emails[0].value}</Text>
-                </Box>
+                <box marginLeft={2}>
+                  <text fg="gray">Email: </text>
+                  <text>{currentIdentity.contacts.emails[0].value}</text>
+                </box>
               )}
               {currentIdentity.contacts.phones.length > 0 && (
-                <Box marginLeft={2}>
-                  <Text dimColor>Phone: </Text>
-                  <Text>{currentIdentity.contacts.phones[0].value}</Text>
-                </Box>
+                <box marginLeft={2}>
+                  <text fg="gray">Phone: </text>
+                  <text>{currentIdentity.contacts.phones[0].value}</text>
+                </box>
               )}
               {currentIdentity.contacts.addresses.length > 0 && (
-                <Box marginLeft={2}>
-                  <Text dimColor>Address: </Text>
-                  <Text>
+                <box marginLeft={2}>
+                  <text fg="gray">Address: </text>
+                  <text>
                     {[
                       currentIdentity.contacts.addresses[0].street,
                       currentIdentity.contacts.addresses[0].city,
@@ -1245,45 +1243,45 @@ export function IdentityPanel({
                       currentIdentity.contacts.addresses[0].postalCode,
                       currentIdentity.contacts.addresses[0].country,
                     ].filter(Boolean).join(', ')}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               )}
               {currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0 && (
-                <Box marginLeft={2}>
-                  <Text dimColor>Virtual: </Text>
-                  <Text>{currentIdentity.contacts.virtualAddresses[0].value}</Text>
-                </Box>
+                <box marginLeft={2}>
+                  <text fg="gray">Virtual: </text>
+                  <text>{currentIdentity.contacts.virtualAddresses[0].value}</text>
+                </box>
               )}
             </>
           )}
 
           {currentIdentity.context && (
             <>
-              <Box marginTop={1} marginBottom={1}>
-                <Text bold>Context</Text>
-              </Box>
-              <Box marginLeft={2}>
-                <Text dimColor>{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</Text>
-              </Box>
+              <box marginTop={1} marginBottom={1}>
+                <text><b>Context</b></text>
+              </box>
+              <box marginLeft={2}>
+                <text fg="gray">{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</text>
+              </box>
             </>
           )}
-        </Box>
+        </box>
 
         {error && (
-          <Box marginTop={1}>
-            <Text color="red">{error}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="red">{error}</text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             {!isActive && 's switch | '}
             e edit |{' '}
             {!currentIdentity.isDefault && 'd set default | '}
             x delete | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -1291,24 +1289,24 @@ export function IdentityPanel({
   const visibleIdentities = identities.slice(identityRange.start, identityRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Identities</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Identities</b></text>
         {identities.length > MAX_VISIBLE_ITEMS && (
-          <Text dimColor> ({identityIndex + 1}/{identities.length})</Text>
+          <text fg="gray"> ({identityIndex + 1}/{identities.length})</text>
         )}
-      </Box>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {identityRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {identityRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {identityRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleIdentities.map((identity, visibleIdx) => {
@@ -1321,45 +1319,45 @@ export function IdentityPanel({
           const statusColor = identity.isDefault ? 'yellow' : isActive ? 'green' : 'gray';
 
           return (
-            <Box key={identity.id} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={identity.id} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}
-              </Text>
-              <Text color={statusColor} inverse={isSelected}>
+              </text>
+              <text fg={statusColor} attributes={isSelected ? 32 : undefined}>
                 {statusIcon}
-              </Text>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {' '}{nameDisplay}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}{identity.profile.displayName}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
 
         {identityRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {identityRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {identityRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Legend: </Text>
-        <Text color="yellow">★</Text>
-        <Text dimColor> default | </Text>
-        <Text color="green">●</Text>
-        <Text dimColor> active | </Text>
-        <Text color="gray">○</Text>
-        <Text dimColor> inactive</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Legend: </text>
+        <text fg="yellow">★</text>
+        <text fg="gray"> default | </text>
+        <text fg="green">●</text>
+        <text fg="gray"> active | </text>
+        <text fg="gray">○</text>
+        <text fg="gray"> inactive</text>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | n new | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

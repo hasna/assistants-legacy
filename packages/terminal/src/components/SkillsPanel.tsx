@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { Skill } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import type { CreateSkillOptions, CreateSkillResult, SkillScope } from '@hasna/assistants-core';
@@ -439,59 +437,59 @@ export function SkillsPanel({
 
   if (mode === 'create') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>
             {createMode === 'prompt' ? 'New Skill (Prompt)' : 'New Skill'}
-          </Text>
-        </Box>
+          </b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
           {/* Step 1: Scope selection */}
           {createStep === 'scope' && (
-            <Box flexDirection="column">
-              <Text bold>Select scope:</Text>
-              <Box flexDirection="column" marginTop={1}>
+            <box flexDirection="column">
+              <text><b>Select scope:</b></text>
+              <box flexDirection="column" marginTop={1}>
                 {SCOPE_OPTIONS.map((opt, idx) => (
-                  <Box key={opt.id}>
-                    <Text inverse={idx === createScopeIndex}>
-                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <Text dimColor>{opt.desc}</Text>
-                    </Text>
-                  </Box>
+                  <box key={opt.id}>
+                    <text attributes={idx === createScopeIndex ? 32 : undefined}>
+                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <text fg="gray">{opt.desc}</text>
+                    </text>
+                  </box>
                 ))}
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>↑↓ select | Enter confirm | Esc cancel</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">↑↓ select | Enter confirm | Esc cancel</text>
+              </box>
+            </box>
           )}
 
           {/* Step 2: Prompt */}
           {createStep === 'prompt' && (
-            <Box flexDirection="column">
-              <Text bold>Describe what this skill should do:</Text>
-              <Box marginTop={1}>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Describe what this skill should do:</b></text>
+              <box marginTop={1}>
+                <input
                   value={createPrompt}
                   onChange={setCreatePrompt}
                   onSubmit={handlePromptSubmit}
-                  focus
+                  focused
                   placeholder="e.g. Summarize meeting notes and draft follow-up"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter generate | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter generate | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 2: Name */}
           {createStep === 'name' && (
-            <Box flexDirection="column">
-              <Text bold>Enter skill name:</Text>
-              <Box marginTop={1}>
-                <Text>Name: </Text>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Enter skill name:</b></text>
+              <box marginTop={1}>
+                <text>Name: </text>
+                <input
                   value={createName}
                   onChange={setCreateName}
                   onSubmit={() => {
@@ -500,134 +498,134 @@ export function SkillsPanel({
                   focus
                   placeholder="e.g. my-helper"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter next | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter next | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 3: Description */}
           {createStep === 'description' && (
-            <Box flexDirection="column">
-              <Text bold>Description (optional):</Text>
-              <Box marginTop={1}>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Description (optional):</b></text>
+              <box marginTop={1}>
+                <input
                   value={createDescription}
                   onChange={setCreateDescription}
                   onSubmit={() => setCreateStep('tools')}
                   focus
                   placeholder="What does this skill do?"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter next | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter next | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 4: Allowed tools */}
           {createStep === 'tools' && (
-            <Box flexDirection="column">
-              <Text bold>Allowed tools (optional, comma-separated):</Text>
-              <Box marginTop={1}>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Allowed tools (optional, comma-separated):</b></text>
+              <box marginTop={1}>
+                <input
                   value={createTools}
                   onChange={setCreateTools}
                   onSubmit={() => setCreateStep('hint')}
                   focus
                   placeholder="e.g. bash, filesystem"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter next | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter next | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 5: Argument hint */}
           {createStep === 'hint' && (
-            <Box flexDirection="column">
-              <Text bold>Argument hint (optional):</Text>
-              <Box marginTop={1}>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Argument hint (optional):</b></text>
+              <box marginTop={1}>
+                <input
                   value={createHint}
                   onChange={setCreateHint}
                   onSubmit={() => setCreateStep('content')}
                   focus
                   placeholder="e.g. [filename] [options]"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter next | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter next | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 6: Content */}
           {createStep === 'content' && (
-            <Box flexDirection="column">
-              <Text bold>Skill content (optional, single line):</Text>
-              <Box marginTop={1}>
-                <TextInput
+            <box flexDirection="column">
+              <text><b>Skill content (optional, single line):</b></text>
+              <box marginTop={1}>
+                <input
                   value={createContent}
                   onChange={setCreateContent}
                   onSubmit={() => setCreateStep('confirm')}
                   focus
                   placeholder="Instructions for the skill (or leave empty for default template)"
                 />
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter next | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter next | Esc back</text>
+              </box>
+            </box>
           )}
 
           {/* Step 7: Confirm */}
           {createStep === 'confirm' && (
-            <Box flexDirection="column">
-              <Text bold>Confirm new skill:</Text>
-              <Box flexDirection="column" marginTop={1} marginLeft={1}>
-                <Text>Scope: <Text color="cyan">{SCOPE_OPTIONS[createScopeIndex].label}</Text></Text>
-                <Text>Name: <Text color="cyan">{createName}</Text></Text>
-                {createDescription && <Text>Description: <Text dimColor>{createDescription}</Text></Text>}
-                {createTools && <Text>Tools: <Text dimColor>{createTools}</Text></Text>}
-                {createHint && <Text>Hint: <Text dimColor>{createHint}</Text></Text>}
+            <box flexDirection="column">
+              <text><b>Confirm new skill:</b></text>
+              <box flexDirection="column" marginTop={1} marginLeft={1}>
+                <text>Scope: <text fg="cyan">{SCOPE_OPTIONS[createScopeIndex].label}</text></text>
+                <text>Name: <text fg="cyan">{createName}</text></text>
+                {createDescription && <text>Description: <text fg="gray">{createDescription}</text></text>}
+                {createTools && <text>Tools: <text fg="gray">{createTools}</text></text>}
+                {createHint && <text>Hint: <text fg="gray">{createHint}</text></text>}
                 {createContent && (
                   <>
-                    <Text>Content:</Text>
-                    <Box marginLeft={2} flexDirection="column">
+                    <text>Content:</text>
+                    <box marginLeft={2} flexDirection="column">
                       {createContent.split('\n').slice(0, 6).map((line, i) => (
-                        <Text key={i} dimColor>{line}</Text>
+                        <text key={i} fg="gray">{line}</text>
                       ))}
                       {createContent.split('\n').length > 6 && (
-                        <Text dimColor>... ({createContent.split('\n').length - 6} more lines)</Text>
+                        <text fg="gray">... ({createContent.split('\n').length - 6} more lines)</text>
                       )}
-                    </Box>
+                    </box>
                   </>
                 )}
-              </Box>
-              <Box marginTop={1}>
-                <Text dimColor>Enter/y create | n cancel | Esc back</Text>
-              </Box>
-            </Box>
+              </box>
+              <box marginTop={1}>
+                <text fg="gray">Enter/y create | n cancel | Esc back</text>
+              </box>
+            </box>
           )}
 
           {createError && (
-            <Box marginTop={1}>
-              <Text color="red">{createError}</Text>
-            </Box>
+            <box marginTop={1}>
+              <text fg="red">{createError}</text>
+            </box>
           )}
-        </Box>
+        </box>
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">
+          <box marginTop={1}>
+            <text fg="yellow">
               {createMode === 'prompt' && createStep === 'prompt' ? 'Generating draft...' : 'Creating skill...'}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -637,27 +635,27 @@ export function SkillsPanel({
     const skill = detailSkill || selectedSkill;
     const displayName = skill?.name || '';
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Skill</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Skill</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Delete skill &quot;{displayName}&quot;?
-          </Text>
-        </Box>
+          </text>
+        </box>
         {skill && (
-          <Box marginBottom={1}>
-            <Text dimColor>File: {skill.filePath}</Text>
-          </Box>
+          <box marginBottom={1}>
+            <text fg="gray">File: {skill.filePath}</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -668,45 +666,45 @@ export function SkillsPanel({
     const scope = getSkillScope(s.filePath);
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Skill Details</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Skill Details</b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
-          <Box><Text bold>Name: </Text><Text color="cyan">{s.name}</Text></Box>
-          <Box><Text bold>Scope: </Text><Text>{scope}</Text>{s.source && <Text dimColor> ({s.source})</Text>}{s.version && <Text dimColor> v{s.version}</Text>}</Box>
-          {s.description && <Box><Text bold>Description: </Text><Text>{s.description}</Text></Box>}
-          {s.argumentHint && <Box><Text bold>Argument Hint: </Text><Text>{s.argumentHint}</Text></Box>}
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+          <box><text><b>Name: </b></text><text fg="cyan">{s.name}</text></box>
+          <box><text><b>Scope: </b></text><text>{scope}</text>{s.source && <text fg="gray"> ({s.source})</text>}{s.version && <text fg="gray"> v{s.version}</text>}</box>
+          {s.description && <box><text><b>Description: </b></text><text>{s.description}</text></box>}
+          {s.argumentHint && <box><text><b>Argument Hint: </b></text><text>{s.argumentHint}</text></box>}
           {s.allowedTools && s.allowedTools.length > 0 && (
-            <Box><Text bold>Allowed Tools: </Text><Text>{s.allowedTools.join(', ')}</Text></Box>
+            <box><text><b>Allowed Tools: </b></text><text>{s.allowedTools.join(', ')}</text></box>
           )}
-          {s.model && <Box><Text bold>Model: </Text><Text>{s.model}</Text></Box>}
-          <Box><Text bold>File: </Text><Text dimColor>{s.filePath}</Text></Box>
+          {s.model && <box><text><b>Model: </b></text><text>{s.model}</text></box>}
+          <box><text><b>File: </b></text><text fg="gray">{s.filePath}</text></box>
 
           {s.contentLoaded && s.content && (
             <>
-              <Box marginTop={1}><Text bold>Content:</Text></Box>
-              <Box marginLeft={2} flexDirection="column">
+              <box marginTop={1}><text><b>Content:</b></text></box>
+              <box marginLeft={2} flexDirection="column">
                 {s.content.split('\n').slice(0, 20).map((line, i) => (
-                  <Text key={i} wrap="wrap" dimColor>{line}</Text>
+                  <text key={i} wrapMode="word" fg="gray">{line}</text>
                 ))}
                 {s.content.split('\n').length > 20 && (
-                  <Text dimColor>... ({s.content.split('\n').length - 20} more lines)</Text>
+                  <text fg="gray">... ({s.content.split('\n').length - 20} more lines)</text>
                 )}
-              </Box>
+              </box>
             </>
           )}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             [x]execute | [d]elete | Esc/q back
-          </Text>
-        </Box>
+          </text>
+        </box>
 
-        {isSubmitting && <Box marginTop={1}><Text color="yellow">Loading...</Text></Box>}
-      </Box>
+        {isSubmitting && <box marginTop={1}><text fg="yellow">Loading...</text></box>}
+      </box>
     );
   }
 
@@ -724,40 +722,40 @@ export function SkillsPanel({
   let lastGroup: 'project' | 'global' | null = null;
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Skills</Text>
-        <Text dimColor>[n]ew [p]rompt [x]execute [d]elete [f]refresh</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Skills</b></text>
+        <text fg="gray">[n]ew [p]rompt [x]execute [d]elete [f]refresh</text>
+      </box>
 
-      <Box marginBottom={1}>
-        <Text dimColor>
+      <box marginBottom={1}>
+        <text fg="gray">
           {sortedSkills.length} skill(s) — {projectSkills.length} project, {globalSkills.length} global
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {sortedSkills.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No skills loaded. Press n to create one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No skills loaded. Press n to create one.</text>
+          </box>
         ) : (
           <>
             {skillRange.hasMore.above > 0 && (
-              <Box paddingY={0}>
-                <Text dimColor>  ↑ {skillRange.hasMore.above} more above</Text>
-              </Box>
+              <box paddingY={0}>
+                <text fg="gray">  ↑ {skillRange.hasMore.above} more above</text>
+              </box>
             )}
             {visibleEntries.map((entry) => {
               const desc = entry.skill.description ? ` - ${entry.skill.description}` : '';
               const isSelected = entry.actualIdx === selectedIndex;
               const header = entry.group !== lastGroup
                 ? (
-                  <Box marginTop={lastGroup ? 1 : 0}>
-                    <Text bold dimColor>
+                  <box marginTop={lastGroup ? 1 : 0}>
+                    <text fg="gray"><b>
                       {entry.group === 'project' ? 'Project Skills' : 'Global Skills'}
-                    </Text>
-                  </Box>
+                    </b></text>
+                  </box>
                 )
                 : null;
               lastGroup = entry.group;
@@ -765,48 +763,48 @@ export function SkillsPanel({
               return (
                 <React.Fragment key={`${entry.skill.name}-${entry.actualIdx}`}>
                   {header}
-                  <Box paddingY={0}>
-                    <Text inverse={isSelected}>
+                  <box paddingY={0}>
+                    <text attributes={isSelected ? 32 : undefined}>
                       {isSelected ? '>' : ' '} {(entry.actualIdx + 1).toString().padStart(2)}. {entry.skill.name.padEnd(20)}{desc.slice(0, 40)}{badge}
-                    </Text>
-                  </Box>
+                    </text>
+                  </box>
                 </React.Fragment>
               );
             })}
             {skillRange.hasMore.below > 0 && (
-              <Box paddingY={0}>
-                <Text dimColor>  ↓ {skillRange.hasMore.below} more below</Text>
-              </Box>
+              <box paddingY={0}>
+                <text fg="gray">  ↓ {skillRange.hasMore.below} more below</text>
+              </box>
             )}
           </>
         )}
 
         {/* New skill option at bottom */}
-        <Box marginTop={1} paddingY={0}>
-          <Text
-            inverse={selectedIndex === sortedSkills.length}
-            dimColor={selectedIndex !== sortedSkills.length}
-            color={selectedIndex === sortedSkills.length ? 'cyan' : undefined}
+        <box marginTop={1} paddingY={0}>
+          <text
+            attributes={selectedIndex === sortedSkills.length ? 32 : undefined}
+            fg={selectedIndex !== sortedSkills.length ? "gray" : undefined}
+            fg={selectedIndex === sortedSkills.length ? 'cyan' : undefined}
           >
             + New skill (n) | Prompt (p)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
       {/* Compact preview of selected */}
       {selectedSkill && selectedIndex < sortedSkills.length && (
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             {getSkillScope(selectedSkill.filePath)} | {selectedSkill.argumentHint || 'no args'} | Enter for details
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | [x]execute | q quit</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | [x]execute | q quit</text>
+      </box>
 
-      {isSubmitting && <Box marginTop={1}><Text color="yellow">Processing...</Text></Box>}
-    </Box>
+      {isSubmitting && <box marginTop={1}><text fg="yellow">Processing...</text></box>}
+    </box>
   );
 }

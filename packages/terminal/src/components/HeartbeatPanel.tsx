@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Text } from 'ink';
 import type { Heartbeat } from '@hasna/assistants-core';
 import type { HeartbeatState } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -99,38 +98,38 @@ export function HeartbeatPanel({
 
   if (mode === 'detail' && selectedRun) {
     return (
-      <Box flexDirection="column">
-        <Text bold>Heartbeat Run Details</Text>
-        <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-          <Text>{JSON.stringify(selectedRun, null, 2)}</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Esc / q to go back</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column">
+        <text><b>Heartbeat Run Details</b></text>
+        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <text>{JSON.stringify(selectedRun, null, 2)}</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">Esc / q to go back</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
-      <Text bold>Heartbeat</Text>
+    <box flexDirection="column">
+      <text><b>Heartbeat</b></text>
 
-      <Box marginTop={1}>
+      <box marginTop={1}>
         {heartbeatState ? (
-          <Text dimColor>
+          <text fg="gray">
             State: {heartbeatState.state} | Stale: {heartbeatState.isStale ? 'yes' : 'no'} | Last Activity:{' '}
             {formatRelativeTime(heartbeatState.lastActivity)} | Uptime: {heartbeatState.uptimeSeconds}s
-          </Text>
+          </text>
         ) : (
-          <Text dimColor>Heartbeat status unavailable.</Text>
+          <text fg="gray">Heartbeat status unavailable.</text>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {sortedRuns.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No heartbeat runs recorded yet.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No heartbeat runs recorded yet.</text>
+          </box>
         ) : (
           sortedRuns.map((run, index) => {
             const isSelected = index === selectedIndex;
@@ -139,19 +138,19 @@ export function HeartbeatPanel({
             const stats = run.stats || { messagesProcessed: 0, toolCallsExecuted: 0, errorsEncountered: 0 };
             const summary = `msgs:${stats.messagesProcessed} tools:${stats.toolCallsExecuted} err:${stats.errorsEncountered}`;
             return (
-              <Box key={`${run.timestamp}-${index}`} paddingY={0}>
-                <Text inverse={isSelected}>
+              <box key={`${run.timestamp}-${index}`} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined}>
                   {time} {run.state.padEnd(12)} {activity} {truncate(summary, 32)}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>↑↓ navigate | Enter details | r refresh | q quit</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">↑↓ navigate | Enter details | r refresh | q quit</text>
+      </box>
+    </box>
   );
 }

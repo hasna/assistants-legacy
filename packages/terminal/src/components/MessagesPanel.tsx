@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Text } from 'ink';
 import { InboxPanel } from './InboxPanel';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -147,26 +146,22 @@ function TabBar({ activeTab, inboxEnabled }: { activeTab: ActiveTab; inboxEnable
   if (!inboxEnabled) return null;
 
   return (
-    <Box marginBottom={1}>
-      <Text
-        bold={activeTab === 'assistant'}
-        color={activeTab === 'assistant' ? 'cyan' : undefined}
-        dimColor={activeTab !== 'assistant'}
-        inverse={activeTab === 'assistant'}
-      >
+    <box marginBottom={1}>
+      <text
+        fg={activeTab === 'assistant' ? 'cyan' : 'gray'}
+        attributes={activeTab === 'assistant' ? 33 : undefined}
+      ><b>
         {' Assistant Messages '}
-      </Text>
-      <Text dimColor> | </Text>
-      <Text
-        bold={activeTab === 'email'}
-        color={activeTab === 'email' ? 'cyan' : undefined}
-        dimColor={activeTab !== 'email'}
-        inverse={activeTab === 'email'}
-      >
+      </b></text>
+      <text fg="gray"> | </text>
+      <text
+        fg={activeTab === 'email' ? 'cyan' : 'gray'}
+        attributes={activeTab === 'email' ? 33 : undefined}
+      ><b>
         {' Email Inbox '}
-      </Text>
-      <Text dimColor>  [Tab] switch</Text>
-    </Box>
+      </b></text>
+      <text fg="gray">  [Tab] switch</text>
+    </box>
   );
 }
 
@@ -368,133 +363,133 @@ function AssistantMessagesContent({
   // Empty state
   if (messages.length === 0) {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {!showTabBar && (
-          <Box marginBottom={1}>
-            <Text bold color="cyan">Messages</Text>
-          </Box>
+          <box marginBottom={1}>
+            <text fg="cyan"><b>Messages</b></text>
+          </box>
         )}
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No messages in inbox.</Text>
-          <Text dimColor>Use the messages_send tool to send messages to other assistants.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>q quit</Text>
-        </Box>
-      </Box>
+          <text fg="gray">No messages in inbox.</text>
+          <text fg="gray">Use the messages_send tool to send messages to other assistants.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">q quit</text>
+        </box>
+      </box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column">
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Message</Text>
-        </Box>
-        <Box
+      <box flexDirection="column">
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Message</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Are you sure you want to delete this message?</Text>
-          <Text dimColor>From: {deleteTarget.fromAssistantName}</Text>
-          {deleteTarget.subject && <Text dimColor>Subject: {deleteTarget.subject}</Text>}
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+          <text>Are you sure you want to delete this message?</text>
+          <text fg="gray">From: {deleteTarget.fromAssistantName}</text>
+          {deleteTarget.subject && <text fg="gray">Subject: {deleteTarget.subject}</text>}
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Inject confirmation
   if (mode === 'inject-confirm' && injectTarget) {
     return (
-      <Box flexDirection="column">
-        <Box marginBottom={1}>
-          <Text bold color="green">Inject Message</Text>
-        </Box>
-        <Box
+      <box flexDirection="column">
+        <box marginBottom={1}>
+          <text fg="green"><b>Inject Message</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Inject this message into the current conversation?</Text>
-          <Text dimColor>From: {injectTarget.fromAssistantName}</Text>
-          {injectTarget.subject && <Text dimColor>Subject: {injectTarget.subject}</Text>}
-          <Text dimColor>The message will be added to the context.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+          <text>Inject this message into the current conversation?</text>
+          <text fg="gray">From: {injectTarget.fromAssistantName}</text>
+          {injectTarget.subject && <text fg="gray">Subject: {injectTarget.subject}</text>}
+          <text fg="gray">The message will be added to the context.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Detail view
   if (mode === 'detail' && detailMessage) {
     return (
-      <Box flexDirection="column">
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{getStatusIcon(detailMessage.status)} Message</Text>
-          <Text color={getPriorityColor(detailMessage.priority)}> [{detailMessage.priority}]</Text>
-        </Box>
+      <box flexDirection="column">
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{getStatusIcon(detailMessage.status)} Message</b></text>
+          <text fg={getPriorityColor(detailMessage.priority)}> [{detailMessage.priority}]</text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Box>
-            <Text dimColor>From: </Text>
-            <Text>{detailMessage.fromAssistantName}</Text>
-          </Box>
+          <box>
+            <text fg="gray">From: </text>
+            <text>{detailMessage.fromAssistantName}</text>
+          </box>
 
           {detailMessage.subject && (
-            <Box>
-              <Text dimColor>Subject: </Text>
-              <Text bold>{detailMessage.subject}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Subject: </text>
+              <text><b>{detailMessage.subject}</b></text>
+            </box>
           )}
 
-          <Box>
-            <Text dimColor>Received: </Text>
-            <Text>{formatRelativeTime(detailMessage.createdAt)}</Text>
-            <Text dimColor> ({new Date(detailMessage.createdAt).toLocaleString()})</Text>
-          </Box>
+          <box>
+            <text fg="gray">Received: </text>
+            <text>{formatRelativeTime(detailMessage.createdAt)}</text>
+            <text fg="gray"> ({new Date(detailMessage.createdAt).toLocaleString()})</text>
+          </box>
 
-          <Box marginTop={1} flexDirection="column">
-            <Text dimColor>Message:</Text>
-            <Text>{detailMessage.body || detailMessage.preview}</Text>
-          </Box>
-        </Box>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray">Message:</text>
+            <text>{detailMessage.body || detailMessage.preview}</text>
+          </box>
+        </box>
 
         {error && (
-          <Box marginTop={1}>
-            <Text color="red">{error}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="red">{error}</text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             i inject | x delete | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -502,26 +497,26 @@ function AssistantMessagesContent({
   const visibleMessages = messages.slice(messageRange.start, messageRange.end);
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {!showTabBar && (
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Messages</Text>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Messages</b></text>
           {messages.length > MAX_VISIBLE_ITEMS && (
-            <Text dimColor> ({messageIndex + 1}/{messages.length})</Text>
+            <text fg="gray"> ({messageIndex + 1}/{messages.length})</text>
           )}
-        </Box>
+        </box>
       )}
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {messageRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {messageRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {messageRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleMessages.map((msg, visibleIdx) => {
@@ -534,49 +529,49 @@ function AssistantMessagesContent({
           const subject = (msg.subject || msg.preview.slice(0, 25)).padEnd(25);
 
           return (
-            <Box key={msg.id} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={msg.id} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}{statusIcon}{' '}
-              </Text>
-              <Text color={priorityColor} inverse={isSelected}>
+              </text>
+              <text fg={priorityColor} attributes={isSelected ? 32 : undefined}>
                 {msg.priority === 'urgent' ? '!' : msg.priority === 'high' ? '↑' : ' '}
-              </Text>
-              <Text inverse={isSelected} dimColor={msg.status === 'read'}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={msg.status === 'read' ? "gray" : undefined}>
                 {' '}{fromName}
-              </Text>
-              <Text inverse={isSelected} dimColor={msg.status === 'read'}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={msg.status === 'read' ? "gray" : undefined}>
                 {' '}{subject}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}{formatRelativeTime(msg.createdAt)}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
 
         {messageRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {messageRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {messageRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Legend: </Text>
-        <Text>📬</Text>
-        <Text dimColor> unread | </Text>
-        <Text>📖</Text>
-        <Text dimColor> read | </Text>
-        <Text>👁️</Text>
-        <Text dimColor> injected</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Legend: </text>
+        <text>📬</text>
+        <text fg="gray"> unread | </text>
+        <text>📖</text>
+        <text fg="gray"> read | </text>
+        <text>👁️</text>
+        <text fg="gray"> injected</text>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }
 
@@ -617,7 +612,7 @@ export function MessagesPanel({
   // Single-tab mode (no inbox) - render assistant messages directly
   if (!hasInbox) {
     return (
-      <Box flexDirection="column" paddingY={1}>
+      <box flexDirection="column" paddingY={1}>
         <AssistantMessagesContent
           messages={messages}
           onRead={onRead}
@@ -627,13 +622,13 @@ export function MessagesPanel({
           error={error}
           showTabBar={false}
         />
-      </Box>
+      </box>
     );
   }
 
   // Dual-tab mode - render tab bar + active tab content
   return (
-    <Box flexDirection="column" paddingY={1}>
+    <box flexDirection="column" paddingY={1}>
       <TabBar activeTab={activeTab} inboxEnabled={true} />
 
       {activeTab === 'assistant' ? (
@@ -659,6 +654,6 @@ export function MessagesPanel({
           error={inboxError}
         />
       )}
-    </Box>
+    </box>
   );
 }

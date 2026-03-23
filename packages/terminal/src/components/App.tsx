@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useAppContext, useTerminalDimensions } from '@opentui/react';
 import { join } from 'path';
 import { homedir } from 'os';
-import { Box, Text, useApp, useStdout } from 'ink';
 import { SessionRegistry, SessionStorage, findRecoverableSessions, clearRecoveryState, ConnectorBridge, AudioRecorder, ElevenLabsSTT, WhisperSTT, readHeartbeatHistoryBySession, type SessionInfo, type RecoverableSession, type CreateSessionOptions, type Identity, type Memory, type MemoryStats, type Heartbeat, type SavedSessionInfo } from '@hasna/assistants-core';
 import type { StreamChunk, Message, ToolCall, ToolResult, TokenUsage, VoiceState, HeartbeatState, ActiveIdentityInfo, AskUserRequest, AskUserResponse, InterviewRequest, InterviewResponse, Connector, HookConfig, HookEvent, ScheduledCommand, Skill } from '@hasna/assistants-shared';
 import { InterviewStore } from '@hasna/assistants-core';
@@ -85,10 +85,11 @@ import {
 } from './appHelpers';
 
 export function App({ cwd, version, permissionMode: initialPermissionMode }: AppProps) {
-  const { exit } = useApp();
-  const { stdout } = useStdout();
-  const rows = stdout?.rows ?? 24;
-  const columns = stdout?.columns ?? 80;
+  const appCtx = useAppContext();
+  const exit = () => appCtx.renderer?.destroy();
+  const dims = useTerminalDimensions();
+  const rows = dims.height || 24;
+  const columns = dims.width || 80;
 
   const initialWorkspaceRef = useRef<{ id: string | null; baseDir: string } | null>(null);
   if (!initialWorkspaceRef.current) {
@@ -1048,16 +1049,12 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   }, []);
 
   const clearSessionWindow = useCallback(() => {
-    if (stdout?.write) {
-      stdout.write(CLEAR_SCREEN_TOKEN);
-    } else if (process.stdout?.write) {
-      process.stdout.write(CLEAR_SCREEN_TOKEN);
-    }
+    process.stdout.write(CLEAR_SCREEN_TOKEN);
     cachedDisplayMessagesRef.current.clear();
     staticMessageIdsRef.current.clear();
     setStaticMessages([]);
     setStaticResetKey((prev) => prev + 1);
-  }, [stdout]);
+  }, []);
 
   const isConnectorInstallCommand = useCallback((command: unknown): boolean => {
     if (typeof command !== 'string') return false;
@@ -3013,7 +3010,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const isThinking = isProcessing && !currentResponse && !currentToolCall && toolCallEntries.length === 0;
 
   return (
-    <Box flexDirection="column" height={rows} paddingX={1}>
+    <box flexDirection="column" height={rows} paddingX={1}>
       {/* Welcome banner */}
       {showWelcome && (
         <WelcomeBanner
@@ -3025,15 +3022,15 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
       {/* Background processing indicator */}
       {backgroundProcessingCount > 0 && (
-        <Box marginBottom={1}>
-          <Text color="yellow">
+        <box marginBottom={1}>
+          <text fg="yellow">
             {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
       {/* Messages area — flexGrow fills available space between header and footer */}
-      <Box flexDirection="column" flexGrow={1}>
+      <box flexDirection="column" flexGrow={1}>
         {/* All messages rendered dynamically (no <Static> — it breaks in tmux) */}
         <Messages
           key="all-messages"
@@ -3046,7 +3043,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           queuedMessageIds={queuedMessageIds}
           verboseTools={verboseTools}
         />
-      </Box>
+      </box>
 
       {/* Ask-user simple interview */}
       {askUserState && activeAskQuestion && !interviewState && (
@@ -3082,16 +3079,16 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
       {/* Worked-for timer - shows only most recent, sticky above input */}
       {!isProcessing && lastWorkedFor && (
-        <Box marginBottom={0} marginLeft={2}>
-          <Text color="gray">✻ Worked for {lastWorkedFor}</Text>
-        </Box>
+        <box marginBottom={0} marginLeft={2}>
+          <text fg="gray">✻ Worked for {lastWorkedFor}</text>
+        </box>
       )}
 
       {/* Exit hint for double Ctrl+C */}
       {showExitHint && (
-        <Box marginLeft={2} marginBottom={0}>
-          <Text color="yellow">(Press Ctrl+C again to exit)</Text>
-        </Box>
+        <box marginLeft={2} marginBottom={0}>
+          <text fg="yellow">(Press Ctrl+C again to exit)</text>
+        </box>
       )}
 
       {/* Queue indicator - sticky above input */}
@@ -3160,10 +3157,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       />
 
       {stopHint && (
-        <Box marginLeft={2}>
-          <Text dimColor>{stopHint}</Text>
-        </Box>
+        <box marginLeft={2}>
+          <text fg="gray">{stopHint}</text>
+        </box>
       )}
-    </Box>
+    </box>
   );
 }

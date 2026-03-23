@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 // Maximum visible items in lists before pagination kicks in
@@ -380,15 +378,15 @@ export function SecretsPanel({
   // Add form
   if (mode === 'add-form') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Add Secret</Text>
-          <Text dimColor> ({addFieldIndex + 1}/{ADD_FIELDS.length})</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Add Secret</b></text>
+          <text fg="gray"> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
@@ -401,9 +399,9 @@ export function SecretsPanel({
 
             if (isCurrent) {
               return (
-                <Box key={field.key}>
-                  <Text color="cyan">{label}</Text>
-                  <TextInput
+                <box key={field.key}>
+                  <text fg="cyan">{label}</text>
+                  <input
                     value={value}
                     onChange={(nextValue) => {
                       setAddForm((prev) => ({
@@ -416,167 +414,167 @@ export function SecretsPanel({
                     }}
                     placeholder={field.placeholder}
                   />
-                </Box>
+                </box>
               );
             }
 
             if (isCompleted) {
               return (
-                <Box key={field.key}>
-                  <Text dimColor>{label}</Text>
-                  <Text>{maskFieldValue(field, value)}</Text>
-                </Box>
+                <box key={field.key}>
+                  <text fg="gray">{label}</text>
+                  <text>{maskFieldValue(field, value)}</text>
+                </box>
               );
             }
 
             return (
-              <Box key={field.key}>
-                <Text dimColor>{label}</Text>
-                <Text dimColor>{field.placeholder}</Text>
-              </Box>
+              <box key={field.key}>
+                <text fg="gray">{label}</text>
+                <text fg="gray">{field.placeholder}</text>
+              </box>
             );
           })}
-        </Box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>Enter next field | Esc back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Enter next field | Esc back</text>
+        </box>
+      </box>
     );
   }
 
   // Empty state
   if (secrets.length === 0) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Secrets</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Secrets</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No secrets stored.</Text>
-          <Text dimColor>Press n to add your first secret.</Text>
-        </Box>
+          <text fg="gray">No secrets stored.</text>
+          <text fg="gray">Press n to add your first secret.</text>
+        </box>
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>n add secret | q quit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">n add secret | q quit</text>
+        </box>
+      </box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Secret</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Secret</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Are you sure you want to delete "{deleteTarget.name}"?</Text>
-          <Text dimColor>Scope: {deleteTarget.scope}</Text>
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
+          <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
+          <text fg="gray">Scope: {deleteTarget.scope}</text>
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Detail view
   if (mode === 'detail' && currentSecret) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{currentSecret.name}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{currentSecret.name}</b></text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Box>
-            <Text dimColor>Scope: </Text>
-            <Text color={currentSecret.scope === 'global' ? 'yellow' : 'blue'}>
+          <box>
+            <text fg="gray">Scope: </text>
+            <text fg={currentSecret.scope === 'global' ? 'yellow' : 'blue'}>
               {currentSecret.scope}
-            </Text>
-          </Box>
+            </text>
+          </box>
 
           {currentSecret.createdAt && (
-            <Box>
-              <Text dimColor>Created: </Text>
-              <Text>{new Date(currentSecret.createdAt).toLocaleString()}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Created: </text>
+              <text>{new Date(currentSecret.createdAt).toLocaleString()}</text>
+            </box>
           )}
 
           {currentSecret.updatedAt && (
-            <Box>
-              <Text dimColor>Updated: </Text>
-              <Text>{new Date(currentSecret.updatedAt).toLocaleString()}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Updated: </text>
+              <text>{new Date(currentSecret.updatedAt).toLocaleString()}</text>
+            </box>
           )}
 
-          <Box marginTop={1}>
-            <Text dimColor>Value: </Text>
+          <box marginTop={1}>
+            <text fg="gray">Value: </text>
             {revealedValue !== null ? (
-              <Text color="green">{revealedValue}</Text>
+              <text fg="green">{revealedValue}</text>
             ) : (
-              <Text dimColor>••••••••</Text>
+              <text fg="gray">••••••••</text>
             )}
-          </Box>
-        </Box>
+          </box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             {revealedValue === null && 'r reveal | '}
             x delete | n add | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -584,24 +582,24 @@ export function SecretsPanel({
   const visibleSecrets = secrets.slice(secretRange.start, secretRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Secrets</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Secrets</b></text>
         {secrets.length > MAX_VISIBLE_ITEMS && (
-          <Text dimColor> ({secretIndex + 1}/{secrets.length})</Text>
+          <text fg="gray"> ({secretIndex + 1}/{secrets.length})</text>
         )}
-      </Box>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {secretRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {secretRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {secretRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleSecrets.map((secret, visibleIdx) => {
@@ -612,45 +610,45 @@ export function SecretsPanel({
           const scopeColor = secret.scope === 'global' ? 'yellow' : 'blue';
 
           return (
-            <Box key={`${secret.name}-${secret.scope}`} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={`${secret.name}-${secret.scope}`} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}{nameDisplay}
-              </Text>
-              <Text color={scopeColor} inverse={isSelected}>
+              </text>
+              <text fg={scopeColor} attributes={isSelected ? 32 : undefined}>
                 {secret.scope.padEnd(8)}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
 
         {secretRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {secretRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {secretRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Legend: </Text>
-        <Text color="yellow">global</Text>
-        <Text dimColor> = shared | </Text>
-        <Text color="blue">assistant</Text>
-        <Text dimColor> = assistant-specific</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Legend: </text>
+        <text fg="yellow">global</text>
+        <text fg="gray"> = shared | </text>
+        <text fg="blue">assistant</text>
+        <text fg="gray"> = assistant-specific</text>
+      </box>
 
       {(error || statusMessage) && (
-        <Box marginTop={1}>
-          <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+        <box marginTop={1}>
+          <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
             {error || statusMessage}
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | n add | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

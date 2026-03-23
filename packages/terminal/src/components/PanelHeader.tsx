@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 
 interface PanelHeaderProps {
   title: string;
@@ -14,17 +13,17 @@ interface PanelHeaderProps {
  */
 export function PanelHeader({ title, color = 'cyan', count, hints }: PanelHeaderProps) {
   return (
-    <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={0} marginBottom={1}>
-      <Text bold>{title}</Text>
+    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={0} marginBottom={1}>
+      <text><b>{title}</b></text>
       {count !== undefined && (
-        <Text dimColor> ({count})</Text>
+        <text fg="gray"> ({count})</text>
       )}
       {hints && (
         <>
-          <Text dimColor> | </Text>
-          <Text dimColor>{hints}</Text>
+          <text fg="gray"> | </text>
+          <text fg="gray">{hints}</text>
         </>
       )}
-    </Box>
+    </box>
   );
 }

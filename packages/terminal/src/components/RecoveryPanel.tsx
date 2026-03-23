@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Text } from 'ink';
 import type { RecoverableSession } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -106,43 +105,43 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
   const selectedSessionIndex = selectedIndex - 1;
 
   return (
-    <Box flexDirection="column" paddingX={1} paddingY={1}>
-      <Box marginBottom={1}>
-        <Text color="yellow" bold>
+    <box flexDirection="column" paddingX={1} paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="yellow"><b>
           Session Recovery
-        </Text>
-      </Box>
+        </b></text>
+      </box>
 
-      <Box marginBottom={1}>
-        <Text dimColor>
+      <box marginBottom={1}>
+        <text fg="gray">
           {sessions.length} recoverable session{sessions.length !== 1 ? 's' : ''} found.
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
         marginBottom={1}
       >
         {/* Start fresh option — always on top */}
-        <Box paddingY={0}>
-          <Text inverse={selectedIndex === 0} color={selectedIndex === 0 ? 'cyan' : undefined}>
+        <box paddingY={0}>
+          <text attributes={selectedIndex === 0 ? 32 : undefined} fg={selectedIndex === 0 ? 'cyan' : undefined}>
             {selectedIndex === 0 ? '▶' : ' '} Start fresh (new session)
-          </Text>
-        </Box>
+          </text>
+        </box>
 
         {/* Separator */}
-        <Box marginY={0}>
-          <Text dimColor>────────────────────────────────────</Text>
-        </Box>
+        <box marginY={0}>
+          <text fg="gray">────────────────────────────────────</text>
+        </box>
 
         {/* Scroll up indicator */}
         {showUpArrow && (
-          <Box>
-            <Text dimColor>  ↑ {startIdx} more above</Text>
-          </Box>
+          <box>
+            <text fg="gray">  ↑ {startIdx} more above</text>
+          </box>
         )}
 
         {/* Visible sessions */}
@@ -156,25 +155,25 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
           const meta = [msgCount, modelName].filter(Boolean).join(', ');
 
           return (
-            <Box key={session.sessionId} flexDirection="column" paddingY={0}>
-              <Text inverse={isSelected}>
-                {isSelected ? '▶' : ' '} {displayName} <Text dimColor>({timeAgo})</Text>
-                {meta ? <Text dimColor> — {meta}</Text> : null}
-              </Text>
+            <box key={session.sessionId} flexDirection="column" paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined}>
+                {isSelected ? '▶' : ' '} {displayName} <text fg="gray">({timeAgo})</text>
+                {meta ? <text fg="gray"> — {meta}</text> : null}
+              </text>
               {session.lastMessage && (
-                <Text dimColor>    {'\u2018'}{session.lastMessage}{'\u2019'}</Text>
+                <text fg="gray">    {'\u2018'}{session.lastMessage}{'\u2019'}</text>
               )}
-            </Box>
+            </box>
           );
         })}
 
         {/* Scroll down indicator */}
         {showDownArrow && (
-          <Box>
-            <Text dimColor>  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</Text>
-          </Box>
+          <box>
+            <text fg="gray">  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
       {/* Details of selected session */}
       {selectedSessionIndex >= 0 && selectedSessionIndex < sessions.length && (() => {
@@ -186,22 +185,22 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
           s.model || null,
         ].filter(Boolean).join(' · ');
         return (
-          <Box flexDirection="column" marginBottom={1}>
-            <Text dimColor>Selected:</Text>
-            <Text>  <Text color="cyan">{s.cwd}</Text></Text>
-            <Text>  {details}</Text>
+          <box flexDirection="column" marginBottom={1}>
+            <text fg="gray">Selected:</text>
+            <text>  <text fg="cyan">{s.cwd}</text></text>
+            <text>  {details}</text>
             {s.lastMessage && (
-              <Text dimColor>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</Text>
+              <text fg="gray">  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</text>
             )}
-          </Box>
+          </box>
         );
       })()}
 
-      <Box>
-        <Text dimColor>
+      <box>
+        <text fg="gray">
           ↑/↓ navigate · Enter select · Esc fresh start
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

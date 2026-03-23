@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 
 interface ParsedError {
   code?: string;
@@ -36,11 +35,11 @@ export function ErrorBanner({ error, showErrorCodes = false }: ErrorBannerProps)
   const prefix = showErrorCodes && parsed.code ? `${parsed.code}: ` : '';
 
   return (
-    <Box marginY={1} flexDirection="column">
-      <Text color={severity}>{prefix}{parsed.message}</Text>
+    <box marginY={1} flexDirection="column">
+      <text fg={severity}>{prefix}{parsed.message}</text>
       {parsed.suggestion && (
-        <Text color={severity}>Suggestion: {parsed.suggestion}</Text>
+        <text fg={severity}>Suggestion: {parsed.suggestion}</text>
       )}
-    </Box>
+    </box>
   );
 }

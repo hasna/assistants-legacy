@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { render } from 'ink';
+import { testRender } from '@opentui/react/test-utils';
 import { PassThrough } from 'stream';
 import { AskUserPanel } from '../src/components/AskUserPanel';
 import { ErrorBanner } from '../src/components/ErrorBanner';
@@ -13,26 +13,9 @@ import { Status } from '../src/components/Status';
 
 const stripAnsi = (text: string) => text.replace(/\x1B\[[0-9;]*m/g, '');
 
-const createInkTestEnv = () => {
-  const stdout = new PassThrough();
-  let output = '';
-  stdout.on('data', (chunk) => {
-    output += String(chunk);
-  });
-  const stdin = new PassThrough() as any;
-  stdin.isTTY = true;
-  stdin.setRawMode = () => {};
-  stdin.ref = () => {};
-  stdin.unref = () => {};
-  stdin.resume = () => {};
-  stdin.pause = () => {};
-  return { stdout, stdin, getOutput: () => stripAnsi(output) };
-};
-
 describe('terminal basic components', () => {
   test('AskUserPanel renders question and options', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
+    const { captureCharFrame, renderOnce } = await testRender(
       <AskUserPanel
         sessionId="session-1"
         request={{
@@ -46,95 +29,84 @@ describe('terminal basic components', () => {
         question={{ id: 'q1', question: 'What is your name?', options: ['Ada', 'Grace'], multiline: true } as any}
         index={0}
         total={1}
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Questionnaire');
     expect(frame).toContain('What is your name?');
     expect(frame).toContain('Ada');
     expect(frame).toContain('Multi-line answer allowed');
     expect(frame).toContain('session-1');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('ErrorBanner parses codes and suggestions', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
+    const { captureCharFrame, renderOnce } = await testRender(
       <ErrorBanner
         error={'RATE_LIMITED: Too many requests\nSuggestion: try later'}
         showErrorCodes
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('RATE_LIMITED: Too many requests');
     expect(frame).toContain('Suggestion: try later');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('Spinner renders label when provided', async () => {
-    const env = createInkTestEnv();
-    const instance = render(<Spinner label="Loading" />, { stdout: env.stdout, stdin: env.stdin });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    const { captureCharFrame, renderOnce } = await testRender(<Spinner label="Loading" />, { width: 80, height: 24 });
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Loading');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('WelcomeBanner abbreviates home directory', async () => {
     const originalHome = process.env.HOME;
     process.env.HOME = '/home/tester';
 
-    const env = createInkTestEnv();
-    const instance = render(
-      <WelcomeBanner version="1.2.3" model="gpt" directory="/home/tester/project" />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <WelcomeBanner version="1.2.3" model="gpt" directory="/home/tester/project" />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Assistants');
     expect(frame).toContain('v1.2.3');
     expect(frame).toContain('model');
     expect(frame).toContain('~/project');
-    instance.unmount();
+    // cleanup handled by testRender
 
     process.env.HOME = originalHome;
   });
 
   test('WelcomeBanner displays friendly model name instead of raw ID', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
-      <WelcomeBanner version="1.0.0" model="claude-sonnet-4-20250514" directory="/tmp" />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <WelcomeBanner version="1.0.0" model="claude-sonnet-4-20250514" directory="/tmp" />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     // Should display "Claude Sonnet 4" not "claude-sonnet-4-20250514"
     expect(frame).toContain('Claude Sonnet 4');
     expect(frame).not.toContain('claude-sonnet-4-20250514');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('WelcomeBanner falls back to raw ID for unknown models', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
-      <WelcomeBanner version="1.0.0" model="custom-model-xyz" directory="/tmp" />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <WelcomeBanner version="1.0.0" model="custom-model-xyz" directory="/tmp" />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     // Unknown model should show the raw ID
     expect(frame).toContain('custom-model-xyz');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('QueueIndicator summarizes queued messages', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
+    const { captureCharFrame, renderOnce } = await testRender(
       <QueueIndicator
         messages={[
           { id: 'm1', content: 'first', mode: 'inline', queuedAt: 1 },
@@ -143,24 +115,22 @@ describe('terminal basic components', () => {
           { id: 'm4', content: 'fourth', mode: 'queued', queuedAt: 4 },
         ]}
         maxPreview={2}
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('queued');
     expect(frame).toContain('in-stream');
     expect(frame).toContain('+2 more');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('EnergyBar renders percentage and color segments', async () => {
-    const env = createInkTestEnv();
-    const instance = render(<EnergyBar current={3} max={10} />, { stdout: env.stdout, stdin: env.stdin });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    const { captureCharFrame, renderOnce } = await testRender(<EnergyBar current={3} max={10} />, { width: 80, height: 24 });
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('30%');
-    instance.unmount();
+    // cleanup handled by testRender
   });
 
   test('ProcessingIndicator renders when active', async () => {
@@ -174,17 +144,15 @@ describe('terminal basic components', () => {
     }) as any;
     globalThis.clearInterval = (() => {}) as any;
 
-    const env = createInkTestEnv();
-    const instance = render(
-      <ProcessingIndicator isProcessing startTime={1000} tokenCount={1200} isThinking />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <ProcessingIndicator isProcessing startTime={1000} tokenCount={1200} isThinking />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('esc');
     expect(frame).toContain('1.2k');
     expect(frame).toContain('tokens');
-    instance.unmount();
+    // cleanup handled by testRender
 
     Date.now = originalNow;
     globalThis.setInterval = originalSetInterval;
@@ -202,8 +170,7 @@ describe('terminal basic components', () => {
     }) as any;
     globalThis.clearInterval = (() => {}) as any;
 
-    const env = createInkTestEnv();
-    const instance = render(
+    const { captureCharFrame, renderOnce } = await testRender(
       <Status
         isProcessing
         cwd="/tmp"
@@ -216,17 +183,16 @@ describe('terminal basic components', () => {
         processingStartTime={1000}
         verboseTools
         voiceState={{ enabled: true, isListening: true } as any}
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('50%');
     expect(frame).toContain('verbose');
     expect(frame).toContain('2q');
     expect(frame).toContain('0/2');
     expect(frame).toContain('esc');
-    instance.unmount();
+    // cleanup handled by testRender
 
     Date.now = originalNow;
     globalThis.setInterval = originalSetInterval;

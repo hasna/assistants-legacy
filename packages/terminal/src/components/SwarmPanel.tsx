@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 import type { SerializableSwarmState, SwarmConfig } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -23,7 +22,7 @@ function StatusBadge({ status }: { status: string }) {
     cancelled: 'red',
   };
 
-  return <Text color={colorMap[status] || 'gray'} bold>{status.toUpperCase()}</Text>;
+  return <text fg={colorMap[status] || 'gray'}><b>{status.toUpperCase()}</b></text>;
 }
 
 function TaskStatusIcon({ status }: { status: string }) {
@@ -46,7 +45,7 @@ function TaskStatusIcon({ status }: { status: string }) {
     cancelled: 'gray',
   };
 
-  return <Text color={colors[status] || 'gray'}>{icons[status] || '?'}</Text>;
+  return <text fg={colors[status] || 'gray'}>{icons[status] || '?'}</text>;
 }
 
 export function SwarmPanel({
@@ -69,15 +68,15 @@ export function SwarmPanel({
 
   if (!state) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Text bold>Swarm</Text>
-        <Box marginTop={1}>
-          <Text dimColor>No swarm currently running. Use /swarm &lt;goal&gt; to start.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>[q]uit</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <text><b>Swarm</b></text>
+        <box marginTop={1}>
+          <text fg="gray">No swarm currently running. Use /swarm &lt;goal&gt; to start.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">[q]uit</text>
+        </box>
+      </box>
     );
   }
 
@@ -85,109 +84,109 @@ export function SwarmPanel({
   const isRunning = !['completed', 'failed', 'cancelled'].includes(state.status);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
+    <box flexDirection="column" paddingY={1}>
       {/* Header */}
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text bold>Swarm</Text>
+      <box justifyContent="space-between" marginBottom={1}>
+        <text><b>Swarm</b></text>
         <StatusBadge status={state.status} />
-      </Box>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
         {/* Goal */}
         {state.plan?.goal && (
-          <Box marginBottom={1}>
-            <Text dimColor>Goal: </Text>
-            <Text>{state.plan.goal}</Text>
-          </Box>
+          <box marginBottom={1}>
+            <text fg="gray">Goal: </text>
+            <text>{state.plan.goal}</text>
+          </box>
         )}
 
         {/* Task Graph */}
         {tasks.length > 0 && (
-          <Box flexDirection="column" marginBottom={1}>
-            <Text bold dimColor>Tasks ({state.metrics.completedTasks}/{state.metrics.totalTasks}):</Text>
-            <Box flexDirection="column" marginTop={1}>
+          <box flexDirection="column" marginBottom={1}>
+            <text fg="gray"><b>Tasks ({state.metrics.completedTasks}/{state.metrics.totalTasks}):</b></text>
+            <box flexDirection="column" marginTop={1}>
               {tasks.slice(0, 15).map((task, i) => (
-                <Box key={task.id || i} gap={1}>
+                <box key={task.id || i} gap={1}>
                   <TaskStatusIcon status={task.status} />
-                  <Text dimColor={task.status === 'completed'}>{task.description.slice(0, 60)}</Text>
+                  <text fg={task.status === 'completed' ? "gray" : undefined}>{task.description.slice(0, 60)}</text>
                   {task.assignedAssistantId && (
-                    <Text dimColor color="cyan"> [{task.assignedAssistantId.slice(0, 6)}]</Text>
+                    <text fg="cyan"> [{task.assignedAssistantId.slice(0, 6)}]</text>
                   )}
-                </Box>
+                </box>
               ))}
               {tasks.length > 15 && (
-                <Text dimColor>  ...and {tasks.length - 15} more</Text>
+                <text fg="gray">  ...and {tasks.length - 15} more</text>
               )}
-            </Box>
-          </Box>
+            </box>
+          </box>
         )}
 
         {/* Metrics */}
-        <Box flexDirection="column">
-          <Text bold dimColor>Metrics:</Text>
-          <Box paddingLeft={1} flexDirection="column">
-            <Box>
-              <Text dimColor>{'LLM Calls:'.padEnd(16)}</Text>
-              <Text>{state.metrics.llmCalls}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>{'Tool Calls:'.padEnd(16)}</Text>
-              <Text>{state.metrics.toolCalls}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>{'Tokens Used:'.padEnd(16)}</Text>
-              <Text>{state.metrics.tokensUsed.toLocaleString()}</Text>
+        <box flexDirection="column">
+          <text fg="gray"><b>Metrics:</b></text>
+          <box paddingLeft={1} flexDirection="column">
+            <box>
+              <text fg="gray">{'LLM Calls:'.padEnd(16)}</text>
+              <text>{state.metrics.llmCalls}</text>
+            </box>
+            <box>
+              <text fg="gray">{'Tool Calls:'.padEnd(16)}</text>
+              <text>{state.metrics.toolCalls}</text>
+            </box>
+            <box>
+              <text fg="gray">{'Tokens Used:'.padEnd(16)}</text>
+              <text>{state.metrics.tokensUsed.toLocaleString()}</text>
               {config?.tokenBudget && config.tokenBudget > 0 && (
-                <Text dimColor> / {config.tokenBudget.toLocaleString()}</Text>
+                <text fg="gray"> / {config.tokenBudget.toLocaleString()}</text>
               )}
-            </Box>
+            </box>
             {state.metrics.replans > 0 && (
-              <Box>
-                <Text dimColor>{'Replans:'.padEnd(16)}</Text>
-                <Text>{state.metrics.replans}</Text>
-              </Box>
+              <box>
+                <text fg="gray">{'Replans:'.padEnd(16)}</text>
+                <text>{state.metrics.replans}</text>
+              </box>
             )}
-          </Box>
-        </Box>
+          </box>
+        </box>
 
         {/* Active Assistants */}
         {state.activeAssistants && state.activeAssistants.length > 0 && (
-          <Box marginTop={1}>
-            <Text dimColor>Active workers: </Text>
-            <Text color="cyan">{state.activeAssistants.length}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="gray">Active workers: </text>
+            <text fg="cyan">{state.activeAssistants.length}</text>
+          </box>
         )}
 
         {/* Shared Memory */}
         {memoryStats && memoryStats.totalEntries > 0 && (
-          <Box marginTop={1} flexDirection="column">
-            <Text bold dimColor>Shared Memory: {memoryStats.totalEntries} entries</Text>
-            <Box paddingLeft={1}>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray"><b>Shared Memory: {memoryStats.totalEntries} entries</b></text>
+            <box paddingLeft={1}>
               {Object.entries(memoryStats.byCategory)
                 .filter(([_, count]) => count > 0)
                 .map(([cat, count]) => (
-                  <Text key={cat} dimColor>{cat}: {count}  </Text>
+                  <text key={cat} fg="gray">{cat}: {count}  </text>
                 ))}
-            </Box>
-          </Box>
+            </box>
+          </box>
         )}
 
         {/* Errors */}
         {state.errors && state.errors.length > 0 && (
-          <Box marginTop={1} flexDirection="column">
-            <Text color="red" bold>Errors:</Text>
+          <box marginTop={1} flexDirection="column">
+            <text fg="red"><b>Errors:</b></text>
             {state.errors.slice(-3).map((err, i) => (
-              <Text key={i} color="red">  - {err.slice(0, 80)}</Text>
+              <text key={i} fg="red">  - {err.slice(0, 80)}</text>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           {isRunning ? '[s]top ' : ''}[q]uit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

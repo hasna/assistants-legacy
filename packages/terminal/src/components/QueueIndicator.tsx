@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 import type { QueuedMessage } from './appTypes';
 
 interface QueueIndicatorProps {
@@ -34,19 +33,19 @@ export function QueueIndicator({
   const summary = parts.join(', ');
 
   return (
-    <Box flexDirection="column" marginTop={0} marginBottom={0}>
+    <box flexDirection="column" marginTop={0} marginBottom={0}>
       {previewItems.map((msg) => (
-        <Box key={msg.id}>
-          <Text color={msg.mode === 'inline' ? 'cyan' : 'yellow'}>
+        <box key={msg.id}>
+          <text fg={msg.mode === 'inline' ? 'cyan' : 'yellow'}>
             {msg.mode === 'inline' ? '⚡' : '⏳'}{' '}
             {msg.mode === 'inline' ? 'in-stream' : 'queued'}:{' '}
-          </Text>
-          <Text dimColor>"{truncateQueued(msg.content, 60)}"</Text>
-        </Box>
+          </text>
+          <text fg="gray">"{truncateQueued(msg.content, 60)}"</text>
+        </box>
       ))}
       {hasMore && (
-        <Text dimColor>  +{totalCount - maxPreview} more ({summary})</Text>
+        <text fg="gray">  +{totalCount - maxPreview} more ({summary})</text>
       )}
-    </Box>
+    </box>
   );
 }

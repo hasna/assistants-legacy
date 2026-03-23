@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { basename } from 'path';
-import { Box, Text } from 'ink';
 import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
 import { getModelById } from '@hasna/assistants-shared';
 
@@ -243,9 +242,9 @@ export function Status({
   if (costInfo) rightParts.push(costInfo);
 
   return (
-    <Box justifyContent="space-between">
-      <Text dimColor>{leftParts.join(' · ')}</Text>
-      <Text dimColor>{rightParts.join(' · ')}</Text>
-    </Box>
+    <box justifyContent="space-between">
+      <text fg="gray">{leftParts.join(' · ')}</text>
+      <text fg="gray">{rightParts.join(' · ')}</text>
+    </box>
   );
 }

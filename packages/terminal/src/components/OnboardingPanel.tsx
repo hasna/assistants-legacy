@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { useTypewriter } from '../hooks/useTypewriter';
 import { useGradientCycle } from '../hooks/useGradientCycle';
@@ -108,12 +106,12 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
   const empty = width - filled;
   const pct = Math.round((step / total) * 100);
   return (
-    <Box marginBottom={1}>
-      <Text color="gray">Step {step} of {total}  [</Text>
-      <Text color="cyan">{'='.repeat(filled)}</Text>
-      <Text color="gray">{' '.repeat(empty)}</Text>
-      <Text color="gray">] {pct}%</Text>
-    </Box>
+    <box marginBottom={1}>
+      <text fg="gray">Step {step} of {total}  [</text>
+      <text fg="cyan">{'='.repeat(filled)}</text>
+      <text fg="gray">{' '.repeat(empty)}</text>
+      <text fg="gray">] {pct}%</text>
+    </box>
   );
 }
 
@@ -129,24 +127,24 @@ function MaskedInput({ value, onChange, onSubmit, placeholder }: {
     : value;
 
   return (
-    <Box>
-      <Text color="cyan">&gt; </Text>
+    <box>
+      <text fg="cyan">&gt; </text>
       {value.length === 0 ? (
-        <TextInput
+        <input
           value={value}
           onChange={onChange}
           onSubmit={onSubmit}
           placeholder={placeholder}
         />
       ) : (
-        <TextInput
+        <input
           value={value}
           onChange={onChange}
           onSubmit={onSubmit}
           placeholder={placeholder}
         />
       )}
-    </Box>
+    </box>
   );
 }
 
@@ -493,18 +491,18 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'welcome') {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginTop={1} marginBottom={1}>
-          <Text bold color={logoColor}>{COMPACT_LOGO}</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text color="cyan">&gt; </Text>
-          <Text>{subtitle}</Text>
-          {!subtitleDone && <Text color="cyan">_</Text>}
-        </Box>
-        <Text color="gray">Press Enter to get started...</Text>
-        <Text color="gray" dimColor>Press Escape to skip</Text>
-      </Box>
+      <box flexDirection="column" paddingX={1}>
+        <box marginTop={1} marginBottom={1}>
+          <text fg={logoColor}><b>{COMPACT_LOGO}</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text fg="cyan">&gt; </text>
+          <text>{subtitle}</text>
+          {!subtitleDone && <text fg="cyan">_</text>}
+        </box>
+        <text fg="gray">Press Enter to get started...</text>
+        <text fg="gray">Press Escape to skip</text>
+      </box>
     );
   }
 
@@ -513,23 +511,23 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'intro') {
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>What can assistants do?</Text>
-        <Box flexDirection="column" marginTop={1} marginBottom={1}>
+        <text><b>What can assistants do?</b></text>
+        <box flexDirection="column" marginTop={1} marginBottom={1}>
           {INTRO_FEATURES.slice(0, introRevealCount).map((feature, i) => (
-            <Box key={i}>
-              <Text color="cyan">  &gt; </Text>
-              <Text>{feature}</Text>
-            </Box>
+            <box key={i}>
+              <text fg="cyan">  &gt; </text>
+              <text>{feature}</text>
+            </box>
           ))}
           {introRevealCount < INTRO_FEATURES.length && (
-            <Text color="gray">  ...</Text>
+            <text fg="gray">  ...</text>
           )}
-        </Box>
-        <Text color="gray">Press Enter to continue...</Text>
-        <Text color="gray">Esc or B to go back</Text>
-      </Box>
+        </box>
+        <text fg="gray">Press Enter to continue...</text>
+        <text fg="gray">Esc or B to go back</text>
+      </box>
     );
   }
 
@@ -538,25 +536,25 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'provider-select') {
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Choose your provider</Text>
-        <Box flexDirection="column" marginTop={1} marginBottom={1}>
+        <text><b>Choose your provider</b></text>
+        <box flexDirection="column" marginTop={1} marginBottom={1}>
           {LLM_PROVIDERS.map((provider, i) => (
-            <Box key={provider.id}>
-              <Text color={i === selectedProviderIndex ? 'cyan' : 'gray'}>
+            <box key={provider.id}>
+              <text fg={i === selectedProviderIndex ? 'cyan' : 'gray'}>
                 {i === selectedProviderIndex ? '  > ' : '    '}
-              </Text>
-              <Text bold={i === selectedProviderIndex} color={i === selectedProviderIndex ? 'white' : undefined}>
+              </text>
+              <text attributes={i === selectedProviderIndex ? 1 : undefined} fg={i === selectedProviderIndex ? 'white' : undefined}><b>
                 {provider.label}
-              </Text>
-              <Text color="gray">  {provider.description}</Text>
-            </Box>
+              </b></text>
+              <text fg="gray">  {provider.description}</text>
+            </box>
           ))}
-        </Box>
-        <Text color="gray">Arrow keys to move, Enter to continue</Text>
-        <Text color="gray">Esc or B to go back</Text>
-      </Box>
+        </box>
+        <text fg="gray">Arrow keys to move, Enter to continue</text>
+        <text fg="gray">Esc or B to go back</text>
+      </box>
     );
   }
 
@@ -569,29 +567,29 @@ export function OnboardingPanel({
     const envName = providerInfo?.apiKeyEnv || 'API_KEY';
     const existingKey = existingApiKeys?.[selectedProvider];
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Let's set up your API key</Text>
-        <Box marginTop={1} marginBottom={1} flexDirection="column">
-          <Text>assistants uses {providerLabel}. You'll need an API key.</Text>
+        <text><b>Let's set up your API key</b></text>
+        <box marginTop={1} marginBottom={1} flexDirection="column">
+          <text>assistants uses {providerLabel}. You'll need an API key.</text>
           {providerInfo?.docsUrl ? (
-            <Text>Get one at: <Text color="cyan" underline>{providerInfo.docsUrl}</Text></Text>
+            <text>Get one at: <text fg="cyan"><u>{providerInfo.docsUrl}</u></text></text>
           ) : null}
-        </Box>
+        </box>
         {existingKey ? (
-          <Box flexDirection="column">
-            <Text color="green">Existing API key detected: {existingKey.slice(0, 10)}...{existingKey.slice(-4)}</Text>
-            <Box marginTop={1}>
-              <Text color="gray">Press Enter to keep it, or type a new key:</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <text fg="green">Existing API key detected: {existingKey.slice(0, 10)}...{existingKey.slice(-4)}</text>
+            <box marginTop={1}>
+              <text fg="gray">Press Enter to keep it, or type a new key:</text>
+            </box>
+          </box>
         ) : null}
-        <Box marginTop={1}>
-          <Text>Enter your {providerLabel} API key ({envName}):</Text>
-        </Box>
-        <Box>
-          <Text color="cyan">&gt; </Text>
-            <TextInput
+        <box marginTop={1}>
+          <text>Enter your {providerLabel} API key ({envName}):</text>
+        </box>
+        <box>
+          <text fg="cyan">&gt; </text>
+            <input
               value={apiKey}
               onChange={(v) => {
                 setApiKey(v);
@@ -602,21 +600,21 @@ export function OnboardingPanel({
               focus
               placeholder={selectedProvider === 'anthropic' ? 'sk-ant-...' : 'api-key'}
             />
-        </Box>
+        </box>
         {apiKeyError && (
-          <Box marginTop={1}>
-            <Text color="red">{apiKeyError}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="red">{apiKeyError}</text>
+          </box>
         )}
         {apiKeyValidated && (
-          <Box marginTop={1}>
-            <Text color="green">Key validated successfully!</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="green">Key validated successfully!</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text color="gray">Escape to go back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Escape to go back</text>
+        </box>
+      </box>
     );
   }
 
@@ -625,25 +623,25 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'model-select') {
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Choose your default model</Text>
-        <Box flexDirection="column" marginTop={1} marginBottom={1}>
+        <text><b>Choose your default model</b></text>
+        <box flexDirection="column" marginTop={1} marginBottom={1}>
           {availableModels.map((model, i) => (
-            <Box key={model.id}>
-              <Text color={i === selectedModelIndex ? 'cyan' : 'gray'}>
+            <box key={model.id}>
+              <text fg={i === selectedModelIndex ? 'cyan' : 'gray'}>
                 {i === selectedModelIndex ? '  > ' : '    '}
-              </Text>
-              <Text bold={i === selectedModelIndex} color={i === selectedModelIndex ? 'white' : undefined}>
+              </text>
+              <text attributes={i === selectedModelIndex ? 1 : undefined} fg={i === selectedModelIndex ? 'white' : undefined}><b>
                 {model.name}
-              </Text>
-              <Text color="gray">  {model.description}</Text>
-            </Box>
+              </b></text>
+              <text fg="gray">  {model.description}</text>
+            </box>
           ))}
-        </Box>
-        <Text color="gray">Arrow keys to select, Enter to confirm</Text>
-        <Text color="gray">Esc or B to go back</Text>
-      </Box>
+        </box>
+        <text fg="gray">Arrow keys to select, Enter to confirm</text>
+        <text fg="gray">Esc or B to go back</text>
+      </box>
     );
   }
 
@@ -656,15 +654,15 @@ export function OnboardingPanel({
     const visibleConnectors = connectorList.slice(visibleRange.start, visibleRange.end);
 
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Connectors</Text>
-        <Box marginTop={1} marginBottom={1} flexDirection="column">
-          <Text color="gray">Select connectors to enable. Uninstalled ones will be installed automatically.</Text>
-        </Box>
-        <Box flexDirection="column">
+        <text><b>Connectors</b></text>
+        <box marginTop={1} marginBottom={1} flexDirection="column">
+          <text fg="gray">Select connectors to enable. Uninstalled ones will be installed automatically.</text>
+        </box>
+        <box flexDirection="column">
           {visibleRange.hasMore.above > 0 && (
-            <Text dimColor>  ^ {visibleRange.hasMore.above} more above</Text>
+            <text fg="gray">  ^ {visibleRange.hasMore.above} more above</text>
           )}
           {visibleConnectors.map((connector, visibleIdx) => {
             const actualIdx = visibleRange.start + visibleIdx;
@@ -674,27 +672,27 @@ export function OnboardingPanel({
             const descDisplay = desc.length > 32 ? desc.slice(0, 29) + '...' : desc;
             const checkbox = enabled ? 'x' : ' ';
             return (
-              <Box key={connector.name}>
-                <Text color={isSelected ? 'cyan' : 'gray'}>
+              <box key={connector.name}>
+                <text fg={isSelected ? 'cyan' : 'gray'}>
                   {isSelected ? '> ' : '  '}
-                </Text>
-                <Text color={enabled ? 'green' : 'gray'}>
+                </text>
+                <text fg={enabled ? 'green' : 'gray'}>
                   [{checkbox}]
-                </Text>
-                <Text> {connector.name}</Text>
-                <Text color="gray">  {descDisplay}</Text>
-              </Box>
+                </text>
+                <text> {connector.name}</text>
+                <text fg="gray">  {descDisplay}</text>
+              </box>
             );
           })}
           {visibleRange.hasMore.below > 0 && (
-            <Text dimColor>  v {visibleRange.hasMore.below} more below</Text>
+            <text fg="gray">  v {visibleRange.hasMore.below} more below</text>
           )}
-        </Box>
-        <Box marginTop={1} flexDirection="column">
-          <Text color="gray">Arrow keys to move, Space to toggle, Enter to continue</Text>
-          <Text color="gray">Esc or B to go back</Text>
-        </Box>
-      </Box>
+        </box>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">Arrow keys to move, Space to toggle, Enter to continue</text>
+          <text fg="gray">Esc or B to go back</text>
+        </box>
+      </box>
     );
   }
 
@@ -703,41 +701,41 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'skills') {
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Skills</Text>
-        <Box marginTop={1} marginBottom={1} flexDirection="column">
-          <Text color="gray">Skills teach your assistant specialized workflows.</Text>
-          <Text color="gray">Install skills with: <Text color="cyan">bun add -g @hasna/skills</Text></Text>
-        </Box>
+        <text><b>Skills</b></text>
+        <box marginTop={1} marginBottom={1} flexDirection="column">
+          <text fg="gray">Skills teach your assistant specialized workflows.</text>
+          <text fg="gray">Install skills with: <text fg="cyan">bun add -g @hasna/skills</text></text>
+        </box>
         {skillsList.length > 0 ? (
-          <Box flexDirection="column">
+          <box flexDirection="column">
             {skillsList.map((skill, i) => {
               const isSelected = i === selectedSkillIndex;
               return (
-                <Box key={skill.name}>
-                  <Text color={isSelected ? 'cyan' : 'gray'}>
+                <box key={skill.name}>
+                  <text fg={isSelected ? 'cyan' : 'gray'}>
                     {isSelected ? '> ' : '  '}
-                  </Text>
-                  <Text color="green">[x]</Text>
-                  <Text> /{skill.name}</Text>
+                  </text>
+                  <text fg="green">[x]</text>
+                  <text> /{skill.name}</text>
                   {skill.description && (
-                    <Text color="gray">  {skill.description.length > 40 ? skill.description.slice(0, 37) + '...' : skill.description}</Text>
+                    <text fg="gray">  {skill.description.length > 40 ? skill.description.slice(0, 37) + '...' : skill.description}</text>
                   )}
-                </Box>
+                </box>
               );
             })}
-          </Box>
+          </box>
         ) : (
-          <Box marginBottom={1}>
-            <Text dimColor>  No skills installed. Run <Text color="cyan">bun add -g @hasna/skills</Text> to get started.</Text>
-          </Box>
+          <box marginBottom={1}>
+            <text fg="gray">  No skills installed. Run <text fg="cyan">bun add -g @hasna/skills</text> to get started.</text>
+          </box>
         )}
-        <Box marginTop={1} flexDirection="column">
-          <Text color="gray">Press Enter to continue...</Text>
-          <Text color="gray">Esc or B to go back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">Press Enter to continue...</text>
+          <text fg="gray">Esc or B to go back</text>
+        </box>
+      </box>
     );
   }
 
@@ -753,26 +751,26 @@ export function OnboardingPanel({
     }
 
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold>Configure connector: {currentConnector}</Text>
-        <Box marginTop={1}>
-          <Text>Enter API key for {currentConnector}:</Text>
-        </Box>
-        <Box>
-          <Text color="cyan">&gt; </Text>
-          <TextInput
+        <text><b>Configure connector: {currentConnector}</b></text>
+        <box marginTop={1}>
+          <text>Enter API key for {currentConnector}:</text>
+        </box>
+        <box>
+          <text fg="cyan">&gt; </text>
+          <input
             value={connectorKeyValue}
             onChange={setConnectorKeyValue}
             onSubmit={submitConnectorKey}
-            focus
+            focused
             placeholder="Enter API key or press Enter to skip"
           />
-        </Box>
-        <Box marginTop={1}>
-          <Text color="gray">{connectorKeyIndex + 1} of {connectorKeysNeeded.length} connectors</Text>
-        </Box>
-      </Box>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">{connectorKeyIndex + 1} of {connectorKeysNeeded.length} connectors</text>
+        </box>
+      </box>
     );
   }
 
@@ -790,34 +788,34 @@ export function OnboardingPanel({
     const modelDisplay = modelLabel.length > 24 ? modelLabel.slice(0, 21) + '...' : modelLabel.padEnd(24);
 
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <Text bold color="green">You're all set!</Text>
-        <Box marginTop={1} flexDirection="column">
-          <Text color="gray">{'┌─────────────────────────────────────┐'}</Text>
-          <Text color="gray">{'│'} <Text bold>Configuration Summary</Text>{'              │'}</Text>
-          <Text color="gray">{'├─────────────────────────────────────┤'}</Text>
-          <Text color="gray">{'│'} API Key:    <Text>{maskedKey.padEnd(24)}</Text>{'│'}</Text>
-          <Text color="gray">{'│'} Model:      <Text>{modelDisplay}</Text>{'│'}</Text>
-          <Text color="gray">{'│'} Connectors: <Text>{connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}</Text>{'│'}</Text>
-          <Text color="gray">{'│'} Skills:     <Text>{skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}</Text>{'│'}</Text>
-          <Text color="gray">{'│'} Config:     <Text>{'~/.assistants/'.padEnd(24)}</Text>{'│'}</Text>
-          <Text color="gray">{'└─────────────────────────────────────┘'}</Text>
-        </Box>
-        <Box marginTop={1}>
+        <text fg="green"><b>You're all set!</b></text>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">{'┌─────────────────────────────────────┐'}</text>
+          <text fg="gray">{'│'} <text><b>Configuration Summary</b></text>{'              │'}</text>
+          <text fg="gray">{'├─────────────────────────────────────┤'}</text>
+          <text fg="gray">{'│'} API Key:    <text>{maskedKey.padEnd(24)}</text>{'│'}</text>
+          <text fg="gray">{'│'} Model:      <text>{modelDisplay}</text>{'│'}</text>
+          <text fg="gray">{'│'} Connectors: <text>{connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}</text>{'│'}</text>
+          <text fg="gray">{'│'} Skills:     <text>{skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}</text>{'│'}</text>
+          <text fg="gray">{'│'} Config:     <text>{'~/.assistants/'.padEnd(24)}</text>{'│'}</text>
+          <text fg="gray">{'└─────────────────────────────────────┘'}</text>
+        </box>
+        <box marginTop={1}>
           {isSaving ? (
-            <Text color="yellow">Saving configuration...</Text>
+            <text fg="yellow">Saving configuration...</text>
           ) : (
-            <Text color="gray">Press Enter to start chatting...</Text>
+            <text fg="gray">Press Enter to start chatting...</text>
           )}
-        </Box>
+        </box>
         {!isSaving && (
-          <Box marginTop={1} flexDirection="column">
-            <Text color="gray">Edit: (P)rovider  (M)odel  (K)ey  (C)onnectors  (S)kills</Text>
-            <Text color="gray">Esc or B to go back</Text>
-          </Box>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray">Edit: (P)rovider  (M)odel  (K)ey  (C)onnectors  (S)kills</text>
+            <text fg="gray">Esc or B to go back</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 

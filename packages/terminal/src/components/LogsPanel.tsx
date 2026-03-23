@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Text } from 'ink';
 import { getSecurityLogger, SecurityLogger } from '@hasna/assistants-core';
 import type { SecurityEvent, Severity } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -174,34 +173,34 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     const severityColor = SEVERITY_COLORS[e.severity];
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Log Entry Details</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Log Entry Details</b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
-          <Box><Text bold>Timestamp: </Text><Text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</Text></Box>
-          <Box><Text bold>Severity: </Text><Text color={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</Text></Box>
-          <Box><Text bold>Event Type: </Text><Text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</Text></Box>
-          <Box><Text bold>Session: </Text><Text dimColor>{e.sessionId}</Text></Box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+          <box><text><b>Timestamp: </b></text><text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</text></box>
+          <box><text><b>Severity: </b></text><text fg={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</text></box>
+          <box><text><b>Event Type: </b></text><text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</text></box>
+          <box><text><b>Session: </b></text><text fg="gray">{e.sessionId}</text></box>
 
-          <Box marginTop={1}><Text bold>Details:</Text></Box>
+          <box marginTop={1}><text><b>Details:</b></text></box>
           {e.details.tool && (
-            <Box marginLeft={2}><Text bold>Tool: </Text><Text>{e.details.tool}</Text></Box>
+            <box marginLeft={2}><text><b>Tool: </b></text><text>{e.details.tool}</text></box>
           )}
           {e.details.command && (
-            <Box marginLeft={2}><Text bold>Command: </Text><Text color="cyan" wrap="wrap">{e.details.command}</Text></Box>
+            <box marginLeft={2}><text><b>Command: </b></text><text fg="cyan" wrapMode="word">{e.details.command}</text></box>
           )}
           {e.details.path && (
-            <Box marginLeft={2}><Text bold>Path: </Text><Text wrap="wrap">{e.details.path}</Text></Box>
+            <box marginLeft={2}><text><b>Path: </b></text><text wrapMode="word">{e.details.path}</text></box>
           )}
-          <Box marginLeft={2}><Text bold>Reason: </Text><Text wrap="wrap">{e.details.reason}</Text></Box>
-        </Box>
+          <box marginLeft={2}><text><b>Reason: </b></text><text wrapMode="word">{e.details.reason}</text></box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>Esc/q back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Esc/q back</text>
+        </box>
+      </box>
     );
   }
 
@@ -210,33 +209,33 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
   const hasFilters = severityFilter !== 'all' || eventTypeFilter !== 'all';
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Security Logs</Text>
-        <Text dimColor>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Security Logs</b></text>
+        <text fg="gray">{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}</text>
+      </box>
 
       {hasFilters && (
-        <Box marginBottom={1}>
-          <Text dimColor>Filters: </Text>
+        <box marginBottom={1}>
+          <text fg="gray">Filters: </text>
           {severityFilter !== 'all' && (
-            <Text color={SEVERITY_COLORS[severityFilter]}>[severity: {severityFilter}] </Text>
+            <text fg={SEVERITY_COLORS[severityFilter]}>[severity: {severityFilter}] </text>
           )}
           {eventTypeFilter !== 'all' && (
-            <Text color="cyan">[type: {eventTypeFilter}] </Text>
+            <text fg="cyan">[type: {eventTypeFilter}] </text>
           )}
-        </Box>
+        </box>
       )}
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {filteredEvents.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>
+          <box paddingY={1}>
+            <text fg="gray">
               {allEvents.length === 0
                 ? 'No security events recorded.'
                 : 'No events match current filters.'}
-            </Text>
-          </Box>
+            </text>
+          </box>
         ) : (
           filteredEvents.map((event, index) => {
             const isSelected = index === selectedIndex;
@@ -246,23 +245,23 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
             const reason = event.details?.reason || event.details?.command || event.details?.path || 'n/a';
 
             return (
-              <Box key={`${event.timestamp}-${index}`} paddingY={0}>
-                <Text inverse={isSelected}>
-                  <Text color={severityColor}>{icon.padEnd(2)}</Text>
+              <box key={`${event.timestamp}-${index}`} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined}>
+                  <text fg={severityColor}>{icon.padEnd(2)}</text>
                   {' '}
                   {time.padEnd(8)} {event.eventType.padEnd(20)} {truncate(reason, 40)}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ navigate | Enter details | [s]everity filter | [t]ype filter | [r]efresh | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

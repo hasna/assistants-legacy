@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { ProjectRecord } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -192,57 +190,57 @@ export function ProjectsPanel({
   // Create mode UI
   if (mode === 'create') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Create New Project</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Create New Project</b></text>
+        </box>
 
         {createStep === 'name' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Name: </text>
+              <input
                 value={newName}
                 onChange={setNewName}
                 onSubmit={handleNameSubmit}
-                focus
+                focused
                 placeholder="Enter project name..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc to cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc to cancel</text>
+            </box>
+          </box>
         )}
 
         {createStep === 'description' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text dimColor>Name: </Text>
-              <Text>{newName}</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text>Description: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text fg="gray">Name: </text>
+              <text>{newName}</text>
+            </box>
+            <box marginTop={1}>
+              <text>Description: </text>
+              <input
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={handleDescriptionSubmit}
-                focus
+                focused
                 placeholder="Enter description (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to create | Tab to skip | Esc to cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to create | Tab to skip | Esc to cancel</text>
+            </box>
+          </box>
         )}
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Creating project...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Creating project...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -250,46 +248,46 @@ export function ProjectsPanel({
   if (mode === 'delete-confirm') {
     const project = projects[selectedIndex];
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Project</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Project</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Are you sure you want to delete &quot;{project?.name}&quot;?
-          </Text>
-        </Box>
-        <Box>
-          <Text dimColor>This will delete all plans in this project.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box>
+          <text fg="gray">This will delete all plans in this project.</text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
   // List mode UI
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Projects</Text>
-        <Text dimColor>[n]ew</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Projects</b></text>
+        <text fg="gray">[n]ew</text>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {projects.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No projects yet. Press n to create one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No projects yet. Press n to create one.</text>
+          </box>
         ) : (
           projects.map((project, index) => {
             const isActive = project.id === activeProjectId;
@@ -299,45 +297,45 @@ export function ProjectsPanel({
             const time = formatProjectTime(project.updatedAt);
 
             return (
-              <Box key={project.id} paddingY={0}>
-                <Text
-                  inverse={isSelected}
-                  color={isActive ? 'green' : undefined}
-                  dimColor={!isSelected && !isActive}
+              <box key={project.id} paddingY={0}>
+                <text
+                  attributes={isSelected ? 32 : undefined}
+                  fg={isActive ? 'green' : undefined}
+                  fg={!isSelected && !isActive ? "gray" : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {project.name.padEnd(20)} {planCount} plan{planCount !== 1 ? 's' : ''} {contextCount > 0 ? `${contextCount} ctx` : ''} {time}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
 
         {/* New project option */}
-        <Box marginTop={1} paddingY={0}>
-          <Text
-            inverse={selectedIndex === projects.length}
-            dimColor={selectedIndex !== projects.length}
-            color={selectedIndex === projects.length ? 'cyan' : undefined}
+        <box marginTop={1} paddingY={0}>
+          <text
+            attributes={selectedIndex === projects.length ? 32 : undefined}
+            fg={selectedIndex !== projects.length ? "gray" : undefined}
+            fg={selectedIndex === projects.length ? 'cyan' : undefined}
           >
             + New project (n)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
       {/* Selected project details */}
       {projects.length > 0 && selectedIndex < projects.length && (
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">
             {projects[selectedIndex].description || 'No description'}
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter select | p plans | d delete | Esc close | 1-{Math.max(1, projects.length)} jump
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import {
   ALL_MODELS,
   LLM_PROVIDER_IDS,
@@ -227,71 +225,71 @@ export function ModelPanel({
   const visibleRows = rows.slice(visibleRange.start, visibleRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
+    <box flexDirection="column" paddingY={1}>
       {/* Header */}
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Model Selector</Text>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Model Selector</b></text>
         {assistantName ? (
-          <Text dimColor>{assistantName}</Text>
+          <text fg="gray">{assistantName}</text>
         ) : (
-          <Text dimColor>Active assistant</Text>
+          <text fg="gray">Active assistant</text>
         )}
-      </Box>
+      </box>
 
-      <Box marginBottom={1}>
-        <Text dimColor>
+      <box marginBottom={1}>
+        <text fg="gray">
           Current: {getModelDisplayName(currentModelId || 'unknown')} ({currentModelId || 'unknown'})
-        </Text>
-      </Box>
+        </text>
+      </box>
 
       {/* Status message */}
       {status && (
-        <Box marginBottom={1}>
-          <Text color={status.type === 'error' ? 'red' : status.type === 'success' ? 'green' : 'yellow'}>
+        <box marginBottom={1}>
+          <text fg={status.type === 'error' ? 'red' : status.type === 'success' ? 'green' : 'yellow'}>
             {status.text}
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
       {/* Search bar */}
       {isSearching && (
-        <Box marginBottom={1}>
-          <Text bold color="blue">/ </Text>
-          <TextInput
+        <box marginBottom={1}>
+          <text fg="blue"><b>/ </b></text>
+          <input
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search models..."
           />
-        </Box>
+        </box>
       )}
 
       {/* Scroll indicator: above */}
       {visibleRange.hasMore.above > 0 && (
-        <Box paddingLeft={2}>
-          <Text dimColor>↑ {visibleRange.hasMore.above} more</Text>
-        </Box>
+        <box paddingLeft={2}>
+          <text fg="gray">↑ {visibleRange.hasMore.above} more</text>
+        </box>
       )}
 
       {/* Column header */}
-      <Box paddingLeft={2}>
-        <Text dimColor>
+      <box paddingLeft={2}>
+        <text fg="gray">
           {padRight('Model', NAME_WIDTH)}
           {padLeft('Ctx', CTX_WIDTH)}
           {padLeft('Out', OUT_WIDTH)}
           {padLeft('Cost/1M', COST_WIDTH)}
-        </Text>
-      </Box>
+        </text>
+      </box>
 
       {/* Model rows */}
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {visibleRows.map((row, i) => {
           const globalIndex = visibleRange.start + i;
 
           if (row.type === 'provider') {
             return (
-              <Box key={`p-${row.label}`} paddingLeft={1}>
-                <Text bold color="cyan"> {row.label}</Text>
-              </Box>
+              <box key={`p-${row.label}`} paddingLeft={1}>
+                <text fg="cyan"><b> {row.label}</b></text>
+              </box>
             );
           }
 
@@ -304,44 +302,44 @@ export function ModelPanel({
           const cost = padLeft(fmtCost(row.model), COST_WIDTH);
 
           return (
-            <Box key={row.model.id}>
-              <Text color={isSelected ? 'blue' : undefined}>{prefix}</Text>
-              <Text bold={isSelected} color={isSelected ? 'blue' : undefined}>
+            <box key={row.model.id}>
+              <text fg={isSelected ? 'blue' : undefined}>{prefix}</text>
+              <text attributes={isSelected ? 1 : undefined} fg={isSelected ? 'blue' : undefined}><b>
                 {name}
-              </Text>
-              <Text dimColor={!isSelected} color={isSelected ? 'blue' : undefined}>
+              </b></text>
+              <text fg={isSelected ? 'blue' : 'gray'}>
                 {ctx}{out}{cost}
-              </Text>
-              {isCurrent && <Text color="green"> ← current</Text>}
-            </Box>
+              </text>
+              {isCurrent && <text fg="green"> ← current</text>}
+            </box>
           );
         })}
-      </Box>
+      </box>
 
       {/* Scroll indicator: below */}
       {visibleRange.hasMore.below > 0 && (
-        <Box paddingLeft={2}>
-          <Text dimColor>↓ {visibleRange.hasMore.below} more</Text>
-        </Box>
+        <box paddingLeft={2}>
+          <text fg="gray">↓ {visibleRange.hasMore.below} more</text>
+        </box>
       )}
 
       {/* No results */}
       {selectableIndices.length === 0 && isSearching && (
-        <Box paddingLeft={2} marginY={1}>
-          <Text dimColor>No models match "{searchQuery}"</Text>
-        </Box>
+        <box paddingLeft={2} marginY={1}>
+          <text fg="gray">No models match "{searchQuery}"</text>
+        </box>
       )}
 
       {/* Footer */}
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           {isSwitching
             ? 'Switching model...'
             : isSearching
               ? 'Type to filter | Esc clear search'
               : 'Enter select | ↑↓ navigate | / search | q quit'}
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

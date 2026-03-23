@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { SavedSessionInfo } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -105,23 +104,23 @@ export function ResumePanel({
   });
 
   return (
-    <Box flexDirection="column">
-      <Text bold>Resume Sessions</Text>
-      <Box marginTop={1}>
-        <Text dimColor>
+    <box flexDirection="column">
+      <text><b>Resume Sessions</b></text>
+      <box marginTop={1}>
+        <text fg="gray">
           Filter: {mode === 'cwd' ? 'current folder' : 'all sessions'} | Tab toggle | Enter resume | r refresh | q quit
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {filteredSessions.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>
+          <box paddingY={1}>
+            <text fg="gray">
               {mode === 'cwd'
                 ? 'No saved sessions for this folder.'
                 : 'No saved sessions found.'}
-            </Text>
-          </Box>
+            </text>
+          </box>
         ) : (
           filteredSessions.map((session, index) => {
             const isSelected = index === selectedIndex;
@@ -130,25 +129,25 @@ export function ResumePanel({
             const messages = String(session.messageCount ?? 0).padStart(4);
             const cwd = truncate(session.cwd, 48);
             return (
-              <Box key={`${session.id}-${session.assistantId ?? 'default'}`} paddingY={0}>
-                <Text inverse={isSelected}>
+              <box key={`${session.id}-${session.assistantId ?? 'default'}`} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined}>
                   {time} {assistant} {messages} {cwd}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
+      </box>
 
       {selected && (
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Selected</Text>
-          <Text>ID: {selected.id}</Text>
-          <Text>Assistant: {selected.assistantId || 'default'}</Text>
-          <Text>Updated: {selected.updatedAt}</Text>
-          <Text>CWD: {selected.cwd}</Text>
-        </Box>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">Selected</text>
+          <text>ID: {selected.id}</text>
+          <text>Assistant: {selected.assistantId || 'default'}</text>
+          <text>Updated: {selected.updatedAt}</text>
+          <text>CWD: {selected.cwd}</text>
+        </box>
       )}
-    </Box>
+    </box>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { Message, ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { Markdown } from './Markdown';
 import {
@@ -102,7 +101,7 @@ export function Messages({
   }, [hasPendingTools]);
 
   return (
-    <Box flexDirection="column" width="100%">
+    <box flexDirection="column" width="100%">
       {/* Historical messages */}
       {historicalItems.map((item) => {
         if (item.item.kind === 'message') {
@@ -122,12 +121,12 @@ export function Messages({
       {visibleActivity
         .filter((entry) => entry.type === 'text' && entry.content)
         .map((entry) => (
-          <Box key={entry.id} marginY={1}>
-            <Text dimColor>● </Text>
-            <Box flexGrow={1}>
+          <box key={entry.id} marginY={1}>
+            <text fg="gray">● </text>
+            <box flexGrow={1}>
               <Markdown content={entry.content!} indent={3} />
-            </Box>
-          </Box>
+            </box>
+          </box>
         ))}
 
       {/* Unified active tools panel */}
@@ -150,14 +149,14 @@ export function Messages({
 
       {/* Show current streaming response (text being typed now) */}
       {showCurrentResponse && (
-        <Box marginY={1}>
-          <Text dimColor>● </Text>
-          <Box flexGrow={1}>
+        <box marginY={1}>
+          <text fg="gray">● </text>
+          <box flexGrow={1}>
             <Markdown content={currentResponse ?? ''} indent={3} />
-          </Box>
-        </Box>
+          </box>
+        </box>
       )}
-    </Box>
+    </box>
   );
 }
 
@@ -198,9 +197,9 @@ function CombinedToolMessage({ messages, verboseTools }: { messages: DisplayMess
   }
 
   return (
-    <Box marginY={1}>
+    <box marginY={1}>
       <ToolCallPanel toolCalls={allToolCalls} toolResults={allToolResults} verboseTools={verboseTools} />
-    </Box>
+    </box>
   );
 }
 
@@ -232,28 +231,28 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
     const showToolResultsOnly = toolResults.length > 0 && !isContinuation;
     const hasContent = Boolean((message.content ?? '').trim());
     return (
-      <Box marginY={isContinuation ? 0 : 1} flexDirection="column">
+      <box marginY={isContinuation ? 0 : 1} flexDirection="column">
         {isDraft && !isContinuation && (
-          <Box>
-            <Text dimColor>  🎤 Live dictation</Text>
-          </Box>
+          <box>
+            <text fg="gray">  🎤 Live dictation</text>
+          </box>
         )}
         {hasContent && (
-          <Box>
-            <Text dimColor={isDraft || isContinuation}>{isContinuation ? '  ' : '❯ '} </Text>
+          <box>
+            <text fg={isDraft || isContinuation ? "gray" : undefined}>{isContinuation ? '  ' : '❯ '} </text>
             {isQueued && !isContinuation ? (
-              <Text dimColor>⏳ {message.content ?? ''}</Text>
+              <text fg="gray">⏳ {message.content ?? ''}</text>
             ) : (
-              <Text dimColor={isDraft}>{displayContent}</Text>
+              <text fg={isDraft ? "gray" : undefined}>{displayContent}</text>
             )}
-          </Box>
+          </box>
         )}
         {showToolResultsOnly && (
-          <Box marginTop={hasContent ? 1 : 0}>
+          <box marginTop={hasContent ? 1 : 0}>
             <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -264,26 +263,26 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
   const showToolResultsOnly = toolCalls.length === 0 && toolResults.length > 0;
 
   return (
-    <Box marginY={isContinuation ? 0 : 1} flexDirection="column">
+    <box marginY={isContinuation ? 0 : 1} flexDirection="column">
       {hasContent && (
-        <Box>
-          <Text dimColor>{isContinuation || !leadingBullet ? '  ' : '● '} </Text>
-          <Box flexGrow={1}>
+        <box>
+          <text fg="gray">{isContinuation || !leadingBullet ? '  ' : '● '} </text>
+          <box flexGrow={1}>
             <Markdown content={message.content} preRendered={Boolean(message.__rendered)} indent={3} />
-          </Box>
-        </Box>
+          </box>
+        </box>
       )}
       {toolCalls.length > 0 && (
-        <Box marginTop={hasContent ? 1 : 0}>
+        <box marginTop={hasContent ? 1 : 0}>
           <ToolCallPanel toolCalls={toolCalls} toolResults={toolResults} verboseTools={verboseTools} />
-        </Box>
+        </box>
       )}
       {showToolResultsOnly && (
-        <Box marginTop={hasContent ? 1 : 0}>
+        <box marginTop={hasContent ? 1 : 0}>
           <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
-        </Box>
+        </box>
       )}
-    </Box>
+    </box>
   );
 }
 
@@ -367,17 +366,17 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
     const suffix = anyRunning ? '…' : '';
 
     return (
-      <Box>
-        <Text color={iconColor}>{icon} </Text>
-        <Text> </Text>
-        <Text>{summary}{suffix}</Text>
-        <Text dimColor> (ctrl+o to expand)</Text>
-      </Box>
+      <box>
+        <text fg={iconColor}>{icon} </text>
+        <text> </text>
+        <text>{summary}{suffix}</text>
+        <text fg="gray"> (ctrl+o to expand)</text>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {toolCalls.map((call) => {
         const icon = call.status === 'running' ? '○'
           : call.status === 'failed' ? '✗' : '●';
@@ -397,43 +396,43 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
             const imgData = JSON.parse(call.result.content);
             if (imgData.path) {
               return (
-                <Box key={call.id} flexDirection="column">
-                  <Box>
-                    <Text color={iconColor}>{icon} </Text>
-                    <Text color={iconColor} bold>{title}</Text>
-                    <Text dimColor> · {elapsedText}</Text>
-                  </Box>
+                <box key={call.id} flexDirection="column">
+                  <box>
+                    <text fg={iconColor}>{icon} </text>
+                    <text fg={iconColor}><b>{title}</b></text>
+                    <text fg="gray"> · {elapsedText}</text>
+                  </box>
                   <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
-                </Box>
+                </box>
               );
             }
           } catch { /* fall through */ }
         }
 
         return (
-          <Box key={call.id} flexDirection="column">
-            <Box>
-              <Text color={iconColor}>{icon} </Text>
-              <Text> </Text>
-              <Text color={iconColor} bold>{prefix}{title}</Text>
-              <Text dimColor> · {elapsedText}</Text>
-            </Box>
+          <box key={call.id} flexDirection="column">
+            <box>
+              <text fg={iconColor}>{icon} </text>
+              <text> </text>
+              <text fg={iconColor}><b>{prefix}{title}</b></text>
+              <text fg="gray"> · {elapsedText}</text>
+            </box>
             {params.length > 0 && (
-              <Box marginLeft={2} flexDirection="column">
+              <box marginLeft={2} flexDirection="column">
                 {params.map((param, i) => (
-                  <Text key={i} dimColor>{i === 0 ? '└ ' : '  '}{param}</Text>
+                  <text key={i} fg="gray">{i === 0 ? '└ ' : '  '}{param}</text>
                 ))}
-              </Box>
+              </box>
             )}
             {call.result && (call.toolCall.name !== 'display_image' || call.result.isError) && (
-              <Box marginLeft={2}>
-                <Text dimColor>└ {truncateToolResult(call.result, 2, 200, { verbose: verboseTools })}</Text>
-              </Box>
+              <box marginLeft={2}>
+                <text fg="gray">└ {truncateToolResult(call.result, 2, 200, { verbose: verboseTools })}</text>
+              </box>
             )}
-          </Box>
+          </box>
         );
       })}
-    </Box>
+    </box>
   );
 }
 
@@ -498,17 +497,17 @@ function ToolCallPanel({
     const suffix = isRunning ? '…' : '';
 
     return (
-      <Box>
-        <Text color={iconColor}>{icon} </Text>
-        <Text> </Text>
-        <Text>{summary}{suffix}</Text>
-        <Text dimColor> (ctrl+o to expand)</Text>
-      </Box>
+      <box>
+        <text fg={iconColor}>{icon} </text>
+        <text> </text>
+        <text>{summary}{suffix}</text>
+        <text fg="gray"> (ctrl+o to expand)</text>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {toolCalls.map((toolCall) => {
         const result = resultMap.get(toolCall.id);
         const isRunning = !result;
@@ -529,14 +528,14 @@ function ToolCallPanel({
             const imgData = JSON.parse(result.content);
             if (imgData.path) {
               return (
-                <Box key={toolCall.id} flexDirection="column">
-                  <Box>
-                    <Text color={iconColor}>{icon} </Text>
-                    <Text> </Text>
-                    <Text color={iconColor} bold>{title}</Text>
-                  </Box>
+                <box key={toolCall.id} flexDirection="column">
+                  <box>
+                    <text fg={iconColor}>{icon} </text>
+                    <text> </text>
+                    <text fg={iconColor}><b>{title}</b></text>
+                  </box>
                   <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
-                </Box>
+                </box>
               );
             }
           } catch { /* fall through */ }
@@ -549,33 +548,33 @@ function ToolCallPanel({
         const showExpandHint = !verboseTools && truncatedResult?.truncation.wasTruncated;
 
         return (
-          <Box key={toolCall.id} flexDirection="column">
-            <Box>
-              <Text color={iconColor}>{icon} </Text>
-              <Text> </Text>
-              <Text color={iconColor} bold>{prefix}{title}</Text>
-            </Box>
+          <box key={toolCall.id} flexDirection="column">
+            <box>
+              <text fg={iconColor}>{icon} </text>
+              <text> </text>
+              <text fg={iconColor}><b>{prefix}{title}</b></text>
+            </box>
             {params.length > 0 && (
-              <Box marginLeft={2} flexDirection="column">
+              <box marginLeft={2} flexDirection="column">
                 {params.map((param, i) => (
-                  <Text key={i} dimColor>{i === 0 ? '└ ' : '  '}{param}</Text>
+                  <text key={i} fg="gray">{i === 0 ? '└ ' : '  '}{param}</text>
                 ))}
-              </Box>
+              </box>
             )}
             {result && resultText && (
-              <Box marginLeft={2}>
-                <Text dimColor>└ {indentMultiline(resultText, '  ')}</Text>
-              </Box>
+              <box marginLeft={2}>
+                <text fg="gray">└ {indentMultiline(resultText, '  ')}</text>
+              </box>
             )}
             {showExpandHint && (
-              <Box marginLeft={2}>
-                <Text dimColor>  (Ctrl+O for full output)</Text>
-              </Box>
+              <box marginLeft={2}>
+                <text fg="gray">  (Ctrl+O for full output)</text>
+              </box>
             )}
-          </Box>
+          </box>
         );
       })}
-    </Box>
+    </box>
   );
 }
 
@@ -589,7 +588,7 @@ function ToolResultPanel({
   if (toolResults.length === 0) return null;
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {toolResults.map((result, index) => {
         const isError = result.isError;
         const icon = isError ? '✗' : '●';
@@ -604,13 +603,13 @@ function ToolResultPanel({
             const data = JSON.parse(result.content);
             if (data.path) {
               return (
-                <Box key={`${result.toolCallId}-${index}`} flexDirection="column">
-                  <Box>
-                    <Text color={iconColor}>{icon} </Text>
-                    <Text color={iconColor} bold>{title}</Text>
-                  </Box>
+                <box key={`${result.toolCallId}-${index}`} flexDirection="column">
+                  <box>
+                    <text fg={iconColor}>{icon} </text>
+                    <text fg={iconColor}><b>{title}</b></text>
+                  </box>
                   <TerminalImage src={data.path} width={data.width} height={data.height} alt={data.alt || basename(data.path)} />
-                </Box>
+                </box>
               );
             }
           } catch { /* fall through to text display */ }
@@ -620,23 +619,23 @@ function ToolResultPanel({
         const resultText = indentMultiline(truncatedResult.content, '   ');
         const showExpandHint = !verboseTools && truncatedResult.truncation.wasTruncated;
         return (
-          <Box key={`${result.toolCallId}-${index}`} flexDirection="column">
-            <Box>
-              <Text color={iconColor}>{icon} </Text>
-              <Text color={iconColor} bold>{title}</Text>
-            </Box>
-            <Box marginLeft={1}>
-              <Text dimColor>└  {resultText}</Text>
-            </Box>
+          <box key={`${result.toolCallId}-${index}`} flexDirection="column">
+            <box>
+              <text fg={iconColor}>{icon} </text>
+              <text fg={iconColor}><b>{title}</b></text>
+            </box>
+            <box marginLeft={1}>
+              <text fg="gray">└  {resultText}</text>
+            </box>
             {showExpandHint && (
-              <Box marginLeft={1}>
-                <Text dimColor>   (Ctrl+O for full output)</Text>
-              </Box>
+              <box marginLeft={1}>
+                <text fg="gray">   (Ctrl+O for full output)</text>
+              </box>
             )}
-          </Box>
+          </box>
         );
       })}
-    </Box>
+    </box>
   );
 }
 

@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { Connector, ConnectorCommand, ConnectorStatus } from '@hasna/assistants-shared';
 import { ConnectorAutoRefreshManager } from '@hasna/assistants-core';
 import type { ConnectorAutoRefreshEntry, ConnectorAutoRefreshSchedule } from '@hasna/assistants-core';
@@ -512,27 +510,27 @@ export function ConnectorsPanel({
   // Empty state
   if (connectors.length === 0) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Connectors</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Connectors</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No connectors found.</Text>
-          <Text dimColor>Connectors are auto-discovered from installed `connect-*` CLIs.</Text>
-          <Box marginTop={1}>
-            <Text dimColor>Install with: `bun add -g connect-&lt;name&gt;`</Text>
-          </Box>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>q quit</Text>
-        </Box>
-      </Box>
+          <text fg="gray">No connectors found.</text>
+          <text fg="gray">Connectors are auto-discovered from installed `connect-*` CLIs.</text>
+          <box marginTop={1}>
+            <text fg="gray">Install with: `bun add -g connect-&lt;name&gt;`</text>
+          </box>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">q quit</text>
+        </box>
+      </box>
     );
   }
 
@@ -543,81 +541,81 @@ export function ConnectorsPanel({
     const hasOptions = currentCommand.options && currentCommand.options.length > 0;
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>
             {currentConnector.name} {'>'} {currentCommand.name}
-          </Text>
-        </Box>
+          </b></text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>{currentCommand.description || 'No description'}</Text>
+          <text>{currentCommand.description || 'No description'}</text>
 
           {hasArgs && (
-            <Box flexDirection="column" marginTop={1}>
-              <Text bold>Arguments:</Text>
+            <box flexDirection="column" marginTop={1}>
+              <text><b>Arguments:</b></text>
               {currentCommand.args.map((arg, idx) => (
-                <Box key={idx} marginLeft={2}>
-                  <Text color={arg.required ? 'white' : 'gray'}>
+                <box key={idx} marginLeft={2}>
+                  <text fg={arg.required ? 'white' : 'gray'}>
                     {arg.name}
                     {arg.required ? ' (required)' : ' (optional)'}
                     {arg.description ? ` - ${arg.description}` : ''}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               ))}
-            </Box>
+            </box>
           )}
 
           {hasOptions && (
-            <Box flexDirection="column" marginTop={1}>
-              <Text bold>Options:</Text>
+            <box flexDirection="column" marginTop={1}>
+              <text><b>Options:</b></text>
               {currentCommand.options.map((opt, idx) => (
-                <Box key={idx} marginLeft={2}>
-                  <Text dimColor>
+                <box key={idx} marginLeft={2}>
+                  <text fg="gray">
                     --{opt.name}
                     {opt.alias ? `, -${opt.alias}` : ''}
                     {opt.type !== 'boolean' ? ` <${opt.type}>` : ''}
                     {opt.default !== undefined ? ` (default: ${String(opt.default)})` : ''}
                     {opt.description ? ` - ${opt.description}` : ''}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               ))}
-            </Box>
+            </box>
           )}
 
           {isLoadingHelp && (
-            <Box marginTop={1}>
-              <Text color="yellow">Loading help...</Text>
-            </Box>
+            <box marginTop={1}>
+              <text fg="yellow">Loading help...</text>
+            </box>
           )}
 
           {commandHelp && !isLoadingHelp && (
-            <Box flexDirection="column" marginTop={1}>
-              <Text bold>Help output:</Text>
-              <Box marginLeft={2} marginTop={1}>
-                <Text dimColor>{commandHelp}</Text>
-              </Box>
-            </Box>
+            <box flexDirection="column" marginTop={1}>
+              <text><b>Help output:</b></text>
+              <box marginLeft={2} marginTop={1}>
+                <text fg="gray">{commandHelp}</text>
+              </box>
+            </box>
           )}
 
-          <Box flexDirection="column" marginTop={1}>
-            <Text bold>Example:</Text>
-            <Box marginLeft={2}>
-              <Text color="cyan">{cli} {currentCommand.name}</Text>
-            </Box>
-          </Box>
-        </Box>
+          <box flexDirection="column" marginTop={1}>
+            <text><b>Example:</b></text>
+            <box marginLeft={2}>
+              <text fg="cyan">{cli} {currentCommand.name}</text>
+            </box>
+          </box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>Esc back | q quit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Esc back | q quit</text>
+        </box>
+      </box>
     );
   }
 
@@ -636,83 +634,83 @@ export function ConnectorsPanel({
       : '';
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{currentConnector.name}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{currentConnector.name}</b></text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
         >
-          <Box paddingY={1} flexDirection="column">
-            <Box>
-              <Text>Status: </Text>
-              <Text color={status.color}>{status.icon}</Text>
-              <Text> </Text>
-              <Text color={status.color}>
+          <box paddingY={1} flexDirection="column">
+            <box>
+              <text>Status: </text>
+              <text fg={status.color}>{status.icon}</text>
+              <text> </text>
+              <text fg={status.color}>
                 {currentStatus?.authenticated
                   ? 'Authenticated'
                   : currentStatus?.error || 'Not authenticated'}
-              </Text>
-            </Box>
+              </text>
+            </box>
             {currentStatus?.user && (
-              <Box>
-                <Text dimColor>Account: {currentStatus.user}</Text>
-              </Box>
+              <box>
+                <text fg="gray">Account: {currentStatus.user}</text>
+              </box>
             )}
             {currentStatus?.email && !currentStatus?.user && (
-              <Box>
-                <Text dimColor>Account: {currentStatus.email}</Text>
-              </Box>
+              <box>
+                <text fg="gray">Account: {currentStatus.email}</text>
+              </box>
             )}
-            <Box>
-              <Text dimColor>CLI: {cli}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Auto-refresh: </Text>
-              <Text color={autoRefreshColor}>{autoRefreshStatus}</Text>
+            <box>
+              <text fg="gray">CLI: {cli}</text>
+            </box>
+            <box>
+              <text fg="gray">Auto-refresh: </text>
+              <text fg={autoRefreshColor}>{autoRefreshStatus}</text>
               {autoRefreshSchedule && (
-                <Text dimColor> ({autoRefreshSchedule})</Text>
+                <text fg="gray"> ({autoRefreshSchedule})</text>
               )}
-            </Box>
+            </box>
             {autoRefreshEntry?.nextRunAt && (
-              <Box>
-                <Text dimColor>
+              <box>
+                <text fg="gray">
                   Next refresh: {new Date(autoRefreshEntry.nextRunAt).toLocaleString()}
-                </Text>
-              </Box>
+                </text>
+              </box>
             )}
             {autoRefreshError && (
-              <Box>
-                <Text color="red">Auto-refresh error: {autoRefreshError}</Text>
-              </Box>
+              <box>
+                <text fg="red">Auto-refresh error: {autoRefreshError}</text>
+              </box>
             )}
-          </Box>
+          </box>
 
-          <Box marginTop={1} marginBottom={1}>
-            <Text bold>Commands:</Text>
+          <box marginTop={1} marginBottom={1}>
+            <text><b>Commands:</b></text>
             {currentCommands.length > MAX_VISIBLE_ITEMS && (
-              <Text dimColor> ({commandIndex + 1}/{currentCommands.length})</Text>
+              <text fg="gray"> ({commandIndex + 1}/{currentCommands.length})</text>
             )}
-          </Box>
+          </box>
 
           {loadingConnectorName === currentConnector.name ? (
-            <Box paddingBottom={1}>
-              <Text color="yellow">Loading commands...</Text>
-            </Box>
+            <box paddingBottom={1}>
+              <text fg="yellow">Loading commands...</text>
+            </box>
           ) : currentCommands.length === 0 ? (
-            <Box paddingBottom={1}>
-              <Text dimColor>No commands discovered</Text>
-            </Box>
+            <box paddingBottom={1}>
+              <text fg="gray">No commands discovered</text>
+            </box>
           ) : (
             <>
               {commandRange.hasMore.above > 0 && (
-                <Box paddingY={0}>
-                  <Text dimColor>  ↑ {commandRange.hasMore.above} more above</Text>
-                </Box>
+                <box paddingY={0}>
+                  <text fg="gray">  ↑ {commandRange.hasMore.above} more above</text>
+                </box>
               )}
 
               {currentCommands.slice(commandRange.start, commandRange.end).map((cmd, visibleIdx) => {
@@ -722,89 +720,89 @@ export function ConnectorsPanel({
                 const displayName = cmd.name.padEnd(20);
 
                 return (
-                  <Box key={cmd.name} paddingY={0}>
-                    <Text
-                      inverse={isSelected}
-                      dimColor={!isSelected}
+                  <box key={cmd.name} paddingY={0}>
+                    <text
+                      attributes={isSelected ? 32 : undefined}
+                      fg={!isSelected ? "gray" : undefined}
                     >
                       {prefix}{actualIdx + 1}. {displayName} {cmd.description}
-                    </Text>
-                  </Box>
+                    </text>
+                  </box>
                 );
               })}
 
               {commandRange.hasMore.below > 0 && (
-                <Box paddingY={0}>
-                  <Text dimColor>  ↓ {commandRange.hasMore.below} more below</Text>
-                </Box>
+                <box paddingY={0}>
+                  <text fg="gray">  ↓ {commandRange.hasMore.below} more below</text>
+                </box>
               )}
             </>
           )}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             ↑↓ navigate | Enter view command | a auto-refresh | Esc back | q quit
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
   // Connector list view (default)
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Connectors</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Connectors</b></text>
         {filteredConnectors.length > 0 && (
-          <Text dimColor>
+          <text fg="gray">
             {' '}({safeConnectorIndex + 1}/{filteredConnectors.length}
             {searchQuery && ` matching "${searchQuery}"`}
             {connectors.length !== filteredConnectors.length && ` of ${connectors.length} total`})
-          </Text>
+          </text>
         )}
-      </Box>
+      </box>
 
       {/* Search input */}
       {isSearching && (
-        <Box marginBottom={1}>
-          <Text color="yellow">Search: </Text>
-          <TextInput
+        <box marginBottom={1}>
+          <text fg="yellow">Search: </text>
+          <input
             value={searchQuery}
             onChange={setSearchQuery}
-            focus
+            focused
             placeholder="Type to filter..."
           />
-        </Box>
+        </box>
       )}
 
       {/* Search indicator when not in search mode but query exists */}
       {!isSearching && searchQuery && (
-        <Box marginBottom={1}>
-          <Text dimColor>Filter: </Text>
-          <Text color="yellow">{searchQuery}</Text>
-          <Text dimColor> (Esc to clear)</Text>
-        </Box>
+        <box marginBottom={1}>
+          <text fg="gray">Filter: </text>
+          <text fg="yellow">{searchQuery}</text>
+          <text fg="gray"> (Esc to clear)</text>
+        </box>
       )}
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {filteredConnectors.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>
+          <box paddingY={1}>
+            <text fg="gray">
               No connectors matching "{searchQuery}"
-            </Text>
-          </Box>
+            </text>
+          </box>
         ) : (
           <>
             {connectorRange.hasMore.above > 0 && (
-              <Box paddingY={0}>
-                <Text dimColor>  ↑ {connectorRange.hasMore.above} more above</Text>
-              </Box>
+              <box paddingY={0}>
+                <text fg="gray">  ↑ {connectorRange.hasMore.above} more above</text>
+              </box>
             )}
 
             {visibleConnectors.map((connector, visibleIdx) => {
@@ -816,56 +814,56 @@ export function ConnectorsPanel({
               const nameDisplay = connector.name.padEnd(16);
 
               return (
-                <Box key={connector.name} paddingY={0}>
-                  <Text
-                    inverse={isSelected}
-                    dimColor={!isSelected}
+                <box key={connector.name} paddingY={0}>
+                  <text
+                    attributes={isSelected ? 32 : undefined}
+                    fg={!isSelected ? "gray" : undefined}
                   >
                     {prefix}
-                  </Text>
-                  <Text color={status.color} inverse={isSelected}>
+                  </text>
+                  <text fg={status.color} attributes={isSelected ? 32 : undefined}>
                     {status.icon}
-                  </Text>
-                  <Text
-                    inverse={isSelected}
-                    dimColor={!isSelected}
+                  </text>
+                  <text
+                    attributes={isSelected ? 32 : undefined}
+                    fg={!isSelected ? "gray" : undefined}
                   >
                     {' '}{nameDisplay} {cmdCount.toString().padStart(2)} cmd{cmdCount !== 1 ? 's' : ' '}
-                  </Text>
-                  <Text
-                    inverse={isSelected}
-                    dimColor
+                  </text>
+                  <text
+                    attributes={isSelected ? 32 : undefined}
+                    fg="gray"
                   >
                     {' '}{connector.description?.slice(0, 30) || ''}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               );
             })}
 
             {connectorRange.hasMore.below > 0 && (
-              <Box paddingY={0}>
-                <Text dimColor>  ↓ {connectorRange.hasMore.below} more below</Text>
-              </Box>
+              <box paddingY={0}>
+                <text fg="gray">  ↓ {connectorRange.hasMore.below} more below</text>
+              </box>
             )}
           </>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Legend: </Text>
-        <Text color="green">✓</Text>
-        <Text dimColor> authenticated | </Text>
-        <Text color="yellow">○</Text>
-        <Text dimColor> not authenticated | </Text>
-        <Text color="gray">?</Text>
-        <Text dimColor> unknown</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Legend: </text>
+        <text fg="green">✓</text>
+        <text fg="gray"> authenticated | </text>
+        <text fg="yellow">○</text>
+        <text fg="gray"> not authenticated | </text>
+        <text fg="gray">?</text>
+        <text fg="gray"> unknown</text>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ navigate | Enter view | / search | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

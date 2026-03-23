@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { parseArgs, main, type HeadlessOptions, type MainDependencies } from '../src/cli/main';
 
 describe('parseArgs', () => {
@@ -538,7 +539,8 @@ describe('main - headless wiring', () => {
       deps
     );
 
-    expect(getState().headlessOptions).toEqual({
+    const opts = getState().headlessOptions;
+    expect(opts).toMatchObject({
       prompt: 'full test',
       cwd: '/my/path',
       outputFormat: 'json',

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
 import type { BudgetStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -37,9 +36,9 @@ function formatElapsed(startedAt: number): string {
 }
 
 function StateIndicator({ isProcessing, isPaused }: { isProcessing: boolean; isPaused: boolean }) {
-  if (isPaused) return <Text color="yellow" bold>PAUSED</Text>;
-  if (isProcessing) return <Text color="green">active</Text>;
-  return <Text dimColor>idle</Text>;
+  if (isPaused) return <text fg="yellow"><b>PAUSED</b></text>;
+  if (isProcessing) return <text fg="green">active</text>;
+  return <text fg="gray">idle</text>;
 }
 
 export function AssistantsDashboard({
@@ -114,80 +113,80 @@ export function AssistantsDashboard({
   }, { isActive: true });
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold>Assistants Dashboard</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text><b>Assistants Dashboard</b></text>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
         {/* Sessions */}
-        <Text bold dimColor>Sessions ({sessions.length}):</Text>
+        <text fg="gray"><b>Sessions ({sessions.length}):</b></text>
         {sessions.length === 0 ? (
-          <Box marginTop={1}><Text dimColor>No active sessions.</Text></Box>
+          <box marginTop={1}><text fg="gray">No active sessions.</text></box>
         ) : (
-        <Box flexDirection="column" marginTop={1}>
+        <box flexDirection="column" marginTop={1}>
           {sessions.map((session, i) => {
             const isSelected = i === selectedIndex;
             const label = session.label || session.assistantName || `Session ${i + 1}`;
 
             return (
-              <Box key={session.id} gap={1}>
-                <Text inverse={isSelected}>
+              <box key={session.id} gap={1}>
+                <text attributes={isSelected ? 32 : undefined}>
                   {isSelected ? '>' : ' '} {String(i + 1)}
-                </Text>
-                <Text bold={isSelected} color={session.isActive ? 'green' : undefined}>
+                </text>
+                <text attributes={isSelected ? 1 : undefined} fg={session.isActive ? 'green' : undefined}><b>
                   {label.slice(0, 20).padEnd(20)}
-                </Text>
+                </b></text>
                 <StateIndicator isProcessing={session.isProcessing} isPaused={session.isPaused} />
-                <Text dimColor> {formatElapsed(session.startedAt)}</Text>
+                <text fg="gray"> {formatElapsed(session.startedAt)}</text>
                 {session.unreadMessages > 0 && (
-                  <Text color="yellow"> [{session.unreadMessages} msg]</Text>
+                  <text fg="yellow"> [{session.unreadMessages} msg]</text>
                 )}
                 {session.budgetStatus?.overallExceeded && (
-                  <Text color="red"> [budget!]</Text>
+                  <text fg="red"> [budget!]</text>
                 )}
-              </Box>
+              </box>
             );
           })}
-        </Box>
+        </box>
         )}
 
         {/* Project Budget */}
         {projectBudget && (
-          <Box marginTop={1} flexDirection="column">
-            <Text bold dimColor>Project Budget{projectName ? `: ${projectName}` : ''}:</Text>
-            <Box paddingLeft={1}>
-              <Text dimColor>Tokens: </Text>
-              <Text>{projectBudget.usage.totalTokens.toLocaleString()}</Text>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray"><b>Project Budget{projectName ? `: ${projectName}` : ''}:</b></text>
+            <box paddingLeft={1}>
+              <text fg="gray">Tokens: </text>
+              <text>{projectBudget.usage.totalTokens.toLocaleString()}</text>
               {projectBudget.limits.maxTotalTokens && (
-                <Text dimColor> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</Text>
+                <text fg="gray"> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</text>
               )}
               {projectBudget.overallExceeded && (
-                <Text color="red" bold> EXCEEDED</Text>
+                <text fg="red"><b> EXCEEDED</b></text>
               )}
-            </Box>
-          </Box>
+            </box>
+          </box>
         )}
 
         {/* Swarm Status */}
         {swarmStatus && (
-          <Box marginTop={1}>
-            <Text bold dimColor>Swarm: </Text>
-            <Text color={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? 'green' : 'gray'}>
+          <box marginTop={1}>
+            <text fg="gray"><b>Swarm: </b></text>
+            <text fg={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? 'green' : 'gray'}>
               {swarmStatus}
-            </Text>
+            </text>
             {swarmTaskProgress && (
-              <Text dimColor> ({swarmTaskProgress})</Text>
+              <text fg="gray"> ({swarmTaskProgress})</text>
             )}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ navigate | Enter switch | [m]essage | [p]ause/resume | [q]uit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

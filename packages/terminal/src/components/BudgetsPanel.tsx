@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { BudgetConfig, BudgetLimits, BudgetUsage } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { BudgetPanel } from './BudgetPanel';
@@ -257,16 +255,16 @@ export function BudgetsPanel({
 
   if (mode === 'create') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Create Budget Profile</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Create Budget Profile</b></text>
+        </box>
 
         {createStep === 'name' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Name: </text>
+              <input
                 value={newName}
                 onChange={setNewName}
                 onSubmit={() => {
@@ -275,22 +273,22 @@ export function BudgetsPanel({
                 focus
                 placeholder="e.g. Deep Work"
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc to cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc to cancel</text>
+            </box>
+          </box>
         )}
 
         {createStep === 'description' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text dimColor>Name: </Text>
-              <Text>{newName}</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text>Description: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text fg="gray">Name: </text>
+              <text>{newName}</text>
+            </box>
+            <box marginTop={1}>
+              <text>Description: </text>
+              <input
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={() => {
@@ -300,24 +298,24 @@ export function BudgetsPanel({
                 focus
                 placeholder="Optional"
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to configure limits | Esc to cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to configure limits | Esc to cancel</text>
+            </box>
+          </box>
         )}
 
         {createStep === 'configure' && (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text dimColor>Name: </Text>
-              <Text>{newName}</Text>
-            </Box>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="gray">Name: </text>
+              <text>{newName}</text>
+            </box>
             {newDescription.trim() && (
-              <Box marginBottom={1}>
-                <Text dimColor>Description: </Text>
-                <Text>{newDescription.trim()}</Text>
-              </Box>
+              <box marginBottom={1}>
+                <text fg="gray">Description: </text>
+                <text>{newDescription.trim()}</text>
+              </box>
             )}
             <BudgetPanel
               config={draftConfig}
@@ -346,88 +344,88 @@ export function BudgetsPanel({
                 setCreateStep('description');
               }}
             />
-          </Box>
+          </box>
         )}
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Creating profile...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Creating profile...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   if (mode === 'delete-confirm') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Budget Profile</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Budget Profile</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Delete profile &quot;{selectedProfile?.name || ''}&quot;?
-          </Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Budgets</Text>
-        <Text dimColor>[n]ew [e]dit [d]elete</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Budgets</b></text>
+        <text fg="gray">[n]ew [e]dit [d]elete</text>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {profiles.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No budget profiles. Press n to create one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No budget profiles. Press n to create one.</text>
+          </box>
         ) : (
           profiles.map((profile, index) => {
             const isSelected = index === selectedIndex;
             const isActive = profile.id === activeProfileId;
             return (
-              <Box key={profile.id} paddingY={0}>
-                <Text inverse={isSelected} color={isActive ? 'green' : undefined} dimColor={!isSelected && !isActive}>
+              <box key={profile.id} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined} fg={isActive ? 'green' : undefined} fg={!isSelected && !isActive ? "gray" : undefined}>
                   {isActive ? '*' : ' '} {index + 1}. {profile.name.padEnd(22)} {profile.description || ''}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
 
         {/* New profile option */}
-        <Box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
-          <Text
-            inverse={selectedIndex === profiles.length}
-            dimColor={selectedIndex !== profiles.length}
-            color={selectedIndex === profiles.length ? 'cyan' : undefined}
+        <box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
+          <text
+            attributes={selectedIndex === profiles.length ? 32 : undefined}
+            fg={selectedIndex !== profiles.length ? "gray" : undefined}
+            fg={selectedIndex === profiles.length ? 'cyan' : undefined}
           >
             + New profile (n)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
       {selectedProfile && (
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             {selectedProfile.id === activeProfileId ? 'Active for this session' : 'Enter to activate'}
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</text>
+      </box>
+    </box>
   );
 }

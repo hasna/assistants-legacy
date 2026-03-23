@@ -7,7 +7,6 @@
  */
 
 import React from 'react';
-import { Box, Text } from 'ink';
 import type { Message, Connector, HookConfig, HookEvent, HookHandler, ScheduledCommand, Skill, TokenUsage, VoiceState, HeartbeatState, ActiveIdentityInfo, InterviewResponse } from '@hasna/assistants-shared';
 import type { SessionInfo, CreateAssistantOptions, CreateIdentityOptions, Identity, Memory, MemoryStats, Heartbeat, SavedSessionInfo, RecoverableSession } from '@hasna/assistants-core';
 import {
@@ -145,10 +144,10 @@ function CloseOnAnyKeyPanel({ message, onClose }: { message: string; onClose: ()
   }, { isActive: true });
 
   return (
-    <Box flexDirection="column" padding={1}>
-      <Text color="red">{message}</Text>
-      <Text color="gray">Press any key to close.</Text>
-    </Box>
+    <box flexDirection="column" padding={1}>
+      <text fg="red">{message}</text>
+      <text fg="gray">Press any key to close.</text>
+    </box>
   );
 }
 
@@ -411,9 +410,9 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   // Initializing spinner
   if (ctx.isInitializing && !ctx.showRecoveryPanel && !ctx.showOnboardingPanel) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <Spinner label="Initializing..." />
-      </Box>
+      </box>
     );
   }
 
@@ -441,13 +440,13 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   // Recovery panel
   if (ctx.showRecoveryPanel && ctx.recoverableSessions.length > 0) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <RecoveryPanel
           sessions={ctx.recoverableSessions}
           onRecover={ctx.handleRecover}
           onStartFresh={ctx.handleStartFresh}
         />
-      </Box>
+      </box>
     );
   }
 
@@ -455,7 +454,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   if (ctx.showSessionSelector) {
     const subagentSessions = ctx.registry.getStore().listSubagentSessions();
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <SessionSelector
           sessions={ctx.sessions}
           activeSessionId={ctx.activeSessionId}
@@ -470,7 +469,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
           onCancel={() => ctx.setShowSessionSelector(false)}
           subagentSessions={subagentSessions}
         />
-      </Box>
+      </box>
     );
   }
 
@@ -507,7 +506,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   // Memory panel
   if (ctx.showMemoryPanel) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <MemoryPanel
           memories={ctx.memoryList}
           stats={ctx.memoryStats}
@@ -518,7 +517,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
             ctx.setMemoryError(null);
           }}
         />
-      </Box>
+      </box>
     );
   }
 
@@ -585,7 +584,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   // Resume panel
   if (ctx.showResumePanel) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <ResumePanel
           sessions={ctx.resumeSessions}
           activeCwd={ctx.cwd}
@@ -596,7 +595,7 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
           onRefresh={ctx.refreshResumeSessions}
           onClose={() => ctx.setShowResumePanel(false)}
         />
-      </Box>
+      </box>
     );
   }
 
@@ -608,11 +607,11 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
   // Logs panel
   if (ctx.showLogsPanel) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <box flexDirection="column" padding={1}>
         <LogsPanel
           onCancel={() => ctx.setShowLogsPanel(false)}
         />
-      </Box>
+      </box>
     );
   }
 
@@ -799,7 +798,7 @@ function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <ConnectorsPanel
         connectors={ctx.connectors}
         initialConnector={ctx.connectorsPanelInitial}
@@ -811,7 +810,7 @@ function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactElement {
           ctx.setConnectorsPanelInitial(undefined);
         }}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -889,7 +888,7 @@ function renderTasksPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <TasksPanel
         tasks={ctx.tasksList}
         paused={ctx.tasksPaused}
@@ -902,7 +901,7 @@ function renderTasksPanel(ctx: PanelRenderContext): React.ReactElement {
         onChangePriority={handleTasksChangePriority}
         onClose={() => ctx.setShowTasksPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1014,7 +1013,7 @@ function renderSkillsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <SkillsPanel
         skills={ctx.skillsList}
         onExecute={handleSkillExecute}
@@ -1026,7 +1025,7 @@ function renderSkillsPanel(ctx: PanelRenderContext): React.ReactElement {
         onClose={() => ctx.setShowSkillsPanel(false)}
         cwd={ctx.cwd}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1125,7 +1124,7 @@ function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <SchedulesPanel
         schedules={ctx.schedulesList}
         sessionId={ctx.activeSessionId || 'default'}
@@ -1137,7 +1136,7 @@ function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactElement {
         onRefresh={handleScheduleRefresh}
         onClose={() => ctx.setShowSchedulesPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1231,7 +1230,7 @@ function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <AssistantsPanel
         assistants={assistantsList}
         activeAssistantId={activeAssistantId}
@@ -1246,7 +1245,7 @@ function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactElement {
         error={ctx.assistantError}
         onClearError={() => ctx.setAssistantError(null)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1353,7 +1352,7 @@ function renderIdentityPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <IdentityPanel
         identities={ctx.identitiesList}
         activeIdentityId={activeIdentity?.id}
@@ -1373,7 +1372,7 @@ function renderIdentityPanel(ctx: PanelRenderContext): React.ReactElement {
         }}
         error={ctx.identityError}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1504,7 +1503,7 @@ function renderHooksPanel(ctx: PanelRenderContext): React.ReactElement {
   const nativeHooks = nativeHookRegistry.listFlat();
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <HooksPanel
         hooks={ctx.hooksConfig}
         nativeHooks={nativeHooks}
@@ -1515,7 +1514,7 @@ function renderHooksPanel(ctx: PanelRenderContext): React.ReactElement {
         onGenerateDraft={handleHookDraft}
         onCancel={() => ctx.setShowHooksPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1594,7 +1593,7 @@ function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <GuardrailsPanel
         config={ctx.guardrailsConfig!}
         policies={ctx.guardrailsPolicies}
@@ -1606,7 +1605,7 @@ function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactElement {
         onUpdatePolicy={handleUpdatePolicy}
         onCancel={() => ctx.setShowGuardrailsPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1687,7 +1686,7 @@ function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <BudgetsPanel
         profiles={ctx.budgetProfiles}
         activeProfileId={activeProfileId}
@@ -1700,7 +1699,7 @@ function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactElement {
         onReset={handleBudgetReset}
         onCancel={() => ctx.setShowBudgetPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1736,14 +1735,14 @@ function renderModelPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <ModelPanel
         currentModelId={currentModelId}
         assistantName={assistantName}
         onSelectModel={handleSelectModel}
         onCancel={() => ctx.setShowModelPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1757,14 +1756,14 @@ function renderAssistantsRegistryPanel(ctx: PanelRenderContext): React.ReactElem
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <AssistantsRegistryPanel
         assistants={ctx.assistantsList}
         stats={ctx.registryStats!}
         onRefresh={handleAssistantsRefresh}
         onCancel={() => ctx.setShowAssistantsRegistryPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1807,7 +1806,7 @@ function renderProjectsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <ProjectsPanel
         projects={ctx.projectsList}
         activeProjectId={ctx.activeProjectId}
@@ -1817,7 +1816,7 @@ function renderProjectsPanel(ctx: PanelRenderContext): React.ReactElement {
         onViewPlans={handleViewPlans}
         onCancel={() => ctx.setShowProjectsPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1894,7 +1893,7 @@ function renderPlansPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <PlansPanel
         project={plansProject}
         onCreatePlan={handleCreatePlan}
@@ -1905,7 +1904,7 @@ function renderPlansPanel(ctx: PanelRenderContext): React.ReactElement {
         onBack={() => ctx.setShowPlansPanel(false)}
         onClose={() => ctx.setShowPlansPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1938,7 +1937,7 @@ function renderWalletPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <WalletPanel
         cards={ctx.walletCards}
         initialMode={ctx.walletPanelInitialMode}
@@ -1948,7 +1947,7 @@ function renderWalletPanel(ctx: PanelRenderContext): React.ReactElement {
         onClose={() => ctx.setShowWalletPanel(false)}
         error={ctx.walletError}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -1985,7 +1984,7 @@ function renderSecretsPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <SecretsPanel
         secrets={ctx.secretsList}
         initialMode={ctx.secretsPanelInitialMode}
@@ -1995,7 +1994,7 @@ function renderSecretsPanel(ctx: PanelRenderContext): React.ReactElement {
         onClose={() => ctx.setShowSecretsPanel(false)}
         error={ctx.secretsError}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2025,7 +2024,7 @@ function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactElement 
     : null;
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <AssistantsDashboard
         sessions={sessionEntries}
         projectBudget={projectBudgetStatus || undefined}
@@ -2051,7 +2050,7 @@ function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactElement 
         }}
         onCancel={() => ctx.setShowAssistantsDashboard(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2063,7 +2062,7 @@ function renderSwarmPanel(ctx: PanelRenderContext): React.ReactElement {
   const memoryStats = swarmMemory ? swarmMemory.getStats() : null;
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <SwarmPanel
         state={swarmState}
         config={swarmConfig}
@@ -2073,7 +2072,7 @@ function renderSwarmPanel(ctx: PanelRenderContext): React.ReactElement {
         }}
         onCancel={() => ctx.setShowSwarmPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2093,7 +2092,7 @@ function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <WorkspacePanel
         workspaces={ctx.workspacesList}
         activeWorkspaceId={ctx.activeWorkspaceId}
@@ -2102,7 +2101,7 @@ function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactElement {
         onSelect={ctx.switchWorkspace}
         onClose={() => ctx.setShowWorkspacePanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2122,14 +2121,14 @@ function renderHeartbeatPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <HeartbeatPanel
         runs={ctx.heartbeatRuns}
         heartbeatState={ctx.heartbeatState}
         onRefresh={handleRefresh}
         onClose={() => ctx.setShowHeartbeatPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2166,7 +2165,7 @@ function renderConfigPanel(ctx: PanelRenderContext): React.ReactElement {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <ConfigPanel
         config={ctx.currentConfig!}
         userConfig={ctx.userConfig}
@@ -2175,7 +2174,7 @@ function renderConfigPanel(ctx: PanelRenderContext): React.ReactElement {
         onSave={handleConfigSave}
         onCancel={() => ctx.setShowConfigPanel(false)}
       />
-    </Box>
+    </box>
   );
 }
 
@@ -2350,29 +2349,29 @@ function renderMessagesPanel(ctx: PanelRenderContext): React.ReactElement {
 
   if (!messagesManager && !inboxManager) {
     return (
-      <Box flexDirection="column" padding={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Messages</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" padding={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Messages</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Messages are not enabled.</Text>
-          <Text dimColor>Configure messages in config.json to enable.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>q quit</Text>
-        </Box>
-      </Box>
+          <text>Messages are not enabled.</text>
+          <text fg="gray">Configure messages in config.json to enable.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">q quit</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <box flexDirection="column" padding={1}>
       <MessagesPanel
         messages={ctx.messagesList}
         onRead={handleMessagesRead}
@@ -2391,6 +2390,6 @@ function renderMessagesPanel(ctx: PanelRenderContext): React.ReactElement {
         inboxError={ctx.inboxError}
         inboxEnabled={ctx.inboxEnabled}
       />
-    </Box>
+    </box>
   );
 }

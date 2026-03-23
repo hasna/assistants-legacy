@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
 import type { BudgetConfig, BudgetLimits } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -78,7 +77,7 @@ function formatDuration(ms: number): string {
 
 function UsageBar({ used, limit }: { used: number; limit?: number }) {
   if (!limit) {
-    return <Text dimColor>no limit</Text>;
+    return <text fg="gray">no limit</text>;
   }
 
   const percent = Math.min(100, Math.round((used / limit) * 100));
@@ -91,11 +90,11 @@ function UsageBar({ used, limit }: { used: number; limit?: number }) {
   else if (percent >= 75) barColor = 'yellow';
 
   return (
-    <Box>
-      <Text color={barColor}>{'█'.repeat(filledWidth)}</Text>
-      <Text dimColor>{'░'.repeat(emptyWidth)}</Text>
-      <Text> {percent}%</Text>
-    </Box>
+    <box>
+      <text fg={barColor}>{'█'.repeat(filledWidth)}</text>
+      <text fg="gray">{'░'.repeat(emptyWidth)}</text>
+      <text> {percent}%</text>
+    </box>
   );
 }
 
@@ -355,102 +354,102 @@ export function BudgetPanel({
   // Edit-limits mode
   if (mode === 'edit-limits') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold>Edit Budget Limits</Text>
-          <Text dimColor> (session scope)</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text><b>Edit Budget Limits</b></text>
+          <text fg="gray"> (session scope)</text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
           {EDIT_FIELDS.map((field, index) => {
             const isSelected = index === editFieldIndex;
             const value = editValues[field.key] || '';
             const isEditing = isSelected && editingField;
 
             return (
-              <Box key={field.key} gap={1}>
-                <Text inverse={isSelected}>
+              <box key={field.key} gap={1}>
+                <text attributes={isSelected ? 32 : undefined}>
                   {isSelected ? '>' : ' '}
-                </Text>
-                <Text bold={isSelected} dimColor={!isSelected}>
+                </text>
+                <text attributes={isSelected ? 1 : undefined} fg={!isSelected ? "gray" : undefined}><b>
                   {field.label.padEnd(20)}
-                </Text>
-                <Box minWidth={15}>
+                </b></text>
+                <box minWidth={15}>
                   {isEditing ? (
-                    <Text>
-                      <Text color="cyan">{value}</Text>
-                      <Text color="cyan" bold>_</Text>
-                      <Text dimColor> {field.unit}</Text>
-                    </Text>
+                    <text>
+                      <text fg="cyan">{value}</text>
+                      <text fg="cyan"><b>_</b></text>
+                      <text fg="gray"> {field.unit}</text>
+                    </text>
                   ) : (
-                    <Text color={value ? undefined : 'gray'}>
+                    <text fg={value ? undefined : 'gray'}>
                       {value || 'unlimited'}
-                      {value ? <Text dimColor> {field.unit}</Text> : null}
-                    </Text>
+                      {value ? <text fg="gray"> {field.unit}</text> : null}
+                    </text>
                   )}
-                </Box>
-              </Box>
+                </box>
+              </box>
             );
           })}
 
           {/* On Exceeded row */}
-          <Box gap={1} marginTop={1}>
-            <Text inverse={editFieldIndex === EDIT_FIELDS.length}>
+          <box gap={1} marginTop={1}>
+            <text attributes={editFieldIndex === EDIT_FIELDS.length ? 32 : undefined}>
               {editFieldIndex === EDIT_FIELDS.length ? '>' : ' '}
-            </Text>
-            <Text bold={editFieldIndex === EDIT_FIELDS.length} dimColor={editFieldIndex !== EDIT_FIELDS.length}>
+            </text>
+            <text attributes={editFieldIndex === EDIT_FIELDS.length ? 1 : undefined} fg={editFieldIndex !== EDIT_FIELDS.length ? "gray" : undefined}><b>
               {'On Exceeded'.padEnd(20)}
-            </Text>
-            <Text color={editOnExceeded === 'stop' ? 'red' : editOnExceeded === 'pause' ? 'yellow' : 'cyan'}>
+            </b></text>
+            <text fg={editOnExceeded === 'stop' ? 'red' : editOnExceeded === 'pause' ? 'yellow' : 'cyan'}>
               {editOnExceeded}
-            </Text>
+            </text>
             {editFieldIndex === EDIT_FIELDS.length && (
-              <Text dimColor> (Enter to cycle)</Text>
+              <text fg="gray"> (Enter to cycle)</text>
             )}
-          </Box>
-        </Box>
+          </box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             {editingField
               ? 'Type digits | Enter/Esc to confirm'
               : `↑↓ navigate | Enter to edit | [c]lear | [s]ave | [b]ack | [q]uit${onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}`}
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
   // Preset selection mode
   if (mode === 'preset-select') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold>Select Budget Preset</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text><b>Select Budget Preset</b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
           {presetKeys.map((key, index) => {
             const preset = PRESET_LIMITS[key];
             const isSelected = index === selectedPreset;
             return (
-              <Box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
-                <Text inverse={isSelected}>
-                  {isSelected ? '>' : ' '} <Text bold={isSelected}>{preset.name.padEnd(12)}</Text>
-                  <Text dimColor={!isSelected}>{preset.description}</Text>
-                </Text>
-              </Box>
+              <box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
+                <text attributes={isSelected ? 32 : undefined}>
+                  {isSelected ? '>' : ' '} <text attributes={isSelected ? 1 : undefined}><b>{preset.name.padEnd(12)}</b></text>
+                  <text fg={!isSelected ? "gray" : undefined}>{preset.description}</text>
+                </text>
+              </box>
             );
           })}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             ↑↓ navigate | Enter to select | [b]ack | [q]uit
             {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -459,58 +458,58 @@ export function BudgetPanel({
     const limits = config.session || {};
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold>Budget Limits</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text><b>Budget Limits</b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-          <Box marginBottom={1}>
-            <Text bold>Session Limits:</Text>
-          </Box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+          <box marginBottom={1}>
+            <text><b>Session Limits:</b></text>
+          </box>
 
-          <Box paddingLeft={1} flexDirection="column">
-            <Box>
-              <Text dimColor>Max Total Tokens: </Text>
-              <Text>{limits.maxTotalTokens ? formatNumber(limits.maxTotalTokens) : 'unlimited'}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Max Input Tokens: </Text>
-              <Text>{limits.maxInputTokens ? formatNumber(limits.maxInputTokens) : 'unlimited'}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Max Output Tokens: </Text>
-              <Text>{limits.maxOutputTokens ? formatNumber(limits.maxOutputTokens) : 'unlimited'}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Max LLM Calls: </Text>
-              <Text>{limits.maxLlmCalls ?? 'unlimited'}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Max Tool Calls: </Text>
-              <Text>{limits.maxToolCalls ?? 'unlimited'}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>Max Duration: </Text>
-              <Text>{limits.maxDurationMs ? formatDuration(limits.maxDurationMs) : 'unlimited'}</Text>
-            </Box>
-          </Box>
+          <box paddingLeft={1} flexDirection="column">
+            <box>
+              <text fg="gray">Max Total Tokens: </text>
+              <text>{limits.maxTotalTokens ? formatNumber(limits.maxTotalTokens) : 'unlimited'}</text>
+            </box>
+            <box>
+              <text fg="gray">Max Input Tokens: </text>
+              <text>{limits.maxInputTokens ? formatNumber(limits.maxInputTokens) : 'unlimited'}</text>
+            </box>
+            <box>
+              <text fg="gray">Max Output Tokens: </text>
+              <text>{limits.maxOutputTokens ? formatNumber(limits.maxOutputTokens) : 'unlimited'}</text>
+            </box>
+            <box>
+              <text fg="gray">Max LLM Calls: </text>
+              <text>{limits.maxLlmCalls ?? 'unlimited'}</text>
+            </box>
+            <box>
+              <text fg="gray">Max Tool Calls: </text>
+              <text>{limits.maxToolCalls ?? 'unlimited'}</text>
+            </box>
+            <box>
+              <text fg="gray">Max Duration: </text>
+              <text>{limits.maxDurationMs ? formatDuration(limits.maxDurationMs) : 'unlimited'}</text>
+            </box>
+          </box>
 
-          <Box marginTop={1}>
-            <Text dimColor>On Exceeded: </Text>
-            <Text color={config.onExceeded === 'stop' ? 'red' : config.onExceeded === 'pause' ? 'yellow' : 'cyan'}>
+          <box marginTop={1}>
+            <text fg="gray">On Exceeded: </text>
+            <text fg={config.onExceeded === 'stop' ? 'red' : config.onExceeded === 'pause' ? 'yellow' : 'cyan'}>
               {config.onExceeded || 'warn'}
-            </Text>
-          </Box>
-        </Box>
+            </text>
+          </box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             [i] edit | [b]ack | [q]uit
             {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -518,107 +517,107 @@ export function BudgetPanel({
   const { usage, limits, overallExceeded } = sessionStatus;
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Budget</Text>
-        <Text color={config.enabled ? 'green' : 'red'}>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Budget</b></text>
+        <text fg={config.enabled ? 'green' : 'red'}>
           {config.enabled ? 'Enforcing' : 'Disabled'}
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
         {/* Status */}
-        <Box marginBottom={1}>
-          <Text bold>Status: </Text>
-          <Text color={overallExceeded ? 'red' : config.enabled ? 'green' : 'gray'}>
+        <box marginBottom={1}>
+          <text><b>Status: </b></text>
+          <text fg={overallExceeded ? 'red' : config.enabled ? 'green' : 'gray'}>
             {overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}
-          </Text>
-        </Box>
+          </text>
+        </box>
 
         {/* Usage */}
-        <Box flexDirection="column">
-          <Text bold dimColor>Session Usage:</Text>
+        <box flexDirection="column">
+          <text fg="gray"><b>Session Usage:</b></text>
 
-          <Box marginTop={1} flexDirection="column">
+          <box marginTop={1} flexDirection="column">
             {/* Tokens */}
-            <Box>
-              <Text>{'Tokens:'.padEnd(15)}</Text>
-              <Text>{formatNumber(usage.totalTokens).padStart(8)}</Text>
+            <box>
+              <text>{'Tokens:'.padEnd(15)}</text>
+              <text>{formatNumber(usage.totalTokens).padStart(8)}</text>
               {limits.maxTotalTokens && (
                 <>
-                  <Text dimColor> / </Text>
-                  <Text>{formatNumber(limits.maxTotalTokens)}</Text>
+                  <text fg="gray"> / </text>
+                  <text>{formatNumber(limits.maxTotalTokens)}</text>
                 </>
               )}
-              <Text>  </Text>
+              <text>  </text>
               <UsageBar used={usage.totalTokens} limit={limits.maxTotalTokens} />
-            </Box>
+            </box>
 
             {/* LLM Calls */}
-            <Box>
-              <Text>{'LLM Calls:'.padEnd(15)}</Text>
-              <Text>{String(usage.llmCalls).padStart(8)}</Text>
+            <box>
+              <text>{'LLM Calls:'.padEnd(15)}</text>
+              <text>{String(usage.llmCalls).padStart(8)}</text>
               {limits.maxLlmCalls && (
                 <>
-                  <Text dimColor> / </Text>
-                  <Text>{limits.maxLlmCalls}</Text>
+                  <text fg="gray"> / </text>
+                  <text>{limits.maxLlmCalls}</text>
                 </>
               )}
-              <Text>  </Text>
+              <text>  </text>
               <UsageBar used={usage.llmCalls} limit={limits.maxLlmCalls} />
-            </Box>
+            </box>
 
             {/* Tool Calls */}
-            <Box>
-              <Text>{'Tool Calls:'.padEnd(15)}</Text>
-              <Text>{String(usage.toolCalls).padStart(8)}</Text>
+            <box>
+              <text>{'Tool Calls:'.padEnd(15)}</text>
+              <text>{String(usage.toolCalls).padStart(8)}</text>
               {limits.maxToolCalls && (
                 <>
-                  <Text dimColor> / </Text>
-                  <Text>{limits.maxToolCalls}</Text>
+                  <text fg="gray"> / </text>
+                  <text>{limits.maxToolCalls}</text>
                 </>
               )}
-              <Text>  </Text>
+              <text>  </text>
               <UsageBar used={usage.toolCalls} limit={limits.maxToolCalls} />
-            </Box>
+            </box>
 
             {/* Duration */}
-            <Box>
-              <Text>{'Duration:'.padEnd(15)}</Text>
-              <Text>{formatDuration(usage.durationMs).padStart(8)}</Text>
+            <box>
+              <text>{'Duration:'.padEnd(15)}</text>
+              <text>{formatDuration(usage.durationMs).padStart(8)}</text>
               {limits.maxDurationMs && (
                 <>
-                  <Text dimColor> / </Text>
-                  <Text>{formatDuration(limits.maxDurationMs)}</Text>
+                  <text fg="gray"> / </text>
+                  <text>{formatDuration(limits.maxDurationMs)}</text>
                 </>
               )}
-              <Text>  </Text>
+              <text>  </text>
               <UsageBar used={usage.durationMs} limit={limits.maxDurationMs} />
-            </Box>
-          </Box>
-        </Box>
+            </box>
+          </box>
+        </box>
 
         {/* Warnings */}
         {sessionStatus.warningsCount > 0 && (
-          <Box marginTop={1}>
-            <Text color="yellow">! {sessionStatus.warningsCount} warning{sessionStatus.warningsCount !== 1 ? 's' : ''}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">! {sessionStatus.warningsCount} warning{sessionStatus.warningsCount !== 1 ? 's' : ''}</text>
+          </box>
         )}
 
         {/* Exceeded */}
         {overallExceeded && (
-          <Box marginTop={1}>
-            <Text color="red" bold>Budget exceeded! Action: {config.onExceeded || 'warn'}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="red"><b>Budget exceeded! Action: {config.onExceeded || 'warn'}</b></text>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           [e]nable [d]isable [r]eset [l]imits [p]reset [i] edit | [q]uit
           {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

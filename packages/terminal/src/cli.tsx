@@ -12,7 +12,8 @@ import { bunRuntime } from '@hasna/runtime-bun';
 setRuntime(bunRuntime);
 
 import React from 'react';
-import { render } from 'ink';
+import { createCliRenderer } from '@opentui/core';
+import { createRoot } from '@opentui/react';
 import { App } from './components/App';
 import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
@@ -160,18 +161,15 @@ if (options.print !== null) {
 
   const appElement = <App cwd={options.cwd} version={VERSION} />;
 
-  const { waitUntilExit } = render(
-    appElement,
-    {
-      // Patch console to route through our synced output
-      patchConsole: true,
-      // Let the app decide how to handle Ctrl+C (clear input or stop processing).
-      exitOnCtrlC: false,
-    },
-  );
+  const renderer = await createCliRenderer({
+    exitOnCtrlC: false,
+    useAlternateScreen: false,
+  });
 
-  waitUntilExit().then(() => {
-    // Restore original stdout.write before exiting
+  const root = createRoot(renderer);
+  root.render(appElement);
+
+  renderer.on('destroy', () => {
     disableSyncOutput();
     process.exit(0);
   });

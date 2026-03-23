@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { Assistant, AssistantSettings, CreateAssistantOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
@@ -452,36 +450,36 @@ export function AssistantsPanel({
 
   // Render model selection
   const renderModelSelection = () => (
-    <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold color="cyan">{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
-        <Text dimColor> - Model</Text>
-      </Box>
+    <box flexDirection="column">
+      <box marginBottom={1}>
+        <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+        <text fg="gray"> - Model</text>
+      </box>
 
-      <Box marginBottom={1} flexDirection="column">
-        <Text dimColor>Name: {newName}</Text>
-        {newDescription && <Text dimColor>Description: {newDescription}</Text>}
-      </Box>
+      <box marginBottom={1} flexDirection="column">
+        <text fg="gray">Name: {newName}</text>
+        {newDescription && <text fg="gray">Description: {newDescription}</text>}
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {ANTHROPIC_MODELS.map((model, index) => (
-          <Box key={model.id} paddingY={0}>
-            <Text
-              inverse={index === selectedModelIndex}
-              color={index === selectedModelIndex ? 'cyan' : undefined}
-              dimColor={index !== selectedModelIndex}
+          <box key={model.id} paddingY={0}>
+            <text
+              attributes={index === selectedModelIndex ? 32 : undefined}
+              fg={index === selectedModelIndex ? 'cyan' : undefined}
+              fg={index !== selectedModelIndex ? "gray" : undefined}
             >
               {index === selectedModelIndex ? '>' : ' '} {model.name}
-              <Text dimColor> - {model.description}</Text>
-            </Text>
-          </Box>
+              <text fg="gray"> - {model.description}</text>
+            </text>
+          </box>
         ))}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Up/Down select | Enter continue | Esc back</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">Up/Down select | Enter continue | Esc back</text>
+      </box>
+    </box>
   );
 
   // Render temperature slider
@@ -492,39 +490,39 @@ export function AssistantsPanel({
     const slider = '[' + '='.repeat(filledWidth) + ' '.repeat(emptyWidth) + ']';
 
     return (
-      <Box flexDirection="column">
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
-          <Text dimColor> - Temperature</Text>
-        </Box>
+      <box flexDirection="column">
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+          <text fg="gray"> - Temperature</text>
+        </box>
 
-        <Box marginBottom={1} flexDirection="column">
-          <Text dimColor>Name: {newName}</Text>
-          {newDescription && <Text dimColor>Description: {newDescription}</Text>}
-          <Text dimColor>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</Text>
-        </Box>
+        <box marginBottom={1} flexDirection="column">
+          <text fg="gray">Name: {newName}</text>
+          {newDescription && <text fg="gray">Description: {newDescription}</text>}
+          <text fg="gray">Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+        </box>
 
-        <Box>
-          <Text>Temperature: </Text>
-          <Text color="cyan">{temperature.toFixed(1)}</Text>
-          <Text dimColor> {slider}</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box>
+          <text>Temperature: </text>
+          <text fg="cyan">{temperature.toFixed(1)}</text>
+          <text fg="gray"> {slider}</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">
             {temperature < 0.5 ? 'More deterministic' : temperature > 1.5 ? 'More creative' : 'Balanced'}
-          </Text>
-        </Box>
+          </text>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>Left/Right adjust | Enter continue | Esc back</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="gray">Left/Right adjust | Enter continue | Esc back</text>
+        </box>
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">{mode === 'create' ? 'Creating...' : 'Saving...'}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">{mode === 'create' ? 'Creating...' : 'Saving...'}</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   };
 
@@ -534,110 +532,110 @@ export function AssistantsPanel({
 
     if (currentStep === 'model') {
       return (
-        <Box flexDirection="column" paddingY={1}>
+        <box flexDirection="column" paddingY={1}>
           {renderModelSelection()}
-        </Box>
+        </box>
       );
     }
 
     if (currentStep === 'temperature') {
       return (
-        <Box flexDirection="column" paddingY={1}>
+        <box flexDirection="column" paddingY={1}>
           {renderTemperatureSlider()}
-        </Box>
+        </box>
       );
     }
 
     if (currentStep === 'systemPrompt') {
       return (
-        <Box flexDirection="column" paddingY={1}>
-          <Box marginBottom={1}>
-            <Text bold color="cyan">{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
-            <Text dimColor> - Custom Instructions</Text>
-          </Box>
+        <box flexDirection="column" paddingY={1}>
+          <box marginBottom={1}>
+            <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+            <text fg="gray"> - Custom Instructions</text>
+          </box>
 
-          <Box marginBottom={1} flexDirection="column">
-            <Text dimColor>Name: {newName}</Text>
-            {newDescription && <Text dimColor>Description: {newDescription}</Text>}
-            <Text dimColor>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</Text>
-            <Text dimColor>Temperature: {temperature.toFixed(1)}</Text>
-          </Box>
+          <box marginBottom={1} flexDirection="column">
+            <text fg="gray">Name: {newName}</text>
+            {newDescription && <text fg="gray">Description: {newDescription}</text>}
+            <text fg="gray">Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+            <text fg="gray">Temperature: {temperature.toFixed(1)}</text>
+          </box>
 
-          <Box>
-            <Text>Instructions: </Text>
-            <TextInput
+          <box>
+            <text>Instructions: </text>
+            <input
               value={newSystemPrompt}
               onChange={setNewSystemPrompt}
               onSubmit={handleSystemPromptSubmit}
-              focus
+              focused
               placeholder="Custom system prompt (optional)..."
             />
-          </Box>
-          <Box marginTop={1}>
-            <Text dimColor>Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</Text>
-          </Box>
+          </box>
+          <box marginTop={1}>
+            <text fg="gray">Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</text>
+          </box>
 
           {isSubmitting && (
-            <Box marginTop={1}>
-              <Text color="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</Text>
-            </Box>
+            <box marginTop={1}>
+              <text fg="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
+            </box>
           )}
-        </Box>
+        </box>
       );
     }
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+        </box>
 
         {currentStep === 'name' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text>Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text>Name: </text>
+              <input
                 value={newName}
                 onChange={setNewName}
                 onSubmit={handleNameSubmit}
-                focus
+                focused
                 placeholder="Enter assistant name..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Esc to cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Esc to cancel</text>
+            </box>
+          </box>
         )}
 
         {currentStep === 'description' && (
-          <Box flexDirection="column">
-            <Box>
-              <Text dimColor>Name: </Text>
-              <Text>{newName}</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text>Description: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box>
+              <text fg="gray">Name: </text>
+              <text>{newName}</text>
+            </box>
+            <box marginTop={1}>
+              <text>Description: </text>
+              <input
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={handleDescriptionSubmit}
-                focus
+                focused
                 placeholder="Enter description (optional)..."
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter to continue | Tab to skip | Esc to go back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter to continue | Tab to skip | Esc to go back</text>
+            </box>
+          </box>
         )}
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -645,57 +643,57 @@ export function AssistantsPanel({
   if (mode === 'delete-confirm') {
     const assistant = sortedAssistants[selectedIndex];
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Assistant</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Assistant</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Are you sure you want to delete &quot;{assistant?.name}&quot;?
-          </Text>
-        </Box>
-        <Box>
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
+          </text>
+        </box>
+        <box>
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Deleting...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Deleting...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // List mode UI
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Assistants</Text>
-        <Text dimColor>[n]ew [e]dit [d]elete</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Assistants</b></text>
+        <text fg="gray">[n]ew [e]dit [d]elete</text>
+      </box>
 
       {error && (
-        <Box marginBottom={1}>
-          <Text color="red">Error: {error}</Text>
-        </Box>
+        <box marginBottom={1}>
+          <text fg="red">Error: {error}</text>
+        </box>
       )}
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {sortedAssistants.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No assistants yet. Press n to create one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No assistants yet. Press n to create one.</text>
+          </box>
         ) : (
           sortedAssistants.map((assistant, index) => {
             const isActive = assistant.id === activeAssistantId;
@@ -707,56 +705,56 @@ export function AssistantsPanel({
             const systemBadge = assistant.isSystem ? '[system] ' : '';
 
             return (
-              <Box key={assistant.id} paddingY={0}>
-                <Text
-                  inverse={isSelected}
-                  color={isActive ? 'green' : undefined}
-                  dimColor={!isSelected && !isActive}
+              <box key={assistant.id} paddingY={0}>
+                <text
+                  attributes={isSelected ? 32 : undefined}
+                  fg={isActive ? 'green' : undefined}
+                  fg={!isSelected && !isActive ? "gray" : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {systemBadge}{assistant.name.padEnd(16)} {modelName.padEnd(18)} {backendLabel.padEnd(10)} T:{temp} {time}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
 
         {/* New assistant option */}
-        <Box marginTop={1} paddingY={0}>
-          <Text
-            inverse={selectedIndex === sortedAssistants.length}
-            dimColor={selectedIndex !== sortedAssistants.length}
-            color={selectedIndex === sortedAssistants.length ? 'cyan' : undefined}
+        <box marginTop={1} paddingY={0}>
+          <text
+            attributes={selectedIndex === sortedAssistants.length ? 32 : undefined}
+            fg={selectedIndex !== sortedAssistants.length ? "gray" : undefined}
+            fg={selectedIndex === sortedAssistants.length ? 'cyan' : undefined}
           >
             + New assistant (n)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
       {/* Selected assistant details */}
       {sortedAssistants.length > 0 && selectedIndex < sortedAssistants.length && (
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>
+        <box marginTop={1} flexDirection="column">
+          <text fg="gray">
             {sortedAssistants[selectedIndex].description || 'No description'}
-          </Text>
+          </text>
           {sortedAssistants[selectedIndex].settings.systemPromptAddition && (
-            <Text dimColor>
+            <text fg="gray">
               System prompt: {sortedAssistants[selectedIndex].settings.systemPromptAddition.slice(0, 50)}
               {(sortedAssistants[selectedIndex].settings.systemPromptAddition?.length || 0) > 50 ? '...' : ''}
-            </Text>
+            </text>
           )}
           {sortedAssistants[selectedIndex].isSystem && (
-            <Text dimColor color="yellow">
+            <text fg="yellow">
               System assistant — cannot be deleted
-            </Text>
+            </text>
           )}
-        </Box>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter select | e edit | d delete | Esc close | 1-{Math.max(1, sortedAssistants.length)} jump
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

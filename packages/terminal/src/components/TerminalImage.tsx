@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
 
 interface TerminalImageProps {
   src: string;
@@ -35,17 +34,17 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
 
   if (failed) {
     return (
-      <Box flexDirection="column" marginY={1}>
-        <Text dimColor>[Image: {alt || src}]</Text>
-      </Box>
+      <box flexDirection="column" marginY={1}>
+        <text fg="gray">[Image: {alt || src}]</text>
+      </box>
     );
   }
 
   if (!ImageModule) {
     return (
-      <Box flexDirection="column" marginY={1}>
-        <Text dimColor>Loading image...</Text>
-      </Box>
+      <box flexDirection="column" marginY={1}>
+        <text fg="gray">Loading image...</text>
+      </box>
     );
   }
 
@@ -53,15 +52,15 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
 
   return (
     <TerminalInfoProvider>
-      <Box flexDirection="column" marginY={1}>
+      <box flexDirection="column" marginY={1}>
         <Image
           src={src}
           width={width || 60}
           height={height || 20}
           alt={alt || src}
         />
-        {alt && <Text dimColor>{alt}</Text>}
-      </Box>
+        {alt && <text fg="gray">{alt}</text>}
+      </box>
     </TerminalInfoProvider>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { SessionInfo } from '@hasna/assistants-core';
 import type { PersistedSessionData } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -157,10 +156,10 @@ export function SessionSelector({
   let currentSessionIdx = -1;
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold>Sessions</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text><b>Sessions</b></text>
+      </box>
 
       {displayList.map((entry, i) => {
         if (entry.type === 'session' && entry.session) {
@@ -175,15 +174,15 @@ export function SessionSelector({
           const displayName = session.label || path;
 
           return (
-            <Box key={session.id}>
-              <Text
-                inverse={isSelected}
-                color={isActive ? 'green' : undefined}
-                dimColor={!isSelected && !isActive}
+            <box key={session.id}>
+              <text
+                attributes={isSelected ? 32 : undefined}
+                fg={isActive ? 'green' : undefined}
+                fg={!isSelected && !isActive ? "gray" : undefined}
               >
                 {prefix} {entry.sessionIndex}. {time}  {displayName}{processing}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         }
 
@@ -193,11 +192,11 @@ export function SessionSelector({
           const statusTag = sub.status === 'completed' ? ' (done)' : sub.status === 'active' ? ' (running)' : '';
 
           return (
-            <Box key={sub.id} paddingLeft={3}>
-              <Text dimColor color="cyan">
+            <box key={sub.id} paddingLeft={3}>
+              <text fg="cyan">
                 {'     '}&#8627; {time}  {sub.label || 'subagent'}{statusTag}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         }
 
@@ -205,20 +204,20 @@ export function SessionSelector({
       })}
 
       {/* New session option */}
-      <Box marginTop={1}>
-        <Text
-          inverse={selectedIndex === selectableCount}
-          dimColor={selectedIndex !== selectableCount}
+      <box marginTop={1}>
+        <text
+          attributes={selectedIndex === selectableCount ? 32 : undefined}
+          fg={selectedIndex !== selectableCount ? "gray" : undefined}
         >
             + New session (n)
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter to select | Esc to cancel | 1-{selectableCount} to switch | n for new
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

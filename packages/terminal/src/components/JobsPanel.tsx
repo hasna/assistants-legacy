@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { Job, JobManager, JobStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -341,71 +340,71 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
 
   if (isLoading) {
     return (
-      <Box flexDirection="column">
-        <Text bold>Jobs</Text>
-        <Text color="gray">Loading jobs...</Text>
-      </Box>
+      <box flexDirection="column">
+        <text><b>Jobs</b></text>
+        <text fg="gray">Loading jobs...</text>
+      </box>
     );
   }
 
   const tabLabel = (
-    <Box marginBottom={1}>
+    <box marginBottom={1}>
       {FILTER_TABS.map((tab, index) => (
-        <Box key={tab} marginRight={1}>
-          <Text color={index === filterIndex ? 'cyan' : 'gray'}>
+        <box key={tab} marginRight={1}>
+          <text fg={index === filterIndex ? 'cyan' : 'gray'}>
             {index + 1}:{tab}
-          </Text>
-        </Box>
+          </text>
+        </box>
       ))}
-      <Text color="gray">
+      <text fg="gray">
         ({jobs.length} total, {jobs.filter((job) => isActiveStatus(job.status)).length} active)
-      </Text>
-    </Box>
+      </text>
+    </box>
   );
 
   if (mode === 'detail' && detailJob) {
     const resultPreview = detailJob.result?.content ? truncateText(detailJob.result.content, 900) : null;
     const errorPreview = detailJob.error?.message ? truncateText(detailJob.error.message, 300) : null;
     return (
-      <Box flexDirection="column">
-        <Text bold>Job Detail</Text>
-        <Box marginTop={1}>
-          <Text>ID: {detailJob.id}</Text>
-        </Box>
-        <Text>
+      <box flexDirection="column">
+        <text><b>Job Detail</b></text>
+        <box marginTop={1}>
+          <text>ID: {detailJob.id}</text>
+        </box>
+        <text>
           Status:{' '}
-          <Text color={statusColor(detailJob.status)}>{statusBadge(detailJob.status)}</Text>
-        </Text>
-        <Text>Connector: {detailJob.connectorName}</Text>
-        <Text>Command: {detailJob.command}</Text>
-        <Text>Session: {detailJob.sessionId}</Text>
-        <Text>Created: {new Date(detailJob.createdAt).toLocaleString()}</Text>
-        <Text>Started: {detailJob.startedAt ? new Date(detailJob.startedAt).toLocaleString() : '-'}</Text>
-        <Text>Completed: {detailJob.completedAt ? new Date(detailJob.completedAt).toLocaleString() : '-'}</Text>
-        <Text>Timeout: {Math.round(detailJob.timeoutMs / 1000)}s</Text>
-        <Text>Duration: {formatDuration(detailJob)}</Text>
+          <text fg={statusColor(detailJob.status)}>{statusBadge(detailJob.status)}</text>
+        </text>
+        <text>Connector: {detailJob.connectorName}</text>
+        <text>Command: {detailJob.command}</text>
+        <text>Session: {detailJob.sessionId}</text>
+        <text>Created: {new Date(detailJob.createdAt).toLocaleString()}</text>
+        <text>Started: {detailJob.startedAt ? new Date(detailJob.startedAt).toLocaleString() : '-'}</text>
+        <text>Completed: {detailJob.completedAt ? new Date(detailJob.completedAt).toLocaleString() : '-'}</text>
+        <text>Timeout: {Math.round(detailJob.timeoutMs / 1000)}s</text>
+        <text>Duration: {formatDuration(detailJob)}</text>
         {resultPreview && (
-          <Box marginTop={1} flexDirection="column">
-            <Text color="green">Result:</Text>
-            <Text>{resultPreview}</Text>
-          </Box>
+          <box marginTop={1} flexDirection="column">
+            <text fg="green">Result:</text>
+            <text>{resultPreview}</text>
+          </box>
         )}
         {errorPreview && (
-          <Box marginTop={1} flexDirection="column">
-            <Text color="red">Error:</Text>
-            <Text>{errorPreview}</Text>
-          </Box>
+          <box marginTop={1} flexDirection="column">
+            <text fg="red">Error:</text>
+            <text>{errorPreview}</text>
+          </box>
         )}
         {error && (
-          <Text color="red">{error}</Text>
+          <text fg="red">{error}</text>
         )}
         {statusMessage && (
-          <Text color="cyan">{statusMessage}</Text>
+          <text fg="cyan">{statusMessage}</text>
         )}
-        <Box marginTop={1}>
-          <Text color="gray">d/x/c kill selected  K kill all active  r refresh  esc back  q close</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">d/x/c kill selected  K kill all active  r refresh  esc back  q close</text>
+        </box>
+      </box>
     );
   }
 
@@ -413,60 +412,60 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
   const visibleRows = filteredJobs.slice(windowed.start, windowed.end);
 
   return (
-    <Box flexDirection="column">
-      <Text bold>Jobs</Text>
+    <box flexDirection="column">
+      <text><b>Jobs</b></text>
       {tabLabel}
 
-      <Text color="gray">{fit('Status', 10)} {fit('ID', 16)} {fit('Connector', 14)} {fit('Age', 6, 'right')} {fit('Run', 6, 'right')} Command</Text>
-      <Text color="gray">{'-'.repeat(86)}</Text>
+      <text fg="gray">{fit('Status', 10)} {fit('ID', 16)} {fit('Connector', 14)} {fit('Age', 6, 'right')} {fit('Run', 6, 'right')} Command</text>
+      <text fg="gray">{'-'.repeat(86)}</text>
 
       {filteredJobs.length === 0 && (
-        <Text color="gray">
+        <text fg="gray">
           {activeFilter === 'all' ? 'No jobs in this session.' : activeFilter === 'active' ? 'No active jobs.' : 'No completed/failed jobs.'}
-        </Text>
+        </text>
       )}
 
       {windowed.above > 0 && (
-        <Text color="gray">... {windowed.above} above ...</Text>
+        <text fg="gray">... {windowed.above} above ...</text>
       )}
       {visibleRows.map((job, idx) => {
         const absolute = windowed.start + idx;
         const selected = absolute === selectedIndex;
         return (
-          <Box key={job.id}>
-            <Text color={selected ? 'cyan' : 'gray'}>{selected ? '>' : ' '}</Text>
-            <Text> </Text>
-            <Text color={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</Text>
-            <Text> </Text>
-            <Text>{fit(job.id, 16)}</Text>
-            <Text> </Text>
-            <Text>{fit(job.connectorName, 14)}</Text>
-            <Text> </Text>
-            <Text>{fit(formatRelativeTime(job.createdAt), 6, 'right')}</Text>
-            <Text> </Text>
-            <Text>{fit(formatDuration(job), 6, 'right')}</Text>
-            <Text> </Text>
-            <Text>{truncateText(job.command, 28)}</Text>
-          </Box>
+          <box key={job.id}>
+            <text fg={selected ? 'cyan' : 'gray'}>{selected ? '>' : ' '}</text>
+            <text> </text>
+            <text fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</text>
+            <text> </text>
+            <text>{fit(job.id, 16)}</text>
+            <text> </text>
+            <text>{fit(job.connectorName, 14)}</text>
+            <text> </text>
+            <text>{fit(formatRelativeTime(job.createdAt), 6, 'right')}</text>
+            <text> </text>
+            <text>{fit(formatDuration(job), 6, 'right')}</text>
+            <text> </text>
+            <text>{truncateText(job.command, 28)}</text>
+          </box>
         );
       })}
       {windowed.below > 0 && (
-        <Text color="gray">... {windowed.below} below ...</Text>
+        <text fg="gray">... {windowed.below} below ...</text>
       )}
 
       {error && (
-        <Text color="red">{error}</Text>
+        <text fg="red">{error}</text>
       )}
       {statusMessage && (
-        <Text color="cyan">{statusMessage}</Text>
+        <text fg="cyan">{statusMessage}</text>
       )}
       {isWorking && (
-        <Text color="yellow">Applying action...</Text>
+        <text fg="yellow">Applying action...</text>
       )}
 
-      <Box marginTop={1}>
-        <Text color="gray">j/k or arrows move  enter view  d/x/c kill selected  K kill all active  r refresh  1/2/3 filter  q close</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">j/k or arrows move  enter view  d/x/c kill selected  K kill all active  r refresh  1/2/3 filter  q close</text>
+      </box>
+    </box>
   );
 }

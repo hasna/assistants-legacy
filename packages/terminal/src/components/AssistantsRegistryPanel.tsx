@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { RegisteredAssistant, RegistryStats, RegistryAssistantState, AssistantType } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -134,171 +133,171 @@ export function AssistantsRegistryPanel({
     const assistant = sortedAssistants[selectedIndex];
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1} justifyContent="space-between">
-          <Text bold>Assistant Details</Text>
-          <Text dimColor>{selectedIndex + 1} of {sortedAssistants.length}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1} justifyContent="space-between">
+          <text><b>Assistant Details</b></text>
+          <text fg="gray">{selectedIndex + 1} of {sortedAssistants.length}</text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
           {/* Identity */}
-          <Box marginBottom={1} flexDirection="column">
-            <Box>
-              <Text bold>{assistant.name}</Text>
-              <Text dimColor> ({assistant.id.slice(0, 12)}...)</Text>
-            </Box>
+          <box marginBottom={1} flexDirection="column">
+            <box>
+              <text><b>{assistant.name}</b></text>
+              <text fg="gray"> ({assistant.id.slice(0, 12)}...)</text>
+            </box>
             {assistant.description && (
-              <Box paddingLeft={1}>
-                <Text dimColor>{assistant.description}</Text>
-              </Box>
+              <box paddingLeft={1}>
+                <text fg="gray">{assistant.description}</text>
+              </box>
             )}
-          </Box>
+          </box>
 
           {/* Type & State */}
-          <Box marginBottom={1} flexDirection="column">
-            <Box>
-              <Text dimColor>Type: </Text>
-              <Text color={TYPE_COLORS[assistant.type]}>{assistant.type}</Text>
-            </Box>
-            <Box>
-              <Text dimColor>State: </Text>
-              <Text color={STATE_COLORS[assistant.status.state]}>{assistant.status.state}</Text>
+          <box marginBottom={1} flexDirection="column">
+            <box>
+              <text fg="gray">Type: </text>
+              <text fg={TYPE_COLORS[assistant.type]}>{assistant.type}</text>
+            </box>
+            <box>
+              <text fg="gray">State: </text>
+              <text fg={STATE_COLORS[assistant.status.state]}>{assistant.status.state}</text>
               {assistant.status.currentTask && (
-                <Text dimColor> ({assistant.status.currentTask})</Text>
+                <text fg="gray"> ({assistant.status.currentTask})</text>
               )}
-            </Box>
-          </Box>
+            </box>
+          </box>
 
           {/* Relationships */}
           {(assistant.parentId || assistant.childIds.length > 0) && (
-            <Box marginBottom={1} flexDirection="column">
+            <box marginBottom={1} flexDirection="column">
               {assistant.parentId && (
-                <Box>
-                  <Text dimColor>Parent: </Text>
-                  <Text>{assistant.parentId.slice(0, 16)}...</Text>
-                </Box>
+                <box>
+                  <text fg="gray">Parent: </text>
+                  <text>{assistant.parentId.slice(0, 16)}...</text>
+                </box>
               )}
               {assistant.childIds.length > 0 && (
-                <Box>
-                  <Text dimColor>Children: </Text>
-                  <Text>{assistant.childIds.length}</Text>
-                </Box>
+                <box>
+                  <text fg="gray">Children: </text>
+                  <text>{assistant.childIds.length}</text>
+                </box>
               )}
-            </Box>
+            </box>
           )}
 
           {/* Capabilities */}
-          <Box marginBottom={1} flexDirection="column">
-            <Text bold dimColor>Capabilities:</Text>
+          <box marginBottom={1} flexDirection="column">
+            <text fg="gray"><b>Capabilities:</b></text>
             {assistant.capabilities.tools.length > 0 && (
-              <Box paddingLeft={1}>
-                <Text dimColor>Tools: </Text>
-                <Text>{assistant.capabilities.tools.slice(0, 5).join(', ')}</Text>
+              <box paddingLeft={1}>
+                <text fg="gray">Tools: </text>
+                <text>{assistant.capabilities.tools.slice(0, 5).join(', ')}</text>
                 {assistant.capabilities.tools.length > 5 && (
-                  <Text dimColor> +{assistant.capabilities.tools.length - 5} more</Text>
+                  <text fg="gray"> +{assistant.capabilities.tools.length - 5} more</text>
                 )}
-              </Box>
+              </box>
             )}
             {assistant.capabilities.skills.length > 0 && (
-              <Box paddingLeft={1}>
-                <Text dimColor>Skills: </Text>
-                <Text>{assistant.capabilities.skills.join(', ')}</Text>
-              </Box>
+              <box paddingLeft={1}>
+                <text fg="gray">Skills: </text>
+                <text>{assistant.capabilities.skills.join(', ')}</text>
+              </box>
             )}
             {assistant.capabilities.tags.length > 0 && (
-              <Box paddingLeft={1}>
-                <Text dimColor>Tags: </Text>
-                <Text>{assistant.capabilities.tags.join(', ')}</Text>
-              </Box>
+              <box paddingLeft={1}>
+                <text fg="gray">Tags: </text>
+                <text>{assistant.capabilities.tags.join(', ')}</text>
+              </box>
             )}
-          </Box>
+          </box>
 
           {/* Load */}
-          <Box marginBottom={1} flexDirection="column">
-            <Text bold dimColor>Load:</Text>
-            <Box paddingLeft={1}>
-              <Text dimColor>Active Tasks: </Text>
-              <Text>{assistant.load.activeTasks}</Text>
-              <Text dimColor> | Queued: </Text>
-              <Text>{assistant.load.queuedTasks}</Text>
-            </Box>
-            <Box paddingLeft={1}>
-              <Text dimColor>Tokens: </Text>
-              <Text>{assistant.load.tokensUsed.toLocaleString()}</Text>
-              <Text dimColor> | LLM Calls: </Text>
-              <Text>{assistant.load.llmCalls}</Text>
-            </Box>
-            <Box paddingLeft={1}>
-              <Text dimColor>Depth: </Text>
-              <Text>{assistant.load.currentDepth}</Text>
+          <box marginBottom={1} flexDirection="column">
+            <text fg="gray"><b>Load:</b></text>
+            <box paddingLeft={1}>
+              <text fg="gray">Active Tasks: </text>
+              <text>{assistant.load.activeTasks}</text>
+              <text fg="gray"> | Queued: </text>
+              <text>{assistant.load.queuedTasks}</text>
+            </box>
+            <box paddingLeft={1}>
+              <text fg="gray">Tokens: </text>
+              <text>{assistant.load.tokensUsed.toLocaleString()}</text>
+              <text fg="gray"> | LLM Calls: </text>
+              <text>{assistant.load.llmCalls}</text>
+            </box>
+            <box paddingLeft={1}>
+              <text fg="gray">Depth: </text>
+              <text>{assistant.load.currentDepth}</text>
               {assistant.capabilities.maxDepth && (
-                <Text dimColor>/{assistant.capabilities.maxDepth}</Text>
+                <text fg="gray">/{assistant.capabilities.maxDepth}</text>
               )}
-            </Box>
-          </Box>
+            </box>
+          </box>
 
           {/* Status Metrics */}
-          <Box marginBottom={1} flexDirection="column">
-            <Text bold dimColor>Metrics:</Text>
-            <Box paddingLeft={1}>
-              <Text dimColor>Uptime: </Text>
-              <Text>{formatUptime(assistant.status.uptime)}</Text>
-            </Box>
-            <Box paddingLeft={1}>
-              <Text dimColor>Messages: </Text>
-              <Text>{assistant.status.messagesProcessed}</Text>
-            </Box>
-            <Box paddingLeft={1}>
-              <Text dimColor>Tool Calls: </Text>
-              <Text>{assistant.status.toolCallsExecuted}</Text>
-            </Box>
-            <Box paddingLeft={1}>
-              <Text dimColor>Errors: </Text>
-              <Text color={assistant.status.errorsCount > 0 ? 'red' : 'white'}>{assistant.status.errorsCount}</Text>
-            </Box>
-          </Box>
+          <box marginBottom={1} flexDirection="column">
+            <text fg="gray"><b>Metrics:</b></text>
+            <box paddingLeft={1}>
+              <text fg="gray">Uptime: </text>
+              <text>{formatUptime(assistant.status.uptime)}</text>
+            </box>
+            <box paddingLeft={1}>
+              <text fg="gray">Messages: </text>
+              <text>{assistant.status.messagesProcessed}</text>
+            </box>
+            <box paddingLeft={1}>
+              <text fg="gray">Tool Calls: </text>
+              <text>{assistant.status.toolCallsExecuted}</text>
+            </box>
+            <box paddingLeft={1}>
+              <text fg="gray">Errors: </text>
+              <text fg={assistant.status.errorsCount > 0 ? 'red' : 'white'}>{assistant.status.errorsCount}</text>
+            </box>
+          </box>
 
           {/* Heartbeat */}
-          <Box flexDirection="column">
-            <Text bold dimColor>Heartbeat:</Text>
-            <Box paddingLeft={1}>
-              <Text dimColor>Last: </Text>
-              <Text>{formatTimestamp(assistant.heartbeat.lastHeartbeat)}</Text>
+          <box flexDirection="column">
+            <text fg="gray"><b>Heartbeat:</b></text>
+            <box paddingLeft={1}>
+              <text fg="gray">Last: </text>
+              <text>{formatTimestamp(assistant.heartbeat.lastHeartbeat)}</text>
               {assistant.heartbeat.isStale && (
-                <Text color="red"> (stale)</Text>
+                <text fg="red"> (stale)</text>
               )}
-            </Box>
-          </Box>
-        </Box>
+            </box>
+          </box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>↑↓ navigate [b]ack [q]uit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">↑↓ navigate [b]ack [q]uit</text>
+        </box>
+      </box>
     );
   }
 
   // List mode - show all assistants
   if (mode === 'list') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1} justifyContent="space-between">
-          <Text bold>Registered Assistants</Text>
-          <Text dimColor>{sortedAssistants.length} assistant{sortedAssistants.length !== 1 ? 's' : ''}</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1} justifyContent="space-between">
+          <text><b>Registered Assistants</b></text>
+          <text fg="gray">{sortedAssistants.length} assistant{sortedAssistants.length !== 1 ? 's' : ''}</text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           height={Math.min(14, sortedAssistants.length + 2)}
           overflowY="hidden"
         >
           {sortedAssistants.length === 0 ? (
-            <Box paddingY={1}>
-              <Text dimColor>No assistants registered.</Text>
-            </Box>
+            <box paddingY={1}>
+              <text fg="gray">No assistants registered.</text>
+            </box>
           ) : (
             sortedAssistants.map((item, index) => {
               const isSelected = index === selectedIndex;
@@ -306,24 +305,24 @@ export function AssistantsRegistryPanel({
               const typeColor = TYPE_COLORS[item.type];
 
               return (
-                <Box key={item.id}>
-                  <Text inverse={isSelected}>
+                <box key={item.id}>
+                  <text attributes={isSelected ? 32 : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <Text color={stateColor}>[{item.status.state.slice(0, 4).padEnd(4)}]</Text>{' '}
-                    <Text bold={isSelected}>{item.name.slice(0, 18).padEnd(18)}</Text>{' '}
-                    <Text color={typeColor}>{item.type.slice(0, 8).padEnd(8)}</Text>{' '}
-                    <Text dimColor>{formatTimestamp(item.registeredAt)}</Text>
-                  </Text>
-                </Box>
+                    <text fg={stateColor}>[{item.status.state.slice(0, 4).padEnd(4)}]</text>{' '}
+                    <text attributes={isSelected ? 1 : undefined}><b>{item.name.slice(0, 18).padEnd(18)}</b></text>{' '}
+                    <text fg={typeColor}>{item.type.slice(0, 8).padEnd(8)}</text>{' '}
+                    <text fg="gray">{formatTimestamp(item.registeredAt)}</text>
+                  </text>
+                </box>
               );
             })
           )}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>↑↓ navigate [d]etails [b]ack [q]uit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">↑↓ navigate [d]etails [b]ack [q]uit</text>
+        </box>
+      </box>
     );
   }
 
@@ -332,110 +331,110 @@ export function AssistantsRegistryPanel({
   const processingAssistants = sortedAssistants.filter(a => a.status.state === 'processing');
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Assistant Registry</Text>
-        <Text dimColor>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Assistant Registry</b></text>
+        <text fg="gray">
           {activeAssistants.length}/{sortedAssistants.length} active
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
         {/* Summary Stats */}
-        <Box marginBottom={1} flexDirection="column">
-          <Box>
-            <Text dimColor>Total Assistants: </Text>
-            <Text bold>{stats.totalAssistants}</Text>
-          </Box>
-          <Box>
-            <Text dimColor>Active: </Text>
-            <Text color="green">{activeAssistants.length}</Text>
+        <box marginBottom={1} flexDirection="column">
+          <box>
+            <text fg="gray">Total Assistants: </text>
+            <text><b>{stats.totalAssistants}</b></text>
+          </box>
+          <box>
+            <text fg="gray">Active: </text>
+            <text fg="green">{activeAssistants.length}</text>
             {processingAssistants.length > 0 && (
               <>
-                <Text dimColor> | Processing: </Text>
-                <Text color="yellow">{processingAssistants.length}</Text>
+                <text fg="gray"> | Processing: </text>
+                <text fg="yellow">{processingAssistants.length}</text>
               </>
             )}
             {stats.staleCount > 0 && (
               <>
-                <Text dimColor> | Stale: </Text>
-                <Text color="red">{stats.staleCount}</Text>
+                <text fg="gray"> | Stale: </text>
+                <text fg="red">{stats.staleCount}</text>
               </>
             )}
-          </Box>
-        </Box>
+          </box>
+        </box>
 
         {/* By Type */}
-        <Box marginBottom={1} flexDirection="column">
-          <Text bold dimColor>By Type:</Text>
-          <Box paddingLeft={1}>
-            <Text color="cyan">Assistants: {stats.byType.assistant}</Text>
-            <Text dimColor> | </Text>
-            <Text color="magenta">Subassistants: {stats.byType.subassistant}</Text>
-          </Box>
-          <Box paddingLeft={1}>
-            <Text color="yellow">Coordinators: {stats.byType.coordinator}</Text>
-            <Text dimColor> | </Text>
-            <Text color="green">Workers: {stats.byType.worker}</Text>
-          </Box>
-        </Box>
+        <box marginBottom={1} flexDirection="column">
+          <text fg="gray"><b>By Type:</b></text>
+          <box paddingLeft={1}>
+            <text fg="cyan">Assistants: {stats.byType.assistant}</text>
+            <text fg="gray"> | </text>
+            <text fg="magenta">Subassistants: {stats.byType.subassistant}</text>
+          </box>
+          <box paddingLeft={1}>
+            <text fg="yellow">Coordinators: {stats.byType.coordinator}</text>
+            <text fg="gray"> | </text>
+            <text fg="green">Workers: {stats.byType.worker}</text>
+          </box>
+        </box>
 
         {/* By State */}
-        <Box marginBottom={1} flexDirection="column">
-          <Text bold dimColor>By State:</Text>
-          <Box paddingLeft={1}>
-            <Text color="green">Idle: {stats.byState.idle}</Text>
-            <Text dimColor> | </Text>
-            <Text color="yellow">Processing: {stats.byState.processing}</Text>
-            <Text dimColor> | </Text>
-            <Text color="cyan">Waiting: {stats.byState.waiting_input}</Text>
-          </Box>
-          <Box paddingLeft={1}>
-            <Text color="red">Error: {stats.byState.error}</Text>
-            <Text dimColor> | </Text>
-            <Text color="gray">Offline: {stats.byState.offline}</Text>
-            <Text dimColor> | </Text>
-            <Text color="gray">Stopped: {stats.byState.stopped}</Text>
-          </Box>
-        </Box>
+        <box marginBottom={1} flexDirection="column">
+          <text fg="gray"><b>By State:</b></text>
+          <box paddingLeft={1}>
+            <text fg="green">Idle: {stats.byState.idle}</text>
+            <text fg="gray"> | </text>
+            <text fg="yellow">Processing: {stats.byState.processing}</text>
+            <text fg="gray"> | </text>
+            <text fg="cyan">Waiting: {stats.byState.waiting_input}</text>
+          </box>
+          <box paddingLeft={1}>
+            <text fg="red">Error: {stats.byState.error}</text>
+            <text fg="gray"> | </text>
+            <text fg="gray">Offline: {stats.byState.offline}</text>
+            <text fg="gray"> | </text>
+            <text fg="gray">Stopped: {stats.byState.stopped}</text>
+          </box>
+        </box>
 
         {/* Average Load */}
-        <Box flexDirection="column">
-          <Box>
-            <Text dimColor>Average Load: </Text>
-            <Text color={stats.averageLoad > 0.8 ? 'red' : stats.averageLoad > 0.5 ? 'yellow' : 'green'}>
+        <box flexDirection="column">
+          <box>
+            <text fg="gray">Average Load: </text>
+            <text fg={stats.averageLoad > 0.8 ? 'red' : stats.averageLoad > 0.5 ? 'yellow' : 'green'}>
               {(stats.averageLoad * 100).toFixed(0)}%
-            </Text>
-          </Box>
-          <Box>
-            <Text dimColor>Registry Uptime: </Text>
-            <Text>{formatUptime(stats.uptime)}</Text>
-          </Box>
-        </Box>
+            </text>
+          </box>
+          <box>
+            <text fg="gray">Registry Uptime: </text>
+            <text>{formatUptime(stats.uptime)}</text>
+          </box>
+        </box>
 
         {/* Quick assistant list preview */}
         {sortedAssistants.length > 0 && (
-          <Box marginTop={1} flexDirection="column">
-            <Text bold dimColor>Recent Assistants:</Text>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray"><b>Recent Assistants:</b></text>
             {sortedAssistants.slice(0, 3).map((item) => (
-              <Box key={item.id} paddingLeft={1}>
-                <Text color={STATE_COLORS[item.status.state]}>●</Text>
-                <Text> {item.name}</Text>
-                <Text dimColor> ({item.type})</Text>
-              </Box>
+              <box key={item.id} paddingLeft={1}>
+                <text fg={STATE_COLORS[item.status.state]}>●</text>
+                <text> {item.name}</text>
+                <text fg="gray"> ({item.type})</text>
+              </box>
             ))}
             {sortedAssistants.length > 3 && (
-              <Box paddingLeft={1}>
-                <Text dimColor>+ {sortedAssistants.length - 3} more</Text>
-              </Box>
+              <box paddingLeft={1}>
+                <text fg="gray">+ {sortedAssistants.length - 3} more</text>
+              </box>
             )}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>[a]ssistants list [r]efresh [q]uit</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">[a]ssistants list [r]efresh [q]uit</text>
+      </box>
+    </box>
   );
 }

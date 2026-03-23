@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { HookEvent, HookHandler } from '@hasna/assistants-shared';
 import type { HookLocation } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -274,284 +272,284 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     switch (step) {
       case 'event':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 1/9: Select Event</Text>
-            </Box>
-            <Text dimColor>When should this hook run?</Text>
-            <Box
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 1/9: Select Event</b></text>
+            </box>
+            <text fg="gray">When should this hook run?</text>
+            <box
               flexDirection="column"
               marginTop={1}
-              borderStyle="round"
+              borderStyle="rounded"
               borderColor="#d4d4d8" borderLeft={false} borderRight={false}
               paddingX={1}
               height={Math.min(10, HOOK_EVENTS.length + 2)}
             >
               {HOOK_EVENTS.map((ev, index) => (
-                <Box key={ev}>
-                  <Text
-                    inverse={index === eventIndex}
-                    color={index === eventIndex ? 'cyan' : undefined}
-                    dimColor={index !== eventIndex}
+                <box key={ev}>
+                  <text
+                    attributes={index === eventIndex ? 32 : undefined}
+                    fg={index === eventIndex ? 'cyan' : undefined}
+                    fg={index !== eventIndex ? "gray" : undefined}
                   >
                     {index === eventIndex ? '>' : ' '} {index + 1}. {ev}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               ))}
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>↑↓ navigate | Enter select | Esc cancel</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">↑↓ navigate | Enter select | Esc cancel</text>
+            </box>
+          </box>
         );
 
       case 'matcher':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 2/9: Matcher Pattern</Text>
-            </Box>
-            <Text dimColor>Filter which {event} events trigger this hook (regex or exact match)</Text>
-            <Text dimColor>Leave empty or use * to match all</Text>
-            <Box marginTop={1}>
-              <Text>Pattern: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 2/9: Matcher Pattern</b></text>
+            </box>
+            <text fg="gray">Filter which {event} events trigger this hook (regex or exact match)</text>
+            <text fg="gray">Leave empty or use * to match all</text>
+            <box marginTop={1}>
+              <text>Pattern: </text>
+              <input
                 value={matcher}
                 onChange={setMatcher}
                 onSubmit={handleMatcherSubmit}
-                focus
+                focused
                 placeholder="Bash|Edit|Write (regex) or * for all"
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'type':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 3/9: Hook Type</Text>
-            </Box>
-            <Text dimColor>How should the hook execute?</Text>
-            <Box flexDirection="column" marginTop={1}>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 3/9: Hook Type</b></text>
+            </box>
+            <text fg="gray">How should the hook execute?</text>
+            <box flexDirection="column" marginTop={1}>
               {HOOK_TYPES.map((type, index) => (
-                <Box key={type}>
-                  <Text
-                    inverse={index === typeIndex}
-                    color={index === typeIndex ? 'cyan' : undefined}
-                    dimColor={index !== typeIndex}
+                <box key={type}>
+                  <text
+                    attributes={index === typeIndex ? 32 : undefined}
+                    fg={index === typeIndex ? 'cyan' : undefined}
+                    fg={index !== typeIndex ? "gray" : undefined}
                   >
                     {index === typeIndex ? '>' : ' '} {type === 'command' ? 'command  ' : type === 'prompt' ? 'prompt   ' : 'assistant'}
-                    <Text dimColor>
+                    <text fg="gray">
                       {type === 'command' && ' - Run a shell command'}
                       {type === 'prompt' && ' - Single-turn LLM decision'}
                       {type === 'assistant' && ' - Multi-turn assistant with tools'}
-                    </Text>
-                  </Text>
-                </Box>
+                    </text>
+                  </text>
+                </box>
               ))}
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>↑↓ navigate | Enter select | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">↑↓ navigate | Enter select | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'command':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</Text>
-            </Box>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</b></text>
+            </box>
             {hookType === 'command' ? (
               <>
-                <Text dimColor>Shell command to run. Input is passed as JSON via stdin.</Text>
-                <Text dimColor>Exit 0 = allow, Exit 2 = block, other = error</Text>
+                <text fg="gray">Shell command to run. Input is passed as JSON via stdin.</text>
+                <text fg="gray">Exit 0 = allow, Exit 2 = block, other = error</text>
               </>
             ) : (
               <>
-                <Text dimColor>Prompt to send to the LLM. Context will be appended.</Text>
-                <Text dimColor>LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</Text>
+                <text fg="gray">Prompt to send to the LLM. Context will be appended.</text>
+                <text fg="gray">LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</text>
               </>
             )}
-            <Box marginTop={1}>
-              <Text>{hookType === 'command' ? 'Command' : 'Prompt'}: </Text>
-              <TextInput
+            <box marginTop={1}>
+              <text>{hookType === 'command' ? 'Command' : 'Prompt'}: </text>
+              <input
                 value={command}
                 onChange={(v) => { setCommand(v); setError(null); }}
                 onSubmit={handleCommandSubmit}
                 focus
                 placeholder={hookType === 'command' ? './scripts/validate.sh' : 'Should this action be allowed?'}
               />
-            </Box>
+            </box>
             {error && (
-              <Box marginTop={1}>
-                <Text color="red">{error}</Text>
-              </Box>
+              <box marginTop={1}>
+                <text fg="red">{error}</text>
+              </box>
             )}
-            <Box marginTop={1}>
-              <Text dimColor>Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            <box marginTop={1}>
+              <text fg="gray">Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'timeout':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 5/9: Timeout</Text>
-            </Box>
-            <Text dimColor>Maximum time to wait for hook to complete (milliseconds)</Text>
-            <Box marginTop={1}>
-              <Text>Timeout: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 5/9: Timeout</b></text>
+            </box>
+            <text fg="gray">Maximum time to wait for hook to complete (milliseconds)</text>
+            <box marginTop={1}>
+              <text>Timeout: </text>
+              <input
                 value={timeout}
                 onChange={(v) => { setTimeout(v); setError(null); }}
                 onSubmit={handleTimeoutSubmit}
                 focus
                 placeholder="30000"
               />
-              <Text dimColor> ms</Text>
-            </Box>
+              <text fg="gray"> ms</text>
+            </box>
             {error && (
-              <Box marginTop={1}>
-                <Text color="red">{error}</Text>
-              </Box>
+              <box marginTop={1}>
+                <text fg="red">{error}</text>
+              </box>
             )}
-            <Box marginTop={1}>
-              <Text dimColor>Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            <box marginTop={1}>
+              <text fg="gray">Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'async':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 6/9: Async Execution</Text>
-            </Box>
-            <Text dimColor>Run in background without blocking?</Text>
-            <Box marginTop={1}>
-              <Text>Run async: </Text>
-              <Text color={isAsync ? 'green' : 'gray'}>[{isAsync ? 'Yes' : 'No '}]</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>y yes | n no | Space toggle | Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 6/9: Async Execution</b></text>
+            </box>
+            <text fg="gray">Run in background without blocking?</text>
+            <box marginTop={1}>
+              <text>Run async: </text>
+              <text fg={isAsync ? 'green' : 'gray'}>[{isAsync ? 'Yes' : 'No '}]</text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">y yes | n no | Space toggle | Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'name':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 7/9: Name (optional)</Text>
-            </Box>
-            <Text dimColor>Give your hook a friendly name</Text>
-            <Box marginTop={1}>
-              <Text>Name: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 7/9: Name (optional)</b></text>
+            </box>
+            <text fg="gray">Give your hook a friendly name</text>
+            <box marginTop={1}>
+              <text>Name: </text>
+              <input
                 value={name}
                 onChange={setName}
                 onSubmit={handleNameSubmit}
-                focus
+                focused
                 placeholder="Validate dangerous commands"
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'description':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 8/9: Description (optional)</Text>
-            </Box>
-            <Text dimColor>Short note about why this hook exists</Text>
-            <Box marginTop={1}>
-              <Text>Description: </Text>
-              <TextInput
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 8/9: Description (optional)</b></text>
+            </box>
+            <text fg="gray">Short note about why this hook exists</text>
+            <box marginTop={1}>
+              <text>Description: </text>
+              <input
                 value={description}
                 onChange={setDescription}
                 onSubmit={handleDescriptionSubmit}
-                focus
+                focused
                 placeholder="Block risky commands before they run"
               />
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Enter continue | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Enter continue | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'location':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Step 9/9: Save Location</Text>
-            </Box>
-            <Text dimColor>Where should this hook be stored?</Text>
-            <Box flexDirection="column" marginTop={1}>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Step 9/9: Save Location</b></text>
+            </box>
+            <text fg="gray">Where should this hook be stored?</text>
+            <box flexDirection="column" marginTop={1}>
               {HOOK_LOCATIONS.map((loc, index) => (
-                <Box key={loc}>
-                  <Text
-                    inverse={index === locationIndex}
-                    color={index === locationIndex ? 'cyan' : undefined}
-                    dimColor={index !== locationIndex}
+                <box key={loc}>
+                  <text
+                    attributes={index === locationIndex ? 32 : undefined}
+                    fg={index === locationIndex ? 'cyan' : undefined}
+                    fg={index !== locationIndex ? "gray" : undefined}
                   >
                     {index === locationIndex ? '>' : ' '} {loc.padEnd(8)}
-                    <Text dimColor> {getLocationDescription(loc)}</Text>
-                  </Text>
-                </Box>
+                    <text fg="gray"> {getLocationDescription(loc)}</text>
+                  </text>
+                </box>
               ))}
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>↑↓ navigate | Enter select | Esc back</Text>
-            </Box>
-          </Box>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">↑↓ navigate | Enter select | Esc back</text>
+            </box>
+          </box>
         );
 
       case 'confirm':
         return (
-          <Box flexDirection="column">
-            <Box marginBottom={1}>
-              <Text bold color="cyan">Confirm Hook</Text>
-            </Box>
-            <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-              <Box><Text dimColor>Event:   </Text><Text bold>{event}</Text></Box>
-              <Box><Text dimColor>Matcher: </Text><Text>{matcher || '*'}</Text></Box>
-              <Box><Text dimColor>Type:    </Text><Text>{hookType}</Text></Box>
-              <Box><Text dimColor>{hookType === 'command' ? 'Command' : 'Prompt'}:</Text><Text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</Text></Box>
-              <Box><Text dimColor>Timeout: </Text><Text>{timeout}ms</Text></Box>
-              <Box><Text dimColor>Async:   </Text><Text>{isAsync ? 'Yes' : 'No'}</Text></Box>
-              {name && <Box><Text dimColor>Name:    </Text><Text>{name}</Text></Box>}
-              {description && <Box><Text dimColor>Desc:    </Text><Text>{description}</Text></Box>}
-              <Box><Text dimColor>Location:</Text><Text> {location}</Text></Box>
-            </Box>
+          <box flexDirection="column">
+            <box marginBottom={1}>
+              <text fg="cyan"><b>Confirm Hook</b></text>
+            </box>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+              <box><text fg="gray">Event:   </text><text><b>{event}</b></text></box>
+              <box><text fg="gray">Matcher: </text><text>{matcher || '*'}</text></box>
+              <box><text fg="gray">Type:    </text><text>{hookType}</text></box>
+              <box><text fg="gray">{hookType === 'command' ? 'Command' : 'Prompt'}:</text><text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</text></box>
+              <box><text fg="gray">Timeout: </text><text>{timeout}ms</text></box>
+              <box><text fg="gray">Async:   </text><text>{isAsync ? 'Yes' : 'No'}</text></box>
+              {name && <box><text fg="gray">Name:    </text><text>{name}</text></box>}
+              {description && <box><text fg="gray">Desc:    </text><text>{description}</text></box>}
+              <box><text fg="gray">Location:</text><text> {location}</text></box>
+            </box>
             {error && (
-              <Box marginTop={1}>
-                <Text color="red">{error}</Text>
-              </Box>
+              <box marginTop={1}>
+                <text fg="red">{error}</text>
+              </box>
             )}
             {isSubmitting ? (
-              <Box marginTop={1}>
-                <Text color="yellow">Saving hook...</Text>
-              </Box>
+              <box marginTop={1}>
+                <text fg="yellow">Saving hook...</text>
+              </box>
             ) : (
-              <Box marginTop={1}>
-                <Text>
-                  Press <Text color="green" bold>y</Text> to save or{' '}
-                  <Text color="red" bold>n</Text> to cancel
-                </Text>
-              </Box>
+              <box marginTop={1}>
+                <text>
+                  Press <text fg="green"><b>y</b></text> to save or{' '}
+                  <text fg="red"><b>n</b></text> to cancel
+                </text>
+              </box>
             )}
-          </Box>
+          </box>
         );
       default:
         return null;
@@ -559,11 +557,11 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
   };
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold>Add Hook</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text><b>Add Hook</b></text>
+      </box>
       {renderStep()}
-    </Box>
+    </box>
   );
 }

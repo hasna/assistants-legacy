@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { ProjectRecord, ProjectPlan, ProjectPlanStep, PlanStepStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -277,83 +275,83 @@ export function PlansPanel({
   // Create plan mode
   if (mode === 'create-plan') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Create New Plan</Text>
-        </Box>
-        <Box>
-          <Text>Title: </Text>
-          <TextInput
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Create New Plan</b></text>
+        </box>
+        <box>
+          <text>Title: </text>
+          <input
             value={newPlanTitle}
             onChange={setNewPlanTitle}
             onSubmit={handleCreatePlan}
-            focus
+            focused
             placeholder="Enter plan title..."
           />
-        </Box>
+        </box>
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Creating plan...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Creating plan...</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>Enter to create | Esc to cancel</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Enter to create | Esc to cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Delete plan confirmation
   if (mode === 'delete-plan-confirm') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Plan</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Plan</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Are you sure you want to delete &quot;{currentPlan?.title}&quot;?
-          </Text>
-        </Box>
-        <Box>
-          <Text dimColor>This will delete all {currentSteps.length} steps.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box>
+          <text fg="gray">This will delete all {currentSteps.length} steps.</text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
   // Add step mode
   if (mode === 'add-step') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Add Step to &quot;{currentPlan?.title}&quot;</Text>
-        </Box>
-        <Box>
-          <Text>Step: </Text>
-          <TextInput
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Add Step to &quot;{currentPlan?.title}&quot;</b></text>
+        </box>
+        <box>
+          <text>Step: </text>
+          <input
             value={newStepText}
             onChange={setNewStepText}
             onSubmit={handleAddStep}
-            focus
+            focused
             placeholder="Enter step description..."
           />
-        </Box>
+        </box>
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Adding step...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Adding step...</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>Enter to add | Esc to cancel</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Enter to add | Esc to cancel</text>
+        </box>
+      </box>
     );
   }
 
@@ -361,22 +359,22 @@ export function PlansPanel({
   if (mode === 'delete-step-confirm') {
     const step = currentSteps[stepIndex];
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Step</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Step</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Remove: &quot;{step?.text}&quot;?
-          </Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -386,22 +384,22 @@ export function PlansPanel({
     const totalCount = currentSteps.length;
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1} justifyContent="space-between">
-          <Text bold>{currentPlan.title}</Text>
-          <Text dimColor>[a]dd  [d]elete</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1} justifyContent="space-between">
+          <text><b>{currentPlan.title}</b></text>
+          <text fg="gray">[a]dd  [d]elete</text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
         >
           {currentSteps.length === 0 ? (
-            <Box paddingY={1}>
-              <Text dimColor>No steps yet. Press a to add one.</Text>
-            </Box>
+            <box paddingY={1}>
+              <text fg="gray">No steps yet. Press a to add one.</text>
+            </box>
           ) : (
             currentSteps.map((step, index) => {
               const isSelected = index === stepIndex;
@@ -409,64 +407,64 @@ export function PlansPanel({
               const color = STATUS_COLORS[step.status];
 
               return (
-                <Box key={step.id} paddingY={0}>
-                  <Text
-                    inverse={isSelected}
-                    color={color}
-                    dimColor={!isSelected && step.status === 'done'}
+                <box key={step.id} paddingY={0}>
+                  <text
+                    attributes={isSelected ? 32 : undefined}
+                    fg={color}
+                    fg={!isSelected && step.status === 'done' ? "gray" : undefined}
                   >
                     [{icon}] {index + 1}. {step.text}
-                  </Text>
-                </Box>
+                  </text>
+                </box>
               );
             })
           )}
 
           {/* Add step option */}
-          <Box marginTop={1} paddingY={0}>
-            <Text
-              inverse={stepIndex === currentSteps.length}
-              dimColor={stepIndex !== currentSteps.length}
-              color={stepIndex === currentSteps.length ? 'cyan' : undefined}
+          <box marginTop={1} paddingY={0}>
+            <text
+              attributes={stepIndex === currentSteps.length ? 32 : undefined}
+              fg={stepIndex !== currentSteps.length ? "gray" : undefined}
+              fg={stepIndex === currentSteps.length ? 'cyan' : undefined}
             >
               + Add step (a)
-            </Text>
-          </Box>
-        </Box>
+            </text>
+          </box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             Progress: {doneCount}/{totalCount} ({totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}%)
-          </Text>
-        </Box>
+          </text>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             Space/Enter toggle | Esc back | 1-{Math.max(1, currentSteps.length)} jump
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
   // Plans list view
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Plans for &quot;{project.name}&quot;</Text>
-        <Text dimColor>[n]ew</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Plans for &quot;{project.name}&quot;</b></text>
+        <text fg="gray">[n]ew</text>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {plans.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No plans yet. Press n to create one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No plans yet. Press n to create one.</text>
+          </box>
         ) : (
           plans.map((plan, index) => {
             const isSelected = index === planIndex;
@@ -475,35 +473,35 @@ export function PlansPanel({
             const time = formatPlanTime(plan.updatedAt);
 
             return (
-              <Box key={plan.id} paddingY={0}>
-                <Text
-                  inverse={isSelected}
-                  dimColor={!isSelected}
+              <box key={plan.id} paddingY={0}>
+                <text
+                  attributes={isSelected ? 32 : undefined}
+                  fg={!isSelected ? "gray" : undefined}
                 >
                   {index + 1}. {plan.title.padEnd(25)} [{doneCount}/{totalCount}] {time}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
 
         {/* New plan option */}
-        <Box marginTop={1} paddingY={0}>
-          <Text
-            inverse={planIndex === plans.length}
-            dimColor={planIndex !== plans.length}
-            color={planIndex === plans.length ? 'cyan' : undefined}
+        <box marginTop={1} paddingY={0}>
+          <text
+            attributes={planIndex === plans.length ? 32 : undefined}
+            fg={planIndex !== plans.length ? "gray" : undefined}
+            fg={planIndex === plans.length ? 'cyan' : undefined}
           >
             + New plan (n)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter view | d delete | Esc back | 1-{Math.max(1, plans.length)} jump
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

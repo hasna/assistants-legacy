@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Box, Text } from 'ink';
 import type { InterviewQuestion, InterviewRequest, InterviewResponse } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -58,8 +57,8 @@ function QuestionTabs({
   if (singleQuestion) return null;
 
   return (
-    <Box flexDirection="row" marginBottom={1}>
-      <Text color={currentIndex === 0 ? undefined : 'gray'}>← </Text>
+    <box flexDirection="row" marginBottom={1}>
+      <text fg={currentIndex === 0 ? undefined : 'gray'}>← </text>
       {questions.map((q, idx) => {
         const isAnswered = q.id in answers;
         const isCurrent = idx === currentIndex;
@@ -68,26 +67,26 @@ function QuestionTabs({
 
         if (isCurrent) {
           return (
-            <Text key={q.id} backgroundColor="blue" color="white">
+            <text key={q.id} backgroundColor="blue" fg="white">
               {' '}{checkbox} {label}{' '}
-            </Text>
+            </text>
           );
         }
         return (
-          <Text key={q.id}>
+          <text key={q.id}>
             {' '}{checkbox} {label}{' '}
-          </Text>
+          </text>
         );
       })}
-      <Box key="submit">
+      <box key="submit">
         {isSubmitTab ? (
-          <Text backgroundColor="blue" color="white"> {TICK} Submit </Text>
+          <text backgroundColor="blue" fg="white"> {TICK} Submit </text>
         ) : (
-          <Text> {TICK} Submit </Text>
+          <text> {TICK} Submit </text>
         )}
-      </Box>
-      <Text color={isSubmitTab ? undefined : 'gray'}> →</Text>
-    </Box>
+      </box>
+      <text fg={isSubmitTab ? undefined : 'gray'}> →</text>
+    </box>
   );
 }
 
@@ -115,7 +114,7 @@ function OptionList({
   const multiAnswers = Array.isArray(answer) ? answer : [];
 
   return (
-    <Box flexDirection="column" marginTop={1}>
+    <box flexDirection="column" marginTop={1}>
       {options.map((opt, idx) => {
         const isSelected = selectedOptionIndex === idx && !isInOtherInput;
         const isChecked = isMultiSelect
@@ -127,36 +126,36 @@ function OptionList({
           : (isChecked ? BULLET : ' ');
 
         return (
-          <Box key={opt.label} flexDirection="column">
-            <Box>
-              <Text color={isSelected ? 'cyan' : undefined}>
+          <box key={opt.label} flexDirection="column">
+            <box>
+              <text fg={isSelected ? 'cyan' : undefined}>
                 {pointer} {idx + 1}. {isMultiSelect ? `${checkbox} ` : ''}{opt.label}
-              </Text>
-            </Box>
+              </text>
+            </box>
             {opt.description && (
-              <Box marginLeft={6}>
-                <Text dimColor>{opt.description}</Text>
-              </Box>
+              <box marginLeft={6}>
+                <text fg="gray">{opt.description}</text>
+              </box>
             )}
-          </Box>
+          </box>
         );
       })}
 
       {/* "Other" / type something option */}
-      <Box flexDirection="column" marginTop={0}>
-        <Box>
-          <Text color={selectedOptionIndex === otherIndex || isInOtherInput ? 'cyan' : undefined}>
+      <box flexDirection="column" marginTop={0}>
+        <box>
+          <text fg={selectedOptionIndex === otherIndex || isInOtherInput ? 'cyan' : undefined}>
             {selectedOptionIndex === otherIndex && !isInOtherInput ? POINTER : ' '} {options.length + 1}. Type something.
-          </Text>
-        </Box>
+          </text>
+        </box>
         {isInOtherInput && (
-          <Box marginLeft={6}>
-            <Text color="cyan">{otherText || ''}</Text>
-            <Text inverse> </Text>
-          </Box>
+          <box marginLeft={6}>
+            <text fg="cyan">{otherText || ''}</text>
+            <text attributes={32}> </text>
+          </box>
         )}
-      </Box>
-    </Box>
+      </box>
+    </box>
   );
 }
 
@@ -180,42 +179,42 @@ function ReviewPanel({
   const allAnswered = questions.every((q) => q.id in answers);
 
   return (
-    <Box flexDirection="column" marginTop={1}>
+    <box flexDirection="column" marginTop={1}>
       {!allAnswered && (
-        <Box marginBottom={1}>
-          <Text color="yellow">⚠ You have not answered all questions</Text>
-        </Box>
+        <box marginBottom={1}>
+          <text fg="yellow">⚠ You have not answered all questions</text>
+        </box>
       )}
 
       {Object.keys(answers).length > 0 && (
-        <Box flexDirection="column" marginBottom={1}>
+        <box flexDirection="column" marginBottom={1}>
           {questions
             .filter((q) => q.id in answers)
             .map((q) => {
               const answer = answers[q.id];
               const displayAnswer = Array.isArray(answer) ? answer.join(', ') : answer;
               return (
-                <Box key={q.id} flexDirection="column" marginLeft={1}>
-                  <Text>{BULLET} {q.header || q.question}</Text>
-                  <Box marginLeft={2}>
-                    <Text color="green">→ {displayAnswer}</Text>
-                  </Box>
-                </Box>
+                <box key={q.id} flexDirection="column" marginLeft={1}>
+                  <text>{BULLET} {q.header || q.question}</text>
+                  <box marginLeft={2}>
+                    <text fg="green">→ {displayAnswer}</text>
+                  </box>
+                </box>
               );
             })}
-        </Box>
+        </box>
       )}
 
-      <Text dimColor>Ready to submit your answers?</Text>
-      <Box flexDirection="column" marginTop={1}>
-        <Text color={selectedIndex === 0 ? 'cyan' : undefined}>
+      <text fg="gray">Ready to submit your answers?</text>
+      <box flexDirection="column" marginTop={1}>
+        <text fg={selectedIndex === 0 ? 'cyan' : undefined}>
           {selectedIndex === 0 ? POINTER : ' '} Submit answers
-        </Text>
-        <Text color={selectedIndex === 1 ? 'cyan' : undefined}>
+        </text>
+        <text fg={selectedIndex === 1 ? 'cyan' : undefined}>
           {selectedIndex === 1 ? POINTER : ' '} Cancel
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }
 
@@ -482,15 +481,15 @@ export function InterviewPanel({
 
   // Separator line
   const Divider = useMemo(() => (
-    <Box marginY={0}>
-      <Text dimColor>{'─'.repeat(60)}</Text>
-    </Box>
+    <box marginY={0}>
+      <text fg="gray">{'─'.repeat(60)}</text>
+    </box>
   ), []);
 
   return (
-    <Box
+    <box
       flexDirection="column"
-      borderStyle="round"
+      borderStyle="rounded"
       borderColor="#d4d4d8"
       borderLeft={false}
       borderRight={false}
@@ -499,14 +498,14 @@ export function InterviewPanel({
     >
       {/* Title */}
       {request.title && (
-        <Box marginBottom={0}>
-          <Text color="cyan" bold>{request.title}</Text>
-        </Box>
+        <box marginBottom={0}>
+          <text fg="cyan"><b>{request.title}</b></text>
+        </box>
       )}
       {request.description && (
-        <Box marginBottom={0}>
-          <Text dimColor>{request.description}</Text>
-        </Box>
+        <box marginBottom={0}>
+          <text fg="gray">{request.description}</text>
+        </box>
       )}
 
       {Divider}
@@ -528,9 +527,9 @@ export function InterviewPanel({
           selectedIndex={reviewIndex}
         />
       ) : currentQuestion ? (
-        <Box flexDirection="column">
+        <box flexDirection="column">
           {/* Question text */}
-          <Text bold>{currentQuestion.question}</Text>
+          <text><b>{currentQuestion.question}</b></text>
 
           {/* Options */}
           <OptionList
@@ -544,25 +543,25 @@ export function InterviewPanel({
 
           {/* Bottom menu */}
           {Divider}
-          <Box flexDirection="column">
-            <Box flexDirection="row" gap={1}>
-              <Text color={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
+          <box flexDirection="column">
+            <box flexDirection="row" gap={1}>
+              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
                 {state.isInBottomMenu && state.bottomMenuIndex === 0 ? POINTER : ' '}
-              </Text>
-              <Text color={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
+              </text>
+              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
                 {optionCount + 2}. Chat about this
-              </Text>
-            </Box>
-          </Box>
-        </Box>
+              </text>
+            </box>
+          </box>
+        </box>
       ) : null}
 
       {/* Help text */}
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter to select · {questions.length > 1 ? '←/→ to navigate · ' : ''}↑/↓ to browse · Esc to cancel
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

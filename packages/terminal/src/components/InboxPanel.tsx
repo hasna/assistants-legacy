@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Text } from 'ink';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -307,55 +306,55 @@ export function InboxPanel({
   // Empty state
   if (emails.length === 0 && mode === 'list') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Inbox</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Inbox</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No emails in inbox.</Text>
-          <Text dimColor>Press f to fetch new emails from server.</Text>
-        </Box>
+          <text fg="gray">No emails in inbox.</text>
+          <text fg="gray">Press f to fetch new emails from server.</text>
+        </box>
         {statusMessage && (
-          <Box marginTop={1}>
-            <Text color={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>f fetch | q quit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">f fetch | q quit</text>
+        </box>
+      </box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Email</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Email</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Are you sure you want to delete this email?</Text>
-          <Text dimColor>From: {deleteTarget.from}</Text>
-          <Text dimColor>Subject: {deleteTarget.subject}</Text>
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+          <text>Are you sure you want to delete this email?</text>
+          <text fg="gray">From: {deleteTarget.from}</text>
+          <text fg="gray">Subject: {deleteTarget.subject}</text>
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
@@ -365,85 +364,85 @@ export function InboxPanel({
     const statusIcon = getStatusIcon(emailItem?.isRead ?? true);
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{statusIcon} Email</Text>
-          {emailItem?.hasAttachments && <Text> 📎</Text>}
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{statusIcon} Email</b></text>
+          {emailItem?.hasAttachments && <text> 📎</text>}
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Box>
-            <Text dimColor>From: </Text>
-            <Text>{detailEmail.from.name || detailEmail.from.address}</Text>
+          <box>
+            <text fg="gray">From: </text>
+            <text>{detailEmail.from.name || detailEmail.from.address}</text>
             {detailEmail.from.name && (
-              <Text dimColor> &lt;{detailEmail.from.address}&gt;</Text>
+              <text fg="gray"> &lt;{detailEmail.from.address}&gt;</text>
             )}
-          </Box>
+          </box>
 
-          <Box>
-            <Text dimColor>To: </Text>
-            <Text>
+          <box>
+            <text fg="gray">To: </text>
+            <text>
               {detailEmail.to.map((t) => t.name || t.address).join(', ')}
-            </Text>
-          </Box>
+            </text>
+          </box>
 
           {detailEmail.cc && detailEmail.cc.length > 0 && (
-            <Box>
-              <Text dimColor>Cc: </Text>
-              <Text>
+            <box>
+              <text fg="gray">Cc: </text>
+              <text>
                 {detailEmail.cc.map((c) => c.name || c.address).join(', ')}
-              </Text>
-            </Box>
+              </text>
+            </box>
           )}
 
-          <Box>
-            <Text dimColor>Subject: </Text>
-            <Text bold>{detailEmail.subject}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Subject: </text>
+            <text><b>{detailEmail.subject}</b></text>
+          </box>
 
-          <Box>
-            <Text dimColor>Date: </Text>
-            <Text>{formatRelativeTime(detailEmail.date)}</Text>
-            <Text dimColor> ({new Date(detailEmail.date).toLocaleString()})</Text>
-          </Box>
+          <box>
+            <text fg="gray">Date: </text>
+            <text>{formatRelativeTime(detailEmail.date)}</text>
+            <text fg="gray"> ({new Date(detailEmail.date).toLocaleString()})</text>
+          </box>
 
           {detailEmail.attachments && detailEmail.attachments.length > 0 && (
-            <Box>
-              <Text dimColor>Attachments: </Text>
-              <Text>
+            <box>
+              <text fg="gray">Attachments: </text>
+              <text>
                 {detailEmail.attachments.map((a) => a.filename).join(', ')}
-              </Text>
-            </Box>
+              </text>
+            </box>
           )}
 
-          <Box marginTop={1} flexDirection="column">
-            <Text dimColor>Message:</Text>
-            <Text wrap="wrap">
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray">Message:</text>
+            <text wrapMode="word">
               {detailEmail.body.text || '(No text content)'}
-            </Text>
-          </Box>
-        </Box>
+            </text>
+          </box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
+          <box marginTop={1}>
+            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             r reply | u toggle read | d delete | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -451,24 +450,24 @@ export function InboxPanel({
   const visibleEmails = emails.slice(emailRange.start, emailRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Inbox</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Inbox</b></text>
         {emails.length > MAX_VISIBLE_ITEMS && (
-          <Text dimColor> ({emailIndex + 1}/{emails.length})</Text>
+          <text fg="gray"> ({emailIndex + 1}/{emails.length})</text>
         )}
-      </Box>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {emailRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {emailRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {emailRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleEmails.map((email, visibleIdx) => {
@@ -481,51 +480,51 @@ export function InboxPanel({
           const subject = email.subject.slice(0, 25).padEnd(25);
 
           return (
-            <Box key={email.id} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={email.id} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}{statusIcon}{attachIcon}{' '}
-              </Text>
-              <Text inverse={isSelected} dimColor={email.isRead}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={email.isRead ? "gray" : undefined}>
                 {fromStr}
-              </Text>
-              <Text inverse={isSelected} dimColor={email.isRead}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={email.isRead ? "gray" : undefined}>
                 {' '}{subject}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}{formatRelativeTime(email.date)}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
 
         {emailRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {emailRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {emailRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
-      <Box marginTop={1}>
-        <Text dimColor>Legend: </Text>
-        <Text>📬</Text>
-        <Text dimColor> unread | </Text>
-        <Text>📖</Text>
-        <Text dimColor> read | </Text>
-        <Text>📎</Text>
-        <Text dimColor> attachment</Text>
-      </Box>
+      <box marginTop={1}>
+        <text fg="gray">Legend: </text>
+        <text>📬</text>
+        <text fg="gray"> unread | </text>
+        <text>📖</text>
+        <text fg="gray"> read | </text>
+        <text>📎</text>
+        <text fg="gray"> attachment</text>
+      </box>
 
       {statusMessage && (
-        <Box marginTop={1}>
-          <Text color={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | f fetch | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

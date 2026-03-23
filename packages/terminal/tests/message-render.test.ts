@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { buildDisplayMessages } from '../src/components/messageRender';
 import type { Message } from '@hasna/assistants-shared';
 

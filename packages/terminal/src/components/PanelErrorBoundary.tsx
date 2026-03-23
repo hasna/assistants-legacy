@@ -1,5 +1,4 @@
 import React, { Component, type ReactNode } from 'react';
-import { Box, Text } from 'ink';
 
 interface Props {
   children: ReactNode;
@@ -30,20 +29,20 @@ export class PanelErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Box flexDirection="column" padding={1}>
-          <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-            <Text bold color="red">
+        <box flexDirection="column" padding={1}>
+          <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+            <text fg="red"><b>
               {this.props.panelName || 'Panel'} Error
-            </Text>
-          </Box>
-          <Box paddingX={1} flexDirection="column">
-            <Text color="red">An error occurred while rendering this panel.</Text>
-            <Text> </Text>
-            <Text color="gray">{this.state.error?.message || 'Unknown error'}</Text>
-            <Text> </Text>
-            <Text color="gray">Press 'q' or Escape to close.</Text>
-          </Box>
-        </Box>
+            </b></text>
+          </box>
+          <box paddingX={1} flexDirection="column">
+            <text fg="red">An error occurred while rendering this panel.</text>
+            <text> </text>
+            <text fg="gray">{this.state.error?.message || 'Unknown error'}</text>
+            <text> </text>
+            <text fg="gray">Press 'q' or Escape to close.</text>
+          </box>
+        </box>
       );
     }
 

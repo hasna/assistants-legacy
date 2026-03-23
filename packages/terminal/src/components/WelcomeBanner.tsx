@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 import { getModelDisplayName } from '@hasna/assistants-shared';
 
 interface WelcomeBannerProps {
@@ -23,26 +22,26 @@ export function WelcomeBanner({ version, model, directory }: WelcomeBannerProps)
   const displayModel = getModelDisplayName(model);
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Box>
-        <Text dimColor>{'>'}</Text>
-        <Text bold>_ Hasna Assistants</Text>
-        <Text dimColor>  (v{version})</Text>
-      </Box>
-      <Text>{''}</Text>
-      <Box>
-        <Text dimColor>model:     </Text>
-        <Text>{displayModel}</Text>
-        <Text dimColor>    /model to change</Text>
-      </Box>
-      <Box>
-        <Text dimColor>directory: </Text>
-        <Text>{shortDir}</Text>
-      </Box>
-      <Box>
-        <Text dimColor>shortcuts: </Text>
-        <Text dimColor>Ctrl+] sessions · Ctrl+C stop · /help commands</Text>
-      </Box>
-    </Box>
+    <box flexDirection="column" marginBottom={1}>
+      <box>
+        <text fg="gray">{'>'}</text>
+        <text><b>_ Hasna Assistants</b></text>
+        <text fg="gray">  (v{version})</text>
+      </box>
+      <text>{''}</text>
+      <box>
+        <text fg="gray">model:     </text>
+        <text>{displayModel}</text>
+        <text fg="gray">    /model to change</text>
+      </box>
+      <box>
+        <text fg="gray">directory: </text>
+        <text>{shortDir}</text>
+      </box>
+      <box>
+        <text fg="gray">shortcuts: </text>
+        <text fg="gray">Ctrl+] sessions · Ctrl+C stop · /help commands</text>
+      </box>
+    </box>
   );
 }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { __test__ } from '../src/components/Markdown';
 
 const stripAnsi = (text: string) => text.replace(/\x1B\[[0-9;]*m/g, '');

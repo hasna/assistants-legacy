@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { PeopleManager, PersonListItem, Person } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -190,84 +188,84 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   };
 
   const header = (
-    <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <Text bold color="green">People</Text>
-      <Text color="gray"> | </Text>
-      <Text color="gray">{getHeaderHints()}</Text>
-    </Box>
+    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+      <text fg="green"><b>People</b></text>
+      <text fg="gray"> | </text>
+      <text fg="gray">{getHeaderHints()}</text>
+    </box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
-    <Box marginBottom={1}>
-      <Text color="yellow">{statusMessage}</Text>
-    </Box>
+    <box marginBottom={1}>
+      <text fg="yellow">{statusMessage}</text>
+    </box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
-    <Box marginBottom={1}>
-      <Text color="red">Error: {error}</Text>
-    </Box>
+    <box marginBottom={1}>
+      <text fg="red">Error: {error}</text>
+    </box>
   ) : null;
 
   // View person detail
   if (mode === 'view' && viewPerson) {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold color="green">{viewPerson.name}</Text>
-          <Text color="gray">ID: {viewPerson.id}</Text>
-          <Text>{' '}</Text>
-          {viewPerson.email && <Text>Email:  {viewPerson.email}</Text>}
-          {viewPerson.phone && <Text>Phone:  {viewPerson.phone}</Text>}
-          {viewPerson.role && <Text>Role:   {viewPerson.role}</Text>}
-          <Text>Status: {viewPerson.status}</Text>
+        <box paddingX={1} flexDirection="column">
+          <text fg="green"><b>{viewPerson.name}</b></text>
+          <text fg="gray">ID: {viewPerson.id}</text>
+          <text>{' '}</text>
+          {viewPerson.email && <text>Email:  {viewPerson.email}</text>}
+          {viewPerson.phone && <text>Phone:  {viewPerson.phone}</text>}
+          {viewPerson.role && <text>Role:   {viewPerson.role}</text>}
+          <text>Status: {viewPerson.status}</text>
           {viewPerson.notes && (
-            <Box flexDirection="column" marginTop={1}>
-              <Text bold>Notes:</Text>
-              <Text>  {viewPerson.notes}</Text>
-            </Box>
+            <box flexDirection="column" marginTop={1}>
+              <text><b>Notes:</b></text>
+              <text>  {viewPerson.notes}</text>
+            </box>
           )}
-          <Text>{' '}</Text>
-          <Text dimColor>Created: {viewPerson.createdAt}</Text>
-          <Text dimColor>Updated: {viewPerson.updatedAt}</Text>
-        </Box>
-      </Box>
+          <text>{' '}</text>
+          <text fg="gray">Created: {viewPerson.createdAt}</text>
+          <text fg="gray">Updated: {viewPerson.updatedAt}</text>
+        </box>
+      </box>
     );
   }
 
   // List view
   if (mode === 'list') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {statusBar}
         {errorBar}
         {people.length === 0 ? (
-          <Box paddingX={1}>
-            <Text color="gray">No people registered. Press 'c' to create one.</Text>
-          </Box>
+          <box paddingX={1}>
+            <text fg="gray">No people registered. Press 'c' to create one.</text>
+          </box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {people.map((p) => (
-              <Box key={p.id}>
-                <Text color={p.id === people[selectedIndex]?.id ? 'green' : undefined}>
+              <box key={p.id}>
+                <text fg={p.id === people[selectedIndex]?.id ? 'green' : undefined}>
                   {p.id === people[selectedIndex]?.id ? '> ' : '  '}
-                </Text>
-                <Text bold={p.id === people[selectedIndex]?.id} color={p.id === people[selectedIndex]?.id ? 'green' : undefined}>
+                </text>
+                <text attributes={p.id === people[selectedIndex]?.id ? 1 : undefined} fg={p.id === people[selectedIndex]?.id ? 'green' : undefined}><b>
                   {p.name}
-                </Text>
-                {p.role && <Text color="gray"> ({p.role})</Text>}
-                {p.email && <Text color="gray"> &lt;{p.email}&gt;</Text>}
-                {p.phone && <Text dimColor> {p.phone}</Text>}
-                {p.isActive && <Text color="cyan"> (active)</Text>}
-              </Box>
+                </b></text>
+                {p.role && <text fg="gray"> ({p.role})</text>}
+                {p.email && <text fg="gray"> &lt;{p.email}&gt;</text>}
+                {p.phone && <text fg="gray"> {p.phone}</text>}
+                {p.isActive && <text fg="cyan"> (active)</text>}
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -275,30 +273,30 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   if (mode === 'delete-confirm' && people.length > 0) {
     const person = people[selectedIndex];
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text color="red" bold>Delete person?</Text>
-          <Text>{' '}</Text>
-          <Text>This will permanently delete {person.name} ({person.id})</Text>
-          <Text>{' '}</Text>
-          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
-        </Box>
-      </Box>
+        <box paddingX={1} flexDirection="column">
+          <text fg="red"><b>Delete person?</b></text>
+          <text>{' '}</text>
+          <text>This will permanently delete {person.name} ({person.id})</text>
+          <text>{' '}</text>
+          <text>Press 'y' to confirm, 'n' to cancel.</text>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Person</Text>
-          <Text>{' '}</Text>
-          <Box>
-            <Text>Name: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Person</b></text>
+          <text>{' '}</text>
+          <box>
+            <text>Name: </text>
+            <input
               value={createName}
               onChange={setCreateName}
               onSubmit={() => {
@@ -307,138 +305,138 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               focus
               placeholder="e.g., Jane Smith"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: email
   if (mode === 'create-email') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Person</Text>
-          <Text>Name: {createName}</Text>
-          <Text>{' '}</Text>
-          <Box>
-            <Text>Email: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Person</b></text>
+          <text>Name: {createName}</text>
+          <text>{' '}</text>
+          <box>
+            <text>Email: </text>
+            <input
               value={createEmail}
               onChange={setCreateEmail}
               onSubmit={() => setMode('create-phone')}
               focus
               placeholder="(optional) e.g., jane@example.com"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: phone
   if (mode === 'create-phone') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Person</Text>
-          <Text>Name: {createName}</Text>
-          {createEmail && <Text>Email: {createEmail}</Text>}
-          <Text>{' '}</Text>
-          <Box>
-            <Text>Phone: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Person</b></text>
+          <text>Name: {createName}</text>
+          {createEmail && <text>Email: {createEmail}</text>}
+          <text>{' '}</text>
+          <box>
+            <text>Phone: </text>
+            <input
               value={createPhone}
               onChange={setCreatePhone}
               onSubmit={() => setMode('create-role')}
               focus
               placeholder="(optional) e.g., +1-555-123-4567"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: role
   if (mode === 'create-role') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Person</Text>
-          <Text>Name:  {createName}</Text>
-          {createEmail && <Text>Email: {createEmail}</Text>}
-          {createPhone && <Text>Phone: {createPhone}</Text>}
-          <Text>{' '}</Text>
-          <Box>
-            <Text>Role: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Person</b></text>
+          <text>Name:  {createName}</text>
+          {createEmail && <text>Email: {createEmail}</text>}
+          {createPhone && <text>Phone: {createPhone}</text>}
+          <text>{' '}</text>
+          <box>
+            <text>Role: </text>
+            <input
               value={createRole}
               onChange={setCreateRole}
               onSubmit={() => setMode('create-notes')}
               focus
               placeholder="(optional) e.g., Developer, Manager"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: notes
   if (mode === 'create-notes') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Person</Text>
-          <Text>Name:  {createName}</Text>
-          {createEmail && <Text>Email: {createEmail}</Text>}
-          {createPhone && <Text>Phone: {createPhone}</Text>}
-          {createRole && <Text>Role:  {createRole}</Text>}
-          <Text>{' '}</Text>
-          <Box>
-            <Text>Notes: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Person</b></text>
+          <text>Name:  {createName}</text>
+          {createEmail && <text>Email: {createEmail}</text>}
+          {createPhone && <text>Phone: {createPhone}</text>}
+          {createRole && <text>Role:  {createRole}</text>}
+          <text>{' '}</text>
+          <box>
+            <text>Notes: </text>
+            <input
               value={createNotes}
               onChange={setCreateNotes}
               onSubmit={() => setMode('create-confirm')}
               focus
               placeholder="(optional) Any notes about this person"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Confirm Person Creation</Text>
-          <Text>{' '}</Text>
-          <Text>Name:  {createName}</Text>
-          {createEmail && <Text>Email: {createEmail}</Text>}
-          {createPhone && <Text>Phone: {createPhone}</Text>}
-          {createRole && <Text>Role:  {createRole}</Text>}
-          {createNotes && <Text>Notes: {createNotes}</Text>}
-          <Text>{' '}</Text>
-          <Text>Press 'y' to create, 'n' to cancel.</Text>
-        </Box>
-      </Box>
+        <box paddingX={1} flexDirection="column">
+          <text><b>Confirm Person Creation</b></text>
+          <text>{' '}</text>
+          <text>Name:  {createName}</text>
+          {createEmail && <text>Email: {createEmail}</text>}
+          {createPhone && <text>Phone: {createPhone}</text>}
+          {createRole && <text>Role:  {createRole}</text>}
+          {createNotes && <text>Notes: {createNotes}</text>}
+          <text>{' '}</text>
+          <text>Press 'y' to create, 'n' to cancel.</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {header}
-      <Text color="gray">Loading...</Text>
-    </Box>
+      <text fg="gray">Loading...</text>
+    </box>
   );
 }

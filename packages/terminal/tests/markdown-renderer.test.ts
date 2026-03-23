@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { render } from 'ink';
+import { testRender } from '@opentui/react/test-utils';
 import { Markdown, renderMarkdown } from '../src/components/Markdown';
 
 describe('terminal Markdown renderer', () => {
@@ -9,9 +9,12 @@ describe('terminal Markdown renderer', () => {
     expect(element?.props?.children).toBe('hello');
   });
 
-  test('Markdown component renders with stdout width', () => {
-    const instance = render(React.createElement(Markdown, { content: 'hello' }));
-    instance.unmount();
+  test('Markdown component renders with stdout width', async () => {
+    const { captureCharFrame, renderOnce } = await testRender(React.createElement(Markdown, { content: 'hello' }), { width: 80, height: 24 });
+    await renderOnce();
+    const frame = captureCharFrame();
+    // OpenTUI test renderer captures a cell grid; verify the component renders without crashing
+    expect(typeof frame).toBe('string');
   });
 
   test('renderMarkdown handles blocks, grids, reports, tables, and statuses', () => {

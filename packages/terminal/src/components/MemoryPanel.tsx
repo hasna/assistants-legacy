@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import type { Memory, MemoryStats } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -113,83 +112,83 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
 
   if (mode === 'detail' && selected) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Memory Detail</Text>
-        </Box>
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-          <Text><Text dimColor>Key:</Text> {selected.key}</Text>
-          <Text><Text dimColor>Scope:</Text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</Text>
-          <Text><Text dimColor>Category:</Text> {selected.category}</Text>
-          <Text><Text dimColor>Importance:</Text> {selected.importance}/10</Text>
-          <Text><Text dimColor>Tags:</Text> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</Text>
-          <Text><Text dimColor>Created:</Text> {selected.createdAt}</Text>
-          <Text><Text dimColor>Updated:</Text> {selected.updatedAt}</Text>
-          <Text><Text dimColor>Accessed:</Text> {selected.accessCount} times</Text>
-          <Box marginTop={1}>
-            <Text dimColor>Value:</Text>
-          </Box>
-          <Box>
-            <Text>{formatValue(selected.value)}</Text>
-          </Box>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Esc back | r refresh | q close</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Memory Detail</b></text>
+        </box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <text><text fg="gray">Key:</text> {selected.key}</text>
+          <text><text fg="gray">Scope:</text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
+          <text><text fg="gray">Category:</text> {selected.category}</text>
+          <text><text fg="gray">Importance:</text> {selected.importance}/10</text>
+          <text><text fg="gray">Tags:</text> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
+          <text><text fg="gray">Created:</text> {selected.createdAt}</text>
+          <text><text fg="gray">Updated:</text> {selected.updatedAt}</text>
+          <text><text fg="gray">Accessed:</text> {selected.accessCount} times</text>
+          <box marginTop={1}>
+            <text fg="gray">Value:</text>
+          </box>
+          <box>
+            <text>{formatValue(selected.value)}</text>
+          </box>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">Esc back | r refresh | q close</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Box>
-          <Text bold>Memory</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <box>
+          <text><b>Memory</b></text>
           {stats && (
-            <Text dimColor>
+            <text fg="gray">
               {' '}({stats.totalCount} total · G{stats.byScope.global}/S{stats.byScope.shared}/P{stats.byScope.private})
-            </Text>
+            </text>
           )}
-        </Box>
-        <Text dimColor>[r]efresh</Text>
-      </Box>
+        </box>
+        <text fg="gray">[r]efresh</text>
+      </box>
 
       {error && (
-        <Box marginBottom={1}>
-          <Text color="red">Error: {error}</Text>
-        </Box>
+        <box marginBottom={1}>
+          <text fg="red">Error: {error}</text>
+        </box>
       )}
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {sorted.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No memories yet.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No memories yet.</text>
+          </box>
         ) : (
           sorted.map((memory, index) => {
             const isSelected = index === selectedIndex;
             const summary = formatSummary(memory);
             const scopeTag = SCOPE_TAG[memory.scope];
             return (
-              <Box key={memory.id} paddingY={0}>
-                <Text inverse={isSelected} dimColor={!isSelected}>
+              <box key={memory.id} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                   {scopeTag} {index + 1}. {memory.key.padEnd(18)} {summary}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
+      </box>
 
       {isRefreshing && (
-        <Box marginTop={1}>
-          <Text color="yellow">Refreshing...</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="yellow">Refreshing...</text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>Enter view | Esc close | ↑↓ navigate | 1-9 jump</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">Enter view | Esc close | ↑↓ navigate | 1-9 jump</text>
+      </box>
+    </box>
   );
 }

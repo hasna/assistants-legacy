@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 // Maximum visible items in lists before pagination kicks in
@@ -390,103 +388,103 @@ export function WalletPanel({
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Remove Card</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Remove Card</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text>Are you sure you want to remove "{deleteTarget.name}"?</Text>
-          <Text dimColor>Card ending in {deleteTarget.last4}</Text>
-          <Text dimColor>This action cannot be undone.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+          <text>Are you sure you want to remove "{deleteTarget.name}"?</text>
+          <text fg="gray">Card ending in {deleteTarget.last4}</text>
+          <text fg="gray">This action cannot be undone.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Detail view
   if (mode === 'detail' && detailCard) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">{detailCard.name}</Text>
-          {detailCard.isDefault && <Text color="yellow"> (default)</Text>}
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>{detailCard.name}</b></text>
+          {detailCard.isDefault && <text fg="yellow"> (default)</text>}
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Box>
-            <Text dimColor>Card Number: </Text>
-            <Text>**** **** **** {detailCard.last4}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Card Number: </text>
+            <text>**** **** **** {detailCard.last4}</text>
+          </box>
 
           {detailCard.cardholderName && (
-            <Box>
-              <Text dimColor>Cardholder: </Text>
-              <Text>{detailCard.cardholderName}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Cardholder: </text>
+              <text>{detailCard.cardholderName}</text>
+            </box>
           )}
 
-          <Box>
-            <Text dimColor>Brand: </Text>
-            <Text>{formatCardType(detailCard.cardType || detailCard.brand)}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Brand: </text>
+            <text>{formatCardType(detailCard.cardType || detailCard.brand)}</text>
+          </box>
 
-          <Box>
-            <Text dimColor>Expires: </Text>
-            <Text>{formatExpiry(detailCard.expiryMonth, detailCard.expiryYear, detailCard.expiry)}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Expires: </text>
+            <text>{formatExpiry(detailCard.expiryMonth, detailCard.expiryYear, detailCard.expiry)}</text>
+          </box>
 
           {detailCard.createdAt && (
-            <Box>
-              <Text dimColor>Added: </Text>
-              <Text>{new Date(detailCard.createdAt).toLocaleString()}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Added: </text>
+              <text>{new Date(detailCard.createdAt).toLocaleString()}</text>
+            </box>
           )}
-        </Box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'green'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'green'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             x remove | n add card | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
   // Add form
   if (mode === 'add-form') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Add Card</Text>
-          <Text dimColor> ({addFieldIndex + 1}/{ADD_FIELDS.length})</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Add Card</b></text>
+          <text fg="gray"> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
+        </box>
 
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
@@ -498,9 +496,9 @@ export function WalletPanel({
             const label = `${field.label}: `;
             if (isCurrent) {
               return (
-                <Box key={field.key}>
-                  <Text color="cyan">{label}</Text>
-                  <TextInput
+                <box key={field.key}>
+                  <text fg="cyan">{label}</text>
+                  <input
                     value={value}
                     onChange={(nextValue) => {
                       setAddForm((prev) => ({
@@ -513,75 +511,75 @@ export function WalletPanel({
                     }}
                     placeholder={field.placeholder}
                   />
-                </Box>
+                </box>
               );
             }
 
             if (isCompleted) {
               return (
-                <Box key={field.key}>
-                  <Text dimColor>{label}</Text>
-                  <Text>{maskFieldValue(field, value)}</Text>
-                </Box>
+                <box key={field.key}>
+                  <text fg="gray">{label}</text>
+                  <text>{maskFieldValue(field, value)}</text>
+                </box>
               );
             }
 
             return (
-              <Box key={field.key}>
-                <Text dimColor>{label}</Text>
-                <Text dimColor>{field.placeholder}</Text>
-              </Box>
+              <box key={field.key}>
+                <text fg="gray">{label}</text>
+                <text fg="gray">{field.placeholder}</text>
+              </box>
             );
           })}
-        </Box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>Enter next field | Esc back</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Enter next field | Esc back</text>
+        </box>
+      </box>
     );
   }
 
   // Empty state
   if (cards.length === 0) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Wallet</Text>
-        </Box>
-        <Box
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Wallet</b></text>
+        </box>
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           paddingY={1}
         >
-          <Text dimColor>No cards stored in wallet.</Text>
-          <Text dimColor>Press n to add your first card.</Text>
-          <Box marginTop={1}>
-            <Text color="yellow">Warning:</Text>
-          </Box>
-          <Text dimColor>Store card data only if you have proper compliance controls.</Text>
-        </Box>
+          <text fg="gray">No cards stored in wallet.</text>
+          <text fg="gray">Press n to add your first card.</text>
+          <box marginTop={1}>
+            <text fg="yellow">Warning:</text>
+          </box>
+          <text fg="gray">Store card data only if you have proper compliance controls.</text>
+        </box>
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <box marginTop={1}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>n add card | q quit</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">n add card | q quit</text>
+        </box>
+      </box>
     );
   }
 
@@ -589,24 +587,24 @@ export function WalletPanel({
   const visibleCards = cards.slice(cardRange.start, cardRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Wallet</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Wallet</b></text>
         {cards.length > MAX_VISIBLE_ITEMS && (
-          <Text dimColor> ({cardIndex + 1}/{cards.length})</Text>
+          <text fg="gray"> ({cardIndex + 1}/{cards.length})</text>
         )}
-      </Box>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {cardRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {cardRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {cardRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleCards.map((card, visibleIdx) => {
@@ -618,48 +616,48 @@ export function WalletPanel({
           const cardType = card.cardType || card.brand || '';
 
           return (
-            <Box key={card.id} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={card.id} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}
-              </Text>
-              <Text color={statusColor} inverse={isSelected}>
+              </text>
+              <text fg={statusColor} attributes={isSelected ? 32 : undefined}>
                 {statusIcon}
-              </Text>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {' '}{card.name}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}**** {card.last4}
-              </Text>
+              </text>
               {cardType && (
-                <Text inverse={isSelected} dimColor>
+                <text attributes={isSelected ? 32 : undefined} fg="gray">
                   {' '}({cardType})
-                </Text>
+                </text>
               )}
-            </Box>
+            </box>
           );
         })}
 
         {cardRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {cardRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {cardRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
       {(error || statusMessage) && (
-        <Box marginTop={1}>
-          <Text color={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+        <box marginTop={1}>
+          <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
             {error || statusMessage}
-          </Text>
-        </Box>
+          </text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | n add card | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

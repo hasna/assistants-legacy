@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { buildLayout, moveCursorVertical } from '../src/components/inputLayout';
 
 describe('input layout', () => {

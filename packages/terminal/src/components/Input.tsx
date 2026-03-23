@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback, useImperativeHandle } from 'react';
-import { Box, Text, useStdout } from 'ink';
+import { useTerminalDimensions } from '@opentui/react';
 import { buildLayout, moveCursorVertical, type InputLayout } from './inputLayout';
 import { CommandHistory, getCommandHistory } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -250,8 +250,8 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
   const [preferredColumn, setPreferredColumn] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { stdout } = useStdout();
-  const screenWidth = stdout?.columns ?? 80;
+  const termDims = useTerminalDimensions();
+  const screenWidth = termDims.width || 80;
   const textWidth = Math.max(10, screenWidth - 4);
 
   // Merge built-in commands with passed commands
@@ -794,78 +794,78 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const lines = layout.displayLines;
   const lineCount = value.split('\n').length;
   return (
-    <Box flexDirection="column" marginTop={0}>
+    <box flexDirection="column" marginTop={0}>
       {/* Assistant name badge above the input box */}
       {assistantName && (
-        <Box justifyContent="flex-end" marginBottom={0}>
-          <Text backgroundColor={getAssistantColor(assistantName)} color="whiteBright" bold> {assistantName} </Text>
-        </Box>
+        <box justifyContent="flex-end" marginBottom={0}>
+          <text backgroundColor={getAssistantColor(assistantName)} fg="whiteBright"><b> {assistantName} </b></text>
+        </box>
       )}
 
       {/* Input box with top/bottom border only (Claude Code style) */}
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderLeft={false}
         borderRight={false}
         borderColor="#d4d4d8"
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
-          <Box paddingY={0}>
-            <Text color="red" bold>🎤 Recording... </Text>
-            <Text dimColor>[Ctrl+R or Enter to stop]</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="red"><b>🎤 Recording... </b></text>
+            <text fg="gray">[Ctrl+R or Enter to stop]</text>
+          </box>
         )}
         {recordingStatus === 'transcribing' && (
-          <Box paddingY={0}>
-            <Text color="yellow" bold>⏳ Transcribing...</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="yellow"><b>⏳ Transcribing...</b></text>
+          </box>
         )}
         {recordingStatus === 'talking' && (
-          <Box paddingY={0} flexDirection="column">
-            <Box>
-              <Text color="green" bold>🎙 Talk mode </Text>
-              <Text dimColor>[listening... Ctrl+C to stop]</Text>
-            </Box>
+          <box paddingY={0} flexDirection="column">
+            <box>
+              <text fg="green"><b>🎙 Talk mode </b></text>
+              <text fg="gray">[listening... Ctrl+C to stop]</text>
+            </box>
             {partialTranscript ? (
-              <Box>
-                <Text color="cyan" dimColor>{'> '}</Text>
-                <Text color="white" italic>{partialTranscript}</Text>
-              </Box>
+              <box>
+                <text fg="cyan" fg="gray">{'> '}</text>
+                <text fg="white"><i>{partialTranscript}</i></text>
+              </box>
             ) : null}
-          </Box>
+          </box>
         )}
 
         {/* Input area */}
         {largePaste ? (
           /* Large paste placeholder view */
-          <Box>
-            <Text color={isProcessing ? 'gray' : 'cyan'}>&gt; </Text>
-            <Box flexGrow={1}>
-              <Text color="yellow">{largePaste.placeholder}</Text>
-              <Text dimColor> [Enter to send, Esc to cancel]</Text>
-            </Box>
-          </Box>
+          <box>
+            <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
+            <box flexGrow={1}>
+              <text fg="yellow">{largePaste.placeholder}</text>
+              <text fg="gray"> [Enter to send, Esc to cancel]</text>
+            </box>
+          </box>
         ) : value.length === 0 ? (
-          <Box>
-            <Text color={isProcessing ? 'gray' : 'cyan'}>&gt; </Text>
-            <Box flexGrow={1}>
-              <Text inverse> </Text>
-              <Text dimColor>{placeholder}</Text>
-            </Box>
-          </Box>
+          <box>
+            <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
+            <box flexGrow={1}>
+              <text attributes={32}> </text>
+              <text fg="gray">{placeholder}</text>
+            </box>
+          </box>
         ) : (
           lines.map((line, index) => {
             const isCursorLine = index === layout.cursorRow;
             if (!isCursorLine) {
               return (
-                <Box key={`line-${index}`}>
-                  <Text color={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</Text>
-                  <Box flexGrow={1}>
-                    <Text>{line.text || ' '}</Text>
-                  </Box>
-                </Box>
+                <box key={`line-${index}`}>
+                  <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
+                  <box flexGrow={1}>
+                    <text>{line.text || ' '}</text>
+                  </box>
+                </box>
               );
             }
             const column = Math.min(layout.cursorCol, line.text.length);
@@ -873,107 +873,107 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const cursorChar = column < line.text.length ? line.text[column] : ' ';
             const after = column < line.text.length ? line.text.slice(column + 1) : '';
             return (
-              <Box key={`line-${index}`}>
-                <Text color={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</Text>
-                <Box flexGrow={1}>
-                  <Text>{before}</Text>
-                  <Text inverse>{cursorChar}</Text>
-                  <Text>{after}</Text>
-                </Box>
-              </Box>
+              <box key={`line-${index}`}>
+                <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
+                <box flexGrow={1}>
+                  <text>{before}</text>
+                  <text attributes={32}>{cursorChar}</text>
+                  <text>{after}</text>
+                </box>
+              </box>
             );
           })
         )}
 
         {/* Show line count if multiline */}
         {lineCount > 1 && (
-          <Box>
-            <Text color="gray">({lineCount} lines)</Text>
-          </Box>
+          <box>
+            <text fg="gray">({lineCount} lines)</text>
+          </box>
         )}
-      </Box>
+      </box>
 
       {/* Skills autocomplete dropdown - below input */}
       {autocompleteMode === 'skill' && filteredSkills.length > 0 && (
-        <Box flexDirection="column">
+        <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleSkills.startIndex > 0 && (
-            <Text dimColor>  ↑ {visibleSkills.startIndex} more above</Text>
+            <text fg="gray">  ↑ {visibleSkills.startIndex} more above</text>
           )}
           {visibleSkills.items.map((skill, i) => {
             const actualIndex = visibleSkills.startIndex + i;
             return (
-              <Box key={skill.name}>
-                <Text color={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
+              <box key={skill.name}>
+                <text fg={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
                   {actualIndex === selectedIndex ? '▸ ' : '  '}
                   {skill.name.padEnd(18)}
-                </Text>
-                <Text dimColor={actualIndex !== selectedIndex}>
+                </text>
+                <text fg={actualIndex !== selectedIndex ? "gray" : undefined}>
                   {truncateDescription(skill.description)}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })}
           {/* Scroll indicator - bottom */}
           {visibleSkills.startIndex + maxVisible < filteredSkills.length && (
-            <Text dimColor>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</Text>
+            <text fg="gray">  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
           )}
-        </Box>
+        </box>
       )}
 
       {/* Commands autocomplete dropdown - below input */}
       {autocompleteMode === 'command' && filteredCommands.length > 0 && (
-        <Box flexDirection="column">
+        <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleCommands.startIndex > 0 && (
-            <Text dimColor>  ↑ {visibleCommands.startIndex} more above</Text>
+            <text fg="gray">  ↑ {visibleCommands.startIndex} more above</text>
           )}
           {visibleCommands.items.map((cmd, i) => {
             const actualIndex = visibleCommands.startIndex + i;
             return (
-              <Box key={cmd.name}>
-                <Text color={actualIndex === selectedIndex ? 'cyan' : undefined}>
+              <box key={cmd.name}>
+                <text fg={actualIndex === selectedIndex ? 'cyan' : undefined}>
                   {actualIndex === selectedIndex ? '▸ ' : '  '}
                   {cmd.name.padEnd(18)}
-                </Text>
-                <Text dimColor={actualIndex !== selectedIndex}>
+                </text>
+                <text fg={actualIndex !== selectedIndex ? "gray" : undefined}>
                   {cmd.description}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })}
           {/* Scroll indicator - bottom */}
           {visibleCommands.startIndex + maxVisible < filteredCommands.length && (
-            <Text dimColor>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</Text>
+            <text fg="gray">  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
           )}
-        </Box>
+        </box>
       )}
 
       {/* File autocomplete dropdown - below input */}
       {autocompleteMode === 'file' && filteredFiles.length > 0 && (
-        <Box flexDirection="column">
+        <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleFiles.startIndex > 0 && (
-            <Text dimColor>  ↑ {visibleFiles.startIndex} more above</Text>
+            <text fg="gray">  ↑ {visibleFiles.startIndex} more above</text>
           )}
           {visibleFiles.items.map((file, i) => {
             const actualIndex = visibleFiles.startIndex + i;
             return (
-              <Box key={file.name}>
-                <Text color={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
+              <box key={file.name}>
+                <text fg={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
                   {actualIndex === selectedIndex ? '▸ ' : '  '}
                   {file.name}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })}
           {/* Scroll indicator - bottom */}
           {visibleFiles.startIndex + maxVisible < filteredFiles.length && (
-            <Text dimColor>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</Text>
+            <text fg="gray">  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
           )}
-        </Box>
+        </box>
       )}
-    </Box>
+    </box>
   );
 });
 

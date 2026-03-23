@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text, useStdout } from 'ink';
+import { useTerminalDimensions } from '@opentui/react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 interface DocsPanelProps {
@@ -254,9 +254,9 @@ function buildSectionLines(section: DocsSection, width: number): string[] {
 }
 
 export function DocsPanel({ onClose }: DocsPanelProps) {
-  const { stdout } = useStdout();
-  const columns = stdout?.columns ?? 80;
-  const rows = stdout?.rows ?? 30;
+  const termDims = useTerminalDimensions();
+  const columns = termDims.width || 80;
+  const rows = termDims.height || 30;
   const contentWidth = Math.max(40, columns - 8);
   const contentHeight = Math.max(8, rows - 10);
 
@@ -394,84 +394,84 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
 
   if (mode === 'index') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box justifyContent="space-between" marginBottom={1}>
-          <Text bold color="cyan">Documentation</Text>
-          <Text dimColor>{DOCS_SECTIONS.length} sections</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box justifyContent="space-between" marginBottom={1}>
+          <text fg="cyan"><b>Documentation</b></text>
+          <text fg="gray">{DOCS_SECTIONS.length} sections</text>
+        </box>
 
-        <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
-          <Text dimColor>Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</Text>
-          <Text dimColor>Close with q or Esc.</Text>
-          <Box marginTop={1} />
+        <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
+          <text fg="gray">Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</text>
+          <text fg="gray">Close with q or Esc.</text>
+          <box marginTop={1} />
 
           {sectionWindow.above > 0 && (
-            <Text dimColor>... {sectionWindow.above} more above</Text>
+            <text fg="gray">... {sectionWindow.above} more above</text>
           )}
 
           {DOCS_SECTIONS.slice(sectionWindow.start, sectionWindow.end).map((section, offset) => {
             const absoluteIndex = sectionWindow.start + offset;
             const selected = absoluteIndex === selectedIndex;
             return (
-              <Box key={section.id} marginBottom={0}>
-                <Text color={selected ? 'cyan' : undefined}>
+              <box key={section.id} marginBottom={0}>
+                <text fg={selected ? 'cyan' : undefined}>
                   {selected ? '>' : ' '} {absoluteIndex + 1}. {section.title}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })}
 
           {sectionWindow.below > 0 && (
-            <Text dimColor>... {sectionWindow.below} more below</Text>
+            <text fg="gray">... {sectionWindow.below} more below</text>
           )}
 
-          <Box marginTop={1} />
-          <Text bold>Selected</Text>
+          <box marginTop={1} />
+          <text><b>Selected</b></text>
           {wrapParagraph(selectedSection.summary, contentWidth).map((line, index) => (
-            <Text key={`${selectedSection.id}-summary-${index}`} wrap="wrap">{line}</Text>
+            <text key={`${selectedSection.id}-summary-${index}`} wrapMode="word">{line}</text>
           ))}
-        </Box>
+        </box>
 
-        <Box marginTop={1}>
-          <Text dimColor>Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</Text>
-        </Box>
-      </Box>
+        <box marginTop={1}>
+          <text fg="gray">Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text bold color="cyan">{selectedSection.title}</Text>
-        <Text dimColor>{selectedIndex + 1}/{DOCS_SECTIONS.length}</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box justifyContent="space-between" marginBottom={1}>
+        <text fg="cyan"><b>{selectedSection.title}</b></text>
+        <text fg="gray">{selectedIndex + 1}/{DOCS_SECTIONS.length}</text>
+      </box>
 
-      <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
+      <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
         {visibleContent.length === 0 ? (
-          <Text dimColor>No content.</Text>
+          <text fg="gray">No content.</text>
         ) : (
           visibleContent.map((line, index) => (
-            <Text key={`${selectedSection.id}-line-${clampedScroll + index}`} wrap="wrap">
+            <text key={`${selectedSection.id}-line-${clampedScroll + index}`} wrapMode="word">
               {line || ' '}
-            </Text>
+            </text>
           ))
         )}
-      </Box>
+      </box>
 
-      <Box justifyContent="space-between" marginTop={1}>
-        <Text dimColor>
+      <box justifyContent="space-between" marginTop={1}>
+        <text fg="gray">
           Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom
-        </Text>
-        <Text dimColor>
+        </text>
+        <text fg="gray">
           [b/Esc] index  [[/]] section  [q] close
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box marginTop={0}>
-        <Text dimColor>
+      <box marginTop={0}>
+        <text fg="gray">
           Lines {Math.min(sectionLines.length, clampedScroll + 1)}-{Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of {sectionLines.length}
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

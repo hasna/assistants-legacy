@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { WebhookListItem, WebhookRegistration, WebhookEventListItem, WebhooksManager } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -210,66 +208,66 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
 
   // Header
   const header = (
-    <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <Text bold color="cyan">Webhooks</Text>
-      <Text color="gray"> | </Text>
-      <Text color="gray">
+    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+      <text fg="cyan"><b>Webhooks</b></text>
+      <text fg="gray"> | </text>
+      <text fg="gray">
         {mode === 'list' ? 'q:close c:create d:delete p:pause/resume t:test e:events r:refresh' :
          mode === 'detail' ? 'esc:back r:reveal/hide secret e:events' :
          mode === 'events' ? 'esc:back' :
          mode === 'delete-confirm' ? 'y:confirm n:cancel' :
          mode === 'create-confirm' ? 'y:confirm n:cancel' :
          'Enter to continue'}
-      </Text>
-    </Box>
+      </text>
+    </box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
-    <Box marginBottom={1}>
-      <Text color="yellow">{statusMessage}</Text>
-    </Box>
+    <box marginBottom={1}>
+      <text fg="yellow">{statusMessage}</text>
+    </box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
-    <Box marginBottom={1}>
-      <Text color="red">Error: {error}</Text>
-    </Box>
+    <box marginBottom={1}>
+      <text fg="red">Error: {error}</text>
+    </box>
   ) : null;
 
   // List view
   if (mode === 'list') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {statusBar}
         {errorBar}
         {webhooks.length === 0 ? (
-          <Box paddingX={1}>
-            <Text color="gray">No webhooks registered. Press 'c' to create one.</Text>
-          </Box>
+          <box paddingX={1}>
+            <text fg="gray">No webhooks registered. Press 'c' to create one.</text>
+          </box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {webhooks.map((wh, i) => (
-              <Box key={wh.id}>
-                <Text color={i === selectedIndex ? 'cyan' : undefined}>
+              <box key={wh.id}>
+                <text fg={i === selectedIndex ? 'cyan' : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
-                </Text>
-                <Text color={STATUS_COLORS[wh.status]}>
+                </text>
+                <text fg={STATUS_COLORS[wh.status]}>
                   {STATUS_ICONS[wh.status] || '?'}{' '}
-                </Text>
-                <Text bold={i === selectedIndex}>
+                </text>
+                <text attributes={i === selectedIndex ? 1 : undefined}><b>
                   {wh.name}
-                </Text>
-                <Text color="gray">
+                </b></text>
+                <text fg="gray">
                   {' '}({wh.source}) | {wh.deliveryCount} events | Last: {formatRelativeTime(wh.lastDeliveryAt)}
-                </Text>
-              </Box>
+                </text>
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -280,95 +278,95 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
       : selectedWebhook.secret.slice(0, 10) + '•'.repeat(20);
 
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {statusBar}
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>{selectedWebhook.name}</Text>
-          <Text> </Text>
-          <Text>ID:          <Text color="cyan">{selectedWebhook.id}</Text></Text>
-          <Text>Source:      {selectedWebhook.source}</Text>
-          <Text>Status:      <Text color={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</Text></Text>
+        <box flexDirection="column" paddingX={1}>
+          <text><b>{selectedWebhook.name}</b></text>
+          <text> </text>
+          <text>ID:          <text fg="cyan">{selectedWebhook.id}</text></text>
+          <text>Source:      {selectedWebhook.source}</text>
+          <text>Status:      <text fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</text></text>
           {selectedWebhook.description && (
-            <Text>Description: {selectedWebhook.description}</Text>
+            <text>Description: {selectedWebhook.description}</text>
           )}
-          <Text>URL:         <Text color="green">/api/v1/webhooks/receive/{selectedWebhook.id}</Text></Text>
-          <Text>Secret:      <Text color={showSecret ? 'yellow' : 'gray'}>{maskedSecret}</Text> <Text color="gray">(r to {showSecret ? 'hide' : 'reveal'})</Text></Text>
-          <Text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</Text>
-          <Text>Deliveries:  {selectedWebhook.deliveryCount}</Text>
-          <Text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</Text>
+          <text>URL:         <text fg="green">/api/v1/webhooks/receive/{selectedWebhook.id}</text></text>
+          <text>Secret:      <text fg={showSecret ? 'yellow' : 'gray'}>{maskedSecret}</text> <text fg="gray">(r to {showSecret ? 'hide' : 'reveal'})</text></text>
+          <text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</text>
+          <text>Deliveries:  {selectedWebhook.deliveryCount}</text>
+          <text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</text>
           {selectedWebhook.lastDeliveryAt && (
-            <Text>Last Event:  {new Date(selectedWebhook.lastDeliveryAt).toLocaleString()}</Text>
+            <text>Last Event:  {new Date(selectedWebhook.lastDeliveryAt).toLocaleString()}</text>
           )}
-        </Box>
-      </Box>
+        </box>
+      </box>
     );
   }
 
   // Events view
   if (mode === 'events') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {events.length === 0 ? (
-          <Box paddingX={1}>
-            <Text color="gray">No events received yet.</Text>
-          </Box>
+          <box paddingX={1}>
+            <text fg="gray">No events received yet.</text>
+          </box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {events.map((evt) => (
-              <Box key={evt.id} flexDirection="column" marginBottom={1}>
-                <Box>
-                  <Text>{EVENT_STATUS_ICONS[evt.status] || '?'} </Text>
-                  <Text bold>{evt.eventType}</Text>
-                  <Text color="gray"> ({evt.id})</Text>
-                </Box>
-                <Box paddingLeft={2}>
-                  <Text color="gray">
+              <box key={evt.id} flexDirection="column" marginBottom={1}>
+                <box>
+                  <text>{EVENT_STATUS_ICONS[evt.status] || '?'} </text>
+                  <text><b>{evt.eventType}</b></text>
+                  <text fg="gray"> ({evt.id})</text>
+                </box>
+                <box paddingLeft={2}>
+                  <text fg="gray">
                     {evt.source} | {evt.status} | {new Date(evt.timestamp).toLocaleString()}
-                  </Text>
-                </Box>
-                <Box paddingLeft={2}>
-                  <Text color="gray" wrap="truncate">
+                  </text>
+                </box>
+                <box paddingLeft={2}>
+                  <text fg="gray" truncate={true} wrapMode="none">
                     {evt.preview}
-                  </Text>
-                </Box>
-              </Box>
+                  </text>
+                </box>
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // Delete confirm
   if (mode === 'delete-confirm' && selectedWebhook) {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text color="red" bold>Delete webhook?</Text>
-          <Text> </Text>
-          <Text>This will permanently delete "{selectedWebhook.name}" ({selectedWebhook.id})</Text>
-          <Text>and all its event history.</Text>
-          <Text> </Text>
-          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
-        </Box>
-      </Box>
+        <box paddingX={1} flexDirection="column">
+          <text fg="red"><b>Delete webhook?</b></text>
+          <text> </text>
+          <text>This will permanently delete "{selectedWebhook.name}" ({selectedWebhook.id})</text>
+          <text>and all its event history.</text>
+          <text> </text>
+          <text>Press 'y' to confirm, 'n' to cancel.</text>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Webhook</Text>
-          <Text> </Text>
-          <Box>
-            <Text>Name: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Webhook</b></text>
+          <text> </text>
+          <box>
+            <text>Name: </text>
+            <input
               value={createName}
               onChange={setCreateName}
               onSubmit={() => {
@@ -379,24 +377,24 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
               focus
               placeholder="e.g., gmail-notifications"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: source
   if (mode === 'create-source') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Create Webhook</Text>
-          <Text>Name: {createName}</Text>
-          <Text> </Text>
-          <Box>
-            <Text>Source: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Create Webhook</b></text>
+          <text>Name: {createName}</text>
+          <text> </text>
+          <box>
+            <text>Source: </text>
+            <input
               value={createSource}
               onChange={setCreateSource}
               onSubmit={() => {
@@ -405,33 +403,33 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
               focus
               placeholder="e.g., gmail, notion, github, custom"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Confirm Webhook Creation</Text>
-          <Text> </Text>
-          <Text>Name:   {createName}</Text>
-          <Text>Source: {createSource || 'custom'}</Text>
-          <Text> </Text>
-          <Text>Press 'y' to create, 'n' to cancel.</Text>
-        </Box>
-      </Box>
+        <box paddingX={1} flexDirection="column">
+          <text><b>Confirm Webhook Creation</b></text>
+          <text> </text>
+          <text>Name:   {createName}</text>
+          <text>Source: {createSource || 'custom'}</text>
+          <text> </text>
+          <text>Press 'y' to create, 'n' to cancel.</text>
+        </box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {header}
-      <Text color="gray">Loading...</Text>
-    </Box>
+      <text fg="gray">Loading...</text>
+    </box>
   );
 }

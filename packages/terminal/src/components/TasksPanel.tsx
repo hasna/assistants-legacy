@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { Task, TaskPriority, TaskStatus, TaskCreateOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -383,19 +381,19 @@ export function TasksPanel({
     const isFieldActive = (field: CreateField) => createField === field;
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Add New Task</Text>
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Add New Task</b></text>
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
           {/* Description field */}
-          <Box>
-            <Text inverse={isFieldActive('description')} color={isFieldActive('description') ? 'cyan' : undefined}>
+          <box>
+            <text attributes={isFieldActive('description') ? 32 : undefined} fg={isFieldActive('description') ? 'cyan' : undefined}>
               Task:{' '}
-            </Text>
+            </text>
             {isFieldActive('description') ? (
-              <TextInput
+              <input
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={() => setCreateField('priority')}
@@ -403,119 +401,119 @@ export function TasksPanel({
                 placeholder="What needs to be done..."
               />
             ) : (
-              <Text dimColor={!newDescription}>{newDescription || '(empty)'}</Text>
+              <text fg={!newDescription ? "gray" : undefined}>{newDescription || '(empty)'}</text>
             )}
-          </Box>
+          </box>
 
           {/* Priority field */}
-          <Box marginTop={0}>
-            <Text inverse={isFieldActive('priority')} color={isFieldActive('priority') ? 'cyan' : undefined}>
+          <box marginTop={0}>
+            <text attributes={isFieldActive('priority') ? 32 : undefined} fg={isFieldActive('priority') ? 'cyan' : undefined}>
               Priority:{' '}
-            </Text>
-            <Text color={PRIORITY_COLORS[newPriority]}>
+            </text>
+            <text fg={PRIORITY_COLORS[newPriority]}>
               {PRIORITY_ICONS[newPriority]} {newPriority}
-            </Text>
-            {isFieldActive('priority') && <Text dimColor> (←/→ to change)</Text>}
-          </Box>
+            </text>
+            {isFieldActive('priority') && <text fg="gray"> (←/→ to change)</text>}
+          </box>
 
           {/* Blocked By field */}
-          <Box marginTop={0} flexDirection="column">
-            <Box>
-              <Text inverse={isFieldActive('blockedBy')} color={isFieldActive('blockedBy') ? 'cyan' : undefined}>
+          <box marginTop={0} flexDirection="column">
+            <box>
+              <text attributes={isFieldActive('blockedBy') ? 32 : undefined} fg={isFieldActive('blockedBy') ? 'cyan' : undefined}>
                 Blocked by:{' '}
-              </Text>
+              </text>
               {newBlockedBy.length > 0 ? (
-                <Text>{newBlockedBy.map((id) => getTaskLabel(id)).join(', ')}</Text>
+                <text>{newBlockedBy.map((id) => getTaskLabel(id)).join(', ')}</text>
               ) : (
-                <Text dimColor>(none)</Text>
+                <text fg="gray">(none)</text>
               )}
-            </Box>
+            </box>
             {isFieldActive('blockedBy') && selectableTasks.length > 0 && (
-              <Box flexDirection="column" marginLeft={2}>
+              <box flexDirection="column" marginLeft={2}>
                 {selectableTasks.map((task, idx) => {
                   const isSelected = newBlockedBy.includes(task.id);
                   const isCursor = idx === blockedByIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <Text key={task.id} inverse={isCursor}>
+                    <text key={task.id} attributes={isCursor ? 32 : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
-                    </Text>
+                    </text>
                   );
                 })}
-                <Text dimColor>↑/↓ navigate, Space to toggle</Text>
-              </Box>
+                <text fg="gray">↑/↓ navigate, Space to toggle</text>
+              </box>
             )}
             {isFieldActive('blockedBy') && selectableTasks.length === 0 && (
-              <Box marginLeft={2}><Text dimColor>No tasks available to select</Text></Box>
+              <box marginLeft={2}><text fg="gray">No tasks available to select</text></box>
             )}
-          </Box>
+          </box>
 
           {/* Blocks field */}
-          <Box marginTop={0} flexDirection="column">
-            <Box>
-              <Text inverse={isFieldActive('blocks')} color={isFieldActive('blocks') ? 'cyan' : undefined}>
+          <box marginTop={0} flexDirection="column">
+            <box>
+              <text attributes={isFieldActive('blocks') ? 32 : undefined} fg={isFieldActive('blocks') ? 'cyan' : undefined}>
                 Blocks:{' '}
-              </Text>
+              </text>
               {newBlocks.length > 0 ? (
-                <Text>{newBlocks.map((id) => getTaskLabel(id)).join(', ')}</Text>
+                <text>{newBlocks.map((id) => getTaskLabel(id)).join(', ')}</text>
               ) : (
-                <Text dimColor>(none)</Text>
+                <text fg="gray">(none)</text>
               )}
-            </Box>
+            </box>
             {isFieldActive('blocks') && selectableTasks.length > 0 && (
-              <Box flexDirection="column" marginLeft={2}>
+              <box flexDirection="column" marginLeft={2}>
                 {selectableTasks.map((task, idx) => {
                   const isSelected = newBlocks.includes(task.id);
                   const isCursor = idx === blocksIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <Text key={task.id} inverse={isCursor}>
+                    <text key={task.id} attributes={isCursor ? 32 : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
-                    </Text>
+                    </text>
                   );
                 })}
-                <Text dimColor>↑/↓ navigate, Space to toggle</Text>
-              </Box>
+                <text fg="gray">↑/↓ navigate, Space to toggle</text>
+              </box>
             )}
             {isFieldActive('blocks') && selectableTasks.length === 0 && (
-              <Box marginLeft={2}><Text dimColor>No tasks available to select</Text></Box>
+              <box marginLeft={2}><text fg="gray">No tasks available to select</text></box>
             )}
-          </Box>
+          </box>
 
           {/* Assignee field */}
-          <Box marginTop={0}>
-            <Text inverse={isFieldActive('assignee')} color={isFieldActive('assignee') ? 'cyan' : undefined}>
+          <box marginTop={0}>
+            <text attributes={isFieldActive('assignee') ? 32 : undefined} fg={isFieldActive('assignee') ? 'cyan' : undefined}>
               Assignee:{' '}
-            </Text>
+            </text>
             {isFieldActive('assignee') ? (
-              <TextInput
+              <input
                 value={newAssignee}
                 onChange={setNewAssignee}
                 onSubmit={handleCreateSubmit}
-                focus
+                focused
                 placeholder="assistant name or leave empty"
               />
             ) : (
-              <Text dimColor={!newAssignee}>{newAssignee || '(unassigned)'}</Text>
+              <text fg={!newAssignee ? "gray" : undefined}>{newAssignee || '(unassigned)'}</text>
             )}
-          </Box>
+          </box>
 
           {/* Submit button hint */}
-          <Box marginTop={1}>
-            <Text dimColor>
+          <box marginTop={1}>
+            <text fg="gray">
               {createField === 'assignee'
                 ? 'Enter: save task | Tab: cycle fields | Esc: cancel'
                 : 'Enter: next field | Tab: cycle fields | Esc: cancel'}
-            </Text>
-          </Box>
-        </Box>
+            </text>
+          </box>
+        </box>
 
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Adding task...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Adding task...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -527,22 +525,22 @@ export function TasksPanel({
       return null;
     }
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Task</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Task</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Delete task: &quot;{task.description.slice(0, 50)}{task.description.length > 50 ? '...' : ''}&quot;?
-          </Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -550,28 +548,28 @@ export function TasksPanel({
   if (mode === 'priority-select') {
     const task = tasks[selectedIndex];
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Change Priority</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>Task: {task?.description.slice(0, 50)}{(task?.description.length || 0) > 50 ? '...' : ''}</Text>
-        </Box>
-        <Box marginTop={1} flexDirection="column">
-          <Text>
-            <Text color="red" bold>h</Text> High priority
-          </Text>
-          <Text>
-            <Text bold>n</Text> Normal priority
-          </Text>
-          <Text>
-            <Text color="gray" bold>l</Text> Low priority
-          </Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Press letter to select | Esc to cancel</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Change Priority</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>Task: {task?.description.slice(0, 50)}{(task?.description.length || 0) > 50 ? '...' : ''}</text>
+        </box>
+        <box marginTop={1} flexDirection="column">
+          <text>
+            <text fg="red"><b>h</b></text> High priority
+          </text>
+          <text>
+            <text><b>n</b></text> Normal priority
+          </text>
+          <text>
+            <text fg="gray"><b>l</b></text> Low priority
+          </text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">Press letter to select | Esc to cancel</text>
+        </box>
+      </box>
     );
   }
 
@@ -583,34 +581,34 @@ export function TasksPanel({
 
   // List mode UI
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Box>
-          <Text bold>Tasks </Text>
-          <Text color={paused ? 'yellow' : 'green'}>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <box>
+          <text><b>Tasks </b></text>
+          <text fg={paused ? 'yellow' : 'green'}>
             {paused ? '(Paused)' : '(Active)'}
-          </Text>
-        </Box>
-        <Text dimColor>[n]ew [Space]pause</Text>
-      </Box>
+          </text>
+        </box>
+        <text fg="gray">[n]ew [Space]pause</text>
+      </box>
 
       {/* Status summary */}
-      <Box marginBottom={1}>
-        <Text dimColor>
+      <box marginBottom={1}>
+        <text fg="gray">
           {pendingCount} pending, {inProgressCount} running, {completedCount} done, {failedCount} failed
-        </Text>
-      </Box>
+        </text>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
       >
         {tasks.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No tasks yet. Press n to add one.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No tasks yet. Press n to add one.</text>
+          </box>
         ) : (
           tasks.map((task, index) => {
             const isSelected = index === selectedIndex;
@@ -622,30 +620,30 @@ export function TasksPanel({
             const desc = task.description.slice(0, 40) + (task.description.length > 40 ? '...' : '');
 
             return (
-              <Box key={task.id} paddingY={0}>
-                <Text inverse={isSelected} dimColor={!isSelected && task.status === 'completed'}>
-                  <Text color={statusColor}>{statusIcon}</Text>
+              <box key={task.id} paddingY={0}>
+                <text attributes={isSelected ? 32 : undefined} fg={!isSelected && task.status === 'completed' ? "gray" : undefined}>
+                  <text fg={statusColor}>{statusIcon}</text>
                   {' '}
-                  <Text color={priorityColor}>[{priorityIcon}]</Text>
+                  <text fg={priorityColor}>[{priorityIcon}]</text>
                   {' '}
                   {index + 1}. {desc.padEnd(42)} {time}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
 
         {/* New task option */}
-        <Box marginTop={1} paddingY={0}>
-          <Text
-            inverse={selectedIndex === tasks.length}
-            dimColor={selectedIndex !== tasks.length}
-            color={selectedIndex === tasks.length ? 'cyan' : undefined}
+        <box marginTop={1} paddingY={0}>
+          <text
+            attributes={selectedIndex === tasks.length ? 32 : undefined}
+            fg={selectedIndex !== tasks.length ? "gray" : undefined}
+            fg={selectedIndex === tasks.length ? 'cyan' : undefined}
           >
             + Add task (n)
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
 
       {/* Selected task details */}
       {tasks.length > 0 && selectedIndex < tasks.length && (() => {
@@ -664,51 +662,51 @@ export function TasksPanel({
         const elapsed = getElapsed();
 
         return (
-          <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
-            <Text bold wrap="wrap">{task.description}</Text>
+          <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+            <text wrapMode="word"><b>{task.description}</b></text>
 
             {/* Timestamps and elapsed time */}
-            <Box marginTop={0}>
-              <Text dimColor>Created: {formatTime(task.createdAt)}</Text>
-              {elapsed && <Text color="yellow"> | {elapsed}</Text>}
-            </Box>
+            <box marginTop={0}>
+              <text fg="gray">Created: {formatTime(task.createdAt)}</text>
+              {elapsed && <text fg="yellow"> | {elapsed}</text>}
+            </box>
             {task.startedAt && (
-              <Text dimColor>Started: {formatTime(task.startedAt)}</Text>
+              <text fg="gray">Started: {formatTime(task.startedAt)}</text>
             )}
             {task.completedAt && (
-              <Text dimColor>Completed: {formatTime(task.completedAt)}</Text>
+              <text fg="gray">Completed: {formatTime(task.completedAt)}</text>
             )}
 
             {/* Dependencies and assignment */}
             {task.blockedBy && task.blockedBy.length > 0 && (
-              <Text dimColor>Blocked by: {task.blockedBy.map(id => getTaskLabel(id)).join(', ')}</Text>
+              <text fg="gray">Blocked by: {task.blockedBy.map(id => getTaskLabel(id)).join(', ')}</text>
             )}
             {task.blocks && task.blocks.length > 0 && (
-              <Text dimColor>Blocks: {task.blocks.map(id => getTaskLabel(id)).join(', ')}</Text>
+              <text fg="gray">Blocks: {task.blocks.map(id => getTaskLabel(id)).join(', ')}</text>
             )}
             {task.assignee && (
-              <Text dimColor>Assignee: {task.assignee}</Text>
+              <text fg="gray">Assignee: {task.assignee}</text>
             )}
             {task.projectId && (
-              <Text dimColor>Project: {task.projectId}</Text>
+              <text fg="gray">Project: {task.projectId}</text>
             )}
 
             {/* Result/Error */}
             {task.error && (
-              <Text color="red">Error: {task.error}</Text>
+              <text fg="red">Error: {task.error}</text>
             )}
             {task.result && (
-              <Text color="green">Result: {task.result}</Text>
+              <text fg="green">Result: {task.result}</text>
             )}
-          </Box>
+          </box>
         );
       })()}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           Enter/r run | p priority | d delete | c clear done | Esc close
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { AssistantsConfig } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
@@ -325,232 +323,232 @@ export function ConfigPanel({
     switch (section.id) {
       case 'overview':
         return (
-          <Box flexDirection="column">
-            <Text bold>Configuration Overview</Text>
-            <Box marginTop={1} flexDirection="column">
-              <Text dimColor>Config sources (in priority order):</Text>
-              <Text>  1. Local:   .assistants/config.local.json {localConfig ? 'present' : 'none'}</Text>
-              <Text>  2. Project: .assistants/config.json {projectConfig ? 'present' : 'none'}</Text>
-              <Text>  3. User:    ~/.assistants/config.json {userConfig ? 'present' : 'none'}</Text>
-              <Text>  4. Default: Built-in defaults</Text>
-            </Box>
-            <Box marginTop={1} flexDirection="column">
-              <Text dimColor>Current effective settings:</Text>
-              <Text>  Model: {getModelDisplayName(config.llm?.model ?? DEFAULT_MODEL)}</Text>
-              <Text>  Max Tokens: {config.llm?.maxTokens ?? 8192}</Text>
-              <Text>  Memory: {config.memory?.enabled ? 'enabled' : 'disabled'}</Text>
-              <Text>  Voice: {config.voice?.enabled ? 'enabled' : 'disabled'}</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <text><b>Configuration Overview</b></text>
+            <box marginTop={1} flexDirection="column">
+              <text fg="gray">Config sources (in priority order):</text>
+              <text>  1. Local:   .assistants/config.local.json {localConfig ? 'present' : 'none'}</text>
+              <text>  2. Project: .assistants/config.json {projectConfig ? 'present' : 'none'}</text>
+              <text>  3. User:    ~/.assistants/config.json {userConfig ? 'present' : 'none'}</text>
+              <text>  4. Default: Built-in defaults</text>
+            </box>
+            <box marginTop={1} flexDirection="column">
+              <text fg="gray">Current effective settings:</text>
+              <text>  Model: {getModelDisplayName(config.llm?.model ?? DEFAULT_MODEL)}</text>
+              <text>  Max Tokens: {config.llm?.maxTokens ?? 8192}</text>
+              <text>  Memory: {config.memory?.enabled ? 'enabled' : 'disabled'}</text>
+              <text>  Voice: {config.voice?.enabled ? 'enabled' : 'disabled'}</text>
+            </box>
+          </box>
         );
 
       case 'model':
         return (
-          <Box flexDirection="column">
-            <Text bold>Model Settings</Text>
-            <Box marginTop={1} flexDirection="column">
-              <Text dimColor>Select model: (↑/↓)</Text>
-              <Box flexDirection="column" marginTop={1} marginBottom={1}>
+          <box flexDirection="column">
+            <text><b>Model Settings</b></text>
+            <box marginTop={1} flexDirection="column">
+              <text fg="gray">Select model: (↑/↓)</text>
+              <box flexDirection="column" marginTop={1} marginBottom={1}>
                 {ALL_MODELS.map((model, index) => (
-                  <Text
+                  <text
                     key={model.id}
-                    inverse={index === selectedModelIndex}
-                    color={index === selectedModelIndex ? 'cyan' : undefined}
-                    dimColor={index !== selectedModelIndex}
+                    attributes={index === selectedModelIndex ? 32 : undefined}
+                    fg={index === selectedModelIndex ? 'cyan' : undefined}
+                    fg={index !== selectedModelIndex ? "gray" : undefined}
                   >
                     {index === selectedModelIndex ? '>' : ' '} {model.name}
-                    <Text dimColor> ({getProviderLabel(model.provider)})</Text>
-                    <Text dimColor> - {model.description}</Text>
-                  </Text>
+                    <text fg="gray"> ({getProviderLabel(model.provider)})</text>
+                    <text fg="gray"> - {model.description}</text>
+                  </text>
                 ))}
-              </Box>
-            </Box>
-            <Box marginTop={1} flexDirection="column">
-              <Text>Max Tokens: <Text color="cyan">{maxTokens}</Text> (←/→ to adjust by 1024)</Text>
-              <Text dimColor>
+              </box>
+            </box>
+            <box marginTop={1} flexDirection="column">
+              <text>Max Tokens: <text fg="cyan">{maxTokens}</text> (←/→ to adjust by 1024)</text>
+              <text fg="gray">
                 {maxTokens < 4096 ? 'Short responses' : maxTokens > 12000 ? 'Very long responses' : 'Standard length'}
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Press s to save | Esc to cancel</Text>
-            </Box>
-          </Box>
+              </text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Press s to save | Esc to cancel</text>
+            </box>
+          </box>
         );
 
       case 'context':
         return (
-          <Box flexDirection="column">
-            <Text bold>Context Settings</Text>
-            <Box marginTop={1} flexDirection="column">
+          <box flexDirection="column">
+            <text><b>Context Settings</b></text>
+            <box marginTop={1} flexDirection="column">
               {editingField === 'context.maxContextTokens' ? (
-                <Box>
-                  <Text>1. Max Context Tokens: </Text>
-                  <TextInput
+                <box>
+                  <text>1. Max Context Tokens: </text>
+                  <input
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focus
+                    focused
                   />
-                </Box>
+                </box>
               ) : (
-                <Text>
-                  1. Max Context Tokens: <Text color="cyan">{config.context?.maxContextTokens ?? 180000}</Text>
-                  <Text dimColor> {getSource('context.maxContextTokens')}</Text>
-                </Text>
+                <text>
+                  1. Max Context Tokens: <text fg="cyan">{config.context?.maxContextTokens ?? 180000}</text>
+                  <text fg="gray"> {getSource('context.maxContextTokens')}</text>
+                </text>
               )}
               {editingField === 'context.keepRecentMessages' ? (
-                <Box>
-                  <Text>2. Keep Recent Messages: </Text>
-                  <TextInput
+                <box>
+                  <text>2. Keep Recent Messages: </text>
+                  <input
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focus
+                    focused
                   />
-                </Box>
+                </box>
               ) : (
-                <Text>
-                  2. Keep Recent Messages: <Text color="cyan">{config.context?.keepRecentMessages ?? 10}</Text>
-                  <Text dimColor> {getSource('context.keepRecentMessages')}</Text>
-                </Text>
+                <text>
+                  2. Keep Recent Messages: <text fg="cyan">{config.context?.keepRecentMessages ?? 10}</text>
+                  <text fg="gray"> {getSource('context.keepRecentMessages')}</text>
+                </text>
               )}
-              <Text>
-                Summary Strategy: <Text color="cyan">{config.context?.summaryStrategy ?? 'hybrid'}</Text>
-                <Text dimColor> {getSource('context.summaryStrategy')}</Text>
-              </Text>
-              <Text>
-                Summary Max Tokens: <Text color="cyan">{config.context?.summaryMaxTokens ?? 2000}</Text>
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Press 1-2 to edit | Esc to go back</Text>
-            </Box>
-          </Box>
+              <text>
+                Summary Strategy: <text fg="cyan">{config.context?.summaryStrategy ?? 'hybrid'}</text>
+                <text fg="gray"> {getSource('context.summaryStrategy')}</text>
+              </text>
+              <text>
+                Summary Max Tokens: <text fg="cyan">{config.context?.summaryMaxTokens ?? 2000}</text>
+              </text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Press 1-2 to edit | Esc to go back</text>
+            </box>
+          </box>
         );
 
       case 'memory':
         return (
-          <Box flexDirection="column">
-            <Text bold>Memory Settings</Text>
-            <Box marginTop={1} flexDirection="column">
-              <Text>
-                Enabled: <Text color={config.memory?.enabled ? 'green' : 'red'}>{config.memory?.enabled ? 'Yes' : 'No'}</Text>
-                <Text dimColor> (t to toggle) {getSource('memory.enabled')}</Text>
-              </Text>
-              <Text>
-                Injection: <Text color={config.memory?.injection?.enabled ? 'green' : 'red'}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</Text>
-              </Text>
-              <Text>
-                Max Injection Tokens: <Text color="cyan">{config.memory?.injection?.maxTokens ?? 500}</Text>
-              </Text>
-              <Text>
-                Min Importance: <Text color="cyan">{config.memory?.injection?.minImportance ?? 5}</Text>
-              </Text>
-              <Text>
-                Max Entries: <Text color="cyan">{config.memory?.storage?.maxEntries ?? 1000}</Text>
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Scopes:</Text>
-              <Text dimColor>  Global: {config.memory?.scopes?.globalEnabled ? 'enabled' : 'disabled'}</Text>
-              <Text dimColor>  Shared: {config.memory?.scopes?.sharedEnabled ? 'enabled' : 'disabled'}</Text>
-              <Text dimColor>  Private: {config.memory?.scopes?.privateEnabled ? 'enabled' : 'disabled'}</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Press t to toggle enabled | Esc to go back</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <text><b>Memory Settings</b></text>
+            <box marginTop={1} flexDirection="column">
+              <text>
+                Enabled: <text fg={config.memory?.enabled ? 'green' : 'red'}>{config.memory?.enabled ? 'Yes' : 'No'}</text>
+                <text fg="gray"> (t to toggle) {getSource('memory.enabled')}</text>
+              </text>
+              <text>
+                Injection: <text fg={config.memory?.injection?.enabled ? 'green' : 'red'}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</text>
+              </text>
+              <text>
+                Max Injection Tokens: <text fg="cyan">{config.memory?.injection?.maxTokens ?? 500}</text>
+              </text>
+              <text>
+                Min Importance: <text fg="cyan">{config.memory?.injection?.minImportance ?? 5}</text>
+              </text>
+              <text>
+                Max Entries: <text fg="cyan">{config.memory?.storage?.maxEntries ?? 1000}</text>
+              </text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Scopes:</text>
+              <text fg="gray">  Global: {config.memory?.scopes?.globalEnabled ? 'enabled' : 'disabled'}</text>
+              <text fg="gray">  Shared: {config.memory?.scopes?.sharedEnabled ? 'enabled' : 'disabled'}</text>
+              <text fg="gray">  Private: {config.memory?.scopes?.privateEnabled ? 'enabled' : 'disabled'}</text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Press t to toggle enabled | Esc to go back</text>
+            </box>
+          </box>
         );
 
       case 'subassistants':
         return (
-          <Box flexDirection="column">
-            <Text bold>Subassistants Settings</Text>
-            <Box marginTop={1} flexDirection="column">
+          <box flexDirection="column">
+            <text><b>Subassistants Settings</b></text>
+            <box marginTop={1} flexDirection="column">
               {editingField === 'subassistants.maxDepth' ? (
-                <Box>
-                  <Text>1. Max Depth: </Text>
-                  <TextInput
+                <box>
+                  <text>1. Max Depth: </text>
+                  <input
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focus
+                    focused
                   />
-                </Box>
+                </box>
               ) : (
-                <Text>
-                  1. Max Depth: <Text color="cyan">{config.subassistants?.maxDepth ?? 3}</Text>
-                  <Text dimColor> {getSource('subassistants.maxDepth')}</Text>
-                </Text>
+                <text>
+                  1. Max Depth: <text fg="cyan">{config.subassistants?.maxDepth ?? 3}</text>
+                  <text fg="gray"> {getSource('subassistants.maxDepth')}</text>
+                </text>
               )}
               {editingField === 'subassistants.maxConcurrent' ? (
-                <Box>
-                  <Text>2. Max Concurrent: </Text>
-                  <TextInput
+                <box>
+                  <text>2. Max Concurrent: </text>
+                  <input
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focus
+                    focused
                   />
-                </Box>
+                </box>
               ) : (
-                <Text>
-                  2. Max Concurrent: <Text color="cyan">{config.subassistants?.maxConcurrent ?? 5}</Text>
-                  <Text dimColor> {getSource('subassistants.maxConcurrent')}</Text>
-                </Text>
+                <text>
+                  2. Max Concurrent: <text fg="cyan">{config.subassistants?.maxConcurrent ?? 5}</text>
+                  <text fg="gray"> {getSource('subassistants.maxConcurrent')}</text>
+                </text>
               )}
               {editingField === 'subassistants.maxTurns' ? (
-                <Box>
-                  <Text>3. Max Turns: </Text>
-                  <TextInput
+                <box>
+                  <text>3. Max Turns: </text>
+                  <input
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focus
+                    focused
                   />
-                </Box>
+                </box>
               ) : (
-                <Text>
-                  3. Max Turns: <Text color="cyan">{config.subassistants?.maxTurns ?? 10}</Text>
-                  <Text dimColor> {getSource('subassistants.maxTurns')}</Text>
-                </Text>
+                <text>
+                  3. Max Turns: <text fg="cyan">{config.subassistants?.maxTurns ?? 10}</text>
+                  <text fg="gray"> {getSource('subassistants.maxTurns')}</text>
+                </text>
               )}
-              <Text>
-                Default Timeout: <Text color="cyan">{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</Text>
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Default Tools: {(config.subassistants?.defaultTools ?? []).slice(0, 5).join(', ')}...</Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Press 1-3 to edit | Esc to go back</Text>
-            </Box>
-          </Box>
+              <text>
+                Default Timeout: <text fg="cyan">{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</text>
+              </text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Default Tools: {(config.subassistants?.defaultTools ?? []).slice(0, 5).join(', ')}...</text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Press 1-3 to edit | Esc to go back</text>
+            </box>
+          </box>
         );
 
       case 'voice':
         return (
-          <Box flexDirection="column">
-            <Text bold>Voice Settings</Text>
-            <Box marginTop={1} flexDirection="column">
-              <Text>
-                Enabled: <Text color={config.voice?.enabled ? 'green' : 'red'}>{config.voice?.enabled ? 'Yes' : 'No'}</Text>
-                <Text dimColor> (t to toggle) {getSource('voice.enabled')}</Text>
-              </Text>
-              <Text>
-                TTS Provider: <Text color="cyan">{config.voice?.tts?.provider ?? 'elevenlabs'}</Text>
-              </Text>
-              <Text>
-                STT Provider: <Text color="cyan">{config.voice?.stt?.provider ?? 'whisper'}</Text>
-              </Text>
-              <Text>
-                Auto Listen: <Text color={config.voice?.autoListen ? 'green' : 'red'}>{config.voice?.autoListen ? 'Yes' : 'No'}</Text>
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>Press t to toggle enabled | Esc to go back</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <text><b>Voice Settings</b></text>
+            <box marginTop={1} flexDirection="column">
+              <text>
+                Enabled: <text fg={config.voice?.enabled ? 'green' : 'red'}>{config.voice?.enabled ? 'Yes' : 'No'}</text>
+                <text fg="gray"> (t to toggle) {getSource('voice.enabled')}</text>
+              </text>
+              <text>
+                TTS Provider: <text fg="cyan">{config.voice?.tts?.provider ?? 'elevenlabs'}</text>
+              </text>
+              <text>
+                STT Provider: <text fg="cyan">{config.voice?.stt?.provider ?? 'whisper'}</text>
+              </text>
+              <text>
+                Auto Listen: <text fg={config.voice?.autoListen ? 'green' : 'red'}>{config.voice?.autoListen ? 'Yes' : 'No'}</text>
+              </text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">Press t to toggle enabled | Esc to go back</text>
+            </box>
+          </box>
         );
 
       case 'statusLine': {
@@ -558,21 +556,21 @@ export function ConfigPanel({
         const showIcon = (v?: boolean) => (v ?? true) ? 'Yes' : 'No';
         const showColor = (v?: boolean) => (v ?? true) ? 'green' : 'red';
         return (
-          <Box flexDirection="column">
-            <Text bold>Status Line Settings</Text>
-            <Box marginTop={1} flexDirection="column">
-              <Text>1. Context %:     <Text color={showColor(sl.showContext)}>{showIcon(sl.showContext)}</Text></Text>
-              <Text>2. Session:       <Text color={showColor(sl.showSession)}>{showIcon(sl.showSession)}</Text></Text>
-              <Text>3. Elapsed Time:  <Text color={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</Text></Text>
-              <Text>4. Heartbeat:     <Text color={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</Text></Text>
-              <Text>5. Voice:         <Text color={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</Text></Text>
-              <Text>6. Queue:         <Text color={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</Text></Text>
-              <Text>7. Recent Tools:  <Text color={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</Text></Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>1-7 toggle metric | Esc back</Text>
-            </Box>
-          </Box>
+          <box flexDirection="column">
+            <text><b>Status Line Settings</b></text>
+            <box marginTop={1} flexDirection="column">
+              <text>1. Context %:     <text fg={showColor(sl.showContext)}>{showIcon(sl.showContext)}</text></text>
+              <text>2. Session:       <text fg={showColor(sl.showSession)}>{showIcon(sl.showSession)}</text></text>
+              <text>3. Elapsed Time:  <text fg={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</text></text>
+              <text>4. Heartbeat:     <text fg={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</text></text>
+              <text>5. Voice:         <text fg={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</text></text>
+              <text>6. Queue:         <text fg={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</text></text>
+              <text>7. Recent Tools:  <text fg={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</text></text>
+            </box>
+            <box marginTop={1}>
+              <text fg="gray">1-7 toggle metric | Esc back</text>
+            </box>
+          </box>
         );
       }
 
@@ -590,94 +588,94 @@ export function ConfigPanel({
     ];
 
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Save to which config?</Text>
-        </Box>
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Save to which config?</b></text>
+        </box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
           {locations.map((loc, index) => (
-            <Box key={loc.id} flexDirection="column">
-              <Text
-                inverse={index === locationSelectIndex}
-                color={index === locationSelectIndex ? 'cyan' : undefined}
+            <box key={loc.id} flexDirection="column">
+              <text
+                attributes={index === locationSelectIndex ? 32 : undefined}
+                fg={index === locationSelectIndex ? 'cyan' : undefined}
               >
                 {index === locationSelectIndex ? '>' : ' '} {loc.name}
-              </Text>
+              </text>
               {index === locationSelectIndex && (
-                <Text dimColor>    {loc.desc}</Text>
+                <text fg="gray">    {loc.desc}</text>
               )}
-            </Box>
+            </box>
           ))}
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>↑/↓ select | Enter confirm | Esc cancel</Text>
-        </Box>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">↑/↓ select | Enter confirm | Esc cancel</text>
+        </box>
         {isSubmitting && (
-          <Box marginTop={1}>
-            <Text color="yellow">Saving...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Saving...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // Main UI
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Configuration</Text>
-        <Text dimColor>{mode === 'editing' ? 'Editing' : 'Sections'}</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Configuration</b></text>
+        <text fg="gray">{mode === 'editing' ? 'Editing' : 'Sections'}</text>
+      </box>
 
-      <Box>
+      <box>
         {/* Section list */}
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           marginRight={1}
           width={26}
         >
           {SECTIONS.map((section, index) => (
-            <Text
+            <text
               key={section.id}
-              inverse={index === selectedSection}
-              color={index === selectedSection ? 'cyan' : undefined}
-              dimColor={index !== selectedSection}
+              attributes={index === selectedSection ? 32 : undefined}
+              fg={index === selectedSection ? 'cyan' : undefined}
+              fg={index !== selectedSection ? "gray" : undefined}
             >
               {index === selectedSection ? '>' : ' '} {section.name}
-            </Text>
+            </text>
           ))}
-        </Box>
+        </box>
 
         {/* Section content */}
-        <Box
+        <box
           flexDirection="column"
-          borderStyle="round"
+          borderStyle="rounded"
           borderColor="#d4d4d8" borderLeft={false} borderRight={false}
           paddingX={1}
           flexGrow={1}
         >
           {renderSectionContent()}
-        </Box>
-      </Box>
+        </box>
+      </box>
 
       {/* Message */}
       {message && (
-        <Box marginTop={1}>
-          <Text color={message.type === 'success' ? 'green' : 'red'}>{message.text}</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg={message.type === 'success' ? 'green' : 'red'}>{message.text}</text>
+        </box>
       )}
 
       {/* Footer */}
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           {mode === 'sections'
             ? '↑/↓ navigate | Enter edit section | 1-7 jump | Esc close'
             : 'Esc back to sections'}
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

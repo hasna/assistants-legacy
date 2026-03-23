@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { __test__ } from '../src/components/Markdown';
 
 describe('markdown internals', () => {

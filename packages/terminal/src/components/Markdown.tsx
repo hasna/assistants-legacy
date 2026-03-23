@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, useStdout } from 'ink';
+import { useTerminalDimensions } from '@opentui/react';
 import chalk from 'chalk';
 
 interface MarkdownProps {
@@ -17,19 +17,19 @@ interface MarkdownProps {
  */
 export function Markdown({ content, preRendered = false, indent = 0 }: MarkdownProps) {
   if (preRendered) {
-    return <Text wrap="wrap">{content}</Text>;
+    return <text wrapMode="word">{content}</text>;
   }
 
   return <MarkdownParsed content={content} indent={indent} />;
 }
 
 function MarkdownParsed({ content, indent = 0 }: { content: string; indent?: number }) {
-  const { stdout } = useStdout();
-  const columns = stdout?.columns ?? 80;
+  const termDims = useTerminalDimensions();
+  const columns = termDims.width || 80;
   const maxWidth = Math.max(20, columns - 2 - indent);
   const rendered = parseMarkdown(content, { maxWidth });
   const wrapped = wrapRenderedMarkdown(rendered, maxWidth);
-  return <Text wrap="wrap">{wrapped}</Text>;
+  return <text wrapMode="word">{wrapped}</text>;
 }
 
 export function renderMarkdown(text: string, options?: { maxWidth?: number }): string {

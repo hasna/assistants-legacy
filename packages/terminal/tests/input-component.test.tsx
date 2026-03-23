@@ -1,83 +1,53 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { render } from 'ink';
-import { PassThrough } from 'stream';
+import { testRender } from '@opentui/react/test-utils';
 import { Input, type InputHandle } from '../src/components/Input';
-
-const stripAnsi = (text: string) => text.replace(/\x1B\[[0-9;]*m/g, '');
-
-const createInkTestEnv = () => {
-  const stdout = new PassThrough();
-  let output = '';
-  stdout.on('data', (chunk) => {
-    output += String(chunk);
-  });
-  const stdin = new PassThrough() as any;
-  stdin.isTTY = true;
-  stdin.setRawMode = () => {};
-  stdin.ref = () => {};
-  stdin.unref = () => {};
-  stdin.resume = () => {};
-  stdin.pause = () => {};
-  return { stdout, stdin, getOutput: () => stripAnsi(output) };
-};
 
 describe('Input component', () => {
   test('shows default placeholder', async () => {
-    const env = createInkTestEnv();
-    const instance = render(<Input onSubmit={() => {}} />, { stdout: env.stdout, stdin: env.stdin });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    const { captureCharFrame, renderOnce } = await testRender(<Input onSubmit={() => {}} />, { width: 80, height: 24 });
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Type a message');
-    instance.unmount();
   });
 
   test('shows processing placeholder with queue', async () => {
-    const env = createInkTestEnv();
-    const instance = render(<Input onSubmit={() => {}} isProcessing queueLength={2} />, { stdout: env.stdout, stdin: env.stdin });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    const { captureCharFrame, renderOnce } = await testRender(<Input onSubmit={() => {}} isProcessing queueLength={2} />, { width: 80, height: 24 });
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Enter=inline | Tab=queue | Shift+Enter=interrupt');
-    instance.unmount();
   });
 
   test('esc stops processing when callback is provided', async () => {
-    const env = createInkTestEnv();
     let stopped = 0;
-    const instance = render(
+    const { renderOnce, mockInput } = await testRender(
       <Input
         onSubmit={() => {}}
         isProcessing
         onStopProcessing={() => {
           stopped += 1;
         }}
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    env.stdin.write('\x1b');
+    await renderOnce();
+    mockInput.pressEscape();
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(stopped).toBe(1);
-    instance.unmount();
   });
 
   test('shows ask-user placeholder', async () => {
-    const env = createInkTestEnv();
-    const instance = render(
-      <Input onSubmit={() => {}} isAskingUser askPlaceholder="Answer now" />,
-      { stdout: env.stdout, stdin: env.stdin }
+    const { captureCharFrame, renderOnce } = await testRender(
+      <Input onSubmit={() => {}} isAskingUser askPlaceholder="Answer now" />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const frame = env.getOutput();
+    await renderOnce();
+    const frame = captureCharFrame();
     expect(frame).toContain('Answer now');
-    instance.unmount();
   });
 
   test('shows line count for multiline input', async () => {
-    const env = createInkTestEnv();
     const ref = React.createRef<InputHandle>();
-    const instance = render(<Input ref={ref} onSubmit={() => {}} />, { stdout: env.stdout, stdin: env.stdin });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    const { renderOnce } = await testRender(<Input ref={ref} onSubmit={() => {}} />, { width: 80, height: 24 });
+    await renderOnce();
     // Wait for ref to be attached before exercising imperative handle
     const waitForRef = async () => {
       const start = Date.now();
@@ -101,23 +71,20 @@ describe('Input component', () => {
     };
     await waitForValue();
     expect(ref.current?.getValue()).toBe('line one\\nline two');
-    instance.unmount();
   });
 
   test('submits on ESC+CR enter sequence (tmux-compatible)', async () => {
-    const env = createInkTestEnv();
     const ref = React.createRef<InputHandle>();
     const submitted: Array<{ value: string; mode: string }> = [];
-    const instance = render(
+    const { renderOnce, mockInput } = await testRender(
       <Input
         ref={ref}
         onSubmit={(value, mode) => {
           submitted.push({ value, mode });
         }}
-      />,
-      { stdout: env.stdout, stdin: env.stdin }
+      />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await renderOnce();
 
     const waitForRef = async () => {
       const start = Date.now();
@@ -133,12 +100,12 @@ describe('Input component', () => {
     ref.current?.setValue('submit me');
     await new Promise((resolve) => setTimeout(resolve, 50));
     // Send ESC+CR as a single sequence (tmux-style enter)
-    env.stdin.write('\x1b\r');
+    mockInput.pressEscape();
+    mockInput.pressEnter();
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(submitted.length).toBe(1);
     expect(submitted[0]).toEqual({ value: 'submit me', mode: 'normal' });
     expect(ref.current?.getValue()).toBe('');
-    instance.unmount();
   });
 });

@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { HookEvent, HookMatcher, HookHandler, HookConfig, NativeHook } from '@hasna/assistants-shared';
 import type { HookLocation } from '@hasna/assistants-core';
 import { HookWizard } from './HookWizard';
@@ -249,22 +247,22 @@ export function HooksPanel({
   if (mode === 'delete-confirm') {
     const item = flattenedHooks[selectedIndex - nativeHooks.length];
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Hook</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Hook</b></text>
+        </box>
+        <box marginBottom={1}>
+          <text>
             Are you sure you want to delete &quot;{getHookName(item?.hook ?? { type: 'command' })}&quot;?
-          </Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>
-            Press <Text color="green" bold>y</Text> to confirm or{' '}
-            <Text color="red" bold>n</Text> to cancel
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+        <box marginTop={1}>
+          <text>
+            Press <text fg="green"><b>y</b></text> to confirm or{' '}
+            <text fg="red"><b>n</b></text> to cancel
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -285,14 +283,14 @@ export function HooksPanel({
 
   if (mode === 'prompt') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Create Hook from Prompt</Text>
-        </Box>
-        <Text dimColor>Describe the behavior you want (event, matcher, action).</Text>
-        <Box marginTop={1}>
-          <Text>Prompt: </Text>
-          <TextInput
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Create Hook from Prompt</b></text>
+        </box>
+        <text fg="gray">Describe the behavior you want (event, matcher, action).</text>
+        <box marginTop={1}>
+          <text>Prompt: </text>
+          <input
             value={promptValue}
             onChange={(value) => {
               setPromptValue(value);
@@ -324,21 +322,21 @@ export function HooksPanel({
             focus
             placeholder="e.g. Block dangerous bash commands like rm -rf"
           />
-        </Box>
+        </box>
         {promptError && (
-          <Box marginTop={1}>
-            <Text color="red">{promptError}</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="red">{promptError}</text>
+          </box>
         )}
-        <Box marginTop={1}>
-          <Text dimColor>Enter generate | Esc back</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="gray">Enter generate | Esc back</text>
+        </box>
         {isGenerating && (
-          <Box marginTop={1}>
-            <Text color="yellow">Generating hook draft...</Text>
-          </Box>
+          <box marginTop={1}>
+            <text fg="yellow">Generating hook draft...</text>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
@@ -347,15 +345,15 @@ export function HooksPanel({
 
   // List mode UI
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold>Hooks</Text>
-        <Text dimColor>{totalHooks} hook{totalHooks !== 1 ? 's' : ''}</Text>
-      </Box>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1} justifyContent="space-between">
+        <text><b>Hooks</b></text>
+        <text fg="gray">{totalHooks} hook{totalHooks !== 1 ? 's' : ''}</text>
+      </box>
 
-      <Box
+      <box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="rounded"
         borderColor="#d4d4d8" borderLeft={false} borderRight={false}
         paddingX={1}
         height={Math.min(18, totalHooks + 4)}
@@ -363,139 +361,139 @@ export function HooksPanel({
       >
         {/* Native Hooks Section */}
         {nativeHooks.length > 0 && (
-          <Box flexDirection="column" marginBottom={1}>
-            <Box>
-              <Text bold color="cyan">Native</Text>
-              <Text dimColor> ({nativeHooks.length})</Text>
-            </Box>
+          <box flexDirection="column" marginBottom={1}>
+            <box>
+              <text fg="cyan"><b>Native</b></text>
+              <text fg="gray"> ({nativeHooks.length})</text>
+            </box>
             {nativeHooks.map((item, index) => {
               const isSelected = index === selectedIndex && selectedIndex < nativeHooks.length;
               return (
-                <Box key={item.hook.id} paddingLeft={2}>
-                  <Text
-                    inverse={isSelected}
-                    color={item.enabled ? undefined : 'gray'}
+                <box key={item.hook.id} paddingLeft={2}>
+                  <text
+                    attributes={isSelected ? 32 : undefined}
+                    fg={item.enabled ? undefined : 'gray'}
                   >
                     {isSelected ? '>' : ' '}{' '}
-                    <Text color={item.enabled ? 'green' : 'red'}>[{item.enabled ? 'on ' : 'off'}]</Text>{' '}
-                    <Text bold={isSelected}>{(item.hook.name || item.hook.id).padEnd(22)}</Text>{' '}
-                    <Text dimColor>nat</Text>{' '}
-                    <Text dimColor>@{item.event}</Text>
-                  </Text>
-                </Box>
+                    <text fg={item.enabled ? 'green' : 'red'}>[{item.enabled ? 'on ' : 'off'}]</text>{' '}
+                    <text attributes={isSelected ? 1 : undefined}><b>{(item.hook.name || item.hook.id).padEnd(22)}</b></text>{' '}
+                    <text fg="gray">nat</text>{' '}
+                    <text fg="gray">@{item.event}</text>
+                  </text>
+                </box>
               );
             })}
-          </Box>
+          </box>
         )}
 
         {/* User Hooks Section */}
         {flattenedHooks.length === 0 && nativeHooks.length === 0 ? (
-          <Box paddingY={1}>
-            <Text dimColor>No hooks configured.</Text>
-          </Box>
+          <box paddingY={1}>
+            <text fg="gray">No hooks configured.</text>
+          </box>
         ) : flattenedHooks.length > 0 ? (
           <>
-            <Box>
-              <Text bold dimColor>User Hooks</Text>
-              <Text dimColor> ({flattenedHooks.length})</Text>
-            </Box>
+            <box>
+              <text fg="gray"><b>User Hooks</b></text>
+              <text fg="gray"> ({flattenedHooks.length})</text>
+            </box>
             {/* Render grouped by event */}
             {Array.from(groupedHooks.entries()).map(([event, eventHooks]) => (
-              <Box key={event} flexDirection="column">
-                <Box paddingLeft={1}>
-                  <Text bold dimColor>{event}</Text>
-                  <Text dimColor> ({eventHooks.length})</Text>
-                </Box>
+              <box key={event} flexDirection="column">
+                <box paddingLeft={1}>
+                  <text fg="gray"><b>{event}</b></text>
+                  <text fg="gray"> ({eventHooks.length})</text>
+                </box>
                 {eventHooks.map((item) => {
                   const globalIndex = flattenedHooks.indexOf(item) + nativeHooks.length;
                   const isSelected = globalIndex === selectedIndex;
                   const isEnabled = item.hook.enabled !== false;
 
                   return (
-                    <Box key={item.hook.id ?? `${item.matcherIndex}-${item.hookIndex}`} paddingLeft={2}>
-                      <Text
-                        inverse={isSelected}
-                        color={isEnabled ? undefined : 'gray'}
+                    <box key={item.hook.id ?? `${item.matcherIndex}-${item.hookIndex}`} paddingLeft={2}>
+                      <text
+                        attributes={isSelected ? 32 : undefined}
+                        fg={isEnabled ? undefined : 'gray'}
                       >
                         {isSelected ? '>' : ' '}{' '}
-                        <Text color={isEnabled ? 'green' : 'red'}>[{isEnabled ? 'on ' : 'off'}]</Text>{' '}
-                        <Text bold={isSelected}>{getHookName(item.hook).padEnd(22)}</Text>{' '}
-                        <Text dimColor>{getTypeBadge(item.hook.type)}</Text>{' '}
-                        {item.matcher && <Text dimColor>@{item.matcher}</Text>}
-                      </Text>
-                    </Box>
+                        <text fg={isEnabled ? 'green' : 'red'}>[{isEnabled ? 'on ' : 'off'}]</text>{' '}
+                        <text attributes={isSelected ? 1 : undefined}><b>{getHookName(item.hook).padEnd(22)}</b></text>{' '}
+                        <text fg="gray">{getTypeBadge(item.hook.type)}</text>{' '}
+                        {item.matcher && <text fg="gray">@{item.matcher}</text>}
+                      </text>
+                    </box>
                   );
                 })}
-              </Box>
+              </box>
             ))}
           </>
         ) : null}
-      </Box>
+      </box>
 
       {/* Selected native hook details */}
       {selectedNativeHook && (
-        <Box marginTop={1} flexDirection="column">
-          <Box>
-            <Text dimColor>Type: </Text>
-            <Text color="cyan">native</Text>
-          </Box>
-          <Box>
-            <Text dimColor>Event: </Text>
-            <Text>{selectedNativeHook.event}</Text>
-          </Box>
-          <Box>
-            <Text dimColor>ID: </Text>
-            <Text>{selectedNativeHook.hook.id}</Text>
-          </Box>
+        <box marginTop={1} flexDirection="column">
+          <box>
+            <text fg="gray">Type: </text>
+            <text fg="cyan">native</text>
+          </box>
+          <box>
+            <text fg="gray">Event: </text>
+            <text>{selectedNativeHook.event}</text>
+          </box>
+          <box>
+            <text fg="gray">ID: </text>
+            <text>{selectedNativeHook.hook.id}</text>
+          </box>
           {selectedNativeHook.hook.description && (
-            <Box>
-              <Text dimColor>Description: </Text>
-              <Text>{selectedNativeHook.hook.description}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Description: </text>
+              <text>{selectedNativeHook.hook.description}</text>
+            </box>
           )}
-        </Box>
+        </box>
       )}
 
       {/* Selected user hook details */}
       {selectedHook && (
-        <Box marginTop={1} flexDirection="column">
-          <Box>
-            <Text dimColor>Type: </Text>
-            <Text>{selectedHook.hook.type}</Text>
-            {selectedHook.hook.async && <Text color="yellow"> (async)</Text>}
-          </Box>
+        <box marginTop={1} flexDirection="column">
+          <box>
+            <text fg="gray">Type: </text>
+            <text>{selectedHook.hook.type}</text>
+            {selectedHook.hook.async && <text fg="yellow"> (async)</text>}
+          </box>
           {selectedHook.matcher && (
-            <Box>
-              <Text dimColor>Matcher: </Text>
-              <Text>{selectedHook.matcher}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Matcher: </text>
+              <text>{selectedHook.matcher}</text>
+            </box>
           )}
           {selectedHook.hook.description && (
-            <Box>
-              <Text dimColor>Description: </Text>
-              <Text>{selectedHook.hook.description}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Description: </text>
+              <text>{selectedHook.hook.description}</text>
+            </box>
           )}
           {selectedHook.hook.command && (
-            <Box>
-              <Text dimColor>Command: </Text>
-              <Text>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Command: </text>
+              <text>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</text>
+            </box>
           )}
           {selectedHook.hook.timeout && (
-            <Box>
-              <Text dimColor>Timeout: </Text>
-              <Text>{selectedHook.hook.timeout}ms</Text>
-            </Box>
+            <box>
+              <text fg="gray">Timeout: </text>
+              <text>{selectedHook.hook.timeout}ms</text>
+            </box>
           )}
-        </Box>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           [a]dd [p]rompt [e]nable [d]isable {!isNativeSelected && '[x]delete '} [q]uit | ↑↓ navigate
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

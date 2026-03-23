@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 import type { AskUserQuestion, AskUserRequest } from '@hasna/assistants-shared';
 
 interface AskUserPanelProps {
@@ -18,36 +17,36 @@ export function AskUserPanel({
   total,
 }: AskUserPanelProps) {
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginY={1}>
-      <Box justifyContent="space-between">
-        <Text color="cyan" bold>{request.title || 'Question'}</Text>
-        <Text dimColor>{index + 1}/{total}</Text>
-      </Box>
+    <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginY={1}>
+      <box justifyContent="space-between">
+        <text fg="cyan"><b>{request.title || 'Question'}</b></text>
+        <text fg="gray">{index + 1}/{total}</text>
+      </box>
       {request.description && (
-        <Box marginTop={1}>
-          <Text dimColor>{request.description}</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="gray">{request.description}</text>
+        </box>
       )}
-      <Box marginTop={1}>
-        <Text>{question.question}</Text>
-      </Box>
+      <box marginTop={1}>
+        <text>{question.question}</text>
+      </box>
       {question.options && question.options.length > 0 && (
-        <Box flexDirection="column" marginTop={1}>
+        <box flexDirection="column" marginTop={1}>
           {question.options.map((opt, idx) => (
-            <Text key={`${opt}-${idx}`} dimColor>
+            <text key={`${opt}-${idx}`} fg="gray">
               • {opt}
-            </Text>
+            </text>
           ))}
-        </Box>
+        </box>
       )}
       {question.multiline && (
-        <Box marginTop={1}>
-          <Text dimColor>Multi-line answer allowed. Use Alt+Enter to insert newlines.</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="gray">Multi-line answer allowed. Use Alt+Enter to insert newlines.</text>
+        </box>
       )}
-      <Box marginTop={1}>
-        <Text dimColor>Session: {sessionId}</Text>
-      </Box>
-    </Box>
+      <box marginTop={1}>
+        <text fg="gray">Session: {sessionId}</text>
+      </box>
+    </box>
   );
 }

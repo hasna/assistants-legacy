@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 
 interface EmptyStateProps {
   message: string;
@@ -11,13 +10,13 @@ interface EmptyStateProps {
  */
 export function EmptyState({ message, hint }: EmptyStateProps) {
   return (
-    <Box paddingX={1} flexDirection="column">
-      <Text color="gray">{message}</Text>
+    <box paddingX={1} flexDirection="column">
+      <text fg="gray">{message}</text>
       {hint && (
-        <Box marginTop={1}>
-          <Text color="gray" dimColor>{hint}</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg="gray">{hint}</text>
+        </box>
       )}
-    </Box>
+    </box>
   );
 }

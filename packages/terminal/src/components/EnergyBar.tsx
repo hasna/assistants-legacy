@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 
 interface EnergyBarProps {
   current: number;
@@ -17,11 +16,11 @@ export function EnergyBar({ current, max }: EnergyBarProps) {
   const emoji = percentage > 70 ? '⚡' : percentage > 30 ? '🔋' : '🪫';
 
   return (
-    <Box>
-      <Text>{emoji} </Text>
-      <Text color={color}>{'█'.repeat(filled)}</Text>
-      <Text color="gray">{'░'.repeat(empty)}</Text>
-      <Text> {percentage}%</Text>
-    </Box>
+    <box>
+      <text>{emoji} </text>
+      <text fg={color}>{'█'.repeat(filled)}</text>
+      <text fg="gray">{'░'.repeat(empty)}</text>
+      <text> {percentage}%</text>
+    </box>
   );
 }

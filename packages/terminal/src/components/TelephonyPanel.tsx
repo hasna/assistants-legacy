@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Text } from 'ink';
-import TextInput from 'ink-text-input';
 import type { TelephonyManager, CallListItem, SmsListItem, PhoneNumber, RoutingRule, TelephonyStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -240,13 +238,13 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
 
   // Tab bar
   const tabBar = (
-    <Box marginBottom={1}>
+    <box marginBottom={1}>
       {tabs.map((t, i) => (
-        <Box key={t} marginRight={1}>
-          <Text inverse={tab === t}>{`${i + 1}:${t}`}</Text>
-        </Box>
+        <box key={t} marginRight={1}>
+          <text attributes={tab === t ? 32 : undefined}>{`${i + 1}:${t}`}</text>
+        </box>
       ))}
-    </Box>
+    </box>
   );
 
   // Header
@@ -257,33 +255,33 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       : 'q close | 1-5 tabs | s sms | c call | r refresh';
 
   const header = (
-    <Box borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <Text bold color="blue">Communication</Text>
-      <Text color="gray"> | </Text>
-      <Text color="gray">{headerHint}</Text>
-    </Box>
+    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+      <text fg="blue"><b>Communication</b></text>
+      <text fg="gray"> | </text>
+      <text fg="gray">{headerHint}</text>
+    </box>
   );
 
   const statusBar2 = statusMessage ? (
-    <Box marginBottom={1}><Text color="yellow">{statusMessage}</Text></Box>
+    <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box>
   ) : null;
 
   const errorBar = error ? (
-    <Box marginBottom={1}><Text color="red">Error: {error}</Text></Box>
+    <box marginBottom={1}><text fg="red">Error: {error}</text></box>
   ) : null;
 
   // SMS compose
   if (mode === 'sms-compose') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Send SMS</Text>
-          <Text> </Text>
+        <box paddingX={1} flexDirection="column">
+          <text><b>Send SMS</b></text>
+          <text> </text>
           {composeStep === 'to' ? (
-            <Box>
-              <Text>To: </Text>
-              <TextInput
+            <box>
+              <text>To: </text>
+              <input
                 value={composeTo}
                 onChange={setComposeTo}
                 onSubmit={() => {
@@ -292,13 +290,13 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                 focus
                 placeholder="+15551234567"
               />
-            </Box>
+            </box>
           ) : (
-            <Box flexDirection="column">
-              <Text>To: {composeTo}</Text>
-              <Box>
-                <Text>Body: </Text>
-                <TextInput
+            <box flexDirection="column">
+              <text>To: {composeTo}</text>
+              <box>
+                <text>Body: </text>
+                <input
                   value={composeBody}
                   onChange={setComposeBody}
                   onSubmit={async () => {
@@ -313,25 +311,25 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                   focus
                   placeholder="Type your message..."
                 />
-              </Box>
-            </Box>
+              </box>
+            </box>
           )}
-        </Box>
-      </Box>
+        </box>
+      </box>
     );
   }
 
   // Call compose
   if (mode === 'call-compose') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
-        <Box paddingX={1} flexDirection="column">
-          <Text bold>Make Call</Text>
-          <Text> </Text>
-          <Box>
-            <Text>To: </Text>
-            <TextInput
+        <box paddingX={1} flexDirection="column">
+          <text><b>Make Call</b></text>
+          <text> </text>
+          <box>
+            <text>To: </text>
+            <input
               value={composeTo}
               onChange={setComposeTo}
               onSubmit={async () => {
@@ -346,132 +344,132 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
               focus
               placeholder="+15551234567"
             />
-          </Box>
-        </Box>
-      </Box>
+          </box>
+        </box>
+      </box>
     );
   }
 
   // Overview tab
   if (tab === 'overview') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>System Status</Text>
-          <Text> </Text>
+        <box flexDirection="column" paddingX={1}>
+          <text><b>System Status</b></text>
+          <text> </text>
           {status ? (
             <>
-              <Text>Twilio:       {status.twilioConfigured ? <Text color="green">Connected</Text> : <Text color="red">Not configured</Text>}</Text>
-              <Text>ElevenLabs:   {status.elevenLabsConfigured ? <Text color="green">Connected</Text> : <Text color="red">Not configured</Text>}</Text>
-              <Text>Default #:    {status.defaultPhoneNumber ? <Text color="cyan">{status.defaultPhoneNumber}</Text> : <Text color="red">Not set</Text>} {status.defaultPhoneNumberSource ? <Text color="gray">({status.defaultPhoneNumberSource})</Text> : null}</Text>
-              <Text>Phone #s:     {status.phoneNumbers}</Text>
-              <Text>Active calls: {status.activeCalls}</Text>
-              <Text>Routes:       {status.routingRules}</Text>
-              <Text> </Text>
-              <Text color="gray">Press 's' to send SMS, 'c' to make a call</Text>
-              <Text> </Text>
-              <Text bold>Quick Setup</Text>
-              <Text color="gray">1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</Text>
-              <Text color="gray">2) Run /communication sync to import numbers</Text>
-              <Text color="gray">3) Pick a default number (numbers tab → 'd')</Text>
-              <Text color="gray">4) Set telephony.webhookUrl for voice calls</Text>
+              <text>Twilio:       {status.twilioConfigured ? <text fg="green">Connected</text> : <text fg="red">Not configured</text>}</text>
+              <text>ElevenLabs:   {status.elevenLabsConfigured ? <text fg="green">Connected</text> : <text fg="red">Not configured</text>}</text>
+              <text>Default #:    {status.defaultPhoneNumber ? <text fg="cyan">{status.defaultPhoneNumber}</text> : <text fg="red">Not set</text>} {status.defaultPhoneNumberSource ? <text fg="gray">({status.defaultPhoneNumberSource})</text> : null}</text>
+              <text>Phone #s:     {status.phoneNumbers}</text>
+              <text>Active calls: {status.activeCalls}</text>
+              <text>Routes:       {status.routingRules}</text>
+              <text> </text>
+              <text fg="gray">Press 's' to send SMS, 'c' to make a call</text>
+              <text> </text>
+              <text><b>Quick Setup</b></text>
+              <text fg="gray">1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</text>
+              <text fg="gray">2) Run /communication sync to import numbers</text>
+              <text fg="gray">3) Pick a default number (numbers tab → 'd')</text>
+              <text fg="gray">4) Set telephony.webhookUrl for voice calls</text>
             </>
           ) : (
-            <Text color="gray">Loading...</Text>
+            <text fg="gray">Loading...</text>
           )}
-        </Box>
-      </Box>
+        </box>
+      </box>
     );
   }
 
   // Calls tab
   if (tab === 'calls') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {calls.length === 0 ? (
-          <Box paddingX={1}><Text color="gray">No call history. Press 'c' to make a call.</Text></Box>
+          <box paddingX={1}><text fg="gray">No call history. Press 'c' to make a call.</text></box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {calls.map((call, i) => (
-              <Box key={call.id}>
-                <Text color={i === selectedIndex ? 'blue' : undefined}>
+              <box key={call.id}>
+                <text fg={i === selectedIndex ? 'blue' : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
-                </Text>
-                <Text color={call.direction === 'inbound' ? 'green' : 'cyan'}>
+                </text>
+                <text fg={call.direction === 'inbound' ? 'green' : 'cyan'}>
                   {call.direction === 'inbound' ? 'IN ' : 'OUT'}
-                </Text>
-                <Text> {call.fromNumber} → {call.toNumber}</Text>
-                <Text color="gray"> | {call.status}</Text>
-                {call.duration != null && <Text color="gray"> | {call.duration}s</Text>}
-                <Text color="gray"> | {formatRelativeTime(call.createdAt)}</Text>
-                <Text color="gray"> | by {resolveActor(call.assistantId)}</Text>
-              </Box>
+                </text>
+                <text> {call.fromNumber} → {call.toNumber}</text>
+                <text fg="gray"> | {call.status}</text>
+                {call.duration != null && <text fg="gray"> | {call.duration}s</text>}
+                <text fg="gray"> | {formatRelativeTime(call.createdAt)}</text>
+                <text fg="gray"> | by {resolveActor(call.assistantId)}</text>
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // Messages tab
   if (tab === 'messages') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {messages.length === 0 ? (
-          <Box paddingX={1}><Text color="gray">No messages. Press 's' to send an SMS.</Text></Box>
+          <box paddingX={1}><text fg="gray">No messages. Press 's' to send an SMS.</text></box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {messages.map((msg, i) => (
-              <Box key={msg.id} flexDirection="column">
-                <Box>
-                  <Text color={i === selectedIndex ? 'blue' : undefined}>
+              <box key={msg.id} flexDirection="column">
+                <box>
+                  <text fg={i === selectedIndex ? 'blue' : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </Text>
-                  <Text color={msg.direction === 'inbound' ? 'green' : 'cyan'}>
+                  </text>
+                  <text fg={msg.direction === 'inbound' ? 'green' : 'cyan'}>
                     {msg.direction === 'inbound' ? 'IN ' : 'OUT'}
-                  </Text>
-                  <Text color={msg.messageType === 'whatsapp' ? 'green' : undefined}>
+                  </text>
+                  <text fg={msg.messageType === 'whatsapp' ? 'green' : undefined}>
                     [{msg.messageType === 'whatsapp' ? 'WA' : 'SMS'}]
-                  </Text>
-                  <Text> {msg.fromNumber} → {msg.toNumber}</Text>
-                  <Text color="gray"> | {formatRelativeTime(msg.createdAt)}</Text>
-                  <Text color="gray"> | by {resolveActor(msg.assistantId)}</Text>
-                </Box>
-                <Box paddingLeft={4}>
-                  <Text color="gray">{msg.bodyPreview}</Text>
-                </Box>
-              </Box>
+                  </text>
+                  <text> {msg.fromNumber} → {msg.toNumber}</text>
+                  <text fg="gray"> | {formatRelativeTime(msg.createdAt)}</text>
+                  <text fg="gray"> | by {resolveActor(msg.assistantId)}</text>
+                </box>
+                <box paddingLeft={4}>
+                  <text fg="gray">{msg.bodyPreview}</text>
+                </box>
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // Numbers tab
   if (tab === 'numbers') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {numbers.length === 0 ? (
-          <Box paddingX={1}><Text color="gray">No phone numbers. Run /communication sync to import from Twilio.</Text></Box>
+          <box paddingX={1}><text fg="gray">No phone numbers. Run /communication sync to import from Twilio.</text></box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {numbers.map((num, i) => {
               const caps: string[] = [];
               if (num.capabilities.voice) caps.push('voice');
@@ -479,62 +477,62 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
               if (num.capabilities.whatsapp) caps.push('whatsapp');
               const isDefault = status?.defaultPhoneNumber === num.number;
               return (
-                <Box key={num.id}>
-                  <Text color={i === selectedIndex ? 'blue' : undefined}>
+                <box key={num.id}>
+                  <text fg={i === selectedIndex ? 'blue' : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </Text>
-                  {isDefault && <Text color="yellow">★ </Text>}
-                  <Text bold={i === selectedIndex}>{num.number}</Text>
-                  {num.friendlyName && <Text color="gray"> ({num.friendlyName})</Text>}
-                  <Text color="gray"> [{caps.join(', ')}]{isDefault ? ' default' : ''}</Text>
-                </Box>
+                  </text>
+                  {isDefault && <text fg="yellow">★ </text>}
+                  <text attributes={i === selectedIndex ? 1 : undefined}><b>{num.number}</b></text>
+                  {num.friendlyName && <text fg="gray"> ({num.friendlyName})</text>}
+                  <text fg="gray"> [{caps.join(', ')}]{isDefault ? ' default' : ''}</text>
+                </box>
               );
             })}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   // Routes tab
   if (tab === 'routes') {
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {routes.length === 0 ? (
-          <Box paddingX={1}><Text color="gray">No routing rules configured.</Text></Box>
+          <box paddingX={1}><text fg="gray">No routing rules configured.</text></box>
         ) : (
-          <Box flexDirection="column" paddingX={1}>
+          <box flexDirection="column" paddingX={1}>
             {routes.map((rule, i) => (
-              <Box key={rule.id} flexDirection="column">
-                <Box>
-                  <Text color={i === selectedIndex ? 'blue' : undefined}>
+              <box key={rule.id} flexDirection="column">
+                <box>
+                  <text fg={i === selectedIndex ? 'blue' : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </Text>
-                  <Text bold={i === selectedIndex}>{rule.name}</Text>
-                  <Text color="gray"> (priority: {rule.priority})</Text>
-                  {!rule.enabled && <Text color="red"> [DISABLED]</Text>}
-                </Box>
-                <Box paddingLeft={4}>
-                  <Text color="gray">
+                  </text>
+                  <text attributes={i === selectedIndex ? 1 : undefined}><b>{rule.name}</b></text>
+                  <text fg="gray"> (priority: {rule.priority})</text>
+                  {!rule.enabled && <text fg="red"> [DISABLED]</text>}
+                </box>
+                <box paddingLeft={4}>
+                  <text fg="gray">
                     Type: {rule.messageType} → {rule.targetAssistantName}
-                  </Text>
-                </Box>
-              </Box>
+                  </text>
+                </box>
+              </box>
             ))}
-          </Box>
+          </box>
         )}
-      </Box>
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {header}
-      <Text color="gray">Loading...</Text>
-    </Box>
+      <text fg="gray">Loading...</text>
+    </box>
   );
 }

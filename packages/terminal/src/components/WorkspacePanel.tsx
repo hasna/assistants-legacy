@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text } from 'ink';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 const MAX_VISIBLE_ITEMS = 5;
@@ -229,58 +228,58 @@ export function WorkspacePanel({
   // Empty state
   if (workspaces.length === 0 && mode === 'list') {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Workspaces</Text>
-        </Box>
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-          <Text dimColor>No workspaces found.</Text>
-          <Text dimColor>Use /workspace create &lt;name&gt; to create one.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>q quit</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Workspaces</b></text>
+        </box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+          <text fg="gray">No workspaces found.</text>
+          <text fg="gray">Use /workspace create &lt;name&gt; to create one.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">q quit</text>
+        </box>
+      </box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="red">Delete Workspace</Text>
-        </Box>
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-          <Text>Are you sure you want to delete this workspace?</Text>
-          <Text dimColor>Name: {deleteTarget.name}</Text>
-          <Text dimColor>ID: {deleteTarget.id}</Text>
-          <Text dimColor>This will remove all workspace files permanently.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="red"><b>Delete Workspace</b></text>
+        </box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+          <text>Are you sure you want to delete this workspace?</text>
+          <text fg="gray">Name: {deleteTarget.name}</text>
+          <text fg="gray">ID: {deleteTarget.id}</text>
+          <text fg="gray">This will remove all workspace files permanently.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
   // Archive confirmation
   if (mode === 'archive-confirm' && archiveTarget) {
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="yellow">Archive Workspace</Text>
-        </Box>
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-          <Text>Archive this workspace?</Text>
-          <Text dimColor>Name: {archiveTarget.name}</Text>
-          <Text dimColor>ID: {archiveTarget.id}</Text>
-          <Text dimColor>Archived workspaces are hidden from the default list.</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>y confirm | n cancel</Text>
-        </Box>
-      </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="yellow"><b>Archive Workspace</b></text>
+        </box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+          <text>Archive this workspace?</text>
+          <text fg="gray">Name: {archiveTarget.name}</text>
+          <text fg="gray">ID: {archiveTarget.id}</text>
+          <text fg="gray">Archived workspaces are hidden from the default list.</text>
+        </box>
+        <box marginTop={1}>
+          <text fg="gray">y confirm | n cancel</text>
+        </box>
+      </box>
     );
   }
 
@@ -288,64 +287,64 @@ export function WorkspacePanel({
   if (mode === 'detail' && currentWs) {
     const isActive = currentWs.id === activeWorkspaceId;
     return (
-      <Box flexDirection="column" paddingY={1}>
-        <Box marginBottom={1}>
-          <Text bold color="cyan">Workspace: {currentWs.name}</Text>
-          <Text color={currentWs.status === 'active' ? 'green' : 'gray'}> [{currentWs.status}]</Text>
-          {isActive && <Text color="green"> [current]</Text>}
-        </Box>
+      <box flexDirection="column" paddingY={1}>
+        <box marginBottom={1}>
+          <text fg="cyan"><b>Workspace: {currentWs.name}</b></text>
+          <text fg={currentWs.status === 'active' ? 'green' : 'gray'}> [{currentWs.status}]</text>
+          {isActive && <text fg="green"> [current]</text>}
+        </box>
 
-        <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
-          <Box>
-            <Text dimColor>ID: </Text>
-            <Text>{currentWs.id}</Text>
-          </Box>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+          <box>
+            <text fg="gray">ID: </text>
+            <text>{currentWs.id}</text>
+          </box>
 
           {currentWs.description && (
-            <Box>
-              <Text dimColor>Description: </Text>
-              <Text>{currentWs.description}</Text>
-            </Box>
+            <box>
+              <text fg="gray">Description: </text>
+              <text>{currentWs.description}</text>
+            </box>
           )}
 
-          <Box>
-            <Text dimColor>Created by: </Text>
-            <Text>{currentWs.createdBy}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Created by: </text>
+            <text>{currentWs.createdBy}</text>
+          </box>
 
-          <Box>
-            <Text dimColor>Created: </Text>
-            <Text>{formatRelativeTime(currentWs.createdAt)}</Text>
-            <Text dimColor> ({new Date(currentWs.createdAt).toLocaleString()})</Text>
-          </Box>
+          <box>
+            <text fg="gray">Created: </text>
+            <text>{formatRelativeTime(currentWs.createdAt)}</text>
+            <text fg="gray"> ({new Date(currentWs.createdAt).toLocaleString()})</text>
+          </box>
 
-          <Box>
-            <Text dimColor>Updated: </Text>
-            <Text>{formatRelativeTime(currentWs.updatedAt)}</Text>
-          </Box>
+          <box>
+            <text fg="gray">Updated: </text>
+            <text>{formatRelativeTime(currentWs.updatedAt)}</text>
+          </box>
 
-          <Box marginTop={1} flexDirection="column">
-            <Text dimColor>Participants ({currentWs.participants.length}):</Text>
+          <box marginTop={1} flexDirection="column">
+            <text fg="gray">Participants ({currentWs.participants.length}):</text>
             {currentWs.participants.map((p, i) => (
-              <Text key={i}>  - {p}</Text>
+              <text key={i}>  - {p}</text>
             ))}
-          </Box>
-        </Box>
+          </box>
+        </box>
 
         {(error || statusMessage) && (
-          <Box marginTop={1}>
-            <Text color={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
+          <box marginTop={1}>
+            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
               {error || statusMessage}
-            </Text>
-          </Box>
+            </text>
+          </box>
         )}
 
-        <Box marginTop={1}>
-          <Text dimColor>
+        <box marginTop={1}>
+          <text fg="gray">
             u use | {currentWs.status === 'active' ? 'a archive | ' : ''}x delete | Esc back
-          </Text>
-        </Box>
-      </Box>
+          </text>
+        </box>
+      </box>
     );
   }
 
@@ -353,19 +352,19 @@ export function WorkspacePanel({
   const visibleWorkspaces = workspaces.slice(wsRange.start, wsRange.end);
 
   return (
-    <Box flexDirection="column" paddingY={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">Workspaces</Text>
+    <box flexDirection="column" paddingY={1}>
+      <box marginBottom={1}>
+        <text fg="cyan"><b>Workspaces</b></text>
         {workspaces.length > MAX_VISIBLE_ITEMS && (
-          <Text dimColor> ({wsIndex + 1}/{workspaces.length})</Text>
+          <text fg="gray"> ({wsIndex + 1}/{workspaces.length})</text>
         )}
-      </Box>
+      </box>
 
-      <Box flexDirection="column" borderStyle="round" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
         {wsRange.hasMore.above > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↑ {wsRange.hasMore.above} more above</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↑ {wsRange.hasMore.above} more above</text>
+          </box>
         )}
 
         {visibleWorkspaces.map((ws, visibleIdx) => {
@@ -378,44 +377,44 @@ export function WorkspacePanel({
           const participants = `${ws.participants.length} participants`.padEnd(16);
 
           return (
-            <Box key={ws.id} paddingY={0}>
-              <Text inverse={isSelected} dimColor={!isSelected}>
+            <box key={ws.id} paddingY={0}>
+              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
                 {prefix}{statusIcon}{' '}
-              </Text>
-              <Text inverse={isSelected} bold={isSelected}>
+              </text>
+              <text attributes={isSelected ? 33 : 1}><b>
                 {name}
-              </Text>
-              <Text inverse={isSelected} color={isActive ? 'green' : undefined}>
+              </b></text>
+              <text attributes={isSelected ? 32 : undefined} fg={isActive ? 'green' : undefined}>
                 {isActive ? ' •' : '  '}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}{participants}
-              </Text>
-              <Text inverse={isSelected} dimColor>
+              </text>
+              <text attributes={isSelected ? 32 : undefined} fg="gray">
                 {' '}{formatRelativeTime(ws.updatedAt)}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
 
         {wsRange.hasMore.below > 0 && (
-          <Box paddingY={0}>
-            <Text dimColor>  ↓ {wsRange.hasMore.below} more below</Text>
-          </Box>
+          <box paddingY={0}>
+            <text fg="gray">  ↓ {wsRange.hasMore.below} more below</text>
+          </box>
         )}
-      </Box>
+      </box>
 
       {statusMessage && (
-        <Box marginTop={1}>
-          <Text color={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</Text>
-        </Box>
+        <box marginTop={1}>
+          <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+        </box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
+      <box marginTop={1}>
+        <text fg="gray">
           ↑↓ select | Enter view | u use | q quit
-        </Text>
-      </Box>
-    </Box>
+        </text>
+      </box>
+    </box>
   );
 }

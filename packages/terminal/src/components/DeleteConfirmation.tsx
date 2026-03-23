@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Text } from 'ink';
 
 interface DeleteConfirmationProps {
   title?: string;
@@ -21,13 +20,13 @@ export function DeleteConfirmation({
   color = 'red',
 }: DeleteConfirmationProps) {
   return (
-    <Box paddingX={1} flexDirection="column">
-      <Text color={color} bold>{title}</Text>
-      <Text> </Text>
-      <Text>This will delete "{itemName}"{itemId ? ` (${itemId})` : ''}.</Text>
-      {message && <Text>{message}</Text>}
-      <Text> </Text>
-      <Text>Press <Text bold>'y'</Text> to confirm, <Text bold>'n'</Text> to cancel.</Text>
-    </Box>
+    <box paddingX={1} flexDirection="column">
+      <text fg={color}><b>{title}</b></text>
+      <text> </text>
+      <text>This will delete "{itemName}"{itemId ? ` (${itemId})` : ''}.</text>
+      {message && <text>{message}</text>}
+      <text> </text>
+      <text>Press <text><b>'y'</b></text> to confirm, <text><b>'n'</b></text> to cancel.</text>
+    </box>
   );
 }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { testRender } from '@opentui/react/test-utils';
 import { marked } from 'marked';
 
 // We test the marked configuration used by Markdown component
