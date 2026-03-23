@@ -1,6 +1,6 @@
 {
   "name": "@hasna/assistants-mcp",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "MCP server for running AI assistants",
   "license": "Apache-2.0",
   "type": "module",
