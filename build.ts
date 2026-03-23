@@ -35,24 +35,35 @@ const result = await Bun.build({
   define: {
     'process.env.ASSISTANTS_VERSION': JSON.stringify(version),
   },
-  // Stub out react-devtools-core to avoid window reference errors
+  // Stub out packages that can't be resolved at build time
   plugins: [
     {
-      name: 'stub-devtools',
+      name: 'stub-unresolvable',
       setup(build) {
-        // Replace react-devtools-core imports with a no-op
-        build.onResolve({ filter: /^react-devtools-core$/ }, () => {
-          return {
-            path: 'react-devtools-core',
-            namespace: 'stub',
-          };
-        });
-        build.onLoad({ filter: /.*/, namespace: 'stub' }, () => {
-          return {
-            contents: 'export default { connectToDevTools: () => {} };',
-            loader: 'js',
-          };
-        });
+        // Stub react-devtools-core to avoid window reference errors
+        build.onResolve({ filter: /^react-devtools-core$/ }, () => ({
+          path: 'react-devtools-core',
+          namespace: 'stub',
+        }));
+        // Stub optional @hasna/* SDK packages that lack dist (lazy-loaded at runtime)
+        build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs)$/ }, (args) => ({
+          path: args.path,
+          namespace: 'stub',
+        }));
+        // Stub electron (only used by playwright-core internally)
+        build.onResolve({ filter: /^electron$/ }, () => ({
+          path: 'electron',
+          namespace: 'stub',
+        }));
+        // Stub chromium-bidi (only used by playwright-core internally)
+        build.onResolve({ filter: /^chromium-bidi/ }, (args) => ({
+          path: args.path,
+          namespace: 'stub',
+        }));
+        build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+          contents: 'export default {}; export const connectToDevTools = () => {};',
+          loader: 'js',
+        }));
       },
     },
   ],
