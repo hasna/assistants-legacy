@@ -1,6 +1,6 @@
 {
   "name": "@hasna/assistants-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server for running AI assistants",
   "license": "Apache-2.0",
   "type": "module",
@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --format esm",
+    "build": "bun run build.ts",
     "prepublishOnly": "bun run build",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
