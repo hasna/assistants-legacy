@@ -1,7 +1,7 @@
 {
   "name": "@hasna/assistants",
   "version": "1.1.103",
-  "description": "Personal AI assistant that runs in your terminal \u2014 powered by Claude",
+  "description": "Personal AI assistant that runs in your terminal — powered by Claude",
   "type": "module",
   "bin": {
     "assistants": "dist/index.js"
@@ -75,6 +75,6 @@
     "packages/*"
   ],
   "dependencies": {
-    "@hasna/cloud": "^0.1.0"
+    "@hasna/cloud": "0.1.5"
   }
 }
