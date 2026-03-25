@@ -38,18 +38,26 @@ const result = await Bun.build({
   // Stub out react-devtools-core to avoid window reference errors
   plugins: [
     {
-      name: 'stub-devtools',
+      name: 'stub-optional-deps',
       setup(build) {
-        // Replace react-devtools-core imports with a no-op
-        build.onResolve({ filter: /^react-devtools-core$/ }, () => {
-          return {
-            path: 'react-devtools-core',
-            namespace: 'stub',
-          };
-        });
+        // Stub out packages that may not be installed or are optional
+        const stubPatterns = [
+          /^react-devtools-core$/,
+          /^@hasna\/terminal$/,
+          /^@hasna\/economy$/,
+          /^@hasna\/wallets$/,
+          /^@hasna\/logs$/,
+          /^electron$/,
+          /^chromium-bidi\//,
+        ];
+        for (const pattern of stubPatterns) {
+          build.onResolve({ filter: pattern }, (args) => {
+            return { path: args.path, namespace: 'stub' };
+          });
+        }
         build.onLoad({ filter: /.*/, namespace: 'stub' }, () => {
           return {
-            contents: 'export default { connectToDevTools: () => {} };',
+            contents: 'export default {}; export const connectToDevTools = () => {};',
             loader: 'js',
           };
         });
