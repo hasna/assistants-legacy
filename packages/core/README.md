@@ -127,7 +127,7 @@ Skills are reusable prompt templates stored in SKILL.md files.
 import { SkillLoader, SkillExecutor } from '@hasna/assistants-core';
 
 const loader = new SkillLoader([
-  '~/.assistants/skills',
+  '~/.hasna/assistants/skills',
   './.assistants/skills',
 ]);
 
@@ -172,7 +172,7 @@ Hooks allow you to intercept and modify assistant behavior at key lifecycle poin
 #### Configuration
 
 Hooks are stored in JSON files that are loaded from multiple locations:
-- `~/.assistants/hooks.json` - Global user hooks
+- `~/.hasna/assistants/hooks.json` - Global user hooks
 - `.assistants/hooks.json` - Project-level hooks
 - `.assistants/hooks.local.json` - Local hooks (gitignored)
 
@@ -320,7 +320,7 @@ const hooks = nativeHookRegistry.listFlat();
 
 ## Configuration
 
-Create `~/.assistants/config.json` or `.assistants/config.json`:
+Create `~/.hasna/assistants/config.json` or `.assistants/config.json`:
 
 ```json
 {

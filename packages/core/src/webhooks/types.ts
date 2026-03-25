@@ -251,7 +251,7 @@ export interface WebhooksInjectionConfig {
  * Webhooks storage configuration
  */
 export interface WebhooksStorageConfig {
-  /** Base path for storage (default: ~/.assistants/webhooks) */
+  /** Base path for storage (default: ~/.hasna/assistants/webhooks) */
   basePath?: string;
   /** Max events per webhook (default: 1000) */
   maxEvents?: number;

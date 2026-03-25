@@ -4,7 +4,7 @@
  * Persistent JSONL-based log of all subagent activity.
  * Each line is a self-contained JSON object representing one subagent execution.
  *
- * Default storage: ~/.assistants/subagent-logs/
+ * Default storage: ~/.hasna/assistants/subagent-logs/
  */
 
 import { join } from 'path';

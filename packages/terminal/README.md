@@ -211,7 +211,7 @@ Prefix a line with `!` to run a local shell command and send the output to the a
 ### Directory Structure
 
 ```
-~/.assistants/
+~/.hasna/assistants/
 ├── config.json        # Global configuration
 ├── sessions/          # Session history
 ├── skills/            # Custom skills
@@ -226,7 +226,7 @@ Prefix a line with `!` to run a local shell command and send the output to the a
 
 ### Configuration File
 
-Create `~/.assistants/config.json`:
+Create `~/.hasna/assistants/config.json`:
 
 ```json
 {
@@ -291,7 +291,7 @@ Review the code at $ARGUMENTS and provide feedback on:
 4. Security concerns
 ```
 
-Place in `~/.assistants/skills/code-review/SKILL.md` or `.assistants/skills/code-review/SKILL.md`.
+Place in `~/.hasna/assistants/skills/code-review/SKILL.md` or `.assistants/skills/code-review/SKILL.md`.
 
 Use with `/skill code-review src/auth.ts` or `$code-review src/auth.ts`.
 
@@ -514,7 +514,7 @@ The first run may take longer as dependencies are cached. Subsequent runs will b
 
 ### Session not found
 
-Sessions are stored in `~/.assistants/sessions/`. Use `/session` to see current session info.
+Sessions are stored in `~/.hasna/assistants/sessions/`. Use `/session` to see current session info.
 
 ## License
 

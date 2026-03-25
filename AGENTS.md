@@ -54,7 +54,7 @@ pnpm typecheck
 ## Key Decisions
 
 - **Bun-first**: We use Bun as the runtime. All Bun APIs are preferred over Node equivalents.
-- **SQLite for persistence**: Local-first. No external database servers needed. Everything stores in `~/.assistants/`.
+- **SQLite for persistence**: Local-first. No external database servers needed. Everything stores in `~/.hasna/assistants/`.
 - **Single-file distribution**: The build bundles all workspace packages into one `dist/index.js`. Zero runtime npm dependencies.
 - **Skills over plugins**: Extensibility is through SKILL.md files (declarative prompts), not code plugins.
 - **Hooks for safety**: Lifecycle hooks validate tool usage, block dangerous commands, inject context.
@@ -205,7 +205,7 @@ mementos memory-save      # save key learnings
 {"tool": "execute_skill", "input": {"skill_name": "review-pr", "arguments": "123"}}
 ```
 
-User skills: `~/.assistants/skills/<name>/SKILL.md`
+User skills: `~/.hasna/assistants/skills/<name>/SKILL.md`
 Project skills: `.assistants/skills/<name>/SKILL.md`
 
 ### Dashboard

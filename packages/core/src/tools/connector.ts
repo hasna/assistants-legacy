@@ -71,7 +71,7 @@ export class ConnectorBridge {
   private static getCachePath(): string {
     const envHome = process.env.HOME || process.env.USERPROFILE;
     const home = envHome && envHome.trim().length > 0 ? envHome : homedir();
-    return join(home, '.assistants', 'cache', 'connectors.json');
+    return join(home, '.hasna', 'assistants', 'cache', 'connectors.json');
   }
 
   private static loadDiskCache(): void {

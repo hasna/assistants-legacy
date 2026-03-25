@@ -801,7 +801,7 @@ export function OnboardingPanel({
           <Text color="gray">{'│'} Model:      <Text>{modelDisplay}</Text>{'│'}</Text>
           <Text color="gray">{'│'} Connectors: <Text>{connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}</Text>{'│'}</Text>
           <Text color="gray">{'│'} Skills:     <Text>{skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}</Text>{'│'}</Text>
-          <Text color="gray">{'│'} Config:     <Text>{'~/.assistants/'.padEnd(24)}</Text>{'│'}</Text>
+          <Text color="gray">{'│'} Config:     <Text>{'~/.hasna/assistants/'.padEnd(24)}</Text>{'│'}</Text>
           <Text color="gray">{'└─────────────────────────────────────┘'}</Text>
         </Box>
         <Box marginTop={1}>

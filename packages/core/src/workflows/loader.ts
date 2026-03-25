@@ -3,7 +3,7 @@
  *
  * Loads workflow definitions from YAML files in:
  * - .assistants/workflows/ (built-in)
- * - ~/.assistants/workflows/ (user-defined)
+ * - ~/.hasna/assistants/workflows/ (user-defined)
  */
 
 import { resolve, basename } from 'path';
@@ -151,7 +151,7 @@ export class WorkflowLoader {
       // Built-in workflows (relative to install)
       resolve(process.cwd(), '.assistants/workflows'),
       // User workflows
-      resolve(homedir(), '.assistants/workflows'),
+      resolve(homedir(), '.hasna/assistants/workflows'),
     ];
 
     // Also check for built-in workflows from dist

@@ -320,7 +320,7 @@ describe('installHeartbeatSkills', () => {
 
     // We can't easily override getConfigDir, so test the skill content structure
     // by verifying the function is callable and returns an array
-    // The actual installation depends on getConfigDir() pointing to ~/.assistants
+    // The actual installation depends on getConfigDir() pointing to ~/.hasna/assistants
     const result = await installHeartbeatSkills();
     expect(Array.isArray(result)).toBe(true);
     // Result should be skill names that were newly installed

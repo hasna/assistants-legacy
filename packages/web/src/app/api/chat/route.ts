@@ -92,7 +92,7 @@ Use \`\`\`ui blocks when the user asks for dashboards, metrics, data summaries, 
 
 /**
  * Load system prompt following same priority as terminal:
- * 1. ~/.assistants/ASSISTANTS.md (global)
+ * 1. ~/.hasna/assistants/ASSISTANTS.md (global)
  * 2. .assistants/ASSISTANTS.md (project, if applicable)
  * 3. Default fallback
  */
@@ -108,8 +108,8 @@ function readPromptIfExists(filePath: string): string | null {
 async function loadSystemPrompt(sessionId?: string): Promise<string> {
   const prompts: string[] = [];
 
-  // Global prompt: ~/.assistants/ASSISTANTS.md
-  const globalPath = join(homedir(), '.assistants', 'ASSISTANTS.md');
+  // Global prompt: ~/.hasna/assistants/ASSISTANTS.md
+  const globalPath = join(homedir(), '.hasna', 'assistants', 'ASSISTANTS.md');
   const globalPrompt = readPromptIfExists(globalPath);
   if (globalPrompt) prompts.push(globalPrompt);
 

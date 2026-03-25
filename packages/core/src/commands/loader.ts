@@ -9,7 +9,7 @@ import { getRuntime } from '../runtime';
  *
  * Command locations (in priority order):
  * 1. Project-level: .assistants/commands/
- * 2. Global-level: ~/.assistants/commands/
+ * 2. Global-level: ~/.hasna/assistants/commands/
  *
  * File format:
  * - Markdown files (.md) with optional YAML frontmatter
@@ -33,7 +33,7 @@ export class CommandLoader {
     // Load global commands first (lower priority)
     const envHome = process.env.HOME || process.env.USERPROFILE;
     const homeDir = envHome && envHome.trim().length > 0 ? envHome : homedir();
-    const globalDir = join(homeDir, '.assistants', 'commands');
+    const globalDir = join(homeDir, '.hasna', 'assistants', 'commands');
     await this.loadFromDirectory(globalDir, 'global');
 
     // Load project commands (higher priority, will override global)

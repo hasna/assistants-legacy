@@ -32,7 +32,7 @@ Usage:
 gather options:
   --limit <n>        Maximum number of examples
   --since <date>     Only include sessions since this date (ISO 8601)
-  --output <dir>     Output directory (default: ~/.assistants/training/)
+  --output <dir>     Output directory (default: ~/.hasna/assistants/training/)
   --json             Output result summary as JSON
 
 train options:

@@ -1,7 +1,7 @@
 /**
  * One-time migration from old multi-DB/JSON storage to unified SQLite
  *
- * Detection: Checks for ~/.assistants/.migrated-v1 marker file.
+ * Detection: Checks for ~/.hasna/assistants/.migrated-v1 marker file.
  * Migration order follows dependencies.
  * Runs in a single transaction for atomicity.
  * Old files are NOT deleted (user can clean up manually).

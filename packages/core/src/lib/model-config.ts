@@ -1,5 +1,5 @@
 // Model configuration for @hasna/assistants
-// Reads/writes ~/.assistants/config.json to store the active fine-tuned model ID
+// Reads/writes ~/.hasna/assistants/config.json to store the active fine-tuned model ID
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,7 +45,7 @@ export function getActiveModel(): string {
 }
 
 /**
- * Sets the active fine-tuned model ID in ~/.assistants/model-config.json.
+ * Sets the active fine-tuned model ID in ~/.hasna/assistants/model-config.json.
  */
 export function setActiveModel(modelId: string): void {
   const config = readModelConfig();

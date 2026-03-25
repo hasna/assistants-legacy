@@ -337,7 +337,7 @@ export function agentsCommand(): Command {
               `We are creating a new agent definition named "${name}" (scope: ${scope}).\n\n${knownBlock}${missingBlock}` +
               'Use the ask_user tool to interview the user and collect the missing fields. ' +
               'Then create the agent definition JSON file. The file should be saved at: ' +
-              `${scope === 'global' ? '~/.assistants' : '.assistants'}/agents/${name}.json\n` +
+              `${scope === 'global' ? '~/.hasna/assistants' : '.assistants'}/agents/${name}.json\n` +
               'Required fields: name, description. Optional: tools, systemPrompt, maxTurns, minTurns, workUntilDone.',
           };
         }
@@ -414,7 +414,7 @@ export function agentsCommand(): Command {
         message += '/agents delete <name>       Delete an agent definition\n';
         message += '\nOptions for create:\n';
         message += '  --project              Save to project .assistants/agents/ (default)\n';
-        message += '  --global               Save to ~/.assistants/agents/\n';
+        message += '  --global               Save to ~/.hasna/assistants/agents/\n';
         message += '  --desc "..."           Description\n';
         message += '  --tools a,b,c          Comma-separated tool names\n';
         message += '  --prompt "..."         System prompt / instructions\n';
@@ -433,7 +433,7 @@ export function agentsCommand(): Command {
         if (defs.length === 0) {
           context.emit('text', '\nNo agent definitions found.\n');
           context.emit('text', 'Create one with: /agents create <name>\n');
-          context.emit('text', 'Agent definitions are JSON files in ~/.assistants/agents/ (global) or .assistants/agents/ (project).\n');
+          context.emit('text', 'Agent definitions are JSON files in ~/.hasna/assistants/agents/ (global) or .assistants/agents/ (project).\n');
           context.emit('done');
           return { handled: true };
         }

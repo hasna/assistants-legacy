@@ -74,7 +74,7 @@ export class ConnectorIndex {
   }
 
   private getCachePath(): string {
-    return join(this.getHomeDir(), '.assistants', 'cache', 'connector-index.json');
+    return join(this.getHomeDir(), '.hasna', 'assistants', 'cache', 'connector-index.json');
   }
 
   private loadDiskCache(): void {

@@ -58,7 +58,7 @@ export async function installConnectorFromRegistry(
   try {
     const lib = await getConnectorsLib();
     const targetDir = scope === 'global'
-      ? join(homedir(), '.assistants', 'connectors')
+      ? join(homedir(), '.hasna', 'assistants', 'connectors')
       : join(cwd || process.cwd(), '.assistants', 'connectors');
     const result = lib.installConnector(name, { targetDir });
     if (!result.success) return { success: false, error: result.error ?? 'Installation failed' };
@@ -72,7 +72,7 @@ export async function getInstalledRegistryConnectors(scope: 'project' | 'global'
   try {
     const lib = await getConnectorsLib();
     const targetDir = scope === 'global'
-      ? join(homedir(), '.assistants', 'connectors')
+      ? join(homedir(), '.hasna', 'assistants', 'connectors')
       : join(cwd || process.cwd(), '.assistants', 'connectors');
     return lib.getInstalledConnectors(targetDir);
   } catch { return []; }
@@ -82,7 +82,7 @@ export async function removeInstalledConnector(name: string, scope: 'project' | 
   try {
     const lib = await getConnectorsLib();
     const targetDir = scope === 'global'
-      ? join(homedir(), '.assistants', 'connectors')
+      ? join(homedir(), '.hasna', 'assistants', 'connectors')
       : join(cwd || process.cwd(), '.assistants', 'connectors');
     lib.removeConnector(name, targetDir);
     return { success: true };

@@ -63,7 +63,7 @@ export function IdentityClient({ data }: { data: IdentityRow[] }) {
           <p className="text-muted-foreground text-sm">
             No identity records found. Configure your assistant in{" "}
             <code className="bg-muted rounded px-1 py-0.5 text-xs">
-              ~/.assistants/config.json
+              ~/.hasna/assistants/config.json
             </code>
           </p>
         </div>

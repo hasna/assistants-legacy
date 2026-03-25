@@ -49,8 +49,8 @@ export function configCommand(): Command {
         message += '\n**Commands Directories:**\n';
         message += `  - Project: ${join(context.cwd, '.assistants', 'commands')}\n`;
         message += `  - User/Workspace: ${join(storageDir, 'commands')}\n`;
-        if (storageDir !== join(homeDir, '.assistants')) {
-          message += `  - Global fallback: ${join(homeDir, '.assistants', 'commands')}\n`;
+        if (storageDir !== join(homeDir, '.hasna', 'assistants')) {
+          message += `  - Global fallback: ${join(homeDir, '.hasna', 'assistants', 'commands')}\n`;
         }
 
         context.emit('text', message);

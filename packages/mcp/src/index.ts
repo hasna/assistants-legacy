@@ -60,7 +60,7 @@ export interface HooksFile { hooks?: Record<string, HookMatcher[]> }
 
 export function loadHooksFile(overridePaths?: string[]): HooksFile {
   const candidates = overridePaths ?? [
-    join(homedir(), '.assistants', 'config', 'hooks.json'),
+    join(homedir(), '.hasna', 'assistants', 'config', 'hooks.json'),
     join(dirname(new URL(import.meta.url).pathname), '..', '..', '..', 'config', 'hooks.json'),
   ];
   for (const p of candidates) {
@@ -133,7 +133,7 @@ export function createAuditLog(maxEntries = 500): {
 
 // ─── Dynamic tools storage ────────────────────────────────────────────────────
 
-export const DYNAMIC_TOOLS_FILE = join(homedir(), '.assistants', 'mcp-tools.json');
+export const DYNAMIC_TOOLS_FILE = join(homedir(), '.hasna', 'assistants', 'mcp-tools.json');
 
 export interface DynamicToolDef { name: string; description: string; command: string; version?: string }
 
@@ -800,7 +800,7 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
     { description: 'Assistant settings.json configuration', mimeType: 'application/json' },
     async (_uri) => {
       const candidates = [
-        join(homedir(), '.assistants', 'config', 'settings.json'),
+        join(homedir(), '.hasna', 'assistants', 'config', 'settings.json'),
         join(dirname(new URL(import.meta.url).pathname), '..', '..', '..', 'config', 'settings.json'),
       ];
       for (const p of candidates) {
@@ -816,7 +816,7 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
     { description: 'Assistant hooks.json configuration', mimeType: 'application/json' },
     async (_uri) => {
       const candidates = [
-        join(homedir(), '.assistants', 'config', 'hooks.json'),
+        join(homedir(), '.hasna', 'assistants', 'config', 'hooks.json'),
         join(dirname(new URL(import.meta.url).pathname), '..', '..', '..', 'config', 'hooks.json'),
       ];
       for (const p of candidates) {
@@ -847,7 +847,7 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
 
   const commandsDirs = [
     join(dirname(new URL(import.meta.url).pathname), '..', '..', '..', '.assistants', 'commands'),
-    join(homedir(), '.assistants', 'commands'),
+    join(homedir(), '.hasna', 'assistants', 'commands'),
   ];
   for (const dir of commandsDirs) {
     for (const cmd of loadCommandsDir(dir)) {
@@ -1059,6 +1059,36 @@ server.tool(
   }
 );
 
+server.tool(
+  'send_feedback',
+  'Send feedback about @hasna/assistants — bugs, feature requests, or general comments. Stored locally and posted to the cloud.',
+  {
+    type: 'object',
+    properties: {
+      message: { type: 'string', description: 'Feedback message' },
+      type: { type: 'string', enum: ['bug', 'feature', 'feedback'], description: 'Feedback type (default: feedback)' },
+      email: { type: 'string', description: 'Your email (optional, for follow-up)' },
+    },
+    required: ['message'],
+  },
+  async (args: { message: string; type?: string; email?: string }) => {
+    try {
+      const { sendFeedback } = await import('@hasna/cloud');
+      const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf-8'));
+      const result = await sendFeedback({
+        service: 'open-assistants',
+        version: packageJson.version ?? undefined,
+        message: args.type ? `[${args.type}] ${args.message}` : args.message,
+        email: args.email,
+      });
+      const status = result.sent ? 'Feedback sent to cloud.' : `Saved locally (cloud send failed: ${result.error ?? 'unknown'}).`;
+      return { content: [{ type: 'text' as const, text: `Thank you for your feedback!\nID: ${result.id}\n${status}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: `Error sending feedback: ${err instanceof Error ? err.message : String(err)}` }] };
+    }
+  }
+);
+
 // ─── CLI mode (remove/uninstall/rm) ─────────────────────────────────────────
 
 const firstArg = process.argv[2];
@@ -1079,7 +1109,7 @@ if (firstArg === 'remove' || firstArg === 'rm' || firstArg === 'uninstall' || fi
     const { unlinkSync, existsSync } = await import('fs');
     const { join } = await import('path');
     const { homedir } = await import('os');
-    const sessionsDir = join(homedir(), '.assistants', 'sessions');
+    const sessionsDir = join(homedir(), '.hasna', 'assistants', 'sessions');
     const sessionFile = join(sessionsDir, `${sessionId}.json`);
     if (existsSync(sessionFile)) {
       unlinkSync(sessionFile);

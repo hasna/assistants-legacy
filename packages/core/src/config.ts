@@ -628,7 +628,7 @@ export function getTempFolder(sessionId: string, baseDir?: string): string {
 
 /**
  * Load system prompt from ASSISTANTS.md files
- * Priority: project .assistants/ASSISTANTS.md > global ~/.assistants/ASSISTANTS.md
+ * Priority: project .assistants/ASSISTANTS.md > global ~/.hasna/assistants/ASSISTANTS.md
  * If both exist, they are concatenated (global first, then project)
  */
 export async function loadSystemPrompt(

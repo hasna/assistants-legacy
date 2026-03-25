@@ -1,7 +1,7 @@
 /**
  * Database connection for the web UI
  *
- * Connects to the shared ~/.assistants/assistants.db SQLite database
+ * Connects to the shared ~/.hasna/assistants/assistants.db SQLite database
  * and the local subscribers database.
  */
 
@@ -40,11 +40,12 @@ export function getSubscribersDb(): Database.Database {
 let assistantsDb: Database.Database | null = null;
 
 function getAssistantsDir(): string {
-  // Respect ASSISTANTS_DIR > ASSISTANTS_PROFILE > default
+  // Respect ASSISTANTS_DIR > ASSISTANTS_PROFILE > default ~/.hasna/assistants
   if (process.env.ASSISTANTS_DIR) return process.env.ASSISTANTS_DIR;
   const profile = process.env.ASSISTANTS_PROFILE;
-  if (profile) return join(homedir(), '.assistants', 'profiles', profile);
-  return join(homedir(), '.assistants');
+  const home = homedir();
+  if (profile) return join(home, '.hasna', 'assistants', 'profiles', profile);
+  return join(home, '.hasna', 'assistants');
 }
 
 export function getDb(): Database.Database {

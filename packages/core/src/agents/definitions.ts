@@ -3,7 +3,7 @@
  *
  * Named subagent specializations loaded from JSON files on disk.
  * Definitions live in:
- *   - ~/.assistants/agents/   (global, user-wide)
+ *   - ~/.hasna/assistants/agents/   (global, user-wide)
  *   - .assistants/agents/     (project-local)
  *
  * Each file is a JSON file: e.g. driveorganizer.json, emailprocessor.json

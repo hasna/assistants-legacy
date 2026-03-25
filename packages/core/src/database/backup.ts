@@ -1,7 +1,7 @@
 /**
  * Database backup using VACUUM INTO
  *
- * - Creates atomic backups at ~/.assistants/backups/assistants-{timestamp}.db
+ * - Creates atomic backups at ~/.hasna/assistants/backups/assistants-{timestamp}.db
  * - Automatically triggered on first startup of the day
  * - Keeps last 5 backups, deletes older ones
  * - Records each backup in the _backups table

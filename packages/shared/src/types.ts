@@ -1281,7 +1281,7 @@ export interface MessagesInjectionConfig {
  * Messages storage configuration
  */
 export interface MessagesStorageConfig {
-  /** Base path for storage (default: ~/.assistants/messages) */
+  /** Base path for storage (default: ~/.hasna/assistants/messages) */
   basePath?: string;
   /** Max messages per inbox (default: 1000) */
   maxMessages?: number;
@@ -1325,7 +1325,7 @@ export interface WebhooksConfig {
 
   /** Storage settings */
   storage?: {
-    /** Base path (default: ~/.assistants/webhooks) */
+    /** Base path (default: ~/.hasna/assistants/webhooks) */
     basePath?: string;
     /** Max events to retain per webhook (default: 1000) */
     maxEvents?: number;

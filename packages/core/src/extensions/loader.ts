@@ -47,13 +47,13 @@ export interface ExtensionLoadResult {
 
 /**
  * ExtensionLoader discovers and loads TypeScript/JavaScript extensions
- * from ~/.assistants/extensions/ and .assistants/extensions/.
+ * from ~/.hasna/assistants/extensions/ and .assistants/extensions/.
  *
  * Each extension is a directory with an index.ts or index.js that
  * default-exports an object implementing the Extension interface.
  *
  * Discovery order (later overrides earlier by name):
- * 1. ~/.assistants/extensions/<name>/  — global user extensions
+ * 1. ~/.hasna/assistants/extensions/<name>/  — global user extensions
  * 2. {cwd}/.assistants/extensions/<name>/ — project-local extensions
  */
 export class ExtensionLoader {
@@ -74,7 +74,7 @@ export class ExtensionLoader {
 
     const envHome = process.env.HOME || process.env.USERPROFILE;
     const userHome = envHome && envHome.trim().length > 0 ? envHome : homedir();
-    const globalDir = join(userHome, '.assistants', 'extensions');
+    const globalDir = join(userHome, '.hasna', 'assistants', 'extensions');
     const projectDir = join(cwd, '.assistants', 'extensions');
 
     // Load global extensions first, then project extensions (project overrides global by name)

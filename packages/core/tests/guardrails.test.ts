@@ -30,7 +30,7 @@ beforeEach(() => {
   homeDir = join(tempDir, 'home');
   projectDir = join(tempDir, 'project');
   mkdirSync(homeDir, { recursive: true });
-  mkdirSync(join(homeDir, '.assistants'), { recursive: true });
+  mkdirSync(join(homeDir, '.hasna', 'assistants'), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;
