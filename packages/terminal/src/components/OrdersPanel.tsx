@@ -248,32 +248,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       return;
     }
 
-    if (input === '1') {
-      switchTab('orders');
-      return;
-    }
-    if (input === '2') {
-      switchTab('stores');
-      return;
-    }
-    if (input === '3') {
-      switchTab('overview');
-      return;
-    }
-
-    if (key.leftArrow) {
-      const index = MAIN_TABS.indexOf(tab);
-      const next = index > 0 ? MAIN_TABS[index - 1] : MAIN_TABS[MAIN_TABS.length - 1];
-      switchTab(next);
-      return;
-    }
-
-    if (key.rightArrow) {
-      const index = MAIN_TABS.indexOf(tab);
-      const next = index < MAIN_TABS.length - 1 ? MAIN_TABS[index + 1] : MAIN_TABS[0];
-      switchTab(next);
-      return;
-    }
+    // Tab switching handled by <tab-select> component
 
     if (tab === 'orders' && (input === '[' || input === ']')) {
       setStatusFilterIndex((prev) => {
@@ -332,13 +307,27 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     }
   });
 
+  const tabSelectOptions = useMemo(() =>
+    MAIN_TABS.map((entry, index) => ({
+      name: `${index + 1}:${entry}`,
+      description: '',
+      value: entry,
+    })), []);
+
   const tabBar = (
-    <box marginBottom={1}>
-      <text>{MAIN_TABS.map((entry, index) => {
-        const label = `${index + 1}:${entry}`;
-        return tab === entry ? <span key={entry} bg="#0055aa" fg="whiteBright">{label}{'  '}</span> : <span key={entry} fg="gray">{label}{'  '}</span>;
-      })}</text>
-    </box>
+    <tab-select
+      options={tabSelectOptions}
+      selectedBackgroundColor="#0055aa"
+      selectedTextColor="whiteBright"
+      textColor="gray"
+      showDescription={false}
+      wrapSelection
+      focused
+      onChange={(index) => {
+        const next = MAIN_TABS[index];
+        if (next) switchTab(next);
+      }}
+    />
   );
 
   const controls = useMemo(() => {

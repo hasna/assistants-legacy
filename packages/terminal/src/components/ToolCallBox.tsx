@@ -92,6 +92,9 @@ function formatToolCall(toolCall: ToolCall): string {
       return `Reading: ${truncate(String(input.path || input.file_path || ''), 50)}`;
     case 'write':
       return `Writing: ${truncate(String(input.filename || input.path || input.file_path || ''), 50)}`;
+    case 'edit':
+    case 'file_edit':
+      return `Editing: ${truncate(String(input.file_path || input.path || ''), 50)}`;
     case 'glob':
       return `Finding: ${truncate(String(input.pattern || ''), 50)}`;
     case 'grep':

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Message, ToolCall, ToolResult } from '@hasna/assistants-shared';
+import { useAppContext } from '@opentui/react';
 import { Markdown } from './Markdown';
 import {
   groupConsecutiveToolMessages,
@@ -7,7 +8,78 @@ import {
 } from './messageLines';
 import { truncateToolResult, truncateToolResultWithInfo } from './toolDisplay';
 import { TerminalImage } from './TerminalImage';
+import { CodeBlock, getFiletypeForToolResult, shouldHighlightToolResult, getFiletypeFromPath } from './CodeBlock';
 import { basename } from 'path';
+
+// ============================================
+// Edit Tool Diff Helpers
+// ============================================
+
+/**
+ * Generate a unified diff string from old and new text.
+ * Produces a minimal git-style unified diff that the <diff> component can render.
+ */
+function generateUnifiedDiff(oldText: string, newText: string, filePath?: string): string {
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+  const file = filePath ? basename(filePath) : 'file';
+
+  const diffLines: string[] = [
+    `--- a/${file}`,
+    `+++ b/${file}`,
+    `@@ -1,${oldLines.length} +1,${newLines.length} @@`,
+  ];
+
+  for (const line of oldLines) {
+    diffLines.push(`-${line}`);
+  }
+  for (const line of newLines) {
+    diffLines.push(`+${line}`);
+  }
+
+  return diffLines.join('\n');
+}
+
+/**
+ * Check if a tool call is an edit with both old and new strings
+ */
+function isEditToolCall(toolCall: ToolCall): boolean {
+  return (
+    (toolCall.name === 'edit' || toolCall.name === 'file_edit') &&
+    typeof toolCall.input.old_string === 'string' &&
+    typeof toolCall.input.new_string === 'string' &&
+    toolCall.input.old_string !== '' &&
+    toolCall.input.new_string !== ''
+  );
+}
+
+// ============================================
+// Clipboard Hook (OSC52)
+// ============================================
+
+/**
+ * Hook to copy text to clipboard via OSC52.
+ * Returns a copy function and a "just copied" flash state.
+ */
+export function useCopyToClipboard(): { copy: (text: string) => boolean; justCopied: boolean } {
+  const { renderer } = useAppContext();
+  const [justCopied, setJustCopied] = useState(false);
+
+  const copy = useCallback(
+    (text: string): boolean => {
+      if (!renderer) return false;
+      const ok = renderer.copyToClipboardOSC52(text);
+      if (ok) {
+        setJustCopied(true);
+        setTimeout(() => setJustCopied(false), 1500);
+      }
+      return ok;
+    },
+    [renderer],
+  );
+
+  return { copy, justCopied };
+}
 
 interface ActivityEntry {
   id: string;
@@ -241,9 +313,9 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
           <box flexDirection="row">
             <text fg={isDraft || isContinuation ? "gray" : undefined}>{isContinuation ? '  ' : '❯ '} </text>
             {isQueued && !isContinuation ? (
-              <text fg="gray">⏳ {message.content ?? ''}</text>
+              <text fg="gray">⏳ {linkifyText(message.content ?? '')}</text>
             ) : (
-              <text fg={isDraft ? "gray" : undefined}>{displayContent}</text>
+              <text fg={isDraft ? "gray" : undefined}>{linkifyText(displayContent)}</text>
             )}
           </box>
         )}
@@ -425,9 +497,11 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
               </box>
             )}
             {call.result && (call.toolCall.name !== 'display_image' || call.result.isError) && (
-              <box marginLeft={2}>
-                <text fg="gray">└ {truncateToolResult(call.result, 2, 200, { verbose: verboseTools })}</text>
-              </box>
+              <ActiveToolResultContent
+                toolCall={call.toolCall}
+                result={call.result}
+                verboseTools={verboseTools}
+              />
             )}
           </box>
         );
@@ -455,6 +529,35 @@ function startsWithListOrTable(content: string): boolean {
 
 function stripAnsi(text: string): string {
   return text.replace(/\x1B\[[0-9;]*m/g, '');
+}
+
+// URL pattern for detecting links in plain text
+const URL_PATTERN = /https?:\/\/[^\s<>"\])\u0000-\u001F]+/g;
+
+/**
+ * Linkify plain text: detect URLs and wrap them in <link> elements
+ * for OSC 8 hyperlink support in terminals that support it.
+ * [cicero] Added for OpenTUI link detection integration.
+ */
+function linkifyText(text: string): React.ReactNode {
+  if (!text) return text;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  URL_PATTERN.lastIndex = 0;
+  while ((match = URL_PATTERN.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const url = match[0];
+    parts.push(<link key={match.index} href={url}>{url}</link>);
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex === 0) return text; // no links found
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return <>{parts}</>;
 }
 
 function normalizeUserDisplay(content: string): string {
@@ -562,9 +665,12 @@ function ToolCallPanel({
               </box>
             )}
             {result && resultText && (
-              <box marginLeft={2}>
-                <text fg="gray">└ {indentMultiline(resultText, '  ')}</text>
-              </box>
+              <ToolResultContent
+                toolCall={toolCall}
+                content={resultText}
+                isError={result.isError}
+                verboseTools={verboseTools}
+              />
             )}
             {showExpandHint && (
               <box marginLeft={2}>
@@ -574,6 +680,126 @@ function ToolCallPanel({
           </box>
         );
       })}
+    </box>
+  );
+}
+
+/**
+ * Renders a unified diff view for Edit tool calls using OpenTUI's <diff> component.
+ * Only shown when the tool call has both old_string and new_string.
+ */
+function EditDiffView({ toolCall }: { toolCall: ToolCall }) {
+  const oldStr = String(toolCall.input.old_string || '');
+  const newStr = String(toolCall.input.new_string || '');
+  const filePath = String(toolCall.input.file_path || toolCall.input.path || '');
+  const filetype = filePath ? getFiletypeFromPath(filePath) : undefined;
+
+  const diffText = useMemo(
+    () => generateUnifiedDiff(oldStr, newStr, filePath),
+    [oldStr, newStr, filePath],
+  );
+
+  return (
+    <box marginLeft={2} flexDirection="column">
+      <text fg="gray">{'\u2514'}</text>
+      <box marginLeft={2}>
+        <diff
+          diff={diffText}
+          view="unified"
+          showLineNumbers={false}
+          filetype={filetype}
+          width="100%"
+        />
+      </box>
+    </box>
+  );
+}
+
+/**
+ * Renders tool result content, using syntax-highlighted <code> for file/code content,
+ * <diff> for edit tool calls, and plain <text> for short or non-code output.
+ * Includes a [copy] indicator for code block results.
+ */
+function ToolResultContent({
+  toolCall,
+  content,
+  isError,
+  verboseTools,
+}: {
+  toolCall: ToolCall;
+  content: string;
+  isError?: boolean;
+  verboseTools?: boolean;
+}) {
+  const toolName = toolCall.name;
+
+  // [titus] Show <diff> view for completed edit tool calls
+  if (!isError && isEditToolCall(toolCall)) {
+    return <EditDiffView toolCall={toolCall} />;
+  }
+
+  if (shouldHighlightToolResult(toolName, content, isError)) {
+    const filetype = getFiletypeForToolResult(toolCall);
+    return (
+      <box marginLeft={2} flexDirection="column">
+        <text fg="gray">{'\u2514'}</text>
+        <box marginLeft={2}>
+          <CopyableCodeBlock content={content} filetype={filetype} />
+        </box>
+      </box>
+    );
+  }
+
+  return (
+    <box marginLeft={2}>
+      <text fg="gray">{'\u2514'} {linkifyText(indentMultiline(content, '  '))}</text>
+    </box>
+  );
+}
+
+/**
+ * CodeBlock with a [copy] indicator. Copies content to clipboard via OSC52 on mouse click.
+ * The indicator shows [copy] by default, [copied] briefly after successful copy.
+ */
+function CopyableCodeBlock({ content, filetype }: { content: string; filetype?: string }) {
+  const { copy, justCopied } = useCopyToClipboard();
+
+  return (
+    <box flexDirection="column">
+      <box flexDirection="row" justifyContent="flex-end">
+        <box onMouseUp={() => copy(content)}>
+          <text fg={justCopied ? 'green' : '#636d83'}>
+            {justCopied ? '[copied]' : '[copy]'}
+          </text>
+        </box>
+      </box>
+      <CodeBlock content={content} filetype={filetype} />
+    </box>
+  );
+}
+
+/**
+ * Renders tool result content in the active tools panel (streaming/in-progress view).
+ * Handles edit diff rendering and clipboard copy.
+ */
+function ActiveToolResultContent({
+  toolCall,
+  result,
+  verboseTools,
+}: {
+  toolCall: ToolCall;
+  result: ToolResult;
+  verboseTools?: boolean;
+}) {
+  // [titus] Show <diff> for completed edit tool calls
+  if (!result.isError && isEditToolCall(toolCall)) {
+    return <EditDiffView toolCall={toolCall} />;
+  }
+
+  const resultText = truncateToolResult(result, 2, 200, { verbose: verboseTools });
+  return (
+    <box marginLeft={2}>
+      <text fg="gray">{'\u2514'} {linkifyText(resultText)}</text>
     </box>
   );
 }
@@ -616,17 +842,30 @@ function ToolResultPanel({
         }
 
         const truncatedResult = truncateToolResultWithInfo(result, 4, 400, { verbose: verboseTools });
-        const resultText = indentMultiline(truncatedResult.content, '   ');
+        const resultText = truncatedResult.content;
         const showExpandHint = !verboseTools && truncatedResult.truncation.wasTruncated;
+        const useHighlight = shouldHighlightToolResult(result.toolName, resultText, result.isError);
         return (
           <box key={`${result.toolCallId}-${index}`} flexDirection="column">
             <box flexDirection="row">
               <text fg={iconColor}>{icon} </text>
               <text fg={iconColor}><b>{title}</b></text>
             </box>
-            <box marginLeft={1}>
-              <text fg="gray">└  {resultText}</text>
-            </box>
+            {useHighlight ? (
+              <box marginLeft={1} flexDirection="column">
+                <text fg="gray">└</text>
+                <box marginLeft={2}>
+                  <CodeBlock
+                    content={resultText}
+                    filetype={result.toolName === 'bash' ? 'bash' : undefined}
+                  />
+                </box>
+              </box>
+            ) : (
+              <box marginLeft={1}>
+                <text fg="gray">└  {linkifyText(indentMultiline(resultText, '   '))}</text>
+              </box>
+            )}
             {showExpandHint && (
               <box marginLeft={1}>
                 <text fg="gray">   (Ctrl+O for full output)</text>
@@ -663,6 +902,8 @@ function capitalizeToolName(name: string): string {
     web_fetch: 'WebFetch',
     web_search: 'WebSearch',
     curl: 'Curl',
+    edit: 'Edit',
+    file_edit: 'Edit',
     display_image: 'Image',
     schedule: 'Schedule',
     submit_feedback: 'Feedback',
@@ -700,6 +941,11 @@ function formatToolParams(toolCall: ToolCall): string[] {
     case 'write':
       if (input.file_path || input.path || input.filename)
         params.push(`file_path: ${truncate(String(input.file_path || input.path || input.filename), 60)}`);
+      break;
+    case 'edit':
+    case 'file_edit':
+      if (input.file_path || input.path)
+        params.push(`file_path: ${truncate(String(input.file_path || input.path), 60)}`);
       break;
     case 'glob':
       if (input.pattern) params.push(`pattern: ${truncate(String(input.pattern), 60)}`);
@@ -748,6 +994,10 @@ function getToolContext(toolCall: ToolCall): string {
     case 'write':
       const writePath = String(input.filename || input.path || input.file_path || '');
       return basename(writePath) || writePath;
+    case 'edit':
+    case 'file_edit':
+      const editPath = String(input.file_path || input.path || '');
+      return basename(editPath) || editPath;
     case 'glob':
       return truncate(String(input.pattern || ''), 30);
     case 'grep':
@@ -801,6 +1051,8 @@ function getToolCategory(name: string): string {
     case 'read':
       return 'read';
     case 'write':
+    case 'edit':
+    case 'file_edit':
       return 'write';
     case 'bash':
       return 'bash';

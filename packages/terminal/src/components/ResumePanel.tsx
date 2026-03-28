@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedSessionInfo } from '@hasna/assistants-core';
+import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 type FilterMode = 'cwd' | 'all';
@@ -60,30 +61,37 @@ export function ResumePanel({
     return sessions.filter((session) => normalizeCwd(session.cwd) === normalizedCwd);
   }, [mode, sessions, normalizedCwd]);
 
-  useEffect(() => {
-    setSelectedIndex((prev) => Math.min(prev, Math.max(0, filteredSessions.length - 1)));
-  }, [filteredSessions.length]);
-
   const selected = filteredSessions[selectedIndex];
 
+  // Build options for <select>
+  const selectOptions: SelectOption[] = useMemo(() => {
+    return filteredSessions.map((session) => {
+      const time = formatRelativeTime(session.updatedAt).padEnd(8);
+      const assistant = (session.assistantId || 'default').slice(0, 12).padEnd(12);
+      const messages = String(session.messageCount ?? 0).padStart(4);
+      const cwd = truncate(session.cwd, 48);
+      return {
+        name: `${time} ${assistant} ${messages} ${cwd}`,
+        description: `ID: ${session.id} | ${session.cwd}`,
+        value: session,
+      };
+    });
+  }, [filteredSessions]);
+
+  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
+    setSelectedIndex(_index);
+  }, []);
+
+  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
+    if (_option) {
+      onResume(_option.value as SavedSessionInfo);
+    }
+  }, [onResume]);
+
+  // Handle non-navigation keys (escape, filter toggle, refresh)
   useInput((input, key) => {
     if (key.escape || input === 'q' || input === 'Q') {
       onClose();
-      return;
-    }
-
-    if (key.return && selected) {
-      onResume(selected);
-      return;
-    }
-
-    if (key.upArrow) {
-      setSelectedIndex((prev) => (prev === 0 ? Math.max(0, filteredSessions.length - 1) : prev - 1));
-      return;
-    }
-
-    if (key.downArrow) {
-      setSelectedIndex((prev) => (prev >= filteredSessions.length - 1 ? 0 : prev + 1));
       return;
     }
 
@@ -95,6 +103,7 @@ export function ResumePanel({
       } else {
         setMode((prev) => (prev === 'cwd' ? 'all' : 'cwd'));
       }
+      setSelectedIndex(0);
       return;
     }
 
@@ -122,20 +131,16 @@ export function ResumePanel({
             </text>
           </box>
         ) : (
-          filteredSessions.map((session, index) => {
-            const isSelected = index === selectedIndex;
-            const time = formatRelativeTime(session.updatedAt).padEnd(8);
-            const assistant = (session.assistantId || 'default').slice(0, 12).padEnd(12);
-            const messages = String(session.messageCount ?? 0).padStart(4);
-            const cwd = truncate(session.cwd, 48);
-            return (
-              <box key={`${session.id}-${session.assistantId ?? 'default'}`} paddingY={0}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
-                  {time} {assistant} {messages} {cwd}
-                </text>
-              </box>
-            );
-          })
+          <select
+            options={selectOptions}
+            focused={true}
+            wrapSelection={true}
+            showDescription={false}
+            showScrollIndicator={true}
+            selectedIndex={selectedIndex}
+            onChange={handleSelectChange}
+            onSelect={handleSelectConfirm}
+          />
         )}
       </box>
 

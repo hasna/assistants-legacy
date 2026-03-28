@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { getSecurityLogger, SecurityLogger } from '@hasna/assistants-core';
 import type { SecurityEvent, Severity } from '@hasna/assistants-core';
+import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 interface LogsPanelProps {
@@ -98,10 +99,6 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     });
   }, [allEvents, severityFilter, eventTypeFilter]);
 
-  useEffect(() => {
-    setSelectedIndex((prev) => Math.min(prev, Math.max(0, filteredEvents.length - 1)));
-  }, [filteredEvents.length]);
-
   const selectedEvent = filteredEvents[selectedIndex];
 
   useEffect(() => {
@@ -110,6 +107,32 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     }
   }, [mode, selectedEvent]);
 
+  // Build options for <select>
+  const selectOptions: SelectOption[] = useMemo(() => {
+    return filteredEvents.map((event) => {
+      const icon = SEVERITY_ICONS[event.severity];
+      const time = formatRelativeTime(event.timestamp);
+      const reason = event.details?.reason || event.details?.command || event.details?.path || 'n/a';
+      return {
+        name: `${icon.padEnd(2)} ${time.padEnd(8)} ${event.eventType.padEnd(20)} ${truncate(reason, 40)}`,
+        description: `${event.severity} | ${EVENT_TYPE_LABELS[event.eventType] || event.eventType} | ${event.sessionId}`,
+        value: event,
+      };
+    });
+  }, [filteredEvents]);
+
+  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
+    setSelectedIndex(_index);
+  }, []);
+
+  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
+    if (_option) {
+      setSelectedIndex(_index);
+      setMode('detail');
+    }
+  }, []);
+
+  // Handle non-navigation keys (escape, filters, refresh)
   useInput((input, key) => {
     if (mode === 'detail') {
       if (key.escape || input === 'q' || input === 'Q') {
@@ -122,20 +145,6 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     // List mode
     if (key.escape || input === 'q' || input === 'Q') {
       onCancel();
-      return;
-    }
-
-    if (key.return && filteredEvents.length > 0) {
-      setMode('detail');
-      return;
-    }
-
-    if (key.upArrow) {
-      setSelectedIndex((prev) => (prev === 0 ? Math.max(0, filteredEvents.length - 1) : prev - 1));
-      return;
-    }
-    if (key.downArrow) {
-      setSelectedIndex((prev) => (prev >= filteredEvents.length - 1 ? 0 : prev + 1));
       return;
     }
 
@@ -237,22 +246,16 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
             </text>
           </box>
         ) : (
-          filteredEvents.map((event, index) => {
-            const isSelected = index === selectedIndex;
-            const severityColor = SEVERITY_COLORS[event.severity];
-            const icon = SEVERITY_ICONS[event.severity];
-            const time = formatRelativeTime(event.timestamp);
-            const reason = event.details?.reason || event.details?.command || event.details?.path || 'n/a';
-
-            return (
-              <box key={`${event.timestamp}-${index}`} paddingY={0}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
-                  <span fg={severityColor}>{icon.padEnd(2)}</span>
-                  {' '}{time.padEnd(8)}{' '}{event.eventType.padEnd(20)}{' '}{truncate(reason, 40)}
-                </text>
-              </box>
-            );
-          })
+          <select
+            options={selectOptions}
+            focused={mode === 'list'}
+            wrapSelection={true}
+            showDescription={false}
+            showScrollIndicator={true}
+            selectedIndex={selectedIndex}
+            onChange={handleSelectChange}
+            onSelect={handleSelectConfirm}
+          />
         )}
       </box>
 

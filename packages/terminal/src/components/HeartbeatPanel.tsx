@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Heartbeat } from '@hasna/assistants-core';
 import type { HeartbeatState } from '@hasna/assistants-shared';
+import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 interface HeartbeatPanelProps {
@@ -28,11 +29,6 @@ function formatRelativeTime(iso: string | undefined): string {
   return `${seconds}s ago`;
 }
 
-function truncate(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen - 3) + '...';
-}
-
 export function HeartbeatPanel({
   runs,
   heartbeatState,
@@ -50,10 +46,6 @@ export function HeartbeatPanel({
     });
   }, [runs]);
 
-  useEffect(() => {
-    setSelectedIndex((prev) => Math.min(prev, Math.max(0, sortedRuns.length - 1)));
-  }, [sortedRuns.length]);
-
   const selectedRun = sortedRuns[selectedIndex];
 
   useEffect(() => {
@@ -62,6 +54,35 @@ export function HeartbeatPanel({
     }
   }, [mode, selectedRun]);
 
+  // Build options for <select>
+  const selectOptions: SelectOption[] = useMemo(() => {
+    return sortedRuns.map((run) => {
+      const time = formatRelativeTime(run.timestamp).padEnd(8);
+      const activity = formatRelativeTime(run.lastActivity).padEnd(8);
+      const stats = run.stats || { messagesProcessed: 0, toolCallsExecuted: 0, errorsEncountered: 0 };
+      const summary = `msgs:${stats.messagesProcessed} tools:${stats.toolCallsExecuted} err:${stats.errorsEncountered}`;
+      return {
+        name: `${time} ${run.state.padEnd(12)} ${activity}`,
+        description: summary,
+        value: run,
+      };
+    });
+  }, [sortedRuns]);
+
+  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
+    if (_option) {
+      setSelectedIndex(sortedRuns.indexOf(_option.value));
+    }
+  }, [sortedRuns]);
+
+  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
+    if (_option && sortedRuns.length > 0) {
+      setSelectedIndex(sortedRuns.indexOf(_option.value));
+      setMode('detail');
+    }
+  }, [sortedRuns]);
+
+  // Handle non-navigation keys (escape, refresh)
   useInput((input, key) => {
     if (mode === 'detail') {
       if (key.escape || input === 'q' || input === 'Q') {
@@ -72,21 +93,6 @@ export function HeartbeatPanel({
 
     if (key.escape || input === 'q' || input === 'Q') {
       onClose();
-      return;
-    }
-
-    if (key.return && sortedRuns.length > 0) {
-      setMode('detail');
-      return;
-    }
-
-    if (key.upArrow) {
-      setSelectedIndex((prev) => (prev === 0 ? Math.max(0, sortedRuns.length - 1) : prev - 1));
-      return;
-    }
-
-    if (key.downArrow) {
-      setSelectedIndex((prev) => (prev >= sortedRuns.length - 1 ? 0 : prev + 1));
       return;
     }
 
@@ -131,20 +137,16 @@ export function HeartbeatPanel({
             <text fg="gray">No heartbeat runs recorded yet.</text>
           </box>
         ) : (
-          sortedRuns.map((run, index) => {
-            const isSelected = index === selectedIndex;
-            const time = formatRelativeTime(run.timestamp).padEnd(8);
-            const activity = formatRelativeTime(run.lastActivity).padEnd(8);
-            const stats = run.stats || { messagesProcessed: 0, toolCallsExecuted: 0, errorsEncountered: 0 };
-            const summary = `msgs:${stats.messagesProcessed} tools:${stats.toolCallsExecuted} err:${stats.errorsEncountered}`;
-            return (
-              <box key={`${run.timestamp}-${index}`} paddingY={0}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
-                  {time} {run.state.padEnd(12)} {activity} {truncate(summary, 32)}
-                </text>
-              </box>
-            );
-          })
+          <select
+            options={selectOptions}
+            focused={mode === 'list'}
+            wrapSelection={true}
+            showDescription={true}
+            showScrollIndicator={true}
+            selectedIndex={selectedIndex}
+            onChange={handleSelectChange}
+            onSelect={handleSelectConfirm}
+          />
         )}
       </box>
 

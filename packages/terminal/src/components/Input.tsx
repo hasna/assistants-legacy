@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback, useImperativeHandle } from 'react';
 import { useTerminalDimensions } from '@opentui/react';
-import { buildLayout, moveCursorVertical, type InputLayout } from './inputLayout';
+import type { TextareaRenderable } from '@opentui/core';
 import { CommandHistory, getCommandHistory } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
@@ -206,11 +206,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const pasteEnabled = pasteConfig?.enabled !== false;
   const pasteThresholds = pasteConfig?.thresholds ?? DEFAULT_PASTE_THRESHOLDS;
   const pasteMode = pasteConfig?.mode ?? 'placeholder';
-  // Combined value+cursor state for atomic updates during rapid paste operations
-  // When text is pasted, it may arrive in multiple chunks; using a single state
-  // object ensures each chunk sees the correct previous state via functional updates
-  const [inputState, setInputState] = useState({ value: '', cursor: 0 });
-  const { value, cursor } = inputState;
+
+  // The OpenTUI <textarea> handles all text editing (cursor, insert, delete, undo/redo, etc.)
+  // We track `value` in React state purely for autocomplete/history logic.
+  const textareaRef = useRef<TextareaRenderable>(null);
+  const [value, setValue] = useState('');
 
   // Large paste handling - when a large paste is detected, we show a placeholder
   // but keep the actual content stored for submission
@@ -234,21 +234,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     });
   }, []);
 
-  // Helpers for setting value/cursor together (atomic) or separately
-  const setValue = (newValue: string | ((prev: string) => string)) => {
-    setInputState(prev => ({
-      ...prev,
-      value: typeof newValue === 'function' ? newValue(prev.value) : newValue,
-    }));
-  };
-  const setCursor = (newCursor: number | ((prev: number) => number)) => {
-    setInputState(prev => ({
-      ...prev,
-      cursor: typeof newCursor === 'function' ? newCursor(prev.cursor) : newCursor,
-    }));
-  };
-
-  const [preferredColumn, setPreferredColumn] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const termDims = useTerminalDimensions();
   const screenWidth = termDims.width || 80;
@@ -328,13 +313,15 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     setSelectedIndex((prev) => Math.min(prev, autocompleteItems.length - 1));
   }, [autocompleteItems.length]);
 
-  const setValueAndCursor = useCallback((nextValue: string, nextCursor: number = nextValue.length, resetHistory: boolean = true) => {
+  // Helper to set the textarea text and sync React state
+  const setTextareaValue = useCallback((nextValue: string, resetHistory: boolean = true) => {
     const normalized = normalizeLineEndings(nextValue);
-    const clamped = Math.max(0, Math.min(nextCursor, normalized.length));
-    setInputState({ value: normalized, cursor: clamped });
-    setPreferredColumn(null);
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.setText(normalized);
+    }
+    setValue(normalized);
     setSelectedIndex(0);
-    // Reset history navigation when input changes (unless navigating history)
     if (resetHistory) {
       historyRef.current.resetIndex(normalized);
     }
@@ -346,34 +333,28 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   }, []);
 
   useImperativeHandle(ref, () => ({
-    setValue: (nextValue: string, nextCursor = nextValue.length, resetHistory = true) => {
+    setValue: (nextValue: string, _nextCursor?: number, resetHistory = true) => {
       clearLargePaste();
-      setValueAndCursor(nextValue, nextCursor, resetHistory);
+      setTextareaValue(nextValue, resetHistory);
     },
     appendValue: (text: string) => {
       const cleaned = normalizeLineEndings(text);
       if (!cleaned) return;
       clearLargePaste();
-      setInputState(prev => {
-        const newValue = prev.value + cleaned;
-        historyRef.current.resetIndex(newValue);
-        return {
-          value: newValue,
-          cursor: newValue.length,
-        };
-      });
-      setPreferredColumn(null);
-      setSelectedIndex(0);
+      const ta = textareaRef.current;
+      const current = ta ? ta.plainText : value;
+      const newValue = current + cleaned;
+      setTextareaValue(newValue);
     },
     clearValue: () => {
       clearLargePaste();
-      setValueAndCursor('');
+      setTextareaValue('');
     },
-    getValue: () => inputState.value,
-  }), [clearLargePaste, setValueAndCursor, inputState.value]);
+    getValue: () => textareaRef.current ? textareaRef.current.plainText : value,
+  }), [clearLargePaste, setTextareaValue, value]);
 
 
-  const handleSubmit = (submittedValue: string) => {
+  const handleSubmit = useCallback((submittedValue: string) => {
     // If there's a large paste pending, use that content instead
     const rawValue = largePaste ? largePaste.content : submittedValue;
     const actualValue = normalizeLineEndings(rawValue);
@@ -384,7 +365,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     // Add to history before submitting (use truncated version for history)
     const valueToAdd = actualValue.trim();
     if (valueToAdd && !isAskingUser) {
-      // For large pastes, add a truncated version to history
       const historyEntry = largePaste
         ? `[Pasted ${countWords(valueToAdd)} words]`
         : valueToAdd;
@@ -404,10 +384,9 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     ) {
       const selected = filteredCommands[selectedIndex] || filteredCommands[0];
       if (selected) {
-        // Add the selected command to history instead
         historyRef.current.add(selected.name);
         onSubmit(selected.name, isProcessing ? 'inline' : 'normal');
-        setValueAndCursor('');
+        setTextareaValue('');
         return;
       }
     }
@@ -417,182 +396,65 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     } else {
       onSubmit(actualValue, 'normal');
     }
-    setValueAndCursor('');
-  };
+    setTextareaValue('');
+  }, [largePaste, allowBlankAnswer, isAskingUser, autocompleteMode, filteredCommands, selectedIndex, isProcessing, onSubmit, setTextareaValue]);
 
-  const moveCursorTo = (next: number, resetPreferred: boolean = true) => {
-    const clamped = Math.max(0, Math.min(next, value.length));
-    setCursor(clamped);
-    if (resetPreferred) {
-      setPreferredColumn(null);
-    }
-  };
-
-  const moveCursorBy = (delta: number) => {
-    moveCursorTo(cursor + delta);
-  };
-
-  const applyVerticalMove = (currentLayout: InputLayout, direction: -1 | 1) => {
-    const result = moveCursorVertical(currentLayout, preferredColumn, direction);
-    if (!result) return;
-    setCursor(result.cursor);
-    setPreferredColumn(result.preferredColumn);
-  };
-
-  const insertText = (text: string) => {
-    const cleaned = normalizeLineEndings(text);
-    if (!cleaned) return;
-
-    // Detect large paste (multiple characters at once that exceed threshold)
-    // A paste is detected when multiple characters arrive at once (text.length > 1)
-    // and the total content exceeds the threshold
-    // Only apply special handling if paste handling is enabled and mode is not 'inline'
-    if (pasteEnabled && pasteMode !== 'inline' && cleaned.length > 1 && isLargePaste(cleaned, pasteThresholds)) {
-      // Store the large paste content and show placeholder
-      setLargePaste({
-        content: cleaned,
-        placeholder: formatPastePlaceholder(cleaned),
-      });
-      setShowPastePreview(false);
-      // Reset history navigation so stale state doesn't persist
-      historyRef.current.resetIndex(cleaned);
-      return;
-    }
+  // Sync textarea content changes to React state (for autocomplete logic)
+  const handleContentChange = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const newValue = ta.plainText;
 
     // Clear any pending large paste if user types normally
-    if (largePaste) {
+    if (largePaste && newValue !== value) {
       setLargePaste(null);
       setShowPastePreview(false);
     }
 
-    // Use functional update for atomic value+cursor change during rapid pastes
-    setInputState(prev => {
-      const newValue = prev.value.slice(0, prev.cursor) + cleaned + prev.value.slice(prev.cursor);
-      // Reset history navigation when user types
-      historyRef.current.resetIndex(newValue);
-      return {
-        value: newValue,
-        cursor: prev.cursor + cleaned.length,
-      };
-    });
-    setPreferredColumn(null);
+    setValue(newValue);
     setSelectedIndex(0);
-  };
+    historyRef.current.resetIndex(newValue);
+  }, [value, largePaste]);
 
-  const deleteBackward = () => {
-    setInputState(prev => {
-      if (prev.cursor === 0) return prev;
-      const newValue = prev.value.slice(0, prev.cursor - 1) + prev.value.slice(prev.cursor);
-      // Reset history navigation when user edits
-      historyRef.current.resetIndex(newValue);
-      return {
-        value: newValue,
-        cursor: prev.cursor - 1,
-      };
-    });
-    setPreferredColumn(null);
-    setSelectedIndex(0);
-  };
-
-  const deleteForward = () => {
-    setInputState(prev => {
-      if (prev.cursor >= prev.value.length) return prev;
-      const newValue = prev.value.slice(0, prev.cursor) + prev.value.slice(prev.cursor + 1);
-      // Reset history navigation when user edits
-      historyRef.current.resetIndex(newValue);
-      return {
-        value: newValue,
-        cursor: prev.cursor,
-      };
-    });
-    setPreferredColumn(null);
-    setSelectedIndex(0);
-  };
-
-  // Delete word backward (Ctrl+W) - standard terminal/readline behavior
-  const deleteWordBackward = () => {
-    setInputState(prev => {
-      if (prev.cursor === 0) return prev;
-
-      let start = prev.cursor - 1;
-
-      // Skip trailing spaces/whitespace
-      while (start >= 0 && /\s/.test(prev.value[start])) {
-        start--;
-      }
-
-      // Find start of word (stop at space or beginning)
-      while (start >= 0 && !/\s/.test(prev.value[start])) {
-        start--;
-      }
-
-      // start is now at the space before the word (or -1 if at beginning)
-      const newValue = prev.value.slice(0, start + 1) + prev.value.slice(prev.cursor);
-      // Reset history navigation when user edits
-      historyRef.current.resetIndex(newValue);
-      return {
-        value: newValue,
-        cursor: start + 1,
-      };
-    });
-    setPreferredColumn(null);
-    setSelectedIndex(0);
-  };
-
-  // Handle keyboard input for autocomplete and editing
+  // Handle keyboard input for control keys that override textarea behavior
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
-      // During processing, Ctrl+C stops the active run (same as Escape)
       if (isProcessing && onStopProcessing) {
         onStopProcessing();
         return;
       }
       if (value.length > 0) {
-        setValueAndCursor('');
+        setTextareaValue('');
       }
       return;
     }
 
-    // Escape during processing: ALWAYS stop, regardless of isAskingUser
+    // Escape during processing: ALWAYS stop
     if (key.escape && isProcessing && onStopProcessing) {
       onStopProcessing();
       return;
     }
 
-    // Escape: clear large paste, clear input, or exit history mode (if not asking user)
+    // Escape: clear large paste, clear input, or exit history mode
     if (key.escape && !isAskingUser) {
-      // First priority: cancel pending large paste
       if (largePaste) {
         setLargePaste(null);
         setShowPastePreview(false);
         return;
       }
       if (historyRef.current.isNavigating()) {
-        // If navigating history, restore saved input
-        setValueAndCursor(savedInput);
+        setTextareaValue(savedInput);
         setSavedInput('');
       } else if (value.length > 0) {
-        setValueAndCursor('');
+        setTextareaValue('');
       }
       return;
     }
 
-    // Ctrl+W: delete word backward (standard readline behavior)
-    if (key.ctrl && input === 'w') {
-      deleteWordBackward();
-      return;
-    }
-
-    // Ctrl+U: clear line (standard readline behavior)
-    if (key.ctrl && input === 'u') {
-      setValueAndCursor('');
-      return;
-    }
-
-    // Tab during processing: ALWAYS queue the message (top priority, before any autocomplete)
+    // Tab during processing: queue the message
     if (key.tab && isProcessing && value.trim()) {
       onSubmit(value, 'queue');
-      setValueAndCursor('');
+      setTextareaValue('');
       return;
     }
 
@@ -602,23 +464,21 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         if (autocompleteItems.length > 0) {
           const selected = autocompleteItems[selectedIndex] || autocompleteItems[0];
           if (autocompleteMode === 'file') {
-            // Replace @query with the file path
             const atMatch = value.match(/^(.*(?:^|\s))@[^\s]*$/);
             const prefix = atMatch ? atMatch[1] : '';
             const nextValue = prefix + selected.name + ' ';
-            setValueAndCursor(nextValue);
+            setTextareaValue(nextValue);
           } else {
             const nextValue = autocompleteMode === 'skill'
               ? `$${selected.name} `
               : `${selected.name} `;
-            setValueAndCursor(nextValue);
+            setTextareaValue(nextValue);
           }
           return;
         }
       }
 
-      // Arrow keys for autocomplete navigation (circular)
-      // Only capture arrows for autocomplete when input is single-line
+      // Arrow keys for autocomplete navigation (circular, single-line only)
       if (autocompleteItems.length > 0 && !value.includes('\n')) {
         if (key.downArrow) {
           setSelectedIndex((prev) => (prev + 1) % autocompleteItems.length);
@@ -631,121 +491,55 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       }
     }
 
-    const activeLayout = buildLayout(value, cursor, textWidth);
-
-    if (key.leftArrow) {
-      moveCursorBy(-1);
-      return;
-    }
-    if (key.rightArrow) {
-      moveCursorBy(1);
-      return;
-    }
-
-    // Handle arrow up for history navigation
+    // Arrow up: history navigation
     if (key.upArrow) {
-      // Navigate history if:
-      // 1. Input is empty, OR
-      // 2. Already navigating history, OR
-      // 3. Cursor is on the first line of multi-line input
-      const isOnFirstLine = activeLayout.cursorRow === 0;
-      const shouldNavigateHistory = value.length === 0 || historyRef.current.isNavigating() || isOnFirstLine;
-
+      const shouldNavigateHistory = value.length === 0 || historyRef.current.isNavigating() || !value.includes('\n');
       if (shouldNavigateHistory && !isAskingUser) {
-        // Save current input before navigating
         if (!historyRef.current.isNavigating()) {
           setSavedInput(value);
           historyRef.current.resetIndex(value);
         }
         const prev = historyRef.current.previous();
         if (prev !== null) {
-          // Set value and cursor at end, don't reset history
-          setValueAndCursor(prev, prev.length, false);
+          setTextareaValue(prev, false);
         }
         return;
       }
-
-      // Otherwise, do vertical cursor movement for multi-line
-      applyVerticalMove(activeLayout, -1);
+      // Multi-line vertical movement handled natively by textarea
       return;
     }
 
-    // Handle arrow down for history navigation
+    // Arrow down: history navigation
     if (key.downArrow) {
-      // Navigate history if:
-      // 1. Already navigating history, OR
-      // 2. Cursor is on the last line of multi-line input
-      const isOnLastLine = activeLayout.cursorRow === activeLayout.displayLines.length - 1;
-      const isNavigatingHistory = historyRef.current.isNavigating();
-
-      if (isNavigatingHistory && !isAskingUser) {
+      if (historyRef.current.isNavigating() && !isAskingUser) {
         const next = historyRef.current.next();
         if (next !== null) {
-          // Set value and cursor at end, don't reset history
-          setValueAndCursor(next, next.length, false);
+          setTextareaValue(next, false);
         }
         return;
       }
-
-      // If on last line and not navigating history, do nothing (or could beep)
-      if (!isOnLastLine) {
-        applyVerticalMove(activeLayout, 1);
-      }
-      return;
-    }
-    if (key.home) {
-      const line = activeLayout.displayLines[activeLayout.cursorRow];
-      moveCursorTo(line.start, false);
-      return;
-    }
-    if (key.end) {
-      const line = activeLayout.displayLines[activeLayout.cursorRow];
-      moveCursorTo(line.start + line.text.length, false);
-      return;
-    }
-    // Handle backspace - multiple terminal variations:
-    // - \x7f (DEL, ASCII 127) - what most modern terminals send for Backspace
-    // - \x08 (BS, ASCII 8) - traditional backspace, some terminals still use this
-    // - Ink sets key.delete for \x7f on Mac/Linux, key.backspace varies by terminal
-    // We check raw codes first for cross-terminal reliability
-    if (input === '\x7f' || input === '\x08' || key.backspace || key.delete) {
-      deleteBackward();
-      return;
-    }
-    // Handle forward delete key (Fn+Backspace on Mac, Delete on full keyboards)
-    // This key sends the \x1b[3~ escape sequence, not \x7f
-    if (input === '\x1b[3~') {
-      deleteForward();
+      // Multi-line vertical movement handled natively by textarea
       return;
     }
 
     if (key.return) {
-      // During push-to-talk recording, Enter stops recording
       if (isRecording && onStopRecording) {
         onStopRecording();
         return;
       }
-      // Shift+Enter or Ctrl+Enter: interrupt and send immediately
       if ((key.shift || key.ctrl) && value.trim()) {
         onSubmit(value, 'interrupt');
-        setValueAndCursor('');
+        setTextareaValue('');
         return;
       }
-      // Meta+Enter: queue message
       if (key.meta && value.trim() && input !== '\x1b\r' && input !== '\x1b\n') {
         onSubmit(value, 'queue');
-        setValueAndCursor('');
+        setTextareaValue('');
         return;
       }
       handleSubmit(value);
-      setValueAndCursor('');
+      setTextareaValue('');
       return;
-    }
-
-    // Insert printable characters only (filter out control characters and DEL)
-    const charCode = input?.charCodeAt(0) ?? 0;
-    if (input && charCode >= 32 && charCode !== 127) {
-      insertText(input);
     }
   });
 
@@ -775,7 +569,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       return { items, startIndex: 0 };
     }
 
-    // Keep selected item in view with some context
     let startIndex = Math.max(0, selectedIndex - Math.floor(maxVisible / 2));
     startIndex = Math.min(startIndex, items.length - maxVisible);
 
@@ -790,8 +583,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const fileItems = useMemo(() => filteredFiles.map(f => ({ name: f })), [filteredFiles]);
   const visibleFiles = getVisibleItems(fileItems);
 
-  const layout = buildLayout(value, cursor, textWidth);
-  const lines = layout.displayLines;
   const lineCount = value.split('\n').length;
   return (
     <box flexDirection="column" marginTop={0}>
@@ -808,6 +599,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         borderStyle="rounded"
         border={["top", "bottom"]}
         borderColor="#d4d4d8"
+        paddingX={1}
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
@@ -836,7 +628,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           </box>
         )}
 
-        {/* Input area */}
+        {/* Input area - OpenTUI <textarea> handles all editing natively */}
         {largePaste ? (
           /* Large paste placeholder view */
           <box flexDirection="row">
@@ -846,42 +638,21 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
               <text fg="gray"> [Enter to send, Esc to cancel]</text>
             </box>
           </box>
-        ) : value.length === 0 ? (
+        ) : (
           <box flexDirection="row">
             <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
-            <box flexDirection="row" flexGrow={1}>
-              <text attributes={32}> </text>
-              <text fg="gray">{placeholder}</text>
-            </box>
+            <textarea
+              ref={textareaRef}
+              placeholder={placeholder}
+              placeholderColor="#888888"
+              wrapMode="word"
+              focused
+              flexGrow={1}
+              height={Math.max(1, lineCount)}
+              onContentChange={handleContentChange}
+              onSubmit={() => handleSubmit(value)}
+            />
           </box>
-        ) : (
-          lines.map((line, index) => {
-            const isCursorLine = index === layout.cursorRow;
-            if (!isCursorLine) {
-              return (
-                <box flexDirection="row" key={`line-${index}`}>
-                  <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
-                  <box flexDirection="row" flexGrow={1}>
-                    <text>{line.text || ' '}</text>
-                  </box>
-                </box>
-              );
-            }
-            const column = Math.min(layout.cursorCol, line.text.length);
-            const before = line.text.slice(0, column);
-            const cursorChar = column < line.text.length ? line.text[column] : ' ';
-            const after = column < line.text.length ? line.text.slice(column + 1) : '';
-            return (
-              <box flexDirection="row" key={`line-${index}`}>
-                <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
-                <box flexDirection="row" flexGrow={1}>
-                  <text>{before}</text>
-                  <text attributes={32}>{cursorChar}</text>
-                  <text>{after}</text>
-                </box>
-              </box>
-            );
-          })
         )}
 
         {/* Show line count if multiline */}

@@ -167,31 +167,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       return;
     }
 
-    // Tab switching with number keys
-    if (input === '1') { setTab('overview'); setMode('overview'); setSelectedIndex(0); }
-    else if (input === '2') { setTab('calls'); setMode('calls'); setSelectedIndex(0); }
-    else if (input === '3') { setTab('messages'); setMode('messages'); setSelectedIndex(0); }
-    else if (input === '4') { setTab('numbers'); setMode('numbers'); setSelectedIndex(0); }
-    else if (input === '5') { setTab('routes'); setMode('routes'); setSelectedIndex(0); }
-
-    // Tab switching with left/right
-    if (key.leftArrow) {
-      const idx = tabs.indexOf(tab);
-      if (idx > 0) {
-        const newTab = tabs[idx - 1];
-        setTab(newTab);
-        setMode(newTab);
-        setSelectedIndex(0);
-      }
-    } else if (key.rightArrow) {
-      const idx = tabs.indexOf(tab);
-      if (idx < tabs.length - 1) {
-        const newTab = tabs[idx + 1];
-        setTab(newTab);
-        setMode(newTab);
-        setSelectedIndex(0);
-      }
-    }
+    // Tab switching handled by <tab-select> component
 
     // List navigation
     if (key.upArrow || input === 'k') {
@@ -236,14 +212,32 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
     }
   }, { isActive: mode === 'sms-compose' || mode === 'call-compose' });
 
-  // Tab bar
+  // Tab bar - uses OpenTUI <tab-select> intrinsic
+  const tabSelectOptions = useMemo(() =>
+    tabs.map((t, i) => ({
+      name: `${i + 1}:${t}`,
+      description: '',
+      value: t,
+    })), []);
+
   const tabBar = (
-    <box marginBottom={1}>
-      <text>{tabs.map((t, i) => {
-        const label = `${i + 1}:${t}`;
-        return tab === t ? <span key={t} bg="#0055aa" fg="whiteBright">{label}{'  '}</span> : <span key={t} fg="gray">{label}{'  '}</span>;
-      })}</text>
-    </box>
+    <tab-select
+      options={tabSelectOptions}
+      selectedBackgroundColor="#0055aa"
+      selectedTextColor="whiteBright"
+      textColor="gray"
+      showDescription={false}
+      wrapSelection
+      focused
+      onChange={(index) => {
+        const newTab = tabs[index];
+        if (newTab) {
+          setTab(newTab);
+          setMode(newTab);
+          setSelectedIndex(0);
+        }
+      }}
+    />
   );
 
   // Header

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Markdown } from './Markdown';
+
 import type { ChannelsManager, ChannelListItem, ChannelMessage, ChannelMember, Channel } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
