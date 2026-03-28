@@ -278,15 +278,12 @@ export function ToolCallDisplay({
       const imgData = JSON.parse(result.content);
       if (imgData.path) {
         return (
-          <box
-            borderStyle="single"
-            borderColor={borderDimCol}
-            border={['left']}
-            paddingLeft={1}
-            flexDirection="column"
-          >
-            <text fg={mutedCol}>{headerText}</text>
-            <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
+          <box flexDirection="row" width="100%">
+            <text fg={borderDimCol}>{'\u2502'} </text>
+            <box flexDirection="column" flexGrow={1} flexShrink={1}>
+              <text fg={mutedCol}>{headerText}</text>
+              <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
+            </box>
           </box>
         );
       }
@@ -294,24 +291,21 @@ export function ToolCallDisplay({
   }
 
   return (
-    <box
-      borderStyle="single"
-      borderColor={borderDimCol}
-      border={['left']}
-      paddingLeft={1}
-      flexDirection="column"
-    >
-      {/* Tool call header: "ToolName: params" in muted */}
-      <text fg={mutedCol}>{headerText}</text>
+    <box flexDirection="row" width="100%">
+      <text fg={borderDimCol}>{'\u2502'} </text>
+      <box flexDirection="column" flexGrow={1} flexShrink={1}>
+        {/* Tool call header: "ToolName: params" in muted */}
+        <text fg={mutedCol}>{headerText}</text>
 
-      {/* Result content — truncated to 10 lines per spec */}
-      {result && !isRunning && (
-        <ToolCallResultContent
-          toolCall={toolCall}
-          result={result}
-          verboseTools={verboseTools}
-        />
-      )}
+        {/* Result content — truncated to 10 lines per spec */}
+        {result && !isRunning && (
+          <ToolCallResultContent
+            toolCall={toolCall}
+            result={result}
+            verboseTools={verboseTools}
+          />
+        )}
+      </box>
     </box>
   );
 }
@@ -462,13 +456,11 @@ export function ToolCallSummary({ toolCalls, toolResults = [], isRunning = false
   const suffix = isRunning ? '\u2026' : '';
 
   return (
-    <box
-      borderStyle="single"
-      borderColor={borderDimCol}
-      border={['left']}
-      paddingLeft={1}
-    >
-      <text fg={mutedCol}>{summary}{suffix}</text>
+    <box flexDirection="row" width="100%">
+      <text fg={borderDimCol}>{'\u2502'} </text>
+      <box flexGrow={1} flexShrink={1}>
+        <text fg={mutedCol}>{summary}{suffix}</text>
+      </box>
     </box>
   );
 }

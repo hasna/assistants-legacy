@@ -8,6 +8,7 @@ import { themeColor } from '../theme/colors';
  * - Left border using borderDim color
  *
  * [brutus] Updated to match OpenCode spec colors exactly.
+ * [cassius] Replaced border={['left']} with row-based pipe char for OpenTUI compat.
  */
 
 interface ThinkingBlockProps {
@@ -24,12 +25,8 @@ export function ThinkingBlock({ content, isActive = false }: ThinkingBlockProps)
 
   if (!content && !isActive) {
     return (
-      <box
-        borderStyle="single"
-        borderColor={borderDimCol}
-        border={['left']}
-        paddingLeft={1}
-      >
+      <box flexDirection="row" width="100%">
+        <text fg={borderDimCol}>{'\u2502'} </text>
         <text fg={warningCol}>Thinking</text>
       </box>
     );
@@ -37,29 +34,22 @@ export function ThinkingBlock({ content, isActive = false }: ThinkingBlockProps)
 
   if (!content) {
     return (
-      <box
-        borderStyle="single"
-        borderColor={borderDimCol}
-        border={['left']}
-        paddingLeft={1}
-      >
+      <box flexDirection="row" width="100%">
+        <text fg={borderDimCol}>{'\u2502'} </text>
         <text fg={warningCol}>Thinking...</text>
       </box>
     );
   }
 
   return (
-    <box
-      flexDirection="column"
-      borderStyle="single"
-      borderColor={borderDimCol}
-      border={['left']}
-      paddingLeft={1}
-    >
-      <text>
-        <text fg={warningCol}>Thinking: </text>
-        <text fg={mutedCol}><i>{content}</i></text>
-      </text>
+    <box flexDirection="row" width="100%">
+      <text fg={borderDimCol}>{'\u2502'} </text>
+      <box flexDirection="column" flexGrow={1} flexShrink={1}>
+        <text>
+          <text fg={warningCol}>Thinking: </text>
+          <text fg={mutedCol}><i>{content}</i></text>
+        </text>
+      </box>
     </box>
   );
 }

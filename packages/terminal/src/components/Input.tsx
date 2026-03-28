@@ -319,7 +319,12 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     const normalized = normalizeLineEndings(nextValue);
     const ta = textareaRef.current;
     if (ta) {
-      ta.setText(normalized);
+      if (normalized === '') {
+        // Use clear() for empty values — ensures placeholder re-renders correctly
+        ta.clear();
+      } else {
+        ta.setText(normalized);
+      }
     }
     setValue(normalized);
     setSelectedIndex(0);
@@ -591,18 +596,12 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
   // OpenCode spec colors
   const bgSecondary = themeColor('surface');    // BackgroundSecondary: #252525 dark / #f0f0f0 light
-  const borderNormal = themeColor('border');    // BorderNormal: #4b4c5c
   const textColor = themeColor('text');         // Text: #e0e0e0
   const textMuted = themeColor('muted');        // TextMuted: #6a6a6a
 
-  // Top border line (Unicode box-drawing thin horizontal)
-  const borderChar = '\u2500'; // ─
-  const borderLine = borderChar.repeat(Math.max(10, screenWidth));
-
   return (
     <box flexDirection="column" marginTop={0}>
-      {/* Top border only (per spec: editor has border-top only, borderNormal color) */}
-      <text fg={borderNormal}>{borderLine}</text>
+      {/* Top border provided by parent <box border={['top']}> in App.tsx — no duplicate here */}
 
       {/* Editor area with backgroundSecondary */}
       <box

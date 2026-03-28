@@ -136,12 +136,13 @@ export function Messages({
           <box key={entry.id} flexDirection="column">
             <box height={1} />
             <box
-              borderStyle="single"
-              borderColor={themeColor('primary')}
-              border={['left']}
-              paddingLeft={1}
+              flexDirection="row"
+              width="100%"
             >
-              <Markdown content={entry.content!} indent={0} />
+              <text fg={themeColor('primary')}>{'\u2502'} </text>
+              <box flexDirection="column" flexGrow={1} flexShrink={1}>
+                <Markdown content={entry.content!} indent={0} />
+              </box>
             </box>
           </box>
         ))}
@@ -169,12 +170,13 @@ export function Messages({
         <box flexDirection="column">
           <box height={1} />
           <box
-            borderStyle="single"
-            borderColor={themeColor('primary')}
-            border={['left']}
-            paddingLeft={1}
+            flexDirection="row"
+            width="100%"
           >
-            <Markdown content={currentResponse ?? ''} indent={0} />
+            <text fg={themeColor('primary')}>{'\u2502'} </text>
+            <box flexDirection="column" flexGrow={1} flexShrink={1}>
+              <Markdown content={currentResponse ?? ''} indent={0} />
+            </box>
           </box>
         </box>
       )}
@@ -222,16 +224,17 @@ function UserMessage({
 
       {hasContent && (
         <box
-          borderStyle="single"
-          borderColor={secondaryCol}
-          border={['left']}
-          paddingLeft={1}
+          flexDirection="row"
+          width="100%"
         >
-          {isQueued && !isContinuation ? (
-            <text fg={mutedCol}>{linkifyText(content)}</text>
-          ) : (
-            <text fg={isDraft ? mutedCol : themeColor('text')}>{linkifyText(displayContent)}</text>
-          )}
+          <text fg={secondaryCol}>{'\u2502'} </text>
+          <box flexGrow={1} flexShrink={1}>
+            {isQueued && !isContinuation ? (
+              <text fg={mutedCol}>{linkifyText(content)}</text>
+            ) : (
+              <text fg={isDraft ? mutedCol : themeColor('text')}>{linkifyText(displayContent)}</text>
+            )}
+          </box>
         </box>
       )}
 
@@ -284,13 +287,13 @@ function AssistantMessage({
       {/* Assistant text content — left border with primary color, markdown rendered */}
       {hasContent && (
         <box
-          borderStyle="single"
-          borderColor={primaryCol}
-          border={['left']}
-          paddingLeft={1}
-          flexDirection="column"
+          flexDirection="row"
+          width="100%"
         >
-          <Markdown content={content} preRendered={Boolean(message.__rendered)} indent={0} />
+          <text fg={primaryCol}>{'\u2502'} </text>
+          <box flexDirection="column" flexGrow={1} flexShrink={1}>
+            <Markdown content={content} preRendered={Boolean(message.__rendered)} indent={0} />
+          </box>
         </box>
       )}
 
@@ -545,14 +548,9 @@ function ToolResultPanel({
             const data = JSON.parse(result.content);
             if (data.path) {
               return (
-                <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-                  <box
-                    borderStyle="single"
-                    borderColor={borderDimCol}
-                    border={['left']}
-                    paddingLeft={1}
-                    flexDirection="column"
-                  >
+                <box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
+                  <text fg={borderDimCol}>{'\u2502'} </text>
+                  <box flexDirection="column" flexGrow={1} flexShrink={1}>
                     <text fg={mutedCol}>{title}</text>
                     <TerminalImage src={data.path} width={data.width} height={data.height} alt={data.alt || basename(data.path)} />
                   </box>
@@ -570,14 +568,9 @@ function ToolResultPanel({
         const useHighlight = shouldHighlightToolResult(result.toolName, resultText, result.isError);
 
         return (
-          <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-            <box
-              borderStyle="single"
-              borderColor={borderDimCol}
-              border={['left']}
-              paddingLeft={1}
-              flexDirection="column"
-            >
+          <box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
+            <text fg={borderDimCol}>{'\u2502'} </text>
+            <box flexDirection="column" flexGrow={1} flexShrink={1}>
               <text fg={mutedCol}>{title}</text>
               {isError ? (
                 <text fg={errorCol}>Error: {resultText}</text>
