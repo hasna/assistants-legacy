@@ -16,6 +16,9 @@ const version = packageJson.version || 'unknown';
 
 console.log('Building assistants...');
 
+// Patch @opentui/core before bundling (accept non-string children in text nodes)
+await $`bash scripts/patch-opentui.sh`.quiet();
+
 // Clean dist
 await $`rm -rf ${outdir}`;
 await $`mkdir -p ${outdir}`;

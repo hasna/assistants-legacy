@@ -4,7 +4,16 @@
 
 import { Glob } from 'bun';
 import { Database } from 'bun:sqlite';
-import { SqliteAdapter } from '@hasna/cloud';
+
+// SqliteAdapter from @hasna/cloud may not be available in all installs.
+// Fall back to native bun:sqlite Database which has the same API.
+let SqliteAdapter: typeof Database;
+try {
+  const cloud = require('@hasna/cloud');
+  SqliteAdapter = cloud.SqliteAdapter ?? Database;
+} catch {
+  SqliteAdapter = Database;
+}
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type {

@@ -10,7 +10,7 @@
  * requiring modifications to any individual component file.
  */
 
-import { TextRenderable, RGBA, type ThemeMode } from '@opentui/core';
+import { TextRenderable, TextNodeRenderable, RGBA, type ThemeMode } from '@opentui/core';
 import type { CliRenderer } from '@opentui/core';
 import { extend } from '@opentui/react';
 
@@ -60,6 +60,20 @@ class ThemedTextRenderable extends TextRenderable {
       super(ctx, options);
     }
   }
+
+  // OpenTUI's TextNodeRenderable only accepts strings.
+  // Ink accepted numbers, booleans, etc. as children of <Text>.
+  // This override converts non-string children to strings automatically,
+  // preventing "TextNodeRenderable only accepts strings" crashes.
+  add(obj: any, index?: number): number {
+    if (typeof obj === 'number' || typeof obj === 'bigint') {
+      return super.add(String(obj), index);
+    }
+    if (typeof obj === 'boolean' || obj === null || obj === undefined) {
+      return super.add('', index);
+    }
+    return super.add(obj, index);
+  }
 }
 
 /**
@@ -77,7 +91,30 @@ export function setupThemeDefaults(renderer: CliRenderer): void {
   const initialMode = rendererTheme ?? envTheme;
   currentDefaultFg = initialMode === 'light' ? LIGHT_FG : DARK_FG;
 
-  // 2. Register our themed text renderable, replacing the default
+  // 2. Patch OpenTUI runtime to accept numeric children in text nodes.
+  // OpenTUI throws "TextNodeRenderable only accepts strings" but React/Ink allowed numbers.
+  // We patch both our bundled imports AND dynamically resolve the runtime module.
+  function patchAdd(Proto: any) {
+    if (!Proto?.add) return;
+    const orig = Proto.add;
+    if ((orig as any).__patched) return; // avoid double-patching
+    Proto.add = function(obj: any, index?: number): number {
+      if (typeof obj === 'number' || typeof obj === 'bigint') return orig.call(this, String(obj), index);
+      if (obj === null || obj === undefined || typeof obj === 'boolean') return orig.call(this, '', index);
+      return orig.call(this, obj, index);
+    };
+    (Proto.add as any).__patched = true;
+  }
+  // Patch our imported copies
+  patchAdd(TextRenderable.prototype);
+  patchAdd(TextNodeRenderable.prototype);
+  // Also patch the runtime copies (may be different module instances)
+  import('@opentui/core').then((core) => {
+    patchAdd(core.TextRenderable?.prototype);
+    patchAdd(core.TextNodeRenderable?.prototype);
+  }).catch(() => {});
+
+  // 3. Register our themed text renderable, replacing the default
   extend({ text: ThemedTextRenderable as any });
 
   // 3. Listen for runtime theme changes (e.g., user switches OS dark/light mode)
