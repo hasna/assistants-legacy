@@ -3,8 +3,41 @@
 # 1. TextNodeRenderable.add() — skip non-string/non-renderable children (Ink accepted numbers)
 # 2. TextNodeRenderable.remove() — don't throw if child not found (silently skipped adds)
 # 3. TextNodeRenderable.insertBefore() — don't throw on non-text anchors/children
+#
+# Works in both:
+# - Local dev: node_modules/.pnpm or node_modules/@opentui/core
+# - Global install: ~/.bun/install/global/node_modules/@opentui/core
 
-CORE_JS=$(find node_modules/.pnpm -path '*@opentui/core/index-7p56py22.js' 2>/dev/null | head -1)
+CORE_JS=""
+
+# Determine the base directory to search from
+# If INIT_CWD is set (npm/bun postinstall), use it; otherwise use script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Strategy 1: pnpm virtual store (local dev with pnpm)
+if [ -z "$CORE_JS" ]; then
+  CORE_JS=$(find "${PACKAGE_DIR}/node_modules/.pnpm" -path '*@opentui/core/index-*.js' 2>/dev/null | head -1)
+fi
+
+# Strategy 2: flat node_modules/@opentui/core (local dev with bun/npm/yarn)
+if [ -z "$CORE_JS" ]; then
+  CORE_JS=$(find "${PACKAGE_DIR}/node_modules/@opentui/core" -name 'index-*.js' 2>/dev/null | head -1)
+fi
+
+# Strategy 3: sibling in parent node_modules (global install — @hasna/assistants is inside node_modules)
+# e.g., ~/.bun/install/global/node_modules/@hasna/assistants/ → ../../@opentui/core/
+if [ -z "$CORE_JS" ]; then
+  PARENT_NM="$(dirname "$(dirname "$PACKAGE_DIR")")"
+  if [ -d "$PARENT_NM/@opentui/core" ]; then
+    CORE_JS=$(find "$PARENT_NM/@opentui/core" -name 'index-*.js' 2>/dev/null | head -1)
+  fi
+fi
+
+# Strategy 4: CWD-based (fallback for running from project root)
+if [ -z "$CORE_JS" ]; then
+  CORE_JS=$(find node_modules/.pnpm -path '*@opentui/core/index-*.js' 2>/dev/null | head -1)
+fi
 if [ -z "$CORE_JS" ]; then
   CORE_JS=$(find node_modules/@opentui/core -name 'index-*.js' 2>/dev/null | head -1)
 fi
@@ -13,6 +46,8 @@ if [ -z "$CORE_JS" ]; then
   echo "No @opentui/core JS file found — skipping patch"
   exit 0
 fi
+
+echo "Patching: $CORE_JS"
 
 python3 -c "
 import sys

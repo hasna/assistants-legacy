@@ -8,6 +8,7 @@
   },
   "files": [
     "dist",
+    "scripts",
     "README.md",
     "LICENSE"
   ],
@@ -21,7 +22,7 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean && rm -rf node_modules dist",
     "prepublishOnly": "bun run build",
-    "postinstall": "mkdir -p $HOME/.hasna/assistants/{logs,temp,messages,backups,connectors,workspaces,agents} 2>/dev/null || true"
+    "postinstall": "mkdir -p $HOME/.hasna/assistants/{logs,temp,messages,backups,connectors,workspaces,agents} 2>/dev/null || true; node scripts/patch-opentui.mjs 2>/dev/null || true"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

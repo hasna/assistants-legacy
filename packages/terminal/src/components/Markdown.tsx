@@ -17,7 +17,10 @@ interface MarkdownProps {
  */
 export function Markdown({ content, preRendered = false, indent = 0 }: MarkdownProps) {
   if (preRendered) {
-    return <text wrapMode="word">{content}</text>;
+    // OpenTUI's <text> does not process ANSI escape codes — strip them to avoid
+    // raw codes like [33m appearing as literal text.
+    const clean = stripAnsi(content);
+    return <text wrapMode="word">{clean}</text>;
   }
 
   return <MarkdownParsed content={content} indent={indent} />;
@@ -29,11 +32,17 @@ function MarkdownParsed({ content, indent = 0 }: { content: string; indent?: num
   const maxWidth = Math.max(20, columns - 2 - indent);
   const rendered = parseMarkdown(content, { maxWidth });
   const wrapped = wrapRenderedMarkdown(rendered, maxWidth);
-  return <text wrapMode="word">{wrapped}</text>;
+  // OpenTUI's <text> does not process inline ANSI escape codes — it renders them
+  // as literal text. Strip all ANSI sequences so users don't see raw codes like [33m.
+  const clean = stripAnsi(wrapped);
+  return <text wrapMode="word">{clean}</text>;
 }
 
 export function renderMarkdown(text: string, options?: { maxWidth?: number }): string {
-  return parseMarkdown(text, { maxWidth: options?.maxWidth });
+  const rendered = parseMarkdown(text, { maxWidth: options?.maxWidth });
+  // Strip ANSI escape codes since OpenTUI's <text> elements do not process them.
+  // This prevents raw codes like [33m from being stored in pre-rendered content.
+  return stripAnsi(rendered);
 }
 
 function parseMarkdown(text: string, options?: { skipBlocks?: boolean; maxWidth?: number }): string {
