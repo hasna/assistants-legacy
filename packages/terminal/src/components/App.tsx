@@ -18,6 +18,7 @@ import { ErrorBanner } from './ErrorBanner';
 import { QueueIndicator } from './QueueIndicator';
 import { AskUserPanel } from './AskUserPanel';
 import { InterviewPanel } from './InterviewPanel';
+import { Sidebar } from './Sidebar';
 import type { OnboardingResult } from './OnboardingPanel';
 import { getProviderInfo, LLM_PROVIDERS } from '@hasna/assistants-shared';
 import type { QueuedMessage } from './appTypes';
@@ -3008,156 +3009,185 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   // Check if currently thinking (no response and no tool calls yet)
   const isThinking = isProcessing && !currentResponse && !currentToolCall && toolCallEntries.length === 0;
 
+  // Derive sidebar title from the last user message or session label
+  const sidebarTitle = useMemo(() => {
+    if (activeSession?.label) return activeSession.label;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user' && messages[i].content) {
+        const text = messages[i].content.trim();
+        return text.length > 60 ? text.slice(0, 57) + '...' : text;
+      }
+    }
+    return undefined;
+  }, [activeSession?.label, messages]);
+
   return (
-    <box flexDirection="column" height={rows} paddingX={1}>
-      {/* Welcome banner */}
-      {showWelcome && (
-        <WelcomeBanner
-          version={version ?? 'unknown'}
-          model={activeSession?.client.getModel() ?? 'unknown'}
-          directory={activeSession?.cwd || cwd}
+    <box flexDirection="row" height={rows}>
+      {/* Left: chat panel (75%) */}
+      <box flexDirection="column" flexGrow={3} paddingX={1}>
+        {/* Welcome banner */}
+        {showWelcome && (
+          <WelcomeBanner
+            version={version ?? 'unknown'}
+            model={activeSession?.client.getModel() ?? 'unknown'}
+            directory={activeSession?.cwd || cwd}
+          />
+        )}
+
+        {/* Background processing indicator */}
+        {backgroundProcessingCount > 0 && (
+          <box marginBottom={1}>
+            <text fg="yellow">
+              {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
+            </text>
+          </box>
+        )}
+
+        {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
+        <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
+          {/* All messages rendered in a scrollable container */}
+          <Messages
+            key="all-messages"
+            messages={displayMessages}
+            currentResponse={undefined}
+            streamingMessages={isProcessing ? streamingMessages : []}
+            currentToolCall={undefined}
+            lastToolResult={undefined}
+            activityLog={isProcessing ? activityTrim.entries : []}
+            queuedMessageIds={queuedMessageIds}
+            verboseTools={verboseTools}
+          />
+        </scrollbox>
+
+        {/* Ask-user simple interview */}
+        {askUserState && activeAskQuestion && !interviewState && (
+          <AskUserPanel
+            sessionId={askUserState.sessionId}
+            request={askUserState.request}
+            question={activeAskQuestion}
+            index={askUserState.index}
+            total={askUserState.request.questions.length}
+          />
+        )}
+
+        {/* Rich interview wizard */}
+        {interviewState && interviewState.sessionId === activeSessionId && (
+          <InterviewPanel
+            request={interviewState.request}
+            onComplete={completeInterview}
+            onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
+            isActive={!isPanelOpen}
+          />
+        )}
+
+        {/* Error */}
+        {error && <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} />}
+
+        {/* Processing indicator */}
+        <ProcessingIndicator
+          isProcessing={isProcessing}
+          startTime={processingStartTime}
+          tokenCount={currentTurnTokens}
+          isThinking={isThinking}
         />
-      )}
 
-      {/* Background processing indicator */}
-      {backgroundProcessingCount > 0 && (
-        <box marginBottom={1}>
-          <text fg="yellow">
-            {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
-          </text>
-        </box>
-      )}
+        {/* Worked-for timer - shows only most recent, sticky above input */}
+        {!isProcessing && lastWorkedFor && (
+          <box marginBottom={0} marginLeft={2}>
+            <text fg="gray">✻ Worked for {lastWorkedFor}</text>
+          </box>
+        )}
 
-      {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
-      <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
-        {/* All messages rendered in a scrollable container */}
-        <Messages
-          key="all-messages"
-          messages={displayMessages}
-          currentResponse={undefined}
-          streamingMessages={isProcessing ? streamingMessages : []}
-          currentToolCall={undefined}
-          lastToolResult={undefined}
-          activityLog={isProcessing ? activityTrim.entries : []}
-          queuedMessageIds={queuedMessageIds}
+        {/* Exit hint for double Ctrl+C */}
+        {showExitHint && (
+          <box marginLeft={2} marginBottom={0}>
+            <text fg="yellow">(Press Ctrl+C again to exit)</text>
+          </box>
+        )}
+
+        {/* Queue indicator - sticky above input */}
+        <QueueIndicator
+          messages={[...activeInline, ...activeQueue]}
+          maxPreview={MAX_QUEUED_PREVIEW}
+        />
+
+        {/* Input - always enabled, supports queue/interrupt */}
+        <Input
+          ref={inputRef}
+          onSubmit={handleSubmit}
+          onStopProcessing={() => {
+            stopActiveProcessing('stopped');
+          }}
+          isProcessing={isBusy}
+          queueLength={activeQueue.length + inlineCount}
+          commands={commands}
+          skills={skills}
+          isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
+          askPlaceholder={askPlaceholder}
+          allowBlankAnswer={activeAskQuestion?.required === false}
+          assistantName={identityInfo?.assistant?.name || undefined}
+          isRecording={pttRecording}
+          recordingStatus={pttStatus}
+          onStopRecording={togglePushToTalk}
+          onFileSearch={searchFiles}
+          partialTranscript={partialTranscript}
+          pasteConfig={currentConfig?.input?.paste ? {
+            enabled: currentConfig.input.paste.enabled,
+            thresholds: currentConfig.input.paste.thresholds,
+            mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+          } : undefined}
+        />
+
+        {/* Status bar */}
+        <Status
+          isProcessing={isBusy}
+          cwd={activeSession?.cwd || cwd}
+          queueLength={activeQueue.length + inlineCount}
+          tokenUsage={tokenUsage}
+          modelId={activeSession?.client.getModel() ?? undefined}
+          voiceState={voiceState}
+          heartbeatState={heartbeatState}
+          identityInfo={identityInfo}
+          sessionIndex={sessionIndex}
+          sessionCount={sessionCount}
+          backgroundProcessingCount={backgroundProcessingCount}
+          processingStartTime={processingStartTime}
           verboseTools={verboseTools}
+          gitBranch={gitBranch}
+          recentTools={activityLog
+            .filter((e) => e.type === 'tool_call' && e.toolCall)
+            .slice(-8)
+            .map((e) => {
+              const hasResult = activityLog.some(
+                (r) => r.type === 'tool_result' && r.toolResult?.toolCallId === e.toolCall!.id
+              );
+              return {
+                name: e.toolCall!.name,
+                status: hasResult ? ('succeeded' as const) : ('running' as const),
+                durationMs: 0,
+                startedAt: e.timestamp,
+              };
+            })}
         />
-      </scrollbox>
 
-      {/* Ask-user simple interview */}
-      {askUserState && activeAskQuestion && !interviewState && (
-        <AskUserPanel
-          sessionId={askUserState.sessionId}
-          request={askUserState.request}
-          question={activeAskQuestion}
-          index={askUserState.index}
-          total={askUserState.request.questions.length}
-        />
-      )}
+        {stopHint && (
+          <box marginLeft={2}>
+            <text fg="gray">{stopHint}</text>
+          </box>
+        )}
+      </box>
 
-      {/* Rich interview wizard */}
-      {interviewState && interviewState.sessionId === activeSessionId && (
-        <InterviewPanel
-          request={interviewState.request}
-          onComplete={completeInterview}
-          onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
-          isActive={!isPanelOpen}
-        />
-      )}
-
-      {/* Error */}
-      {error && <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} />}
-
-      {/* Processing indicator */}
-      <ProcessingIndicator
-        isProcessing={isProcessing}
-        startTime={processingStartTime}
-        tokenCount={currentTurnTokens}
-        isThinking={isThinking}
-      />
-
-      {/* Worked-for timer - shows only most recent, sticky above input */}
-      {!isProcessing && lastWorkedFor && (
-        <box marginBottom={0} marginLeft={2}>
-          <text fg="gray">✻ Worked for {lastWorkedFor}</text>
-        </box>
-      )}
-
-      {/* Exit hint for double Ctrl+C */}
-      {showExitHint && (
-        <box marginLeft={2} marginBottom={0}>
-          <text fg="yellow">(Press Ctrl+C again to exit)</text>
-        </box>
-      )}
-
-      {/* Queue indicator - sticky above input */}
-      <QueueIndicator
-        messages={[...activeInline, ...activeQueue]}
-        maxPreview={MAX_QUEUED_PREVIEW}
-      />
-
-      {/* Input - always enabled, supports queue/interrupt */}
-      <Input
-        ref={inputRef}
-        onSubmit={handleSubmit}
-        onStopProcessing={() => {
-          stopActiveProcessing('stopped');
-        }}
-        isProcessing={isBusy}
-        queueLength={activeQueue.length + inlineCount}
-        commands={commands}
-        skills={skills}
-        isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
-        askPlaceholder={askPlaceholder}
-        allowBlankAnswer={activeAskQuestion?.required === false}
-        assistantName={identityInfo?.assistant?.name || undefined}
-        isRecording={pttRecording}
-        recordingStatus={pttStatus}
-        onStopRecording={togglePushToTalk}
-        onFileSearch={searchFiles}
-        partialTranscript={partialTranscript}
-        pasteConfig={currentConfig?.input?.paste ? {
-          enabled: currentConfig.input.paste.enabled,
-          thresholds: currentConfig.input.paste.thresholds,
-          mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
-        } : undefined}
-      />
-
-      {/* Status bar */}
-      <Status
-        isProcessing={isBusy}
-        cwd={activeSession?.cwd || cwd}
-        queueLength={activeQueue.length + inlineCount}
-        tokenUsage={tokenUsage}
-        modelId={activeSession?.client.getModel() ?? undefined}
-        voiceState={voiceState}
-        heartbeatState={heartbeatState}
-        identityInfo={identityInfo}
-        sessionIndex={sessionIndex}
-        sessionCount={sessionCount}
-        backgroundProcessingCount={backgroundProcessingCount}
-        processingStartTime={processingStartTime}
-        verboseTools={verboseTools}
-        gitBranch={gitBranch}
-        recentTools={activityLog
-          .filter((e) => e.type === 'tool_call' && e.toolCall)
-          .slice(-8)
-          .map((e) => {
-            const hasResult = activityLog.some(
-              (r) => r.type === 'tool_result' && r.toolResult?.toolCallId === e.toolCall!.id
-            );
-            return {
-              name: e.toolCall!.name,
-              status: hasResult ? ('succeeded' as const) : ('running' as const),
-              durationMs: 0,
-              startedAt: e.timestamp,
-            };
-          })}
-      />
-
-      {stopHint && (
-        <box marginLeft={2}>
-          <text fg="gray">{stopHint}</text>
+      {/* Right: sidebar (25%) — hidden when terminal < 100 cols wide */}
+      {columns >= 100 && (
+        <box flexDirection="column" flexGrow={1} border={['left']} borderColor="#44475a" paddingX={1}>
+          <Sidebar
+            title={sidebarTitle}
+            tokenUsage={tokenUsage}
+            modelId={activeSession?.client.getModel() ?? undefined}
+            cwd={activeSession?.cwd || cwd}
+            gitBranch={gitBranch}
+            isProcessing={isBusy}
+          />
         </box>
       )}
     </box>

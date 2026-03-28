@@ -585,11 +585,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const visibleFiles = getVisibleItems(fileItems);
 
   // [cassius] Theme-aware colors for light/dark terminal contrast
-  const promptColor = themeColor('prompt');
   const mutedColor = themeColor('muted');
-  const borderColor = themeColor('border');
+  const accentColor = themeColor('primary'); // cyan #61dafb on dark
 
   const lineCount = value.split('\n').length;
+
+  // Left accent border character (full block for a solid accent line)
+  const accent = '\u2588'; // █
+
   return (
     <box flexDirection="column" marginTop={0}>
       {/* Assistant name badge above the input box */}
@@ -599,74 +602,83 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         </box>
       )}
 
-      {/* Input box with top/bottom border only (Claude Code style) */}
-      <box
-        flexDirection="column"
-        borderStyle="rounded"
-        border={["top", "bottom"]}
-        borderColor={borderColor}
-        paddingX={1}
-      >
-        {/* Recording indicator */}
-        {recordingStatus === 'recording' && (
-          <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('error')}><b>🎤 Recording... </b></text>
-            <text fg={mutedColor}>[Ctrl+R or Enter to stop]</text>
-          </box>
-        )}
-        {recordingStatus === 'transcribing' && (
-          <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('warning')}><b>⏳ Transcribing...</b></text>
-          </box>
-        )}
-        {recordingStatus === 'talking' && (
-          <box paddingY={0} flexDirection="column">
-            <box flexDirection="row">
-              <text fg={themeColor('success')}><b>🎙 Talk mode </b></text>
-              <text fg={mutedColor}>[listening... Ctrl+C to stop]</text>
+      {/* OpenCode-style input box: dark background with left accent border */}
+      <box flexDirection="row" minHeight={2}>
+        {/* Left accent border — cyan vertical bar */}
+        <box flexDirection="column">
+          {Array.from({ length: Math.max(2, lineCount + (recordingStatus ? 1 : 0)) }).map((_, i) => (
+            <text key={i} fg={accentColor}>{accent}</text>
+          ))}
+        </box>
+
+        {/* Input content area with dark background */}
+        <box
+          flexDirection="column"
+          flexGrow={1}
+          bg="#282a36"
+          paddingX={1}
+          minHeight={2}
+        >
+          {/* Recording indicator */}
+          {recordingStatus === 'recording' && (
+            <box flexDirection="row" paddingY={0}>
+              <text fg={themeColor('error')} bg="#282a36"><b>Recording... </b></text>
+              <text fg={mutedColor} bg="#282a36">[Ctrl+R or Enter to stop]</text>
             </box>
-            {partialTranscript ? (
+          )}
+          {recordingStatus === 'transcribing' && (
+            <box flexDirection="row" paddingY={0}>
+              <text fg={themeColor('warning')} bg="#282a36"><b>Transcribing...</b></text>
+            </box>
+          )}
+          {recordingStatus === 'talking' && (
+            <box paddingY={0} flexDirection="column">
               <box flexDirection="row">
-                <text fg={mutedColor}>{'> '}</text>
-                <text><i>{partialTranscript}</i></text>
+                <text fg={themeColor('success')} bg="#282a36"><b>Talk mode </b></text>
+                <text fg={mutedColor} bg="#282a36">[listening... Ctrl+C to stop]</text>
               </box>
-            ) : null}
-          </box>
-        )}
-
-        {/* Input area - OpenTUI <textarea> handles all editing natively */}
-        {largePaste ? (
-          /* Large paste placeholder view */
-          <box flexDirection="row">
-            <text fg={isProcessing ? mutedColor : promptColor}>&gt; </text>
-            <box flexDirection="row" flexGrow={1}>
-              <text fg={themeColor('warning')}>{largePaste.placeholder}</text>
-              <text fg={mutedColor}> [Enter to send, Esc to cancel]</text>
+              {partialTranscript ? (
+                <box flexDirection="row">
+                  <text fg={mutedColor} bg="#282a36">{'> '}</text>
+                  <text bg="#282a36"><i>{partialTranscript}</i></text>
+                </box>
+              ) : null}
             </box>
-          </box>
-        ) : (
-          <box flexDirection="row">
-            <text fg={isProcessing ? mutedColor : promptColor}>&gt; </text>
-            <textarea
-              ref={textareaRef}
-              placeholder={placeholder}
-              placeholderColor="#888888"
-              wrapMode="word"
-              focused
-              flexGrow={1}
-              height={Math.max(1, lineCount)}
-              onContentChange={handleContentChange}
-              onSubmit={() => handleSubmit(value)}
-            />
-          </box>
-        )}
+          )}
 
-        {/* Show line count if multiline */}
-        {lineCount > 1 && (
-          <box>
-            <text fg={mutedColor}>({lineCount} lines)</text>
-          </box>
-        )}
+          {/* Input area - OpenTUI <textarea> handles all editing natively */}
+          {largePaste ? (
+            /* Large paste placeholder view */
+            <box flexDirection="row">
+              <box flexDirection="row" flexGrow={1}>
+                <text fg={themeColor('warning')} bg="#282a36">{largePaste.placeholder}</text>
+                <text fg={mutedColor} bg="#282a36"> [Enter to send, Esc to cancel]</text>
+              </box>
+            </box>
+          ) : (
+            <box flexDirection="row">
+              <textarea
+                ref={textareaRef}
+                placeholder={placeholder}
+                placeholderColor="#6272a4"
+                wrapMode="word"
+                focused
+                flexGrow={1}
+                height={Math.max(1, lineCount)}
+                bg="#282a36"
+                onContentChange={handleContentChange}
+                onSubmit={() => handleSubmit(value)}
+              />
+            </box>
+          )}
+
+          {/* Show line count if multiline */}
+          {lineCount > 1 && (
+            <box>
+              <text fg={mutedColor} bg="#282a36">({lineCount} lines)</text>
+            </box>
+          )}
+        </box>
       </box>
 
       {/* Skills autocomplete dropdown - below input */}

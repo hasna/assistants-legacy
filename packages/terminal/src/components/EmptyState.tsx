@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColor } from '../theme/colors';
 
 interface EmptyStateProps {
   message: string;
@@ -9,12 +10,14 @@ interface EmptyStateProps {
  * Standardized empty state component for panels.
  */
 export function EmptyState({ message, hint }: EmptyStateProps) {
+  const muted = themeColor('muted');
+
   return (
     <box paddingX={1} flexDirection="column">
-      <text fg="gray">{message}</text>
+      <text fg={muted}>{message}</text>
       {hint && (
         <box marginTop={1}>
-          <text fg="gray">{hint}</text>
+          <text fg={muted}>{hint}</text>
         </box>
       )}
     </box>

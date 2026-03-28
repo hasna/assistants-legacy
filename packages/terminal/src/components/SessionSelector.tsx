@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { SessionInfo } from '@hasna/assistants-core';
 import type { PersistedSessionData } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import type { SelectOption } from '@opentui/core';
+import { Modal } from './Modal';
 
 interface SessionSelectorProps {
   sessions: SessionInfo[];
@@ -50,48 +51,9 @@ function formatPath(cwd: string): string {
 }
 
 /**
- * Build a flat display list: parent sessions with their subagent children interleaved
+ * Session selector modal — opens on Ctrl+].
+ * Shows sessions in a modal with native <select> component.
  */
-interface DisplayEntry {
-  type: 'session' | 'subagent';
-  session?: SessionInfo;
-  subagent?: PersistedSessionData;
-  /** 1-based index for interactive selection (only for sessions, not subagents) */
-  sessionIndex?: number;
-}
-
-function buildDisplayList(
-  sessions: SessionInfo[],
-  subagentSessions: PersistedSessionData[]
-): DisplayEntry[] {
-  // Group subagent sessions by parent
-  const subagentsByParent = new Map<string, PersistedSessionData[]>();
-  for (const sub of subagentSessions) {
-    if (!sub.parentSessionId) continue;
-    const existing = subagentsByParent.get(sub.parentSessionId) ?? [];
-    existing.push(sub);
-    subagentsByParent.set(sub.parentSessionId, existing);
-  }
-
-  const entries: DisplayEntry[] = [];
-  let sessionIdx = 0;
-
-  for (const session of sessions) {
-    sessionIdx++;
-    entries.push({ type: 'session', session, sessionIndex: sessionIdx });
-
-    // Add child subagent sessions right after their parent
-    const children = subagentsByParent.get(session.id);
-    if (children) {
-      for (const child of children) {
-        entries.push({ type: 'subagent', subagent: child });
-      }
-    }
-  }
-
-  return entries;
-}
-
 export function SessionSelector({
   sessions,
   activeSessionId,
@@ -100,123 +62,101 @@ export function SessionSelector({
   onCancel,
   subagentSessions = [],
 }: SessionSelectorProps) {
-  const displayList = buildDisplayList(sessions, subagentSessions);
-  // Selectable items = sessions + "new" option (subagent entries are display-only for now)
-  const selectableCount = sessions.length;
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  // Build select options from sessions
+  const { options, initialIndex } = useMemo(() => {
+    const opts: SelectOption[] = [];
+    let activeIdx = 0;
 
-  useEffect(() => {
-    setSelectedIndex((prev) => Math.min(prev, selectableCount));
-  }, [selectableCount]);
+    // Group subagent sessions by parent
+    const subagentsByParent = new Map<string, PersistedSessionData[]>();
+    for (const sub of subagentSessions) {
+      if (!sub.parentSessionId) continue;
+      const existing = subagentsByParent.get(sub.parentSessionId) ?? [];
+      existing.push(sub);
+      subagentsByParent.set(sub.parentSessionId, existing);
+    }
 
-  useInput((input, key) => {
-    // 'n' or 'N' for new session - check first to prioritize
-    if (input === 'n' || input === 'N') {
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessions[i];
+      const isActive = session.id === activeSessionId;
+      const time = formatSessionTime(session.updatedAt);
+      const path = formatPath(session.cwd);
+      const displayName = session.label || path;
+      const processing = session.isProcessing ? ' (processing)' : '';
+      const activeMarker = isActive ? ' *' : '';
+
+      if (isActive) activeIdx = opts.length;
+
+      opts.push({
+        name: `${time}  ${displayName}${processing}${activeMarker}`,
+        description: session.id.slice(0, 8),
+        value: session.id,
+      });
+
+      // Add child subagent sessions right after their parent (display-only)
+      const children = subagentsByParent.get(session.id);
+      if (children) {
+        for (const child of children) {
+          const subTime = formatSessionTime(child.updatedAt);
+          const statusTag = child.status === 'completed' ? ' (done)' : child.status === 'active' ? ' (running)' : '';
+          opts.push({
+            name: `  \u21B3 ${subTime}  ${child.label || 'subagent'}${statusTag}`,
+            description: '',
+            value: `__subagent__${child.id}`,
+          });
+        }
+      }
+    }
+
+    // Add "New session" option at the end
+    opts.push({
+      name: '+ New session',
+      description: 'Create a new session',
+      value: '__new_session__',
+    });
+
+    return { options: opts, initialIndex: activeIdx };
+  }, [sessions, activeSessionId, subagentSessions]);
+
+  const handleSelect = useCallback((_index: number, option: SelectOption | null) => {
+    if (!option) return;
+    const value = String(option.value);
+
+    // Skip subagent entries
+    if (value.startsWith('__subagent__')) return;
+
+    if (value === '__new_session__') {
       onNew();
       return;
     }
 
-    // Escape: cancel
-    if (key.escape) {
-      onCancel();
-      return;
-    }
-
-    // Enter: select current option
-    if (key.return) {
-      if (selectedIndex >= selectableCount) {
-        // "New session" option or out of bounds
-        onNew();
-      } else {
-        onSelect(sessions[selectedIndex].id);
-      }
-      return;
-    }
-
-    // Arrow navigation
-    if (key.upArrow) {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-      return;
-    }
-
-    if (key.downArrow) {
-      setSelectedIndex((prev) => Math.min(selectableCount, prev + 1)); // +1 for "new" option
-      return;
-    }
-
-    // Number keys for quick selection (1-9)
-    const num = parseInt(input, 10);
-    if (!isNaN(num) && num >= 1 && num <= selectableCount) {
-      onSelect(sessions[num - 1].id);
-      return;
-    }
-  });
-
-  // Track which session index we're at for selection highlighting
-  let currentSessionIdx = -1;
+    onSelect(value);
+  }, [onSelect, onNew]);
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text><b>Sessions</b></text>
-      </box>
+    <Modal visible={true} onClose={onCancel} title="Switch Session (Ctrl+])">
+      {/* Session list */}
+      <select
+        options={options}
+        selectedIndex={initialIndex}
+        onSelect={handleSelect}
+        focused={true}
+        showDescription={false}
+        wrapSelection={true}
+        showScrollIndicator={true}
+        backgroundColor="#1a1a2e"
+        textColor="#cccccc"
+        selectedBackgroundColor="#3333aa"
+        selectedTextColor="#ffffff"
+        descriptionColor="#666688"
+        selectedDescriptionColor="#aaaacc"
+        flexGrow={1}
+      />
 
-      {displayList.map((entry, i) => {
-        if (entry.type === 'session' && entry.session) {
-          currentSessionIdx++;
-          const session = entry.session;
-          const isActive = session.id === activeSessionId;
-          const isSelected = currentSessionIdx === selectedIndex;
-          const prefix = isActive ? '[*]' : '   ';
-          const time = formatSessionTime(session.updatedAt);
-          const path = formatPath(session.cwd);
-          const processing = session.isProcessing ? ' (processing)' : '';
-          const displayName = session.label || path;
-
-          return (
-            <box key={session.id}>
-              <text
-                bg={isSelected ? "#0055aa" : undefined}
-                fg={isSelected ? "whiteBright" : isActive ? 'green' : "gray"}
-              >
-                {prefix} {entry.sessionIndex}. {time}  {displayName}{processing}
-              </text>
-            </box>
-          );
-        }
-
-        if (entry.type === 'subagent' && entry.subagent) {
-          const sub = entry.subagent;
-          const time = formatSessionTime(sub.updatedAt);
-          const statusTag = sub.status === 'completed' ? ' (done)' : sub.status === 'active' ? ' (running)' : '';
-
-          return (
-            <box key={sub.id} paddingLeft={3}>
-              <text fg="cyan">
-                {'     '}&#8627; {time}  {sub.label || 'subagent'}{statusTag}
-              </text>
-            </box>
-          );
-        }
-
-        return null;
-      })}
-
-      {/* New session option */}
+      {/* Footer */}
       <box marginTop={1}>
-        <text
-          bg={selectedIndex === selectableCount ? "#0055aa" : undefined}
-          fg={selectedIndex === selectableCount ? "whiteBright" : "gray"}
-        >
-            + New session (n)
-        </text>
+        <text fg="#555555">Enter select | Up/Down navigate | n new | Esc close</text>
       </box>
-
-      <box marginTop={1}>
-        <text fg="gray">
-          Enter to select | Esc to cancel | 1-{selectableCount} to switch | n for new
-        </text>
-      </box>
-    </box>
+    </Modal>
   );
 }

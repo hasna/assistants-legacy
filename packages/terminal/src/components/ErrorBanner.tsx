@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColor } from '../theme/colors';
 
 interface ParsedError {
   code?: string;
@@ -31,7 +32,7 @@ interface ErrorBannerProps {
 
 export function ErrorBanner({ error, showErrorCodes = false }: ErrorBannerProps) {
   const parsed = parseErrorMessage(error);
-  const severity = parsed.code && /TIMEOUT|RATE_LIMITED/.test(parsed.code) ? 'yellow' : 'red';
+  const severity = parsed.code && /TIMEOUT|RATE_LIMITED/.test(parsed.code) ? themeColor('yellow') : themeColor('red');
   const prefix = showErrorCodes && parsed.code ? `${parsed.code}: ` : '';
 
   return (

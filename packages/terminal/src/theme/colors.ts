@@ -1,40 +1,74 @@
 /**
- * Theme-aware color palette — maps semantic color names to hex values
- * based on the detected terminal theme (light vs dark).
+ * Theme-aware color palette — Dracula-inspired semantic color system.
  *
- * On dark terminals, colors like cyan/green/yellow are fine.
- * On light terminals, those same colors are nearly invisible on white backgrounds.
- * This module provides darker variants for light themes.
+ * Dark palette: Dracula colors (#282a36 base, #f8f8f2 text)
+ * Light palette: High-contrast equivalents for readability on white backgrounds.
  *
- * [cassius] Created for light-theme contrast fix.
+ * All components should use themeColor() instead of hardcoded color strings.
+ *
+ * [nero] Rewritten with full Dracula-inspired palette for OpenCode parity.
  */
 
 import { getThemeMode } from './setup';
 
 const DARK_PALETTE = {
-  primary: '#61dafb',    // cyan-ish
-  success: '#50fa7b',    // green
-  warning: '#f1fa8c',    // yellow
-  error: '#ff5555',      // red
-  muted: '#6272a4',      // gray
-  accent: '#bd93f9',     // purple
-  info: '#8be9fd',       // light blue
-  highlight: '#ff79c6',  // pink
-  prompt: '#50fa7b',     // green for > prompt
-  border: '#44475a',     // dark gray
+  // Backgrounds
+  bg: '#1e1e2e',
+  surface: '#282a36',
+  border: '#44475a',
+
+  // Text
+  text: '#f8f8f2',
+  muted: '#6272a4',
+
+  // Accents
+  cyan: '#8be9fd',
+  green: '#50fa7b',
+  orange: '#ffb86c',
+  pink: '#ff79c6',
+  purple: '#bd93f9',
+  red: '#ff5555',
+  yellow: '#f1fa8c',
+
+  // Semantic aliases (mapped to accents)
+  primary: '#8be9fd',     // cyan
+  success: '#50fa7b',     // green
+  warning: '#f1fa8c',     // yellow
+  error: '#ff5555',       // red
+  accent: '#bd93f9',      // purple
+  info: '#8be9fd',        // cyan
+  highlight: '#ff79c6',   // pink
+  prompt: '#50fa7b',      // green
 };
 
 const LIGHT_PALETTE = {
-  primary: '#0077b6',    // darker cyan
-  success: '#2d6a4f',    // darker green
-  warning: '#b8860b',    // dark goldenrod
-  error: '#d00000',      // dark red
-  muted: '#555555',      // medium gray
-  accent: '#6a0dad',     // dark purple
-  info: '#0077b6',       // dark blue
-  highlight: '#c71585',  // dark pink
-  prompt: '#2d6a4f',     // dark green for > prompt
-  border: '#cccccc',     // light gray
+  // Backgrounds
+  bg: '#fafafa',
+  surface: '#f0f0f0',
+  border: '#d4d4d8',
+
+  // Text
+  text: '#1a1a2e',
+  muted: '#555555',
+
+  // Accents (darker for contrast on light bg)
+  cyan: '#0097a7',
+  green: '#2e7d32',
+  orange: '#e65100',
+  pink: '#c2185b',
+  purple: '#6a1b9a',
+  red: '#c62828',
+  yellow: '#f9a825',
+
+  // Semantic aliases
+  primary: '#0097a7',     // dark cyan
+  success: '#2e7d32',     // dark green
+  warning: '#f9a825',     // dark yellow
+  error: '#c62828',       // dark red
+  accent: '#6a1b9a',      // dark purple
+  info: '#0097a7',        // dark cyan
+  highlight: '#c2185b',   // dark pink
+  prompt: '#2e7d32',      // dark green
 };
 
 export type SemanticColor = keyof typeof DARK_PALETTE;

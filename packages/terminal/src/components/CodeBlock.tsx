@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { SyntaxStyle, RGBA } from '@opentui/core';
 import type { ToolCall } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 /**
  * Map file extensions to Tree-Sitter filetype identifiers
@@ -191,7 +192,7 @@ export function CodeBlock({ content, filetype, maxHeight }: CodeBlockProps) {
 
   // Fall back to dim plain text when native syntax highlighting is unavailable
   if (!syntaxStyle) {
-    return <text fg="gray">{content}</text>;
+    return <text fg={themeColor('muted')}>{content}</text>;
   }
 
   return (

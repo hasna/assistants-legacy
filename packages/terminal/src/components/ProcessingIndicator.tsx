@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getRandomLoadingWord } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 interface ProcessingIndicatorProps {
   isProcessing: boolean;
@@ -66,11 +67,13 @@ export function ProcessingIndicator({
 
   const label = loadingWord;
 
+  const muted = themeColor('muted');
+
   return (
     <box marginY={1} flexDirection="row">
-      <text fg="gray">✶ </text>
-      <text fg="gray"> {label}... </text>
-      <text fg="gray">({parts.join(' · ')})</text>
+      <text fg={muted}>✶ </text>
+      <text fg={muted}> {label}... </text>
+      <text fg={muted}>({parts.join(' · ')})</text>
     </box>
   );
 }

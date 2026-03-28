@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface ToolCallEntry {
   toolCall: ToolCall;
@@ -31,17 +32,17 @@ export function ToolCallBox({
     <box
       flexDirection="column"
       borderStyle="rounded"
-      borderColor="#d4d4d8" border={["top", "bottom"]}
+      borderColor={themeColor('border')} border={["top", "bottom"]}
       paddingX={1}
       marginY={1}
     >
       {/* Header with expand hint */}
       <box flexDirection="row" justifyContent="space-between">
-        <text fg="gray"><b>
+        <text fg={themeColor('muted')}><b>
           Tools ({entries.length})
         </b></text>
         {entries.length > maxVisible && (
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {isExpanded ? 'Ctrl+O to collapse' : 'Ctrl+O to expand'}
           </text>
         )}
@@ -49,7 +50,7 @@ export function ToolCallBox({
 
       {/* Hidden count indicator */}
       {hiddenCount > 0 && !isExpanded && (
-        <text fg="gray">  +{hiddenCount} more above...</text>
+        <text fg={themeColor('muted')}>  +{hiddenCount} more above...</text>
       )}
 
       {/* Visible tool calls */}
@@ -67,12 +68,12 @@ interface ToolCallRowProps {
 function ToolCallRow({ entry }: ToolCallRowProps) {
   const { toolCall, result } = entry;
   const statusIcon = result ? (result.isError ? '✗' : '✓') : '○';
-  const statusColor = result ? (result.isError ? 'red' : 'green') : 'gray';
+  const statusColor = result ? (result.isError ? themeColor('red') : themeColor('green')) : themeColor('muted');
 
   return (
     <box flexDirection="row">
       <text fg={statusColor}>{statusIcon} </text>
-      <text fg="gray">{formatToolCall(toolCall)}</text>
+      <text fg={themeColor('muted')}>{formatToolCall(toolCall)}</text>
     </box>
   );
 }
