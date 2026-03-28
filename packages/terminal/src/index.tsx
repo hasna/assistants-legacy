@@ -147,7 +147,7 @@ const subcommand = process.argv[2];
 if (subcommand === 'autocomplete') {
   const shell = (process.argv[3] || 'zsh').toLowerCase();
 
-  const subcommands = ['mcp', 'doctor', 'serve', 'report', 'config', 'sessions', 'search', 'autocomplete'];
+  const subcommands = ['mcp', 'doctor', 'serve', 'report', 'config', 'sessions', 'search', 'autocomplete', 'feedback', 'brains'];
   const flags = [
     '--help', '-h', '--version', '-v',
     '--print', '-p', '--output-format', '--allowed-tools', '--system-prompt',
@@ -457,7 +457,7 @@ if (subcommand === 'serve') {
   const possibleWebDirs = [
     join(import.meta.dir, '..', '..', '..', 'web'),          // monorepo dev
     join(import.meta.dir, '..', 'web'),                       // dist structure
-    join(process.env.HOME || '', '.assistants', 'web'),        // installed
+    join(process.env.HOME || '', '.hasna', 'assistants', 'web'),        // installed
   ];
 
   const webDir = possibleWebDirs.find(d => existsSync(join(d, 'package.json')));
@@ -686,6 +686,57 @@ if (subcommand === 'report') {
 if (subcommand === 'brains') {
   const { runBrainsCommand } = await import('./commands/brains.js');
   await runBrainsCommand(process.argv.slice(3));
+  process.exit(0);
+}
+
+if (subcommand === 'feedback') {
+  const sub = process.argv[3];
+  if (sub === 'send' || sub === 'submit') {
+    const args = process.argv.slice(4);
+    const messageIdx = args.findIndex(a => a === '--message' || a === '-m');
+    const typeIdx = args.findIndex(a => a === '--type' || a === '-t');
+    const emailIdx = args.findIndex(a => a === '--email' || a === '-e');
+    const message = messageIdx >= 0 ? args[messageIdx + 1] : args.filter(a => !a.startsWith('-')).join(' ');
+    const type = typeIdx >= 0 ? args[typeIdx + 1] : 'feedback';
+    const email = emailIdx >= 0 ? args[emailIdx + 1] : undefined;
+
+    if (!message) {
+      console.error('Usage: assistants feedback send <message> [--type bug|feature|feedback] [--email you@example.com]');
+      process.exit(1);
+    }
+
+    try {
+      const { sendFeedback } = await import('@hasna/cloud');
+      const result = await sendFeedback({
+        service: 'open-assistants',
+        version: VERSION,
+        message: type !== 'feedback' ? `[${type}] ${message}` : message,
+        email,
+      });
+      if (result.sent) {
+        console.log(`✓ Feedback sent. ID: ${result.id}`);
+      } else {
+        console.log(`Feedback saved locally. ID: ${result.id}`);
+        if (result.error) console.log(`  (cloud send failed: ${result.error})`);
+      }
+    } catch (err) {
+      console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+    process.exit(0);
+  }
+
+  console.log(`Usage:
+  assistants feedback send <message> [options]
+
+Options:
+  --type, -t    Feedback type: bug, feature, feedback (default: feedback)
+  --email, -e   Your email for follow-up (optional)
+
+Examples:
+  assistants feedback send "The sessions list is slow"
+  assistants feedback send "Add voice support" --type feature
+  assistants feedback send "Crash on startup" --type bug --email me@example.com`);
   process.exit(0);
 }
 

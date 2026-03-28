@@ -58,7 +58,7 @@ Test content here.
     test('should load global commands from HOME', async () => {
       const originalHome = process.env.HOME;
       const homeDir = join(testDir, 'home');
-      const globalDir = join(homeDir, '.assistants', 'commands');
+      const globalDir = join(homeDir, '.hasna', 'assistants', 'commands');
       mkdirSync(globalDir, { recursive: true });
       writeFileSync(join(globalDir, 'global.md'), `---
 name: global

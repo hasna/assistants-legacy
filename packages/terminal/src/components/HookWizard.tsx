@@ -257,7 +257,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
   const getLocationDescription = (loc: HookLocation): string => {
     switch (loc) {
       case 'user':
-        return '~/.assistants/hooks.json (all projects)';
+        return '~/.hasna/assistants/hooks.json (all projects)';
       case 'project':
         return '.assistants/hooks.json (this project)';
       case 'local':

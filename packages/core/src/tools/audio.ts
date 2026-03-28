@@ -292,7 +292,7 @@ export class AudioTools {
 
       // Ensure directory exists
       const runtime = getRuntime();
-      const dir = resolve(homedir(), '.assistants', 'audio');
+      const dir = resolve(homedir(), '.hasna', 'assistants', 'audio');
       try {
         await runtime.file(dir).exists();
       } catch {

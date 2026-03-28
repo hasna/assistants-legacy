@@ -141,14 +141,14 @@ describe('config helpers', () => {
     process.env.HOME = homeDir;
 
     try {
-      expect(getConfigDir()).toBe(join(homeDir, '.assistants'));
+      expect(getConfigDir()).toBe(join(homeDir, '.hasna', 'assistants'));
     } finally {
       process.env.ASSISTANTS_DIR = originalAssistantsDir;
       process.env.HOME = originalHome;
     }
   });
 
-  test('ASSISTANTS_PROFILE routes to ~/.assistants/profiles/<name>', () => {
+  test('ASSISTANTS_PROFILE routes to ~/.hasna/assistants/profiles/<name>', () => {
     const originalProfile = process.env.ASSISTANTS_PROFILE;
     const originalDir = process.env.ASSISTANTS_DIR;
     const originalHome = process.env.HOME;
@@ -160,7 +160,7 @@ describe('config helpers', () => {
     process.env.HOME = homeDir;
 
     try {
-      expect(getConfigDir()).toBe(join(homeDir, '.assistants', 'profiles', 'work'));
+      expect(getConfigDir()).toBe(join(homeDir, '.hasna', 'assistants', 'profiles', 'work'));
     } finally {
       process.env.ASSISTANTS_DIR = originalDir;
       process.env.ASSISTANTS_PROFILE = originalProfile;

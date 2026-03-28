@@ -451,7 +451,7 @@ export function createAssistantToolExecutors(
         );
       }
 
-      // Fall back to agent definitions (JSON files in ~/.assistants/agents/ or .assistants/agents/)
+      // Fall back to agent definitions (JSON files in ~/.hasna/assistants/agents/ or .assistants/agents/)
       if (!assistant) {
         agentDef = getAgentDefinition(assistantQuery, context.getCwd());
       }

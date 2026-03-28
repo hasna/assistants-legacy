@@ -97,7 +97,7 @@ Your prompt instructions here. Use $ARGUMENTS for user input.
 Place the file at:
 
 - `.assistants/skills/my-skill/SKILL.md` -- built-in (ships with the package)
-- `~/.assistants/skills/my-skill/SKILL.md` -- user-level (personal skills)
+- `~/.hasna/assistants/skills/my-skill/SKILL.md` -- user-level (personal skills)
 
 The SkillLoader auto-discovers skills on startup.
 

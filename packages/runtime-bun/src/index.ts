@@ -4,6 +4,7 @@
 
 import { Glob } from 'bun';
 import { Database } from 'bun:sqlite';
+import { SqliteAdapter } from '@hasna/cloud';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type {
@@ -156,7 +157,7 @@ class BunDatabaseConnection implements DatabaseConnection {
   private db: Database;
 
   constructor(path: string) {
-    this.db = new Database(path);
+    this.db = new SqliteAdapter(path) as unknown as Database;
   }
 
   exec(sql: string): void {

@@ -47,7 +47,7 @@ export function parseSource(source: string): { source: PackageSource; identifier
  */
 export function resolvePackagesDir(scope: PackageScope, cwd?: string): string {
   if (scope === 'global') {
-    return join(homedir(), '.assistants', 'packages');
+    return join(homedir(), '.hasna', 'assistants', 'packages');
   }
   return join(cwd || process.cwd(), '.assistants', 'packages');
 }

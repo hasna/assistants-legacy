@@ -75,8 +75,8 @@ export default function SkillsPage() {
   // 1. Legacy built-in skills (.assistants/skills/)
   addSkills(join(process.cwd(), ".assistants", "skills"), "built-in")
 
-  // 2. Legacy user skills (~/.assistants/skills/)
-  addSkills(join(homedir(), ".assistants", "skills"), "user")
+  // 2. User skills (~/.hasna/assistants/skills/)
+  addSkills(join(homedir(), ".hasna", "assistants", "skills"), "user")
 
   // 3. @hasna/skills SDK — global agent skills (~/.claude/skills/)
   addSkills(join(homedir(), ".claude", "skills"), "sdk-global")

@@ -143,7 +143,7 @@ Safe readable paths include: ${SAFE_READ_PATHS.slice(0, 10).join(', ')}... and m
       scope: {
         type: 'string',
         enum: ['effective', 'project', 'global'],
-        description: 'Which config to read: "effective" (merged, default), "project" (.assistants/config.json), or "global" (~/.assistants/config.json)',
+        description: 'Which config to read: "effective" (merged, default), "project" (.assistants/config.json), or "global" (~/.hasna/assistants/config.json)',
       },
     },
     required: ['path'],

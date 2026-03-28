@@ -98,7 +98,7 @@ export function SkillsClient({ data }: { data: SkillRow[] }) {
           <p className="text-muted-foreground text-sm">
             No skills found. Add skills to{" "}
             <code className="bg-muted rounded px-1 py-0.5 text-xs">
-              ~/.assistants/skills/
+              ~/.hasna/assistants/skills/
             </code>{" "}
             to get started.
           </p>

@@ -25,7 +25,7 @@ interface LogEntry {
 }
 
 /**
- * Logger that writes to ~/.assistants/logs/
+ * Logger that writes to ~/.hasna/assistants/logs/
  */
 export class Logger {
   private logDir: string;
@@ -162,7 +162,7 @@ export class Logger {
 }
 
 /**
- * Session storage - saves conversations to ~/.assistants/assistants/{id}/sessions/
+ * Session storage - saves conversations to ~/.hasna/assistants/{id}/sessions/
  */
 export class SessionStorage {
   private sessionsDir: string;

@@ -799,7 +799,7 @@ export function OnboardingPanel({
           <text fg="gray">{'│'} Model:      <text>{modelDisplay}</text>{'│'}</text>
           <text fg="gray">{'│'} Connectors: <text>{connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}</text>{'│'}</text>
           <text fg="gray">{'│'} Skills:     <text>{skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}</text>{'│'}</text>
-          <text fg="gray">{'│'} Config:     <text>{'~/.assistants/'.padEnd(24)}</text>{'│'}</text>
+          <text fg="gray">{'│'} Config:     <text>{'~/.hasna/assistants/'.padEnd(24)}</text>{'│'}</text>
           <text fg="gray">{'└─────────────────────────────────────┘'}</text>
         </box>
         <box marginTop={1}>

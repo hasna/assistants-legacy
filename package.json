@@ -20,7 +20,8 @@
     "test:coverage": "turbo run test -- --coverage",
     "lint": "turbo run lint",
     "clean": "turbo run clean && rm -rf node_modules dist",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "postinstall": "mkdir -p $HOME/.hasna/assistants/{logs,temp,messages,backups,connectors,workspaces,agents} 2>/dev/null || true"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -71,7 +72,8 @@
     "packages/*"
   ],
   "dependencies": {
-    "@opentui/core": "^0.1.90",
-    "@opentui/react": "^0.1.90"
+    "@hasna/cloud": "^0.1.24",
+    "@opentui/core": "^0.1.91",
+    "@opentui/react": "^0.1.91"
   }
 }

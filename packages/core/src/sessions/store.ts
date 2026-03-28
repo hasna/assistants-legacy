@@ -2,7 +2,7 @@
  * Session persistence store
  *
  * Persists session metadata to SQLite for recovery across restarts.
- * Storage: persisted_sessions table in ~/.assistants/assistants.db
+ * Storage: persisted_sessions table in ~/.hasna/assistants/assistants.db
  */
 
 import { getDatabase } from '../database';

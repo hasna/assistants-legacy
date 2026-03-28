@@ -3,7 +3,7 @@
  *
  * Provides a single shared DatabaseConnection for all stores in the core package.
  * On first call to getDatabase(), it:
- *   1. Opens ~/.assistants/assistants.db
+ *   1. Opens ~/.hasna/assistants/assistants.db
  *   2. Configures WAL mode, busy_timeout, foreign_keys
  *   3. Runs all CREATE TABLE IF NOT EXISTS statements
  *   4. Records the schema version
@@ -21,8 +21,12 @@ let singletonPath: string | null = null;
 
 /**
  * Get the path to the unified database file.
+ * Override with HASNA_ASSISTANTS_DB_PATH env var.
  */
 export function getDatabasePath(baseDir?: string): string {
+  if (process.env.HASNA_ASSISTANTS_DB_PATH) {
+    return process.env.HASNA_ASSISTANTS_DB_PATH;
+  }
   const dir = baseDir || getConfigDir();
   return join(dir, 'assistants.db');
 }

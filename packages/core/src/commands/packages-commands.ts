@@ -125,7 +125,7 @@ export function packagesCommand(): Command {
         try {
           const packages = await PackageInstaller.listPackages({ local: isLocal });
           if (packages.length > 0) {
-            lines.push(`\n_${scope} (${isLocal ? '.assistants/packages/' : '~/.assistants/packages/'})_`);
+            lines.push(`\n_${scope} (${isLocal ? '.assistants/packages/' : '~/.hasna/assistants/packages/'})_`);
             for (const pkg of packages) {
               lines.push(`  ${pkg.name} (${pkg.source}) v${pkg.version}`);
             }

@@ -329,7 +329,7 @@ export function ConfigPanel({
               <text fg="gray">Config sources (in priority order):</text>
               <text>  1. Local:   .assistants/config.local.json {localConfig ? 'present' : 'none'}</text>
               <text>  2. Project: .assistants/config.json {projectConfig ? 'present' : 'none'}</text>
-              <text>  3. User:    ~/.assistants/config.json {userConfig ? 'present' : 'none'}</text>
+              <text>  3. User:    ~/.hasna/assistants/config.json {userConfig ? 'present' : 'none'}</text>
               <text>  4. Default: Built-in defaults</text>
             </box>
             <box marginTop={1} flexDirection="column">
@@ -582,7 +582,7 @@ export function ConfigPanel({
   // Location select dialog
   if (mode === 'location-select') {
     const locations: { id: ConfigLocation; name: string; desc: string }[] = [
-      { id: 'user', name: 'User (~/.assistants/config.json)', desc: 'Global settings for all projects' },
+      { id: 'user', name: 'User (~/.hasna/assistants/config.json)', desc: 'Global settings for all projects' },
       { id: 'project', name: 'Project (.assistants/config.json)', desc: 'Settings for this project' },
       { id: 'local', name: 'Local (.assistants/config.local.json)', desc: 'Local overrides (gitignored)' },
     ];

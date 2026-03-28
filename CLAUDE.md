@@ -169,7 +169,7 @@ bunx @hasna/assistants
 ## Adding a New Skill
 
 1. Create `skills/{name}/SKILL.md` with frontmatter and instructions
-2. Place in `.assistants/skills/` (built-in) or `~/.assistants/skills/` (user)
+2. Place in `.assistants/skills/` (built-in) or `~/.hasna/assistants/skills/` (user)
 3. The SkillLoader auto-discovers it on startup
 
 ## Adding a New Hook

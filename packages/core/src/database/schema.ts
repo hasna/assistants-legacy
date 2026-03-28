@@ -1,7 +1,7 @@
 /**
  * Unified SQLite schema for all core storage
  *
- * All tables live in a single ~/.assistants/assistants.db file.
+ * All tables live in a single ~/.hasna/assistants/assistants.db file.
  * Tables are grouped by domain but share the same connection
  * with WAL mode, busy_timeout, and foreign keys enabled.
  *
@@ -981,4 +981,15 @@ export const SCHEMA_STATEMENTS: string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start_time)`,
   `CREATE INDEX IF NOT EXISTS idx_calendar_events_end ON calendar_events(end_time)`,
+
+  // Feedback — schema matches @hasna/cloud's ensureFeedbackTable
+  `CREATE TABLE IF NOT EXISTS feedback (
+    id TEXT PRIMARY KEY,
+    service TEXT NOT NULL DEFAULT 'open-assistants',
+    version TEXT DEFAULT '',
+    message TEXT NOT NULL,
+    email TEXT DEFAULT '',
+    machine_id TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
 ];

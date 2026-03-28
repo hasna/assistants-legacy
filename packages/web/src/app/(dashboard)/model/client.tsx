@@ -65,7 +65,7 @@ export function ModelClient({ data }: { data: ModelConfigRow[] }) {
           <p className="text-muted-foreground text-sm">
             No model configuration found. Set your model in{" "}
             <code className="bg-muted rounded px-1 py-0.5 text-xs">
-              ~/.assistants/config.json
+              ~/.hasna/assistants/config.json
             </code>
           </p>
         </div>

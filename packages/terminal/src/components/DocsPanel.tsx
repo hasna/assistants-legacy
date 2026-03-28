@@ -128,7 +128,7 @@ const DOCS_SECTIONS: DocsSection[] = [
     summary: 'Where data is persisted and what gets isolated by scope.',
     content: [
       'Project-local data uses .assistants in your repository.',
-      'User/global data defaults to ~/.assistants.',
+      'User/global data defaults to ~/.hasna/assistants.',
       'Workspace-scoped data is resolved from the active workspace base directory and includes sessions, assistant registry, wallet, secrets, budgets, and local runtime state.',
       'Switching workspace should not leak state between workspaces.',
     ],

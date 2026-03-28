@@ -17,7 +17,7 @@ export interface InboxManagerOptions {
   assistantName: string;
   /** Inbox configuration */
   config: InboxConfig;
-  /** Base path for local cache (default: ~/.assistants/inbox) */
+  /** Base path for local cache (default: ~/.hasna/assistants/inbox) */
   basePath: string;
 }
 

@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { homedir } from 'os';
+import { existsSync, mkdirSync, readdirSync, copyFileSync } from 'fs';
 import type { AssistantsConfig, HookConfig, ConnectorsConfigShared } from '@hasna/assistants-shared';
 import { getRuntime, hasRuntime } from './runtime';
 import { deepMerge } from './utils/deep-merge';
@@ -335,7 +336,7 @@ function mergeConfig(base: AssistantsConfig, override?: Partial<AssistantsConfig
  * Get the path to the assistants config directory
  */
 export function getConfigDir(): string {
-  // Priority: ASSISTANTS_DIR > ASSISTANTS_PROFILE > default ~/.assistants
+  // Priority: ASSISTANTS_DIR > ASSISTANTS_PROFILE > default ~/.hasna/assistants
   const assistantsOverride = process.env.ASSISTANTS_DIR;
   if (assistantsOverride && assistantsOverride.trim()) {
     return assistantsOverride;
@@ -346,11 +347,51 @@ export function getConfigDir(): string {
   const homeDir = envHome && envHome.trim().length > 0 ? envHome : homedir();
 
   if (profile && profile.trim()) {
-    // ~/.assistants/profiles/<profile>
-    return join(homeDir, '.assistants', 'profiles', profile.trim());
+    // ~/.hasna/assistants/profiles/<profile> (new path)
+    const newProfileDir = join(homeDir, '.hasna', 'assistants', 'profiles', profile.trim());
+    const oldProfileDir = join(homeDir, '.assistants', 'profiles', profile.trim());
+    if (existsSync(oldProfileDir) && !existsSync(newProfileDir)) {
+      migrateDirectory(oldProfileDir, newProfileDir);
+    }
+    mkdirSync(newProfileDir, { recursive: true });
+    return newProfileDir;
   }
 
-  return join(homeDir, '.assistants');
+  const newDir = join(homeDir, '.hasna', 'assistants');
+  const oldDir = join(homeDir, '.assistants');
+
+  // Auto-migrate: if old dir exists and new doesn't, copy over
+  if (existsSync(oldDir) && !existsSync(newDir)) {
+    migrateDirectory(oldDir, newDir);
+  }
+
+  mkdirSync(newDir, { recursive: true });
+  return newDir;
+}
+
+/**
+ * Copy contents from old directory to new directory (shallow, files only).
+ * Used for auto-migration from ~/.<service>/ to ~/.hasna/<service>/.
+ */
+function migrateDirectory(oldDir: string, newDir: string): void {
+  mkdirSync(newDir, { recursive: true });
+  try {
+    for (const file of readdirSync(oldDir)) {
+      const oldPath = join(oldDir, file);
+      const newPath = join(newDir, file);
+      try {
+        // Only copy files, not directories (subdirs need recursive handling)
+        const stat = require('fs').statSync(oldPath);
+        if (stat.isFile()) {
+          copyFileSync(oldPath, newPath);
+        }
+      } catch {
+        // Skip files that can't be copied
+      }
+    }
+  } catch {
+    // If we can't read the old directory, just continue with the new one
+  }
 }
 
 /**
@@ -587,7 +628,7 @@ export function getTempFolder(sessionId: string, baseDir?: string): string {
 
 /**
  * Load system prompt from ASSISTANTS.md files
- * Priority: project .assistants/ASSISTANTS.md > global ~/.assistants/ASSISTANTS.md
+ * Priority: project .assistants/ASSISTANTS.md > global ~/.hasna/assistants/ASSISTANTS.md
  * If both exist, they are concatenated (global first, then project)
  */
 export async function loadSystemPrompt(

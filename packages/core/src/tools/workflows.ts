@@ -46,7 +46,7 @@ const workflowListExecutor: ToolExecutor = async () => {
   const workflows = loader.list();
 
   if (workflows.length === 0) {
-    return 'No workflows found. Create workflow YAML files in ~/.assistants/workflows/ or .assistants/workflows/';
+    return 'No workflows found. Create workflow YAML files in ~/.hasna/assistants/workflows/ or .assistants/workflows/';
   }
 
   const list = workflows.map(w => ({

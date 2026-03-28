@@ -83,7 +83,7 @@ export function docsCommand(): Command {
 
       message += '**Storage**\n';
       message += '  - Project data: `.assistants/`\n';
-      message += '  - User/global data: `~/.assistants/`\n';
+      message += '  - User/global data: `~/.hasna/assistants/`\n';
       message += '  - Workspace switching isolates sessions, assistants, settings, and resource state.\n';
 
       context.emit('text', message);
@@ -146,7 +146,7 @@ export function helpCommand(loader: CommandLoader): Command {
 
       message += '**Tips:**\n';
       message += '  - Create custom commands in .assistants/commands/*.md\n';
-      message += '  - Global commands go in ~/.assistants/commands/*.md\n';
+      message += '  - Global commands go in ~/.hasna/assistants/commands/*.md\n';
       message += '  - Use /init to create a starter command\n';
       message += '  - The assistant can use the wait/sleep tool to pause between actions\n';
 

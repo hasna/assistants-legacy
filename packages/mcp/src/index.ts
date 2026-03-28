@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { registerCloudTools } from '@hasna/cloud';
 import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
@@ -859,15 +860,15 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
     }
   }
 
-  return server;
-}
+  // ─── Cloud ───────────────────────────────────────────────────────────────────
+  registerCloudTools(server, "assistants");
 
-// ─── Agent lifecycle ──────────────────────────────────────────────────────────
+  // ─── Agent lifecycle ──────────────────────────────────────────────────────────
 
-// In-memory agent registry for assistants MCP
-const mcpAgentRegistry = new Map<string, { id: string; name: string; last_seen_at: string; project_id?: string }>();
+  // In-memory agent registry for assistants MCP
+  const mcpAgentRegistry = new Map<string, { id: string; name: string; last_seen_at: string; project_id?: string }>();
 
-registerTool(
+  registerTool(
   'register_agent',
   'Register an agent session for attribution. Returns agent_id.',
   {
@@ -1054,6 +1055,9 @@ server.tool(
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   }
 );
+
+  return server;
+}
 
 // ─── CLI mode (remove/uninstall/rm) ─────────────────────────────────────────
 
