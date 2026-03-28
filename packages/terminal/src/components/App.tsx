@@ -3009,9 +3009,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   // Check if currently thinking (no response and no tool calls yet)
   const isThinking = isProcessing && !currentResponse && !currentToolCall && toolCallEntries.length === 0;
 
-  // Derive sidebar title from the last user message or session label
-  const sidebarTitle = useMemo(() => {
-    if (activeSession?.label) return activeSession.label;
+  // Derive sidebar title — computed inline (not a hook) to avoid hooks ordering issues
+  const sidebarTitle = activeSession?.label || (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user' && messages[i].content) {
         const text = messages[i].content.trim();
@@ -3019,7 +3018,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       }
     }
     return undefined;
-  }, [activeSession?.label, messages]);
+  })();
 
   return (
     <box flexDirection="row" height={rows}>
