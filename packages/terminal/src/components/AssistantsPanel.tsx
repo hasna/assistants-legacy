@@ -465,9 +465,8 @@ export function AssistantsPanel({
         {ANTHROPIC_MODELS.map((model, index) => (
           <box key={model.id} paddingY={0}>
             <text
-              attributes={index === selectedModelIndex ? 32 : undefined}
-              fg={index === selectedModelIndex ? 'cyan' : undefined}
-              fg={index !== selectedModelIndex ? "gray" : undefined}
+              bg={index === selectedModelIndex ? "#0055aa" : undefined}
+              fg={index === selectedModelIndex ? "whiteBright" : undefined}
             >
               {index === selectedModelIndex ? '>' : ' '} {model.name}
               <text fg="gray"> - {model.description}</text>
@@ -673,7 +672,7 @@ export function AssistantsPanel({
   // List mode UI
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Assistants</b></text>
         <text fg="gray">[n]ew [e]dit [d]elete</text>
       </box>
@@ -707,9 +706,8 @@ export function AssistantsPanel({
             return (
               <box key={assistant.id} paddingY={0}>
                 <text
-                  attributes={isSelected ? 32 : undefined}
-                  fg={isActive ? 'green' : undefined}
-                  fg={!isSelected && !isActive ? "gray" : undefined}
+                  bg={isSelected ? "#0055aa" : undefined}
+                  fg={isSelected ? "whiteBright" : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {systemBadge}{assistant.name.padEnd(16)} {modelName.padEnd(18)} {backendLabel.padEnd(10)} T:{temp} {time}
                 </text>
@@ -721,9 +719,8 @@ export function AssistantsPanel({
         {/* New assistant option */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={selectedIndex === sortedAssistants.length ? 32 : undefined}
-            fg={selectedIndex !== sortedAssistants.length ? "gray" : undefined}
-            fg={selectedIndex === sortedAssistants.length ? 'cyan' : undefined}
+            bg={selectedIndex === sortedAssistants.length ? "#0055aa" : undefined}
+            fg={selectedIndex === sortedAssistants.length ? "whiteBright" : undefined}
           >
             + New assistant (n)
           </text>

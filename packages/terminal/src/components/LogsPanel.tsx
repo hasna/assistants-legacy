@@ -210,7 +210,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Security Logs</b></text>
         <text fg="gray">{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</text>
       </box>
@@ -246,7 +246,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
 
             return (
               <box key={`${event.timestamp}-${index}`} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   <span fg={severityColor}>{icon.padEnd(2)}</span>
                   {' '}{time.padEnd(8)}{' '}{event.eventType.padEnd(20)}{' '}{truncate(reason, 40)}
                 </text>

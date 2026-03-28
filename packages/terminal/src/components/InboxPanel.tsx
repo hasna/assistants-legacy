@@ -481,16 +481,16 @@ export function InboxPanel({
 
           return (
             <box key={email.id} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}{statusIcon}{attachIcon}{' '}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={email.isRead ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : email.isRead ? "gray" : undefined}>
                 {fromStr}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={email.isRead ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : email.isRead ? "gray" : undefined}>
                 {' '}{subject}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{formatRelativeTime(email.date)}
               </text>
             </box>

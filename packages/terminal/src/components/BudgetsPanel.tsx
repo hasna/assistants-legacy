@@ -379,7 +379,7 @@ export function BudgetsPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Budgets</b></text>
         <text fg="gray">[n]ew [e]dit [d]elete</text>
       </box>
@@ -395,7 +395,7 @@ export function BudgetsPanel({
             const isActive = profile.id === activeProfileId;
             return (
               <box key={profile.id} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined} fg={isSelected ? undefined : isActive ? 'green' : "gray"}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : isActive ? 'green' : "gray"}>
                   {isActive ? '*' : ' '} {index + 1}. {profile.name.padEnd(22)} {profile.description || ''}
                 </text>
               </box>
@@ -406,9 +406,8 @@ export function BudgetsPanel({
         {/* New profile option */}
         <box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
           <text
-            attributes={selectedIndex === profiles.length ? 32 : undefined}
-            fg={selectedIndex !== profiles.length ? "gray" : undefined}
-            fg={selectedIndex === profiles.length ? 'cyan' : undefined}
+            bg={selectedIndex === profiles.length ? "#0055aa" : undefined}
+            fg={selectedIndex === profiles.length ? "whiteBright" : undefined}
           >
             + New profile (n)
           </text>

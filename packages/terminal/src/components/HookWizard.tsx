@@ -288,9 +288,8 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               {HOOK_EVENTS.map((ev, index) => (
                 <box key={ev}>
                   <text
-                    attributes={index === eventIndex ? 32 : undefined}
-                    fg={index === eventIndex ? 'cyan' : undefined}
-                    fg={index !== eventIndex ? "gray" : undefined}
+                    bg={index === eventIndex ? "#0055aa" : undefined}
+                    fg={index === eventIndex ? "whiteBright" : undefined}
                   >
                     {index === eventIndex ? '>' : ' '} {index + 1}. {ev}
                   </text>
@@ -338,9 +337,8 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               {HOOK_TYPES.map((type, index) => (
                 <box key={type}>
                   <text
-                    attributes={index === typeIndex ? 32 : undefined}
-                    fg={index === typeIndex ? 'cyan' : undefined}
-                    fg={index !== typeIndex ? "gray" : undefined}
+                    bg={index === typeIndex ? "#0055aa" : undefined}
+                    fg={index === typeIndex ? "whiteBright" : undefined}
                   >
                     {index === typeIndex ? '>' : ' '} {type === 'command' ? 'command  ' : type === 'prompt' ? 'prompt   ' : 'assistant'}
                     <text fg="gray">
@@ -499,9 +497,8 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               {HOOK_LOCATIONS.map((loc, index) => (
                 <box key={loc}>
                   <text
-                    attributes={index === locationIndex ? 32 : undefined}
-                    fg={index === locationIndex ? 'cyan' : undefined}
-                    fg={index !== locationIndex ? "gray" : undefined}
+                    bg={index === locationIndex ? "#0055aa" : undefined}
+                    fg={index === locationIndex ? "whiteBright" : undefined}
                   >
                     {index === locationIndex ? '>' : ' '} {loc.padEnd(8)}
                     <text fg="gray"> {getLocationDescription(loc)}</text>

@@ -530,19 +530,19 @@ function AssistantMessagesContent({
 
           return (
             <box key={msg.id} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}{statusIcon}{' '}
               </text>
-              <text fg={priorityColor} attributes={isSelected ? 32 : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : priorityColor}>
                 {msg.priority === 'urgent' ? '!' : msg.priority === 'high' ? '↑' : ' '}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={msg.status === 'read' ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : msg.status === 'read' ? "gray" : undefined}>
                 {' '}{fromName}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={msg.status === 'read' ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : msg.status === 'read' ? "gray" : undefined}>
                 {' '}{subject}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{formatRelativeTime(msg.createdAt)}
               </text>
             </box>

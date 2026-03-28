@@ -36,7 +36,7 @@ export function ToolCallBox({
       marginY={1}
     >
       {/* Header with expand hint */}
-      <box justifyContent="space-between">
+      <box flexDirection="row" justifyContent="space-between">
         <text fg="gray"><b>
           Tools ({entries.length})
         </b></text>
@@ -70,7 +70,7 @@ function ToolCallRow({ entry }: ToolCallRowProps) {
   const statusColor = result ? (result.isError ? 'red' : 'green') : 'gray';
 
   return (
-    <box>
+    <box flexDirection="row">
       <text fg={statusColor}>{statusIcon} </text>
       <text fg="gray">{formatToolCall(toolCall)}</text>
     </box>

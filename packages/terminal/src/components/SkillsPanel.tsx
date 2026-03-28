@@ -452,7 +452,7 @@ export function SkillsPanel({
               <box flexDirection="column" marginTop={1}>
                 {SCOPE_OPTIONS.map((opt, idx) => (
                   <box key={opt.id}>
-                    <text attributes={idx === createScopeIndex ? 32 : undefined}>
+                    <text bg={idx === createScopeIndex ? "#0055aa" : undefined}>
                       {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <text fg="gray">{opt.desc}</text>
                     </text>
                   </box>
@@ -723,7 +723,7 @@ export function SkillsPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Skills</b></text>
         <text fg="gray">[n]ew [p]rompt [x]execute [d]elete [f]refresh</text>
       </box>
@@ -764,7 +764,7 @@ export function SkillsPanel({
                 <React.Fragment key={`${entry.skill.name}-${entry.actualIdx}`}>
                   {header}
                   <box paddingY={0}>
-                    <text attributes={isSelected ? 32 : undefined}>
+                    <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                       {isSelected ? '>' : ' '} {(entry.actualIdx + 1).toString().padStart(2)}. {entry.skill.name.padEnd(20)}{desc.slice(0, 40)}{badge}
                     </text>
                   </box>
@@ -782,9 +782,8 @@ export function SkillsPanel({
         {/* New skill option at bottom */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={selectedIndex === sortedSkills.length ? 32 : undefined}
-            fg={selectedIndex !== sortedSkills.length ? "gray" : undefined}
-            fg={selectedIndex === sortedSkills.length ? 'cyan' : undefined}
+            bg={selectedIndex === sortedSkills.length ? "#0055aa" : undefined}
+            fg={selectedIndex === sortedSkills.length ? "whiteBright" : "gray"}
           >
             + New skill (n) | Prompt (p)
           </text>

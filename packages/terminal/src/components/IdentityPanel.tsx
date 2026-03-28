@@ -823,9 +823,8 @@ export function IdentityPanel({
             return (
               <box key={option.name} paddingY={0}>
                 <text
-                  attributes={isSelected ? 32 : undefined}
-                  fg={!isSelected ? "gray" : undefined}
-                  fg={isCustom && isSelected ? 'cyan' : undefined}
+                  bg={isSelected ? "#0055aa" : undefined}
+                  fg={isSelected ? "whiteBright" : undefined}
                 >
                   {prefix}{option.name.padEnd(24)} {option.description}
                 </text>
@@ -1087,9 +1086,8 @@ export function IdentityPanel({
               {COMMUNICATION_STYLES.map((style, index) => (
                 <box key={style} paddingY={0}>
                   <text
-                    attributes={index === formStyleIndex ? 32 : undefined}
-                    fg={index === formStyleIndex ? 'cyan' : undefined}
-                    fg={index !== formStyleIndex ? "gray" : undefined}
+                    bg={index === formStyleIndex ? "#0055aa" : undefined}
+                    fg={index === formStyleIndex ? "whiteBright" : undefined}
                   >
                     {index === formStyleIndex ? '>' : ' '} {style}
                   </text>
@@ -1111,9 +1109,8 @@ export function IdentityPanel({
               {RESPONSE_LENGTHS.map((length, index) => (
                 <box key={length} paddingY={0}>
                   <text
-                    attributes={index === formLengthIndex ? 32 : undefined}
-                    fg={index === formLengthIndex ? 'cyan' : undefined}
-                    fg={index !== formLengthIndex ? "gray" : undefined}
+                    bg={index === formLengthIndex ? "#0055aa" : undefined}
+                    fg={index === formLengthIndex ? "whiteBright" : undefined}
                   >
                     {index === formLengthIndex ? '>' : ' '} {length}
                   </text>
@@ -1320,16 +1317,16 @@ export function IdentityPanel({
 
           return (
             <box key={identity.id} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}
               </text>
-              <text fg={statusColor} attributes={isSelected ? 32 : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : statusColor}>
                 {statusIcon}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{nameDisplay}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{identity.profile.displayName}
               </text>
             </box>

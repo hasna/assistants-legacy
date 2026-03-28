@@ -131,7 +131,7 @@ export function AssistantsDashboard({
 
             return (
               <box key={session.id} gap={1}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   {isSelected ? '>' : ' '} {String(i + 1)}
                 </text>
                 <text attributes={isSelected ? 1 : undefined} fg={session.isActive ? 'green' : undefined}><b>

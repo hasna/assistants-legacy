@@ -7,6 +7,9 @@
 export { InboxManager, createInboxManager } from './inbox-manager';
 export type { InboxManagerOptions } from './inbox-manager';
 
+// [nero] SDK-backed inbox adapter — uses @hasna/emails as primary
+export { SdkInboxAdapter, createSdkInboxAdapter } from './sdk-inbox-adapter';
+
 // Storage
 export { S3InboxClient } from './storage/s3-client';
 export type { S3InboxClientOptions, S3ObjectInfo } from './storage/s3-client';

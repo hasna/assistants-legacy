@@ -87,7 +87,7 @@ import {
 import { ConnectorAutoRefreshManager } from '../connectors/auto-refresh';
 import { VoiceManager } from '../voice/manager';
 import { AssistantManager, IdentityManager } from '../identity';
-import { createInboxManager, registerInboxTools, type InboxManager } from '../inbox';
+import { createInboxManager, registerInboxTools, createSdkInboxAdapter, type InboxManager } from '../inbox';
 import { createWalletManager, registerWalletTools, type WalletManager } from '../wallet';
 import { createSecretsManager, registerSecretsTools, type SecretsManager } from '../secrets';
 import { JobManager, createJobTools } from '../jobs';
@@ -577,7 +577,7 @@ export class AssistantLoop {
     // Startup schema validation — warn on any malformed tool schemas (never throws)
     this.toolRegistry.validateAll();
 
-    // Initialize inbox if enabled
+    // Initialize inbox — prefer native config, then try @hasna/emails SDK adapter
     if (this.config?.inbox?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
       this.inboxManager = createInboxManager(
@@ -587,6 +587,14 @@ export class AssistantLoop {
         this.storageDir
       );
       registerInboxTools(this.toolRegistry, () => this.inboxManager);
+    } else {
+      // [nero] Try SDK-backed inbox when native inbox config is not enabled
+      const { id: assistantId } = this.getAssistantIdentity();
+      createSdkInboxAdapter(assistantId).then((adapter) => {
+        if (adapter) {
+          this.inboxManager = adapter as any; // SdkInboxAdapter implements same public API
+        }
+      }).catch(() => { /* SDK not available — inbox stays null */ });
     }
 
     // Initialize wallet if enabled

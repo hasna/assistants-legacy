@@ -385,7 +385,7 @@ export function PlansPanel({
 
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <text><b>{currentPlan.title}</b></text>
           <text fg="gray">[a]dd  [d]elete</text>
         </box>
@@ -409,9 +409,8 @@ export function PlansPanel({
               return (
                 <box key={step.id} paddingY={0}>
                   <text
-                    attributes={isSelected ? 32 : undefined}
-                    fg={color}
-                    fg={!isSelected && step.status === 'done' ? "gray" : undefined}
+                    bg={isSelected ? "#0055aa" : undefined}
+                    fg={isSelected ? "whiteBright" : undefined}
                   >
                     [{icon}] {index + 1}. {step.text}
                   </text>
@@ -423,9 +422,8 @@ export function PlansPanel({
           {/* Add step option */}
           <box marginTop={1} paddingY={0}>
             <text
-              attributes={stepIndex === currentSteps.length ? 32 : undefined}
-              fg={stepIndex !== currentSteps.length ? "gray" : undefined}
-              fg={stepIndex === currentSteps.length ? 'cyan' : undefined}
+              bg={stepIndex === currentSteps.length ? "#0055aa" : undefined}
+              fg={stepIndex === currentSteps.length ? "whiteBright" : undefined}
             >
               + Add step (a)
             </text>
@@ -450,7 +448,7 @@ export function PlansPanel({
   // Plans list view
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Plans for &quot;{project.name}&quot;</b></text>
         <text fg="gray">[n]ew</text>
       </box>
@@ -475,8 +473,8 @@ export function PlansPanel({
             return (
               <box key={plan.id} paddingY={0}>
                 <text
-                  attributes={isSelected ? 32 : undefined}
-                  fg={!isSelected ? "gray" : undefined}
+                  bg={isSelected ? "#0055aa" : undefined}
+                  fg={isSelected ? "whiteBright" : undefined}
                 >
                   {index + 1}. {plan.title.padEnd(25)} [{doneCount}/{totalCount}] {time}
                 </text>
@@ -488,9 +486,8 @@ export function PlansPanel({
         {/* New plan option */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={planIndex === plans.length ? 32 : undefined}
-            fg={planIndex !== plans.length ? "gray" : undefined}
-            fg={planIndex === plans.length ? 'cyan' : undefined}
+            bg={planIndex === plans.length ? "#0055aa" : undefined}
+            fg={planIndex === plans.length ? "whiteBright" : undefined}
           >
             + New plan (n)
           </text>

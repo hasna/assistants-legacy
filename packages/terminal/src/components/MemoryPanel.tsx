@@ -141,8 +141,8 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
-        <box>
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row">
           <text><b>Memory</b></text>
           {stats && (
             <text fg="gray">
@@ -171,7 +171,7 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
             const scopeTag = SCOPE_TAG[memory.scope];
             return (
               <box key={memory.id} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                   {scopeTag} {index + 1}. {memory.key.padEnd(18)} {summary}
                 </text>
               </box>

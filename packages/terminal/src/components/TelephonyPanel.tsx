@@ -241,7 +241,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
     <box marginBottom={1}>
       <text>{tabs.map((t, i) => {
         const label = `${i + 1}:${t}`;
-        return tab === t ? <span key={t} attributes={32}>{label}{'  '}</span> : <span key={t}>{label}{'  '}</span>;
+        return tab === t ? <span key={t} bg="#0055aa" fg="whiteBright">{label}{'  '}</span> : <span key={t} fg="gray">{label}{'  '}</span>;
       })}</text>
     </box>
   );

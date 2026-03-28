@@ -273,7 +273,7 @@ export function ProjectsPanel({
   // List mode UI
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Projects</b></text>
         <text fg="gray">[n]ew</text>
       </box>
@@ -299,9 +299,8 @@ export function ProjectsPanel({
             return (
               <box key={project.id} paddingY={0}>
                 <text
-                  attributes={isSelected ? 32 : undefined}
-                  fg={isActive ? 'green' : undefined}
-                  fg={!isSelected && !isActive ? "gray" : undefined}
+                  bg={isSelected ? "#0055aa" : undefined}
+                  fg={isSelected ? "whiteBright" : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {project.name.padEnd(20)} {planCount} plan{planCount !== 1 ? 's' : ''} {contextCount > 0 ? `${contextCount} ctx` : ''} {time}
                 </text>
@@ -313,9 +312,8 @@ export function ProjectsPanel({
         {/* New project option */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={selectedIndex === projects.length ? 32 : undefined}
-            fg={selectedIndex !== projects.length ? "gray" : undefined}
-            fg={selectedIndex === projects.length ? 'cyan' : undefined}
+            bg={selectedIndex === projects.length ? "#0055aa" : undefined}
+            fg={selectedIndex === projects.length ? "whiteBright" : undefined}
           >
             + New project (n)
           </text>

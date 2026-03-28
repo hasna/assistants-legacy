@@ -477,7 +477,7 @@ export function SchedulesPanel({
               <box flexDirection="column" marginTop={1}>
                 {KIND_OPTIONS.map((opt, idx) => (
                   <box key={opt.id}>
-                    <text attributes={idx === createKindIndex ? 32 : undefined}>
+                    <text bg={idx === createKindIndex ? "#0055aa" : undefined}>
                       {idx === createKindIndex ? '>' : ' '} {opt.label.padEnd(12)} <text fg="gray">{opt.desc}</text>
                     </text>
                   </box>
@@ -493,7 +493,7 @@ export function SchedulesPanel({
           {createStep === 'cron' && (
             <box flexDirection="column">
               <text><b>Enter cron expression:</b></text>
-              <box marginTop={1}>
+              <box flexDirection="row" marginTop={1}>
                 <text>Cron: </text>
                 <input
                   value={createCron}
@@ -518,7 +518,7 @@ export function SchedulesPanel({
           {createStep === 'time' && (
             <box flexDirection="column">
               <text><b>Enter date/time (ISO 8601):</b></text>
-              <box marginTop={1}>
+              <box flexDirection="row" marginTop={1}>
                 <text>Time: </text>
                 <input
                   value={createTime}
@@ -543,7 +543,7 @@ export function SchedulesPanel({
           {createStep === 'interval' && (
             <box flexDirection="column">
               <text><b>Configure interval:</b></text>
-              <box marginTop={1}>
+              <box flexDirection="row" marginTop={1}>
                 <text>Every </text>
                 <text fg="cyan"><b>{createInterval}</b></text>
                 <text> </text>
@@ -559,7 +559,7 @@ export function SchedulesPanel({
           {createStep === 'command' && (
             <box flexDirection="column">
               <text><b>Enter command to execute:</b></text>
-              <box marginTop={1}>
+              <box flexDirection="row" marginTop={1}>
                 <text>$ </text>
                 <input
                   value={createCommand}
@@ -730,7 +730,7 @@ export function SchedulesPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Schedules {showAll ? '(all sessions)' : '(this session)'}</b></text>
         <text fg="gray">[n]ew [p]ause [r]esume [d]elete [f]refresh [g]toggle scope</text>
       </box>
@@ -759,7 +759,7 @@ export function SchedulesPanel({
 
             return (
               <box key={schedule.id} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined} fg={!isSelected && schedule.status === 'completed' ? "gray" : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : schedule.status === 'completed' ? "gray" : undefined}>
                   <text fg={statusColor}>{statusIcon}</text>
                   {' '}
                   {actionIcon} {index + 1}. {content.padEnd(32)} {kindLabel.padEnd(10)} {nextRun}
@@ -772,9 +772,8 @@ export function SchedulesPanel({
         {/* New schedule option at bottom */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={selectedIndex === sortedSchedules.length ? 32 : undefined}
-            fg={selectedIndex !== sortedSchedules.length ? "gray" : undefined}
-            fg={selectedIndex === sortedSchedules.length ? 'cyan' : undefined}
+            bg={selectedIndex === sortedSchedules.length ? "#0055aa" : undefined}
+            fg={selectedIndex === sortedSchedules.length ? "whiteBright" : undefined}
           >
             + New schedule (n)
           </text>

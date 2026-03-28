@@ -378,19 +378,19 @@ export function WorkspacePanel({
 
           return (
             <box key={ws.id} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}{statusIcon}{' '}
               </text>
               <text attributes={isSelected ? 33 : 1}><b>
                 {name}
               </b></text>
-              <text attributes={isSelected ? 32 : undefined} fg={isActive ? 'green' : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : isActive ? 'green' : undefined}>
                 {isActive ? ' •' : '  '}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{participants}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{formatRelativeTime(ws.updatedAt)}
               </text>
             </box>

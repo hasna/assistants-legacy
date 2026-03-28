@@ -436,7 +436,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
         </box>
 
         {/* Channel name badge above input (like assistant name badge) */}
-        <box justifyContent="flex-end" marginTop={0}>
+        <box flexDirection="row" justifyContent="flex-end" marginTop={0}>
           <text bg={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
         </box>
 

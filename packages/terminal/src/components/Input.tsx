@@ -797,7 +797,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     <box flexDirection="column" marginTop={0}>
       {/* Assistant name badge above the input box */}
       {assistantName && (
-        <box justifyContent="flex-end" marginBottom={0}>
+        <box flexDirection="row" justifyContent="flex-end" marginBottom={0}>
           <text bg={getAssistantColor(assistantName)} fg="whiteBright"><b> {assistantName} </b></text>
         </box>
       )}
@@ -811,24 +811,24 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
-          <box paddingY={0}>
+          <box flexDirection="row" paddingY={0}>
             <text fg="red"><b>🎤 Recording... </b></text>
             <text fg="gray">[Ctrl+R or Enter to stop]</text>
           </box>
         )}
         {recordingStatus === 'transcribing' && (
-          <box paddingY={0}>
+          <box flexDirection="row" paddingY={0}>
             <text fg="yellow"><b>⏳ Transcribing...</b></text>
           </box>
         )}
         {recordingStatus === 'talking' && (
           <box paddingY={0} flexDirection="column">
-            <box>
+            <box flexDirection="row">
               <text fg="green"><b>🎙 Talk mode </b></text>
               <text fg="gray">[listening... Ctrl+C to stop]</text>
             </box>
             {partialTranscript ? (
-              <box>
+              <box flexDirection="row">
                 <text fg="gray">{'> '}</text>
                 <text fg="white"><i>{partialTranscript}</i></text>
               </box>
@@ -839,17 +839,17 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         {/* Input area */}
         {largePaste ? (
           /* Large paste placeholder view */
-          <box>
+          <box flexDirection="row">
             <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
-            <box flexGrow={1}>
+            <box flexDirection="row" flexGrow={1}>
               <text fg="yellow">{largePaste.placeholder}</text>
               <text fg="gray"> [Enter to send, Esc to cancel]</text>
             </box>
           </box>
         ) : value.length === 0 ? (
-          <box>
+          <box flexDirection="row">
             <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
-            <box flexGrow={1}>
+            <box flexDirection="row" flexGrow={1}>
               <text attributes={32}> </text>
               <text fg="gray">{placeholder}</text>
             </box>
@@ -859,9 +859,9 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const isCursorLine = index === layout.cursorRow;
             if (!isCursorLine) {
               return (
-                <box key={`line-${index}`}>
+                <box flexDirection="row" key={`line-${index}`}>
                   <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
-                  <box flexGrow={1}>
+                  <box flexDirection="row" flexGrow={1}>
                     <text>{line.text || ' '}</text>
                   </box>
                 </box>
@@ -872,9 +872,9 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const cursorChar = column < line.text.length ? line.text[column] : ' ';
             const after = column < line.text.length ? line.text.slice(column + 1) : '';
             return (
-              <box key={`line-${index}`}>
+              <box flexDirection="row" key={`line-${index}`}>
                 <text fg={isProcessing ? 'gray' : 'cyan'}>{index === 0 ? '> ' : '  '}</text>
-                <box flexGrow={1}>
+                <box flexDirection="row" flexGrow={1}>
                   <text>{before}</text>
                   <text attributes={32}>{cursorChar}</text>
                   <text>{after}</text>
@@ -901,13 +901,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           )}
           {visibleSkills.items.map((skill, i) => {
             const actualIndex = visibleSkills.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
             return (
-              <box key={skill.name}>
-                <text fg={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
-                  {actualIndex === selectedIndex ? '▸ ' : '  '}
-                  {skill.name.padEnd(18)}
+              <box flexDirection="row" key={skill.name} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? 'whiteBright' : '#5fb3a1'} bg={isSelected ? '#0055aa' : undefined}>
+                  {isSelected ? '▸ ' : '  '}
+                  <b>{skill.name.padEnd(18)}</b>
                 </text>
-                <text fg={actualIndex !== selectedIndex ? "gray" : undefined}>
+                <text fg={isSelected ? '#bbddff' : 'gray'} bg={isSelected ? '#0055aa' : undefined}>
                   {truncateDescription(skill.description)}
                 </text>
               </box>
@@ -929,13 +930,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           )}
           {visibleCommands.items.map((cmd, i) => {
             const actualIndex = visibleCommands.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
             return (
-              <box key={cmd.name}>
-                <text fg={actualIndex === selectedIndex ? 'cyan' : undefined}>
-                  {actualIndex === selectedIndex ? '▸ ' : '  '}
-                  {cmd.name.padEnd(18)}
+              <box flexDirection="row" key={cmd.name} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? 'whiteBright' : 'cyan'} bg={isSelected ? '#0055aa' : undefined}>
+                  {isSelected ? '▸ ' : '  '}
+                  <b>{cmd.name.padEnd(18)}</b>
                 </text>
-                <text fg={actualIndex !== selectedIndex ? "gray" : undefined}>
+                <text fg={isSelected ? '#bbddff' : 'gray'} bg={isSelected ? '#0055aa' : undefined}>
                   {cmd.description}
                 </text>
               </box>
@@ -957,10 +959,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           )}
           {visibleFiles.items.map((file, i) => {
             const actualIndex = visibleFiles.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
             return (
-              <box key={file.name}>
-                <text fg={actualIndex === selectedIndex ? 'cyan' : '#5fb3a1'}>
-                  {actualIndex === selectedIndex ? '▸ ' : '  '}
+              <box flexDirection="row" key={file.name} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? 'whiteBright' : '#5fb3a1'} bg={isSelected ? '#0055aa' : undefined}>
+                  {isSelected ? '▸ ' : '  '}
                   {file.name}
                 </text>
               </box>

@@ -176,9 +176,8 @@ export function SessionSelector({
           return (
             <box key={session.id}>
               <text
-                attributes={isSelected ? 32 : undefined}
-                fg={isActive ? 'green' : undefined}
-                fg={!isSelected && !isActive ? "gray" : undefined}
+                bg={isSelected ? "#0055aa" : undefined}
+                fg={isSelected ? "whiteBright" : isActive ? 'green' : "gray"}
               >
                 {prefix} {entry.sessionIndex}. {time}  {displayName}{processing}
               </text>
@@ -206,8 +205,8 @@ export function SessionSelector({
       {/* New session option */}
       <box marginTop={1}>
         <text
-          attributes={selectedIndex === selectableCount ? 32 : undefined}
-          fg={selectedIndex !== selectableCount ? "gray" : undefined}
+          bg={selectedIndex === selectableCount ? "#0055aa" : undefined}
+          fg={selectedIndex === selectableCount ? "whiteBright" : "gray"}
         >
             + New session (n)
         </text>

@@ -346,7 +346,7 @@ export function HooksPanel({
   // List mode UI
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Hooks</b></text>
         <text fg="gray">{totalHooks} hook{totalHooks !== 1 ? 's' : ''}</text>
       </box>
@@ -362,7 +362,7 @@ export function HooksPanel({
         {/* Native Hooks Section */}
         {nativeHooks.length > 0 && (
           <box flexDirection="column" marginBottom={1}>
-            <box>
+            <box flexDirection="row">
               <text fg="cyan"><b>Native</b></text>
               <text fg="gray"> ({nativeHooks.length})</text>
             </box>
@@ -371,8 +371,8 @@ export function HooksPanel({
               return (
                 <box key={item.hook.id} paddingLeft={2}>
                   <text
-                    attributes={isSelected ? 32 : undefined}
-                    fg={item.enabled ? undefined : 'gray'}
+                    bg={isSelected ? "#0055aa" : undefined}
+                    fg={isSelected ? "whiteBright" : undefined}
                   >
                     {isSelected ? '>' : ' '}{' '}
                     <text fg={item.enabled ? 'green' : 'red'}>[{item.enabled ? 'on ' : 'off'}]</text>{' '}
@@ -393,14 +393,14 @@ export function HooksPanel({
           </box>
         ) : flattenedHooks.length > 0 ? (
           <>
-            <box>
+            <box flexDirection="row">
               <text fg="gray"><b>User Hooks</b></text>
               <text fg="gray"> ({flattenedHooks.length})</text>
             </box>
             {/* Render grouped by event */}
             {Array.from(groupedHooks.entries()).map(([event, eventHooks]) => (
               <box key={event} flexDirection="column">
-                <box paddingLeft={1}>
+                <box flexDirection="row" paddingLeft={1}>
                   <text fg="gray"><b>{event}</b></text>
                   <text fg="gray"> ({eventHooks.length})</text>
                 </box>
@@ -412,8 +412,8 @@ export function HooksPanel({
                   return (
                     <box key={item.hook.id ?? `${item.matcherIndex}-${item.hookIndex}`} paddingLeft={2}>
                       <text
-                        attributes={isSelected ? 32 : undefined}
-                        fg={isEnabled ? undefined : 'gray'}
+                        bg={isSelected ? "#0055aa" : undefined}
+                        fg={isSelected ? "whiteBright" : undefined}
                       >
                         {isSelected ? '>' : ' '}{' '}
                         <text fg={isEnabled ? 'green' : 'red'}>[{isEnabled ? 'on ' : 'off'}]</text>{' '}

@@ -336,7 +336,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     <box marginBottom={1}>
       <text>{MAIN_TABS.map((entry, index) => {
         const label = `${index + 1}:${entry}`;
-        return tab === entry ? <span key={entry} attributes={32}>{label}{'  '}</span> : <span key={entry}>{label}{'  '}</span>;
+        return tab === entry ? <span key={entry} bg="#0055aa" fg="whiteBright">{label}{'  '}</span> : <span key={entry} fg="gray">{label}{'  '}</span>;
       })}</text>
     </box>
   );
@@ -568,7 +568,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
         <box marginBottom={1}>
           <text fg="gray">Status filter: </text>
           {STATUS_FILTERS.map((status, idx) => (
-            <text key={status} attributes={idx === statusFilterIndex ? 32 : undefined}>{` ${status} `}</text>
+            <text key={status} bg={idx === statusFilterIndex ? "#0055aa" : undefined} fg={idx === statusFilterIndex ? "whiteBright" : "gray"}>{` ${status} `}</text>
           ))}
         </box>
       ) : null}
@@ -594,7 +594,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(order.id, 14)} ${fit(order.storeName, 18)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(String(order.itemCount), 5, 'right')} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
                 return (
-                  <text key={order.id} attributes={isSelected ? 32 : undefined}>{row}</text>
+                  <text key={order.id} bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>{row}</text>
                 );
               })}
 
@@ -624,7 +624,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(store.id, 14)} ${fit(store.name, 22)} ${fit(store.category, 12)} ${fit(String(store.orderCount), 4, 'right')} ${fit(formatRelativeTime(store.lastOrderAt), 10)}`;
                 return (
-                  <text key={store.id} attributes={isSelected ? 32 : undefined}>{row}</text>
+                  <text key={store.id} bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>{row}</text>
                 );
               })}
 

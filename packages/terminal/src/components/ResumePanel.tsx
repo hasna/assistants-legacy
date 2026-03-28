@@ -130,7 +130,7 @@ export function ResumePanel({
             const cwd = truncate(session.cwd, 48);
             return (
               <box key={`${session.id}-${session.assistantId ?? 'default'}`} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   {time} {assistant} {messages} {cwd}
                 </text>
               </box>

@@ -611,10 +611,10 @@ export function SecretsPanel({
 
           return (
             <box key={`${secret.name}-${secret.scope}`} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}{nameDisplay}
               </text>
-              <text fg={scopeColor} attributes={isSelected ? 32 : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : scopeColor}>
                 {secret.scope.padEnd(8)}
               </text>
             </box>

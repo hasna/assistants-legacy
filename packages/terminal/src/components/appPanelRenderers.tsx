@@ -2305,9 +2305,23 @@ function renderMessagesPanel(ctx: PanelRenderContext): React.ReactElement {
     return email;
   };
 
+  // [nero] Delete via SDK adapter when available, fallback to local manager
   const handleInboxDelete = async (id: string) => {
     if (!inboxManager) throw new Error('Inbox not available');
-    throw new Error('Delete not implemented yet');
+    // SdkInboxAdapter exposes deleteEmail via the emails SDK
+    if ('deleteEmail' in (inboxManager as any) && typeof (inboxManager as any).deleteEmail === 'function') {
+      await (inboxManager as any).deleteEmail(id);
+    } else {
+      // Try dynamic import of emails SDK adapter
+      try {
+        const emailsSdk = await import('@hasna/assistants-core/emails/sdk-adapter') as any;
+        await emailsSdk.deleteEmail(id);
+      } catch {
+        throw new Error('Delete not available — install @hasna/emails SDK');
+      }
+    }
+    const emails = await inboxManager.list({ limit: 50 });
+    ctx.setInboxEmails(emails);
   };
 
   const handleInboxFetch = async (): Promise<number> => {

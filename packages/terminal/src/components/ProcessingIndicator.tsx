@@ -67,7 +67,7 @@ export function ProcessingIndicator({
   const label = loadingWord;
 
   return (
-    <box marginY={1}>
+    <box marginY={1} flexDirection="row">
       <text fg="gray">✶ </text>
       <text fg="gray"> {label}... </text>
       <text fg="gray">({parts.join(' · ')})</text>

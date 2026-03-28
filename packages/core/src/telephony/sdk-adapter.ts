@@ -6,9 +6,23 @@
  */
 
 let _lib: any | null = null;
+let _available: boolean | null = null;
+
 async function lib(): Promise<any> {
   if (!_lib) _lib = await import('@hasna/telephony' as any);
   return _lib;
+}
+
+/** Check if @hasna/telephony SDK is importable */
+export async function isAvailable(): Promise<boolean> {
+  if (_available !== null) return _available;
+  try {
+    await lib();
+    _available = true;
+  } catch {
+    _available = false;
+  }
+  return _available;
 }
 
 export async function sendSms(params: { to: string; body: string; from?: string }): Promise<any> {

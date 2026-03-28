@@ -139,7 +139,7 @@ export function HeartbeatPanel({
             const summary = `msgs:${stats.messagesProcessed} tools:${stats.toolCallsExecuted} err:${stats.errorsEncountered}`;
             return (
               <box key={`${run.timestamp}-${index}`} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   {time} {run.state.padEnd(12)} {activity} {truncate(summary, 32)}
                 </text>
               </box>

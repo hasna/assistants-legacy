@@ -121,7 +121,7 @@ export function Messages({
       {visibleActivity
         .filter((entry) => entry.type === 'text' && entry.content)
         .map((entry) => (
-          <box key={entry.id} marginY={1}>
+          <box key={entry.id} marginY={1} flexDirection="row">
             <text fg="gray">● </text>
             <box flexGrow={1}>
               <Markdown content={entry.content!} indent={3} />
@@ -149,7 +149,7 @@ export function Messages({
 
       {/* Show current streaming response (text being typed now) */}
       {showCurrentResponse && (
-        <box marginY={1}>
+        <box marginY={1} flexDirection="row">
           <text fg="gray">● </text>
           <box flexGrow={1}>
             <Markdown content={currentResponse ?? ''} indent={3} />
@@ -238,7 +238,7 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
           </box>
         )}
         {hasContent && (
-          <box>
+          <box flexDirection="row">
             <text fg={isDraft || isContinuation ? "gray" : undefined}>{isContinuation ? '  ' : '❯ '} </text>
             {isQueued && !isContinuation ? (
               <text fg="gray">⏳ {message.content ?? ''}</text>
@@ -265,7 +265,7 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
   return (
     <box marginY={isContinuation ? 0 : 1} flexDirection="column">
       {hasContent && (
-        <box>
+        <box flexDirection="row">
           <text fg="gray">{isContinuation || !leadingBullet ? '  ' : '● '} </text>
           <box flexGrow={1}>
             <Markdown content={message.content} preRendered={Boolean(message.__rendered)} indent={3} />
@@ -366,7 +366,7 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
     const suffix = anyRunning ? '…' : '';
 
     return (
-      <box>
+      <box flexDirection="row">
         <text fg={iconColor}>{icon} </text>
         <text> </text>
         <text>{summary}{suffix}</text>
@@ -397,7 +397,7 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
             if (imgData.path) {
               return (
                 <box key={call.id} flexDirection="column">
-                  <box>
+                  <box flexDirection="row">
                     <text fg={iconColor}>{icon} </text>
                     <text fg={iconColor}><b>{title}</b></text>
                     <text fg="gray"> · {elapsedText}</text>
@@ -411,7 +411,7 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
 
         return (
           <box key={call.id} flexDirection="column">
-            <box>
+            <box flexDirection="row">
               <text fg={iconColor}>{icon} </text>
               <text> </text>
               <text fg={iconColor}><b>{prefix}{title}</b></text>
@@ -497,7 +497,7 @@ function ToolCallPanel({
     const suffix = isRunning ? '…' : '';
 
     return (
-      <box>
+      <box flexDirection="row">
         <text fg={iconColor}>{icon} </text>
         <text> </text>
         <text>{summary}{suffix}</text>
@@ -529,7 +529,7 @@ function ToolCallPanel({
             if (imgData.path) {
               return (
                 <box key={toolCall.id} flexDirection="column">
-                  <box>
+                  <box flexDirection="row">
                     <text fg={iconColor}>{icon} </text>
                     <text> </text>
                     <text fg={iconColor}><b>{title}</b></text>
@@ -549,7 +549,7 @@ function ToolCallPanel({
 
         return (
           <box key={toolCall.id} flexDirection="column">
-            <box>
+            <box flexDirection="row">
               <text fg={iconColor}>{icon} </text>
               <text> </text>
               <text fg={iconColor}><b>{prefix}{title}</b></text>
@@ -604,7 +604,7 @@ function ToolResultPanel({
             if (data.path) {
               return (
                 <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-                  <box>
+                  <box flexDirection="row">
                     <text fg={iconColor}>{icon} </text>
                     <text fg={iconColor}><b>{title}</b></text>
                   </box>
@@ -620,7 +620,7 @@ function ToolResultPanel({
         const showExpandHint = !verboseTools && truncatedResult.truncation.wasTruncated;
         return (
           <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-            <box>
+            <box flexDirection="row">
               <text fg={iconColor}>{icon} </text>
               <text fg={iconColor}><b>{title}</b></text>
             </box>

@@ -242,9 +242,9 @@ export function Status({
   if (costInfo) rightParts.push(costInfo);
 
   return (
-    <box justifyContent="space-between">
-      <text fg="gray">{leftParts.join(' · ')}</text>
-      <text fg="gray">{rightParts.join(' · ')}</text>
+    <box flexDirection="row" justifyContent="space-between">
+      <text fg="gray">{leftParts.join('  ·  ')}</text>
+      <text fg="gray">{rightParts.join('  ·  ')}</text>
     </box>
   );
 }

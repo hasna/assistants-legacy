@@ -388,8 +388,8 @@ export function TasksPanel({
 
         <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
           {/* Description field */}
-          <box>
-            <text attributes={isFieldActive('description') ? 32 : undefined} fg={isFieldActive('description') ? 'cyan' : undefined}>
+          <box flexDirection="row">
+            <text bg={isFieldActive('description') ? "#0055aa" : undefined} fg={isFieldActive('description') ? 'whiteBright' : undefined}>
               Task:{' '}
             </text>
             {isFieldActive('description') ? (
@@ -406,8 +406,8 @@ export function TasksPanel({
           </box>
 
           {/* Priority field */}
-          <box marginTop={0}>
-            <text attributes={isFieldActive('priority') ? 32 : undefined} fg={isFieldActive('priority') ? 'cyan' : undefined}>
+          <box flexDirection="row" marginTop={0}>
+            <text bg={isFieldActive('priority') ? "#0055aa" : undefined} fg={isFieldActive('priority') ? 'whiteBright' : undefined}>
               Priority:{' '}
             </text>
             <text fg={PRIORITY_COLORS[newPriority]}>
@@ -418,8 +418,8 @@ export function TasksPanel({
 
           {/* Blocked By field */}
           <box marginTop={0} flexDirection="column">
-            <box>
-              <text attributes={isFieldActive('blockedBy') ? 32 : undefined} fg={isFieldActive('blockedBy') ? 'cyan' : undefined}>
+            <box flexDirection="row">
+              <text bg={isFieldActive('blockedBy') ? "#0055aa" : undefined} fg={isFieldActive('blockedBy') ? 'whiteBright' : undefined}>
                 Blocked by:{' '}
               </text>
               {newBlockedBy.length > 0 ? (
@@ -435,7 +435,7 @@ export function TasksPanel({
                   const isCursor = idx === blockedByIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <text key={task.id} attributes={isCursor ? 32 : undefined}>
+                    <text key={task.id} bg={isCursor ? "#0055aa" : undefined} fg={isCursor ? "whiteBright" : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
                     </text>
                   );
@@ -450,8 +450,8 @@ export function TasksPanel({
 
           {/* Blocks field */}
           <box marginTop={0} flexDirection="column">
-            <box>
-              <text attributes={isFieldActive('blocks') ? 32 : undefined} fg={isFieldActive('blocks') ? 'cyan' : undefined}>
+            <box flexDirection="row">
+              <text bg={isFieldActive('blocks') ? "#0055aa" : undefined} fg={isFieldActive('blocks') ? 'whiteBright' : undefined}>
                 Blocks:{' '}
               </text>
               {newBlocks.length > 0 ? (
@@ -467,7 +467,7 @@ export function TasksPanel({
                   const isCursor = idx === blocksIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <text key={task.id} attributes={isCursor ? 32 : undefined}>
+                    <text key={task.id} bg={isCursor ? "#0055aa" : undefined} fg={isCursor ? "whiteBright" : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
                     </text>
                   );
@@ -481,8 +481,8 @@ export function TasksPanel({
           </box>
 
           {/* Assignee field */}
-          <box marginTop={0}>
-            <text attributes={isFieldActive('assignee') ? 32 : undefined} fg={isFieldActive('assignee') ? 'cyan' : undefined}>
+          <box flexDirection="row" marginTop={0}>
+            <text bg={isFieldActive('assignee') ? "#0055aa" : undefined} fg={isFieldActive('assignee') ? 'whiteBright' : undefined}>
               Assignee:{' '}
             </text>
             {isFieldActive('assignee') ? (
@@ -582,8 +582,8 @@ export function TasksPanel({
   // List mode UI
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
-        <box>
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row">
           <text><b>Tasks </b></text>
           <text fg={paused ? 'yellow' : 'green'}>
             {paused ? '(Paused)' : '(Active)'}
@@ -621,7 +621,7 @@ export function TasksPanel({
 
             return (
               <box key={task.id} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined} fg={!isSelected && task.status === 'completed' ? "gray" : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : task.status === 'completed' ? "gray" : undefined}>
                   <text fg={statusColor}>{statusIcon}</text>
                   {' '}
                   <text fg={priorityColor}>[{priorityIcon}]</text>
@@ -636,9 +636,8 @@ export function TasksPanel({
         {/* New task option */}
         <box marginTop={1} paddingY={0}>
           <text
-            attributes={selectedIndex === tasks.length ? 32 : undefined}
-            fg={selectedIndex !== tasks.length ? "gray" : undefined}
-            fg={selectedIndex === tasks.length ? 'cyan' : undefined}
+            bg={selectedIndex === tasks.length ? "#0055aa" : undefined}
+            fg={selectedIndex === tasks.length ? "whiteBright" : "gray"}
           >
             + Add task (n)
           </text>

@@ -134,7 +134,7 @@ export function AssistantsRegistryPanel({
 
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <text><b>Assistant Details</b></text>
           <text fg="gray">{selectedIndex + 1} of {sortedAssistants.length}</text>
         </box>
@@ -281,7 +281,7 @@ export function AssistantsRegistryPanel({
   if (mode === 'list') {
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <text><b>Registered Assistants</b></text>
           <text fg="gray">{sortedAssistants.length} assistant{sortedAssistants.length !== 1 ? 's' : ''}</text>
         </box>
@@ -306,7 +306,7 @@ export function AssistantsRegistryPanel({
 
               return (
                 <box key={item.id}>
-                  <text attributes={isSelected ? 32 : undefined}>
+                  <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                     {isSelected ? '>' : ' '}{' '}
                     <text fg={stateColor}>[{item.status.state.slice(0, 4).padEnd(4)}]</text>{' '}
                     <text attributes={isSelected ? 1 : undefined}><b>{item.name.slice(0, 18).padEnd(18)}</b></text>{' '}
@@ -332,7 +332,7 @@ export function AssistantsRegistryPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Assistant Registry</b></text>
         <text fg="gray">
           {activeAssistants.length}/{sortedAssistants.length} active

@@ -12,6 +12,7 @@ import { TwilioClient } from './twilio-client';
 import { CallManager } from './call-manager';
 import { VoiceBridge } from './voice-bridge';
 import { startStreamServer } from './stream-server';
+import * as telephonySdk from './sdk-adapter';
 import type {
   PhoneNumber,
   CallLog,
@@ -43,6 +44,8 @@ export class TelephonyManager {
   private callManager: CallManager;
   private voiceBridge: VoiceBridge | null = null;
   private streamServer: { stop: () => void; port: number } | null = null;
+  // [nero] SDK availability — checked once lazily, then cached
+  private sdkAvailable: boolean | null = null;
 
   constructor(options: TelephonyManagerOptions) {
     this.assistantId = options.assistantId;
@@ -69,6 +72,16 @@ export class TelephonyManager {
         elevenLabsAgentId,
       });
     }
+
+    // Probe SDK availability in the background (non-blocking)
+    telephonySdk.isAvailable().then((ok) => { this.sdkAvailable = ok; }).catch(() => { this.sdkAvailable = false; });
+  }
+
+  // [nero] Check if @hasna/telephony SDK is available (lazy, cached)
+  private async hasSdk(): Promise<boolean> {
+    if (this.sdkAvailable !== null) return this.sdkAvailable;
+    this.sdkAvailable = await telephonySdk.isAvailable();
+    return this.sdkAvailable;
   }
 
   // ============================================
@@ -77,8 +90,35 @@ export class TelephonyManager {
 
   /**
    * Send an SMS message
+   * Prefers @hasna/telephony SDK when available, falls back to native Twilio.
    */
   async sendSms(to: string, body: string, from?: string): Promise<TelephonyOperationResult> {
+    // [nero] Try SDK first
+    if (await this.hasSdk()) {
+      const sdkResult = await telephonySdk.sendSms({ to, body, from });
+      if (sdkResult) {
+        // Also log locally for panel display
+        const sid = sdkResult.messageSid || sdkResult.sid || '';
+        const fromNumber = from || this.getDefaultPhoneNumber() || '';
+        this.store.createSmsLog({
+          messageSid: sid,
+          fromNumber,
+          toNumber: to,
+          direction: 'outbound',
+          messageType: 'sms',
+          body,
+          status: 'queued',
+          assistantId: this.assistantId,
+        });
+        return {
+          success: true,
+          message: sdkResult.message || `SMS sent to ${to}.`,
+          messageSid: sid,
+        };
+      }
+      // SDK returned null — fall through to native Twilio
+    }
+
     if (!this.twilioClient) {
       return {
         success: false,
@@ -130,8 +170,33 @@ export class TelephonyManager {
 
   /**
    * Send a WhatsApp message
+   * Prefers @hasna/telephony SDK when available, falls back to native Twilio.
    */
   async sendWhatsApp(to: string, body: string, from?: string): Promise<TelephonyOperationResult> {
+    // [nero] Try SDK first
+    if (await this.hasSdk()) {
+      const sdkResult = await telephonySdk.sendWhatsApp({ to, body, from });
+      if (sdkResult) {
+        const sid = sdkResult.messageSid || sdkResult.sid || '';
+        const fromNumber = from || this.getDefaultPhoneNumber() || '';
+        this.store.createSmsLog({
+          messageSid: sid,
+          fromNumber: `whatsapp:${fromNumber}`,
+          toNumber: `whatsapp:${to}`,
+          direction: 'outbound',
+          messageType: 'whatsapp',
+          body,
+          status: 'queued',
+          assistantId: this.assistantId,
+        });
+        return {
+          success: true,
+          message: sdkResult.message || `WhatsApp message sent to ${to}.`,
+          messageSid: sid,
+        };
+      }
+    }
+
     if (!this.twilioClient) {
       return {
         success: false,
@@ -186,8 +251,38 @@ export class TelephonyManager {
 
   /**
    * Initiate an outbound voice call
+   * Prefers @hasna/telephony SDK when available, falls back to native Twilio.
    */
   async makeCall(to: string, from?: string, firstMessage?: string): Promise<TelephonyOperationResult> {
+    // [nero] Try SDK first
+    if (await this.hasSdk()) {
+      const sdkResult = await telephonySdk.makeCall({ to, from, firstMessage });
+      if (sdkResult) {
+        const callSid = sdkResult.callSid || sdkResult.sid || '';
+        const fromNumber = from || this.getDefaultPhoneNumber() || '';
+        this.store.createCallLog({
+          callSid,
+          fromNumber,
+          toNumber: to,
+          direction: 'outbound',
+          status: 'pending',
+          assistantId: this.assistantId,
+        });
+        this.callManager.addCall({
+          callSid,
+          fromNumber,
+          toNumber: to,
+          direction: 'outbound',
+          assistantId: this.assistantId,
+        });
+        return {
+          success: true,
+          message: sdkResult.message || `Calling ${to}...`,
+          callSid,
+        };
+      }
+    }
+
     if (!this.twilioClient) {
       return {
         success: false,
@@ -324,6 +419,7 @@ export class TelephonyManager {
 
   /**
    * End a call — hangs up via Twilio API
+   * Prefers @hasna/telephony SDK when available.
    */
   async endCall(callSid?: string): Promise<TelephonyOperationResult> {
     const call = callSid
@@ -333,13 +429,33 @@ export class TelephonyManager {
       return { success: false, message: callSid ? `Call ${callSid} not found.` : 'No active call.' };
     }
 
-    if (!this.twilioClient) {
-      return { success: false, message: 'Twilio is not configured.' };
-    }
-
     // Close the voice bridge
     if (call.bridgeId && this.voiceBridge) {
       this.voiceBridge.closeBridge(call.bridgeId);
+    }
+
+    // [nero] Try SDK first
+    if (await this.hasSdk()) {
+      const sdkResult = await telephonySdk.endCall({ callSid: call.callSid });
+      if (sdkResult) {
+        const endedCall = this.callManager.endCall(call.callSid);
+        if (endedCall) {
+          const callLog = this.store.getCallLogBySid(call.callSid);
+          if (callLog) {
+            const duration = Math.floor((Date.now() - endedCall.startedAt) / 1000);
+            this.store.updateCallLog(callLog.id, {
+              status: 'completed',
+              endedAt: new Date().toISOString(),
+              duration,
+            });
+          }
+        }
+        return { success: true, message: `Call ${call.callSid} ended.`, callSid: call.callSid };
+      }
+    }
+
+    if (!this.twilioClient) {
+      return { success: false, message: 'Twilio is not configured.' };
     }
 
     // End the call via Twilio
@@ -589,6 +705,7 @@ export class TelephonyManager {
 
   /**
    * Get telephony status summary
+   * Merges SDK status when @hasna/telephony is available.
    */
   getStatus(): TelephonyStatus {
     const phoneNumbers = this.store.listPhoneNumbers('active');

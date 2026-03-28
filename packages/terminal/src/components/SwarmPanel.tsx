@@ -86,7 +86,7 @@ export function SwarmPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       {/* Header */}
-      <box justifyContent="space-between" marginBottom={1}>
+      <box flexDirection="row" justifyContent="space-between" marginBottom={1}>
         <text><b>Swarm</b></text>
         <StatusBadge status={state.status} />
       </box>
@@ -94,7 +94,7 @@ export function SwarmPanel({
       <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Goal */}
         {state.plan?.goal && (
-          <box marginBottom={1}>
+          <box flexDirection="row" marginBottom={1}>
             <text fg="gray">Goal: </text>
             <text>{state.plan.goal}</text>
           </box>

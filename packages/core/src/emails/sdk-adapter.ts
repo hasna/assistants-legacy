@@ -6,9 +6,23 @@
  */
 
 let _lib: any | null = null;
+let _available: boolean | null = null;
+
 async function lib(): Promise<any> {
   if (!_lib) _lib = await import('@hasna/emails');
   return _lib;
+}
+
+/** Check if @hasna/emails SDK is importable */
+export async function isAvailable(): Promise<boolean> {
+  if (_available !== null) return _available;
+  try {
+    await lib();
+    _available = true;
+  } catch {
+    _available = false;
+  }
+  return _available;
 }
 
 /** Safe wrapper — returns fallback on error */

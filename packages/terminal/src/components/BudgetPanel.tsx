@@ -362,10 +362,10 @@ export function BudgetPanel({
 
             return (
               <box key={field.key} gap={1}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   {isSelected ? '>' : ' '}
                 </text>
-                <text attributes={isSelected ? 1 : undefined} fg={!isSelected ? "gray" : undefined}><b>
+                <text attributes={isSelected ? 1 : undefined} fg={isSelected ? "whiteBright" : "gray"}><b>
                   {field.label.padEnd(20)}
                 </b></text>
                 <box minWidth={15}>
@@ -388,7 +388,7 @@ export function BudgetPanel({
 
           {/* On Exceeded row */}
           <box gap={1} marginTop={1}>
-            <text attributes={editFieldIndex === EDIT_FIELDS.length ? 32 : undefined}>
+            <text bg={editFieldIndex === EDIT_FIELDS.length ? "#0055aa" : undefined} fg={editFieldIndex === EDIT_FIELDS.length ? "whiteBright" : undefined}>
               {editFieldIndex === EDIT_FIELDS.length ? '>' : ' '}
             </text>
             <text attributes={editFieldIndex === EDIT_FIELDS.length ? 1 : undefined} fg={editFieldIndex !== EDIT_FIELDS.length ? "gray" : undefined}><b>
@@ -428,9 +428,9 @@ export function BudgetPanel({
             const isSelected = index === selectedPreset;
             return (
               <box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
-                <text attributes={isSelected ? 32 : undefined}>
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                   {isSelected ? '>' : ' '} <text attributes={isSelected ? 1 : undefined}><b>{preset.name.padEnd(12)}</b></text>
-                  <text fg={!isSelected ? "gray" : undefined}>{preset.description}</text>
+                  <text fg={isSelected ? "whiteBright" : "gray"}>{preset.description}</text>
                 </text>
               </box>
             );

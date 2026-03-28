@@ -617,20 +617,20 @@ export function WalletPanel({
 
           return (
             <box key={card.id} paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {prefix}
               </text>
-              <text fg={statusColor} attributes={isSelected ? 32 : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : statusColor}>
                 {statusIcon}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg={!isSelected ? "gray" : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}{card.name}
               </text>
-              <text attributes={isSelected ? 32 : undefined} fg="gray">
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                 {' '}**** {card.last4}
               </text>
               {cardType && (
-                <text attributes={isSelected ? 32 : undefined} fg="gray">
+                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
                   {' '}({cardType})
                 </text>
               )}

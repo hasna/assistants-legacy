@@ -18,7 +18,7 @@ export function AskUserPanel({
 }: AskUserPanelProps) {
   return (
     <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginY={1}>
-      <box justifyContent="space-between">
+      <box flexDirection="row" justifyContent="space-between">
         <text fg="cyan"><b>{request.title || 'Question'}</b></text>
         <text fg="gray">{index + 1}/{total}</text>
       </box>

@@ -352,9 +352,8 @@ export function ConfigPanel({
                 {ALL_MODELS.map((model, index) => (
                   <text
                     key={model.id}
-                    attributes={index === selectedModelIndex ? 32 : undefined}
-                    fg={index === selectedModelIndex ? 'cyan' : undefined}
-                    fg={index !== selectedModelIndex ? "gray" : undefined}
+                    bg={index === selectedModelIndex ? "#0055aa" : undefined}
+                    fg={index === selectedModelIndex ? "whiteBright" : undefined}
                   >
                     {index === selectedModelIndex ? '>' : ' '} {model.name}
                     <text fg="gray"> ({getProviderLabel(model.provider)})</text>
@@ -596,8 +595,8 @@ export function ConfigPanel({
           {locations.map((loc, index) => (
             <box key={loc.id} flexDirection="column">
               <text
-                attributes={index === locationSelectIndex ? 32 : undefined}
-                fg={index === locationSelectIndex ? 'cyan' : undefined}
+                bg={index === locationSelectIndex ? "#0055aa" : undefined}
+                fg={index === locationSelectIndex ? "whiteBright" : undefined}
               >
                 {index === locationSelectIndex ? '>' : ' '} {loc.name}
               </text>
@@ -622,7 +621,7 @@ export function ConfigPanel({
   // Main UI
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Configuration</b></text>
         <text fg="gray">{mode === 'editing' ? 'Editing' : 'Sections'}</text>
       </box>
@@ -640,9 +639,8 @@ export function ConfigPanel({
           {SECTIONS.map((section, index) => (
             <text
               key={section.id}
-              attributes={index === selectedSection ? 32 : undefined}
-              fg={index === selectedSection ? 'cyan' : undefined}
-              fg={index !== selectedSection ? "gray" : undefined}
+              bg={index === selectedSection ? "#0055aa" : undefined}
+              fg={index === selectedSection ? "whiteBright" : undefined}
             >
               {index === selectedSection ? '>' : ' '} {section.name}
             </text>

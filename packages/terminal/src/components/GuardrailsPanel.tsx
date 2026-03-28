@@ -401,19 +401,19 @@ export function GuardrailsPanel({
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}><text><b>Create New Policy</b></text></box>
         <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Name: </text>
-            <text attributes={createField === 0 ? 32 : undefined}>{createName || ' '}</text>
+            <text bg={createField === 0 ? "#0055aa" : undefined}>{createName || ' '}</text>
             {createField === 0 && <text fg="cyan">|</text>}
           </box>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Scope: </text>
-            <text attributes={createField === 1 ? 32 : undefined} fg={SCOPE_COLORS[SCOPES[createScopeIdx]]}>{SCOPES[createScopeIdx]}</text>
+            <text bg={createField === 1 ? "#0055aa" : undefined} fg={createField === 1 ? "whiteBright" : SCOPE_COLORS[SCOPES[createScopeIdx]]}>{SCOPES[createScopeIdx]}</text>
             {createField === 1 && <text fg="gray"> ←/→</text>}
           </box>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Default Action: </text>
-            <text attributes={createField === 2 ? 32 : undefined} fg={ACTION_COLORS[ACTIONS[createActionIdx]]}>{ACTIONS[createActionIdx]}</text>
+            <text bg={createField === 2 ? "#0055aa" : undefined} fg={createField === 2 ? "whiteBright" : ACTION_COLORS[ACTIONS[createActionIdx]]}>{ACTIONS[createActionIdx]}</text>
             {createField === 2 && <text fg="gray"> ←/→</text>}
           </box>
         </box>
@@ -428,24 +428,24 @@ export function GuardrailsPanel({
   if (mode === 'rule-create') {
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
+        <box flexDirection="row" marginBottom={1}>
           <text><b>Add Tool Rule</b></text>
           {detailPolicy && <text fg="gray"> to {detailPolicy.name || detailPolicy.id}</text>}
         </box>
         <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Pattern: </text>
-            <text attributes={ruleField === 0 ? 32 : undefined}>{rulePattern || ' '}</text>
+            <text bg={ruleField === 0 ? "#0055aa" : undefined}>{rulePattern || ' '}</text>
             {ruleField === 0 && <text fg="cyan">|</text>}
           </box>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Action: </text>
-            <text attributes={ruleField === 1 ? 32 : undefined} fg={ACTION_COLORS[ACTIONS[ruleActionIdx]]}>{ACTIONS[ruleActionIdx]}</text>
+            <text bg={ruleField === 1 ? "#0055aa" : undefined} fg={ruleField === 1 ? "whiteBright" : ACTION_COLORS[ACTIONS[ruleActionIdx]]}>{ACTIONS[ruleActionIdx]}</text>
             {ruleField === 1 && <text fg="gray"> ←/→</text>}
           </box>
-          <box>
+          <box flexDirection="row">
             <text fg="gray">Reason: </text>
-            <text attributes={ruleField === 2 ? 32 : undefined}>{ruleReason || ' '}</text>
+            <text bg={ruleField === 2 ? "#0055aa" : undefined}>{ruleReason || ' '}</text>
             {ruleField === 2 && <text fg="cyan">|</text>}
             {ruleField !== 2 && <text fg="gray"> (optional)</text>}
           </box>
@@ -462,8 +462,8 @@ export function GuardrailsPanel({
     const isSystem = detailPolicy.location === 'system';
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
-          <box>
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
+          <box flexDirection="row">
             <text><b>{detailPolicy.name || detailPolicy.id}</b></text>
             <text fg={detailPolicy.enabled ? 'green' : 'red'}> [{detailPolicy.enabled ? 'on' : 'off'}]</text>
           </box>
@@ -471,10 +471,10 @@ export function GuardrailsPanel({
         </box>
 
         <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box><text fg="gray">ID: </text><text>{detailPolicy.id}</text></box>
-          <box><text fg="gray">Location: </text><text>{detailPolicy.location}</text></box>
+          <box flexDirection="row"><text fg="gray">ID: </text><text>{detailPolicy.id}</text></box>
+          <box flexDirection="row"><text fg="gray">Location: </text><text>{detailPolicy.location}</text></box>
           {detailPolicy.policy.tools && (
-            <box><text fg="gray">Default Action: </text><text fg={ACTION_COLORS[detailPolicy.policy.tools.defaultAction]}>{detailPolicy.policy.tools.defaultAction}</text></box>
+            <box flexDirection="row"><text fg="gray">Default Action: </text><text fg={ACTION_COLORS[detailPolicy.policy.tools.defaultAction]}>{detailPolicy.policy.tools.defaultAction}</text></box>
           )}
           {detailPolicy.policy.depth && (
             <box><text fg="gray">Max Depth: </text><text>{detailPolicy.policy.depth.maxDepth}</text></box>
@@ -495,7 +495,7 @@ export function GuardrailsPanel({
               const isSelected = idx === ruleIndex;
               return (
                 <box key={`${rule.pattern}-${idx}`}>
-                  <text attributes={isSelected ? 32 : undefined}>
+                  <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                     {isSelected ? '>' : ' '}{' '}
                     <text fg={ACTION_COLORS[rule.action]}>[{rule.action.slice(0, 4).padEnd(4)}]</text>{' '}
                     <text attributes={isSelected ? 1 : undefined}><b>{rule.pattern.slice(0, 30).padEnd(30)}</b></text>
@@ -544,7 +544,7 @@ export function GuardrailsPanel({
   if (mode === 'policies') {
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <text><b>Policies</b></text>
           <text fg="gray">{policies.length} polic{policies.length !== 1 ? 'ies' : 'y'}</text>
         </box>
@@ -557,7 +557,7 @@ export function GuardrailsPanel({
               const scopeColor = SCOPE_COLORS[policy.scope] || 'white';
               return (
                 <box key={policy.id}>
-                  <text attributes={isSelected ? 32 : undefined}>
+                  <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                     {isSelected ? '>' : ' '}{' '}
                     <text fg={policy.enabled ? 'green' : 'red'}>[{policy.enabled ? 'on ' : 'off'}]</text>{' '}
                     <text attributes={isSelected ? 1 : undefined}><b>{(policy.name || policy.id).slice(0, 20).padEnd(20)}</b></text>{' '}
@@ -572,9 +572,8 @@ export function GuardrailsPanel({
           {/* New policy option */}
           <box marginTop={policies.length > 0 ? 1 : 0} paddingY={0}>
             <text
-              attributes={selectedIndex === policies.length ? 32 : undefined}
-              fg={selectedIndex !== policies.length ? "gray" : undefined}
-              fg={selectedIndex === policies.length ? 'cyan' : undefined}
+              bg={selectedIndex === policies.length ? "#0055aa" : undefined}
+              fg={selectedIndex === policies.length ? "whiteBright" : undefined}
             >
               + New policy (n)
             </text>
@@ -592,7 +591,7 @@ export function GuardrailsPanel({
     const selectedRule = toolRules[selectedIndex];
     return (
       <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1} justifyContent="space-between">
+        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <text><b>Tool Rules</b></text>
           <text fg="gray">{toolRules.length} rule{toolRules.length !== 1 ? 's' : ''}</text>
         </box>
@@ -605,7 +604,7 @@ export function GuardrailsPanel({
               const actionColor = ACTION_COLORS[item.rule.action];
               return (
                 <box key={`${item.policyId}-${item.rule.pattern}-${index}`}>
-                  <text attributes={isSelected ? 32 : undefined}>
+                  <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                     {isSelected ? '>' : ' '}{' '}
                     <text fg={actionColor}>[{item.rule.action.slice(0, 4).padEnd(4)}]</text>{' '}
                     <text attributes={isSelected ? 1 : undefined}><b>{item.rule.pattern.slice(0, 25).padEnd(25)}</b></text>{' '}
@@ -639,7 +638,7 @@ export function GuardrailsPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
+      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Guardrails</b></text>
         <text fg={config.enabled ? 'green' : 'red'}>{config.enabled ? 'Enabled' : 'Disabled'}</text>
       </box>

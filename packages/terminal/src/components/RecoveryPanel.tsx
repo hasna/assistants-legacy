@@ -127,7 +127,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
       >
         {/* Start fresh option — always on top */}
         <box paddingY={0}>
-          <text attributes={selectedIndex === 0 ? 32 : undefined} fg={selectedIndex === 0 ? 'cyan' : undefined}>
+          <text bg={selectedIndex === 0 ? "#0055aa" : undefined} fg={selectedIndex === 0 ? 'whiteBright' : undefined}>
             {selectedIndex === 0 ? '▶' : ' '} Start fresh (new session)
           </text>
         </box>
@@ -156,7 +156,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
 
           return (
             <box key={session.sessionId} flexDirection="column" paddingY={0}>
-              <text attributes={isSelected ? 32 : undefined}>
+              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
                 {isSelected ? '▶' : ' '} {displayName} <text fg="gray">({timeAgo})</text>
                 {meta ? <text fg="gray"> — {meta}</text> : null}
               </text>

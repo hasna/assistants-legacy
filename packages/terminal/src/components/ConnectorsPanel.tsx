@@ -722,8 +722,8 @@ export function ConnectorsPanel({
                 return (
                   <box key={cmd.name} paddingY={0}>
                     <text
-                      attributes={isSelected ? 32 : undefined}
-                      fg={!isSelected ? "gray" : undefined}
+                      bg={isSelected ? "#0055aa" : undefined}
+                      fg={isSelected ? "whiteBright" : undefined}
                     >
                       {prefix}{actualIdx + 1}. {displayName} {cmd.description}
                     </text>
@@ -816,23 +816,23 @@ export function ConnectorsPanel({
               return (
                 <box key={connector.name} paddingY={0}>
                   <text
-                    attributes={isSelected ? 32 : undefined}
-                    fg={!isSelected ? "gray" : undefined}
+                    bg={isSelected ? "#0055aa" : undefined}
+                    fg={isSelected ? "whiteBright" : undefined}
                   >
                     {prefix}
                   </text>
-                  <text fg={status.color} attributes={isSelected ? 32 : undefined}>
+                  <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : status.color}>
                     {status.icon}
                   </text>
                   <text
-                    attributes={isSelected ? 32 : undefined}
-                    fg={!isSelected ? "gray" : undefined}
+                    bg={isSelected ? "#0055aa" : undefined}
+                    fg={isSelected ? "whiteBright" : undefined}
                   >
                     {' '}{nameDisplay} {cmdCount.toString().padStart(2)} cmd{cmdCount !== 1 ? 's' : ' '}
                   </text>
                   <text
-                    attributes={isSelected ? 32 : undefined}
-                    fg="gray"
+                    bg={isSelected ? "#0055aa" : undefined}
+                    fg={isSelected ? "whiteBright" : "gray"}
                   >
                     {' '}{connector.description?.slice(0, 30) || ''}
                   </text>

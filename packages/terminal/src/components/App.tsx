@@ -10,7 +10,7 @@ import { generateId, now } from '@hasna/assistants-shared';
 import { Input, type InputHandle } from './Input';
 import { Messages } from './Messages';
 import { buildDisplayMessages } from './messageRender';
-import { estimateActivityLogLines, estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
+import { estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
 import { Status } from './Status';
 import { ProcessingIndicator } from './ProcessingIndicator';
 import { WelcomeBanner } from './WelcomeBanner';
@@ -440,7 +440,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     setInlinePending((prev) => prev.filter((msg) => msg.id !== id));
   }, []);
 
-  // Native terminal scrolling is used - no manual scroll tracking needed
+  // Scrolling is handled by the <scrollbox> component — no manual scroll tracking needed
 
   const beginAskUser = useCallback((sessionId: string, request: AskUserRequest) => {
     return new Promise<AskUserResponse>((resolve, reject) => {
@@ -2272,8 +2272,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return result;
   }, [messages, wrapChars, renderWidth]);
 
-  // No longer using <Static> — all messages render dynamically in the viewport.
-  // This avoids tmux scrollback issues where Static content is invisible.
+  // All messages render inside a <scrollbox> which handles overflow natively.
 
   const reservedLines = 12;
   const dynamicBudget = Math.max(6, rows - reservedLines);
@@ -2302,17 +2301,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return trimActivityLogByLines(activityLog, wrapChars, renderWidth, activityBudget);
   }, [activityLog, wrapChars, renderWidth, dynamicBudget, streamingLineCount]);
 
-  // Trim historical messages to fit within the viewport.
-  // Without this, messages overflow the fixed-height flexGrow box and become invisible.
-  const activityLineCount = useMemo(
-    () => estimateActivityLogLines(activityTrim.entries, wrapChars, renderWidth),
-    [activityTrim.entries, wrapChars, renderWidth]
-  );
-  const historicalBudget = Math.max(4, dynamicBudget - streamingLineCount - activityLineCount);
-  const trimmedDisplayMessages = useMemo(
-    () => trimDisplayMessagesByLines(displayMessages, historicalBudget, renderWidth),
-    [displayMessages, historicalBudget, renderWidth]
-  );
+  // Historical message trimming is no longer needed — the <scrollbox> component
+  // handles overflow natively with scroll, so all messages are rendered.
 
   // Process queue when not busy (not processing and no pending tools)
   // queueFlushTrigger forces re-evaluation when processing completes (done/error)
@@ -2322,7 +2312,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     }
   }, [isBusy, activeQueue.length, activeInline.length, processQueue, queueFlushTrigger]);
 
-  // Native terminal scrolling handles scroll position automatically
+  // Scroll position is managed by the <scrollbox> component (stickyScroll)
 
   // Handle session switch
   const handleSessionSwitch = useCallback(async (sessionId: string) => {
@@ -2478,7 +2468,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       return;
     }
 
-    // Native terminal scrolling is used - scroll with terminal's scrollback
+    // Scrolling is handled by the <scrollbox> component via mouse wheel and arrow keys
   }, { isActive: !showSessionSelector && !isPanelOpen });
 
 
@@ -3038,18 +3028,12 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         </box>
       )}
 
-      {/* Messages area — flexGrow fills available space between header and footer */}
-      <box flexDirection="column" flexGrow={1} overflow="hidden">
-        {/* Trimmed indicator when older messages are hidden */}
-        {trimmedDisplayMessages.trimmed && (
-          <box>
-            <text fg="gray">  ... earlier messages hidden ...</text>
-          </box>
-        )}
-        {/* All messages rendered dynamically (no <Static> — it breaks in tmux) */}
+      {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
+      <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
+        {/* All messages rendered in a scrollable container */}
         <Messages
           key="all-messages"
-          messages={trimmedDisplayMessages.messages}
+          messages={displayMessages}
           currentResponse={undefined}
           streamingMessages={isProcessing ? streamingMessages : []}
           currentToolCall={undefined}
@@ -3058,7 +3042,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           queuedMessageIds={queuedMessageIds}
           verboseTools={verboseTools}
         />
-      </box>
+      </scrollbox>
 
       {/* Ask-user simple interview */}
       {askUserState && activeAskQuestion && !interviewState && (
