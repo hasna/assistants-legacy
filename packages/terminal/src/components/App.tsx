@@ -10,7 +10,7 @@ import { generateId, now } from '@hasna/assistants-shared';
 import { Input, type InputHandle } from './Input';
 import { Messages } from './Messages';
 import { buildDisplayMessages } from './messageRender';
-import { estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
+import { estimateActivityLogLines, estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
 import { Status } from './Status';
 import { ProcessingIndicator } from './ProcessingIndicator';
 import { WelcomeBanner } from './WelcomeBanner';
@@ -2301,7 +2301,18 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     const activityBudget = Math.max(4, dynamicBudget - streamingLineCount);
     return trimActivityLogByLines(activityLog, wrapChars, renderWidth, activityBudget);
   }, [activityLog, wrapChars, renderWidth, dynamicBudget, streamingLineCount]);
-  // All messages render dynamically — no <Static>, no lastResponseMessages needed
+
+  // Trim historical messages to fit within the viewport.
+  // Without this, messages overflow the fixed-height flexGrow box and become invisible.
+  const activityLineCount = useMemo(
+    () => estimateActivityLogLines(activityTrim.entries, wrapChars, renderWidth),
+    [activityTrim.entries, wrapChars, renderWidth]
+  );
+  const historicalBudget = Math.max(4, dynamicBudget - streamingLineCount - activityLineCount);
+  const trimmedDisplayMessages = useMemo(
+    () => trimDisplayMessagesByLines(displayMessages, historicalBudget, renderWidth),
+    [displayMessages, historicalBudget, renderWidth]
+  );
 
   // Process queue when not busy (not processing and no pending tools)
   // queueFlushTrigger forces re-evaluation when processing completes (done/error)
@@ -3028,11 +3039,17 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       )}
 
       {/* Messages area — flexGrow fills available space between header and footer */}
-      <box flexDirection="column" flexGrow={1}>
+      <box flexDirection="column" flexGrow={1} overflow="hidden">
+        {/* Trimmed indicator when older messages are hidden */}
+        {trimmedDisplayMessages.trimmed && (
+          <box>
+            <text fg="gray">  ... earlier messages hidden ...</text>
+          </box>
+        )}
         {/* All messages rendered dynamically (no <Static> — it breaks in tmux) */}
         <Messages
           key="all-messages"
-          messages={displayMessages}
+          messages={trimmedDisplayMessages.messages}
           currentResponse={undefined}
           streamingMessages={isProcessing ? streamingMessages : []}
           currentToolCall={undefined}
