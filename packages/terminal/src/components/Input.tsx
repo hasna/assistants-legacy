@@ -3,6 +3,7 @@ import { useTerminalDimensions } from '@opentui/react';
 import type { TextareaRenderable } from '@opentui/core';
 import { CommandHistory, getCommandHistory } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Deterministic color palette for assistant badges (white text on colored bg)
 const ASSISTANT_COLORS = [
@@ -583,6 +584,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const fileItems = useMemo(() => filteredFiles.map(f => ({ name: f })), [filteredFiles]);
   const visibleFiles = getVisibleItems(fileItems);
 
+  // [cassius] Theme-aware colors for light/dark terminal contrast
+  const promptColor = themeColor('prompt');
+  const mutedColor = themeColor('muted');
+  const borderColor = themeColor('border');
+
   const lineCount = value.split('\n').length;
   return (
     <box flexDirection="column" marginTop={0}>
@@ -598,31 +604,31 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         flexDirection="column"
         borderStyle="rounded"
         border={["top", "bottom"]}
-        borderColor="#d4d4d8"
+        borderColor={borderColor}
         paddingX={1}
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
           <box flexDirection="row" paddingY={0}>
-            <text fg="red"><b>🎤 Recording... </b></text>
-            <text fg="gray">[Ctrl+R or Enter to stop]</text>
+            <text fg={themeColor('error')}><b>🎤 Recording... </b></text>
+            <text fg={mutedColor}>[Ctrl+R or Enter to stop]</text>
           </box>
         )}
         {recordingStatus === 'transcribing' && (
           <box flexDirection="row" paddingY={0}>
-            <text fg="yellow"><b>⏳ Transcribing...</b></text>
+            <text fg={themeColor('warning')}><b>⏳ Transcribing...</b></text>
           </box>
         )}
         {recordingStatus === 'talking' && (
           <box paddingY={0} flexDirection="column">
             <box flexDirection="row">
-              <text fg="green"><b>🎙 Talk mode </b></text>
-              <text fg="gray">[listening... Ctrl+C to stop]</text>
+              <text fg={themeColor('success')}><b>🎙 Talk mode </b></text>
+              <text fg={mutedColor}>[listening... Ctrl+C to stop]</text>
             </box>
             {partialTranscript ? (
               <box flexDirection="row">
-                <text fg="gray">{'> '}</text>
-                <text fg="white"><i>{partialTranscript}</i></text>
+                <text fg={mutedColor}>{'> '}</text>
+                <text><i>{partialTranscript}</i></text>
               </box>
             ) : null}
           </box>
@@ -632,15 +638,15 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         {largePaste ? (
           /* Large paste placeholder view */
           <box flexDirection="row">
-            <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
+            <text fg={isProcessing ? mutedColor : promptColor}>&gt; </text>
             <box flexDirection="row" flexGrow={1}>
-              <text fg="yellow">{largePaste.placeholder}</text>
-              <text fg="gray"> [Enter to send, Esc to cancel]</text>
+              <text fg={themeColor('warning')}>{largePaste.placeholder}</text>
+              <text fg={mutedColor}> [Enter to send, Esc to cancel]</text>
             </box>
           </box>
         ) : (
           <box flexDirection="row">
-            <text fg={isProcessing ? 'gray' : 'cyan'}>&gt; </text>
+            <text fg={isProcessing ? mutedColor : promptColor}>&gt; </text>
             <textarea
               ref={textareaRef}
               placeholder={placeholder}
@@ -658,7 +664,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         {/* Show line count if multiline */}
         {lineCount > 1 && (
           <box>
-            <text fg="gray">({lineCount} lines)</text>
+            <text fg={mutedColor}>({lineCount} lines)</text>
           </box>
         )}
       </box>
@@ -704,11 +710,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const isSelected = actualIndex === selectedIndex;
             return (
               <box flexDirection="row" key={cmd.name} bg={isSelected ? '#0055aa' : undefined}>
-                <text fg={isSelected ? 'whiteBright' : 'cyan'} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? 'whiteBright' : themeColor('primary')} bg={isSelected ? '#0055aa' : undefined}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{cmd.name.padEnd(18)}</b>
                 </text>
-                <text fg={isSelected ? '#bbddff' : 'gray'} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? '#bbddff' : mutedColor} bg={isSelected ? '#0055aa' : undefined}>
                   {cmd.description}
                 </text>
               </box>

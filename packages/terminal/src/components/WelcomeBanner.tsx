@@ -1,5 +1,6 @@
 import React from 'react';
 import { getModelDisplayName } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 interface WelcomeBannerProps {
   version: string;
@@ -21,26 +22,29 @@ export function WelcomeBanner({ version, model, directory }: WelcomeBannerProps)
 
   const displayModel = getModelDisplayName(model);
 
+  // [cassius] Theme-aware colors for light/dark terminal contrast
+  const mutedColor = themeColor('muted');
+
   return (
     <box flexDirection="column" marginBottom={1}>
       <box>
-        <text fg="gray">{'>'}</text>
+        <text fg={mutedColor}>{'>'}</text>
         <text><b>_ Hasna Assistants</b></text>
-        <text fg="gray">  (v{version})</text>
+        <text fg={mutedColor}>  (v{version})</text>
       </box>
       <text>{''}</text>
       <box>
-        <text fg="gray">model:     </text>
+        <text fg={mutedColor}>model:     </text>
         <text>{displayModel}</text>
-        <text fg="gray">    /model to change</text>
+        <text fg={mutedColor}>    /model to change</text>
       </box>
       <box>
-        <text fg="gray">directory: </text>
+        <text fg={mutedColor}>directory: </text>
         <text>{shortDir}</text>
       </box>
       <box>
-        <text fg="gray">shortcuts: </text>
-        <text fg="gray">Ctrl+] sessions · Ctrl+C stop · /help commands</text>
+        <text fg={mutedColor}>shortcuts: </text>
+        <text fg={mutedColor}>Ctrl+] sessions · Ctrl+C stop · /help commands</text>
       </box>
     </box>
   );

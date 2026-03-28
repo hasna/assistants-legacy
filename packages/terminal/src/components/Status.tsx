@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { basename } from 'path';
 import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
 import { getModelById } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 interface TokenUsage {
   inputTokens: number;
@@ -241,10 +242,13 @@ export function Status({
   if (contextDisplay) rightParts.push(contextDisplay + contextWarning);
   if (costInfo) rightParts.push(costInfo);
 
+  // [cassius] Theme-aware muted color for light/dark terminal contrast
+  const mutedColor = themeColor('muted');
+
   return (
     <box flexDirection="row" justifyContent="space-between">
-      <text fg="gray">{leftParts.join('  ·  ')}</text>
-      <text fg="gray">{rightParts.join('  ·  ')}</text>
+      <text fg={mutedColor}>{leftParts.join('  ·  ')}</text>
+      <text fg={mutedColor}>{rightParts.join('  ·  ')}</text>
     </box>
   );
 }

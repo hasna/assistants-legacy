@@ -10,6 +10,7 @@ import { truncateToolResult, truncateToolResultWithInfo } from './toolDisplay';
 import { TerminalImage } from './TerminalImage';
 import { CodeBlock, getFiletypeForToolResult, shouldHighlightToolResult, getFiletypeFromPath } from './CodeBlock';
 import { basename } from 'path';
+import { themeColor } from '../theme/colors';
 
 // ============================================
 // Edit Tool Diff Helpers
@@ -194,7 +195,7 @@ export function Messages({
         .filter((entry) => entry.type === 'text' && entry.content)
         .map((entry) => (
           <box key={entry.id} marginY={1} flexDirection="row">
-            <text fg="gray">● </text>
+            <text fg={themeColor('muted')}>● </text>
             <box flexGrow={1}>
               <Markdown content={entry.content!} indent={3} />
             </box>
@@ -222,7 +223,7 @@ export function Messages({
       {/* Show current streaming response (text being typed now) */}
       {showCurrentResponse && (
         <box marginY={1} flexDirection="row">
-          <text fg="gray">● </text>
+          <text fg={themeColor('muted')}>● </text>
           <box flexGrow={1}>
             <Markdown content={currentResponse ?? ''} indent={3} />
           </box>
@@ -306,16 +307,16 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
       <box marginY={isContinuation ? 0 : 1} flexDirection="column">
         {isDraft && !isContinuation && (
           <box>
-            <text fg="gray">  🎤 Live dictation</text>
+            <text fg={themeColor('muted')}>  🎤 Live dictation</text>
           </box>
         )}
         {hasContent && (
           <box flexDirection="row">
-            <text fg={isDraft || isContinuation ? "gray" : undefined}>{isContinuation ? '  ' : '❯ '} </text>
+            <text fg={isDraft || isContinuation ? themeColor('muted') : undefined}>{isContinuation ? '  ' : '❯ '} </text>
             {isQueued && !isContinuation ? (
-              <text fg="gray">⏳ {linkifyText(message.content ?? '')}</text>
+              <text fg={themeColor('muted')}>⏳ {linkifyText(message.content ?? '')}</text>
             ) : (
-              <text fg={isDraft ? "gray" : undefined}>{linkifyText(displayContent)}</text>
+              <text fg={isDraft ? themeColor('muted') : undefined}>{linkifyText(displayContent)}</text>
             )}
           </box>
         )}
@@ -338,7 +339,7 @@ function MessageBubble({ message, queuedMessageIds, verboseTools }: MessageBubbl
     <box marginY={isContinuation ? 0 : 1} flexDirection="column">
       {hasContent && (
         <box flexDirection="row">
-          <text fg="gray">{isContinuation || !leadingBullet ? '  ' : '● '} </text>
+          <text fg={themeColor('muted')}>{isContinuation || !leadingBullet ? '  ' : '● '} </text>
           <box flexGrow={1}>
             <Markdown content={message.content} preRendered={Boolean(message.__rendered)} indent={3} />
           </box>
@@ -428,13 +429,18 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
 
   if (toolCalls.length === 0) return null;
 
+  // [cassius] Theme-aware tool status colors
+  const mutedCol = themeColor('muted');
+  const successCol = themeColor('success');
+  const errorCol = themeColor('error');
+
   // Compact summary for 2+ tool calls when not verbose
   if (!verboseTools && toolCalls.length >= 2) {
     const anyRunning = toolCalls.some((c) => c.status === 'running');
     const anyError = toolCalls.some((c) => c.status === 'failed');
     const summary = buildToolCallSummary(toolCalls.map((c) => c.toolCall), anyRunning);
     const icon = anyRunning ? '○' : anyError ? '✗' : '●';
-    const iconColor = anyRunning ? 'gray' : anyError ? 'red' : 'green';
+    const iconColor = anyRunning ? mutedCol : anyError ? errorCol : successCol;
     const suffix = anyRunning ? '…' : '';
 
     return (
@@ -442,7 +448,7 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
         <text fg={iconColor}>{icon} </text>
         <text> </text>
         <text>{summary}{suffix}</text>
-        <text fg="gray"> (ctrl+o to expand)</text>
+        <text fg={mutedCol}> (ctrl+o to expand)</text>
       </box>
     );
   }
@@ -452,8 +458,8 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
       {toolCalls.map((call) => {
         const icon = call.status === 'running' ? '○'
           : call.status === 'failed' ? '✗' : '●';
-        const iconColor = call.status === 'running' ? 'gray'
-          : call.status === 'failed' ? 'red' : 'green';
+        const iconColor = call.status === 'running' ? mutedCol
+          : call.status === 'failed' ? errorCol : successCol;
         const elapsedMs = (call.endTime ?? now) - call.startTime;
         const elapsedText = formatDuration(elapsedMs);
         const title = getToolCallTitle(call.toolCall);
@@ -472,7 +478,7 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
                   <box flexDirection="row">
                     <text fg={iconColor}>{icon} </text>
                     <text fg={iconColor}><b>{title}</b></text>
-                    <text fg="gray"> · {elapsedText}</text>
+                    <text fg={mutedCol}> · {elapsedText}</text>
                   </box>
                   <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
                 </box>
@@ -487,12 +493,12 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
               <text fg={iconColor}>{icon} </text>
               <text> </text>
               <text fg={iconColor}><b>{prefix}{title}</b></text>
-              <text fg="gray"> · {elapsedText}</text>
+              <text fg={mutedCol}> · {elapsedText}</text>
             </box>
             {params.length > 0 && (
               <box marginLeft={2} flexDirection="column">
                 {params.map((param, i) => (
-                  <text key={i} fg="gray">{i === 0 ? '└ ' : '  '}{param}</text>
+                  <text key={i} fg={mutedCol}>{i === 0 ? '└ ' : '  '}{param}</text>
                 ))}
               </box>
             )}
@@ -584,6 +590,11 @@ function ToolCallPanel({
 }) {
   if (toolCalls.length === 0) return null;
 
+  // [cassius] Theme-aware tool status colors
+  const mutedCol = themeColor('muted');
+  const successCol = themeColor('success');
+  const errorCol = themeColor('error');
+
   const resultMap = new Map<string, ToolResult>();
   for (const result of toolResults || []) {
     resultMap.set(result.toolCallId, result);
@@ -596,7 +607,7 @@ function ToolCallPanel({
     const isRunning = !allComplete;
     const summary = buildToolCallSummary(toolCalls, isRunning);
     const icon = isRunning ? '○' : anyError ? '✗' : '●';
-    const iconColor = isRunning ? 'gray' : anyError ? 'red' : 'green';
+    const iconColor = isRunning ? mutedCol : anyError ? errorCol : successCol;
     const suffix = isRunning ? '…' : '';
 
     return (
@@ -604,7 +615,7 @@ function ToolCallPanel({
         <text fg={iconColor}>{icon} </text>
         <text> </text>
         <text>{summary}{suffix}</text>
-        <text fg="gray"> (ctrl+o to expand)</text>
+        <text fg={mutedCol}> (ctrl+o to expand)</text>
       </box>
     );
   }
@@ -617,7 +628,7 @@ function ToolCallPanel({
         const isError = result?.isError;
 
         const icon = isRunning ? '○' : isError ? '✗' : '●';
-        const iconColor = isRunning ? 'gray' : isError ? 'red' : 'green';
+        const iconColor = isRunning ? mutedCol : isError ? errorCol : successCol;
 
         const title = getToolCallTitle(toolCall);
         const prefix = isRunning ? 'Calling ' : '';
@@ -660,7 +671,7 @@ function ToolCallPanel({
             {params.length > 0 && (
               <box marginLeft={2} flexDirection="column">
                 {params.map((param, i) => (
-                  <text key={i} fg="gray">{i === 0 ? '└ ' : '  '}{param}</text>
+                  <text key={i} fg={mutedCol}>{i === 0 ? '└ ' : '  '}{param}</text>
                 ))}
               </box>
             )}
@@ -674,7 +685,7 @@ function ToolCallPanel({
             )}
             {showExpandHint && (
               <box marginLeft={2}>
-                <text fg="gray">  (Ctrl+O for full output)</text>
+                <text fg={mutedCol}>  (Ctrl+O for full output)</text>
               </box>
             )}
           </box>
@@ -701,7 +712,7 @@ function EditDiffView({ toolCall }: { toolCall: ToolCall }) {
 
   return (
     <box marginLeft={2} flexDirection="column">
-      <text fg="gray">{'\u2514'}</text>
+      <text fg={themeColor('muted')}>{'\u2514'}</text>
       <box marginLeft={2}>
         <diff
           diff={diffText}
@@ -738,11 +749,14 @@ function ToolResultContent({
     return <EditDiffView toolCall={toolCall} />;
   }
 
+  // [cassius] Theme-aware muted color
+  const mutedCol = themeColor('muted');
+
   if (shouldHighlightToolResult(toolName, content, isError)) {
     const filetype = getFiletypeForToolResult(toolCall);
     return (
       <box marginLeft={2} flexDirection="column">
-        <text fg="gray">{'\u2514'}</text>
+        <text fg={mutedCol}>{'\u2514'}</text>
         <box marginLeft={2}>
           <CopyableCodeBlock content={content} filetype={filetype} />
         </box>
@@ -752,7 +766,7 @@ function ToolResultContent({
 
   return (
     <box marginLeft={2}>
-      <text fg="gray">{'\u2514'} {linkifyText(indentMultiline(content, '  '))}</text>
+      <text fg={mutedCol}>{'\u2514'} {linkifyText(indentMultiline(content, '  '))}</text>
     </box>
   );
 }
@@ -799,7 +813,7 @@ function ActiveToolResultContent({
   const resultText = truncateToolResult(result, 2, 200, { verbose: verboseTools });
   return (
     <box marginLeft={2}>
-      <text fg="gray">{'\u2514'} {linkifyText(resultText)}</text>
+      <text fg={themeColor('muted')}>{'\u2514'} {linkifyText(resultText)}</text>
     </box>
   );
 }
@@ -813,12 +827,17 @@ function ToolResultPanel({
 }) {
   if (toolResults.length === 0) return null;
 
+  // [cassius] Theme-aware tool status colors
+  const successCol = themeColor('success');
+  const errorCol = themeColor('error');
+  const mutedCol = themeColor('muted');
+
   return (
     <box flexDirection="column">
       {toolResults.map((result, index) => {
         const isError = result.isError;
         const icon = isError ? '✗' : '●';
-        const iconColor = isError ? 'red' : 'green';
+        const iconColor = isError ? errorCol : successCol;
         const title = result.toolName
           ? capitalizeToolName(result.toolName)
           : `Result ${index + 1}`;
@@ -853,7 +872,7 @@ function ToolResultPanel({
             </box>
             {useHighlight ? (
               <box marginLeft={1} flexDirection="column">
-                <text fg="gray">└</text>
+                <text fg={mutedCol}>└</text>
                 <box marginLeft={2}>
                   <CodeBlock
                     content={resultText}
@@ -863,12 +882,12 @@ function ToolResultPanel({
               </box>
             ) : (
               <box marginLeft={1}>
-                <text fg="gray">└  {linkifyText(indentMultiline(resultText, '   '))}</text>
+                <text fg={mutedCol}>└  {linkifyText(indentMultiline(resultText, '   '))}</text>
               </box>
             )}
             {showExpandHint && (
               <box marginLeft={1}>
-                <text fg="gray">   (Ctrl+O for full output)</text>
+                <text fg={mutedCol}>   (Ctrl+O for full output)</text>
               </box>
             )}
           </box>
