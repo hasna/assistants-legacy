@@ -2,6 +2,7 @@ import type { HookEvent, HookHandler, HookInput, HookOutput } from '@hasna/assis
 import { existsSync } from 'fs';
 import { generateId } from '@hasna/assistants-shared';
 import { getRuntime } from '../runtime';
+import { writeInputToStdin } from './process-io';
 
 /**
  * Result from testing a hook
@@ -179,23 +180,7 @@ export class HookTester {
     });
 
     // Write input as JSON to stdin
-    const inputData = new TextEncoder().encode(JSON.stringify(input));
-    const stdin = proc.stdin as unknown as {
-      getWriter?: () => { write: (chunk: Uint8Array) => Promise<void> | void; close: () => Promise<void> | void };
-      write?: (chunk: Uint8Array) => Promise<void> | void;
-      end?: () => Promise<void> | void;
-    } | null;
-
-    if (stdin?.getWriter) {
-      const writer = stdin.getWriter();
-      await writer.write(inputData);
-      await writer.close();
-    } else if (stdin?.write) {
-      await stdin.write(inputData);
-      if (stdin.end) {
-        await stdin.end();
-      }
-    }
+    await writeInputToStdin(proc.stdin, input);
 
     // Set up timeout
     let timedOut = false;

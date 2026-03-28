@@ -67,7 +67,7 @@ function sessionsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 
 function emailsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
-    { tool: mkTool('emails_send', 'Send an email.', { to: str('Recipient email'), subject: str('Subject'), body: str('Email body (HTML or plain text)'), from: str('Sender address (optional)') }, ['to', 'subject', 'body']),
+    { tool: mkTool('emails_send', 'Send an email to a recipient. Supports HTML or plain text body.', { to: str('Recipient email address'), subject: str('Email subject line'), body: str('Email body (HTML or plain text)'), from: str('Sender address (optional)') }, ['to', 'subject', 'body']),
       executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.sendEmail({ to: String(i.to), subject: String(i.subject), body: String(i.body), from: i.from ? String(i.from) : undefined }); return r ? `Email sent: ${JSON.stringify(r)}` : 'Failed to send email.'; } },
     { tool: mkTool('emails_list', 'List sent emails.', { limit: num('Max results') }),
       executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.listEmails(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No emails found.'; } },
@@ -75,8 +75,29 @@ function emailsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
       executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.searchEmails(String(i.query)); return r?.length ? JSON.stringify(r.slice(0, 10), null, 2) : 'No emails matched.'; } },
     { tool: mkTool('emails_inbox', 'List inbound emails.', { limit: num('Max results') }),
       executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.listInboundEmails(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'Inbox empty.'; } },
+    { tool: mkTool('emails_get', 'Get a single email by ID.', { id: str('Email ID') }, ['id']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.getEmail(String(i.id)); return r ? JSON.stringify(r, null, 2) : 'Email not found.'; } },
+    { tool: mkTool('emails_sync', 'Sync inbox from email provider (pull new inbound emails).', {}),
+      executor: async () => { const a = await import('../emails/sdk-adapter') as any; const r = await a.syncInbox(); return r ? JSON.stringify(r, null, 2) : 'Sync failed.'; } },
+    { tool: mkTool('emails_triage', 'Auto-triage an inbound email (classify priority, suggest action).', { email_id: str('Inbound email ID') }, ['email_id']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.triageEmail(String(i.email_id)); return r ? JSON.stringify(r, null, 2) : 'Triage failed.'; } },
     { tool: mkTool('emails_stats', 'Get email sending statistics.', {}),
       executor: async () => { const a = await import('../emails/sdk-adapter') as any; const r = await a.getStats(); return r ? JSON.stringify(r, null, 2) : 'No stats available.'; } },
+    // [aurelius] Added: delete, draft_reply, templates, schedule, contacts, analytics
+    { tool: mkTool('emails_delete', 'Delete an email by ID.', { id: str('Email ID') }, ['id']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; await a.deleteEmail(String(i.id)); return 'Email deleted.'; } },
+    { tool: mkTool('emails_draft_reply', 'Generate an AI draft reply for an email.', { email_id: str('Email ID'), instructions: str('Reply instructions (optional)') }, ['email_id']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.generateDraftReply({ emailId: String(i.email_id), instructions: i.instructions ? String(i.instructions) : undefined }); return r || 'Draft generation failed.'; } },
+    { tool: mkTool('emails_templates', 'List email templates.', {}),
+      executor: async () => { const a = await import('../emails/sdk-adapter') as any; const r = await a.listTemplates(); return r?.length ? JSON.stringify(r, null, 2) : 'No templates.'; } },
+    { tool: mkTool('emails_render_template', 'Render a template with variables.', { name: str('Template name'), vars: str('JSON object of variables') }, ['name']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const vars = i.vars ? JSON.parse(String(i.vars)) : {}; const r = await a.renderTemplate(String(i.name), vars); return r || 'Template not found or render failed.'; } },
+    { tool: mkTool('emails_schedule', 'Schedule an email for later delivery.', { to: str('Recipient'), subject: str('Subject'), body: str('Body'), send_at: str('ISO datetime to send at') }, ['to', 'subject', 'body', 'send_at']),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.scheduleEmail({ to: String(i.to), subject: String(i.subject), body: String(i.body), sendAt: String(i.send_at) }); return r ? `Scheduled: ${JSON.stringify(r)}` : 'Scheduling failed.'; } },
+    { tool: mkTool('emails_contacts', 'List email contacts.', { limit: num('Max results') }),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.listContacts(Number(i.limit || 50)); return r?.length ? JSON.stringify(r, null, 2) : 'No contacts.'; } },
+    { tool: mkTool('emails_analytics', 'Get email analytics (open rates, click rates, bounces).', { days: num('Number of days to analyze (default 30)') }),
+      executor: async (i) => { const a = await import('../emails/sdk-adapter') as any; const r = await a.getAnalytics({ days: Number(i.days || 30) }); return r ? JSON.stringify(r, null, 2) : 'No analytics data.'; } },
   ];
 }
 
@@ -117,11 +138,11 @@ function attachmentsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function recordingsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('recordings_list', 'List saved recordings.', { limit: num('Max results') }),
-      executor: async (i) => { const a = await import('../recordings/sdk-adapter') as any; const r = await a.listRecordings(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No recordings.'; } },
+      executor: async (i) => { const { listRecordings } = await import('../recordings/sdk-adapter'); const r = await listRecordings(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No recordings.'; } },
     { tool: mkTool('recordings_transcribe', 'Transcribe an audio file to text.', { file_path: str('Audio file path') }, ['file_path']),
-      executor: async (i) => { const a = await import('../recordings/sdk-adapter') as any; const r = await a.transcribeAudio(String(i.file_path)); return r || 'Transcription failed.'; } },
+      executor: async (i) => { const { transcribeAudio } = await import('../recordings/sdk-adapter'); const r = await transcribeAudio(String(i.file_path)); return r || 'Transcription failed.'; } },
     { tool: mkTool('recordings_search', 'Search recordings by keyword.', { query: str('Search query') }, ['query']),
-      executor: async (i) => { const a = await import('../recordings/sdk-adapter') as any; const r = await a.searchRecordings(String(i.query)); return r?.length ? JSON.stringify(r, null, 2) : 'No recordings matched.'; } },
+      executor: async (i) => { const { searchRecordings } = await import('../recordings/sdk-adapter'); const r = await searchRecordings(String(i.query)); return r?.length ? JSON.stringify(r, null, 2) : 'No recordings matched.'; } },
   ];
 }
 
@@ -141,15 +162,19 @@ function hooksRegistryTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function browserTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('browser_navigate', 'Navigate to a URL in a headless browser.', { url: str('URL to navigate to') }, ['url']),
-      executor: async (i) => { const a = await import('../browser/sdk-adapter') as any; const r = await a.browserNavigate(String(i.url)); return r ? JSON.stringify(r, null, 2) : 'Navigation failed.'; } },
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserNavigate(String(i.url)); return r ? JSON.stringify(r, null, 2) : 'Navigation failed.'; } },
     { tool: mkTool('browser_screenshot', 'Take a screenshot of the current page.', { path: str('Save path (optional)') }),
-      executor: async (i) => { const a = await import('../browser/sdk-adapter') as any; const r = await a.browserScreenshot(i.path ? String(i.path) : undefined); return r ? `Screenshot saved: ${r}` : 'Screenshot failed.'; } },
-    { tool: mkTool('browser_extract', 'Extract structured data from the current page.', { selector: str('CSS selector or description') }, ['selector']),
-      executor: async (i) => { const a = await import('../browser/sdk-adapter') as any; const r = await a.browserExtract(String(i.selector)); return r ? JSON.stringify(r, null, 2) : 'Extraction failed.'; } },
-    { tool: mkTool('browser_get_text', 'Get text content of the current page.', {}),
-      executor: async () => { const a = await import('../browser/sdk-adapter') as any; const r = await a.browserGetText(); return r || 'No text content.'; } },
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserScreenshot(i.path ? String(i.path) : undefined); return r ? JSON.stringify(r, null, 2) : 'Screenshot failed.'; } },
     { tool: mkTool('browser_click', 'Click an element on the page.', { selector: str('CSS selector or text to click') }, ['selector']),
-      executor: async (i) => { const a = await import('../browser/sdk-adapter') as any; await a.browserClick(String(i.selector)); return `Clicked: ${i.selector}`; } },
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserClick(String(i.selector)); return r?.error ? `Click failed: ${r.error}` : `Clicked: ${i.selector}`; } },
+    { tool: mkTool('browser_type', 'Type text into an input field on the page.', { selector: str('CSS selector of the input field'), text: str('Text to type') }, ['selector', 'text']),
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserType(String(i.selector), String(i.text)); return r?.error ? `Type failed: ${r.error}` : `Typed into: ${i.selector}`; } },
+    { tool: mkTool('browser_extract', 'Extract structured data from the current page.', { selector: str('CSS selector (optional)') }),
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserExtract(i.selector ? String(i.selector) : undefined); return r ? JSON.stringify(r, null, 2) : 'Extraction failed.'; } },
+    { tool: mkTool('browser_get_text', 'Get visible text content of the current page or a specific element.', { selector: str('CSS selector (optional)') }),
+      executor: async (i) => { const a = await import('../browser/sdk-adapter'); const r = await a.browserGetText(i.selector ? String(i.selector) : undefined); return r || 'No text content.'; } },
+    { tool: mkTool('browser_snapshot', 'Get an accessibility/ARIA snapshot of the current page (structured DOM tree).', {}),
+      executor: async () => { const a = await import('../browser/sdk-adapter'); const r = await a.browserSnapshot(); return r ? (typeof r === 'string' ? r : JSON.stringify(r, null, 2)) : 'Snapshot failed.'; } },
   ];
 }
 
@@ -158,13 +183,15 @@ function browserTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function crawlTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('crawl_url', 'Crawl a single URL and extract content.', { url: str('URL to crawl') }, ['url']),
-      executor: async (i) => { const a = await import('../crawl/sdk-adapter') as any; const r = await a.crawlUrl(String(i.url)); return r ? JSON.stringify(r, null, 2) : 'Crawl failed.'; } },
-    { tool: mkTool('crawl_site', 'Crawl an entire website.', { url: str('Starting URL'), max_pages: num('Max pages to crawl (default: 50)') }, ['url']),
-      executor: async (i) => { const a = await import('../crawl/sdk-adapter') as any; const r = await a.crawlSite(String(i.url), Number(i.max_pages || 50)); return r ? JSON.stringify(r, null, 2) : 'Crawl failed.'; } },
+      executor: async (i) => { const a = await import('../crawl/sdk-adapter'); const r = await a.crawlUrl(String(i.url)); return r ? JSON.stringify(r, null, 2) : 'Crawl failed.'; } },
+    { tool: mkTool('crawl_site', 'Crawl an entire website starting from a URL, following links to discover and extract content from multiple pages.', { url: str('Starting URL'), max_pages: num('Max pages to crawl (default: 50)') }, ['url']),
+      executor: async (i) => { const a = await import('../crawl/sdk-adapter'); const r = await a.crawlSite(String(i.url), Number(i.max_pages || 50)); return r ? JSON.stringify(r, null, 2) : 'Crawl failed.'; } },
+    { tool: mkTool('crawl_map', 'Get a sitemap/link map of a website (discover all pages without crawling content).', { url: str('Website URL to map') }, ['url']),
+      executor: async (i) => { const a = await import('../crawl/sdk-adapter'); const r = await a.mapSite(String(i.url)); return r?.length ? JSON.stringify(r, null, 2) : 'No pages found.'; } },
     { tool: mkTool('crawl_search', 'Search the web using Firecrawl.', { query: str('Search query') }, ['query']),
-      executor: async (i) => { const a = await import('../crawl/sdk-adapter') as any; const r = await a.searchWeb(String(i.query)); return r?.length ? JSON.stringify(r, null, 2) : 'No results.'; } },
+      executor: async (i) => { const a = await import('../crawl/sdk-adapter'); const r = await a.searchWeb(String(i.query)); return r?.length ? JSON.stringify(r, null, 2) : 'No results.'; } },
     { tool: mkTool('crawl_extract', 'Extract structured data from a URL.', { url: str('URL to extract from'), schema: str('JSON schema for extraction (optional)') }, ['url']),
-      executor: async (i) => { const a = await import('../crawl/sdk-adapter') as any; const r = await a.extractData(String(i.url), i.schema ? String(i.schema) : undefined); return r ? JSON.stringify(r, null, 2) : 'Extraction failed.'; } },
+      executor: async (i) => { const a = await import('../crawl/sdk-adapter'); const r = await a.extractData(String(i.url), i.schema ? String(i.schema) : undefined); return r ? JSON.stringify(r, null, 2) : 'Extraction failed.'; } },
   ];
 }
 
@@ -173,11 +200,11 @@ function crawlTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function logsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('logs_create', 'Create a structured log entry.', { message: str('Log message'), level: str('Log level: info, warn, error, debug') }, ['message']),
-      executor: async (i) => { const a = await import('../logs-sdk/sdk-adapter') as any; await a.createLog(String(i.message), String(i.level || 'info')); return 'Log created.'; } },
+      executor: async (i) => { const { createLog } = await import('../logs-sdk/sdk-adapter'); await createLog(String(i.message), String(i.level || 'info')); return 'Log created.'; } },
     { tool: mkTool('logs_list', 'List recent log entries.', { limit: num('Max entries'), level: str('Filter by level') }),
-      executor: async (i) => { const a = await import('../logs-sdk/sdk-adapter') as any; const r = await a.listLogs(Number(i.limit || 20), i.level ? String(i.level) : undefined); return r?.length ? JSON.stringify(r, null, 2) : 'No logs.'; } },
+      executor: async (i) => { const { listLogs } = await import('../logs-sdk/sdk-adapter'); const r = await listLogs(Number(i.limit || 20), i.level ? String(i.level) : undefined); return r?.length ? JSON.stringify(r, null, 2) : 'No logs.'; } },
     { tool: mkTool('logs_stats', 'Get log statistics.', {}),
-      executor: async () => { const a = await import('../logs-sdk/sdk-adapter') as any; const r = await a.getStats(); return r ? JSON.stringify(r, null, 2) : 'No stats.'; } },
+      executor: async () => { const { getStats } = await import('../logs-sdk/sdk-adapter'); const r = await getStats(); return r ? JSON.stringify(r, null, 2) : 'No stats.'; } },
   ];
 }
 
@@ -186,26 +213,33 @@ function logsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function testersTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('testers_create', 'Create a QA test scenario.', { title: str('Scenario title'), url: str('URL to test'), steps: str('Test steps (JSON array or description)') }, ['title', 'url']),
-      executor: async (i) => { const a = await import('../testers/sdk-adapter') as any; const r = await a.createScenario({ title: String(i.title), url: String(i.url), steps: i.steps ? String(i.steps) : undefined }); return r ? `Scenario created: ${JSON.stringify(r)}` : 'Failed.'; } },
+      executor: async (i) => { const { createScenario } = await import('../testers/sdk-adapter'); const r = await createScenario({ title: String(i.title), url: String(i.url), steps: i.steps ? String(i.steps) : undefined }); return r ? `Scenario created: ${JSON.stringify(r)}` : 'Failed.'; } },
     { tool: mkTool('testers_list', 'List QA test scenarios.', {}),
-      executor: async () => { const a = await import('../testers/sdk-adapter') as any; const r = await a.listScenarios(); return r?.length ? JSON.stringify(r, null, 2) : 'No scenarios.'; } },
+      executor: async () => { const { listScenarios } = await import('../testers/sdk-adapter'); const r = await listScenarios(); return r?.length ? JSON.stringify(r, null, 2) : 'No scenarios.'; } },
     { tool: mkTool('testers_run', 'Run test scenarios.', { scenario_ids: str('Comma-separated scenario IDs (optional — all if omitted)') }),
-      executor: async (i) => { const a = await import('../testers/sdk-adapter') as any; const ids = i.scenario_ids ? String(i.scenario_ids).split(',').map(s => s.trim()) : undefined; const r = await a.runScenarios(ids); return r ? `Run started: ${JSON.stringify(r)}` : 'Failed to start run.'; } },
+      executor: async (i) => { const { runScenarios } = await import('../testers/sdk-adapter'); const ids = i.scenario_ids ? String(i.scenario_ids).split(',').map(s => s.trim()) : undefined; const r = await runScenarios(ids); return r ? `Run started: ${JSON.stringify(r)}` : 'Failed to start run.'; } },
     { tool: mkTool('testers_results', 'Get test run results.', { run_id: str('Run ID') }, ['run_id']),
-      executor: async (i) => { const a = await import('../testers/sdk-adapter') as any; const r = await a.getResults(String(i.run_id)); return r ? JSON.stringify(r, null, 2) : 'Results not found.'; } },
+      executor: async (i) => { const { getResults } = await import('../testers/sdk-adapter'); const r = await getResults(String(i.run_id)); return r ? JSON.stringify(r, null, 2) : 'Results not found.'; } },
   ];
 }
 
 // ─── Wallets ──────────────────────────────────────────────────────────────────
 
 function walletsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
+  const sdk = () => import('@hasna/wallets' as any) as Promise<any>;
   return [
     { tool: mkTool('wallets_balance', 'Get wallet balance.', {}),
-      executor: async () => { const a = await import('../wallets-sdk/sdk-adapter') as any; const r = await a.getBalance(); return r ? JSON.stringify(r, null, 2) : 'No balance info.'; } },
+      executor: async () => { const r = await (await sdk()).getBalance(); return r ? JSON.stringify(r, null, 2) : 'No balance info.'; } },
     { tool: mkTool('wallets_cards', 'List payment cards.', {}),
-      executor: async () => { const a = await import('../wallets-sdk/sdk-adapter') as any; const r = await a.listCards(); return r?.length ? JSON.stringify(r, null, 2) : 'No cards.'; } },
+      executor: async () => { const r = await (await sdk()).listCards(); return r?.length ? JSON.stringify(r, null, 2) : 'No cards.'; } },
     { tool: mkTool('wallets_transactions', 'List recent transactions.', { limit: num('Max results') }),
-      executor: async (i) => { const a = await import('../wallets-sdk/sdk-adapter') as any; const r = await a.listTransactions(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No transactions.'; } },
+      executor: async (i) => { const r = await (await sdk()).listTransactions(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No transactions.'; } },
+    { tool: mkTool('wallets_create_card', 'Create a new virtual payment card.', { label: str('Card label or purpose (optional)') }),
+      executor: async (i) => { const r = await (await sdk()).createCard(i.label ? { label: String(i.label) } : undefined); return r ? JSON.stringify(r, null, 2) : 'Card creation failed.'; } },
+    { tool: mkTool('wallets_card_details', 'Get details of a specific payment card.', { card_id: str('Card ID') }, ['card_id']),
+      executor: async (i) => { const r = await (await sdk()).getCardDetails(String(i.card_id)); return r ? JSON.stringify(r, null, 2) : 'Card not found.'; } },
+    { tool: mkTool('wallets_close_card', 'Close/deactivate a payment card.', { card_id: str('Card ID') }, ['card_id']),
+      executor: async (i) => { const r = await (await sdk()).closeCard(String(i.card_id)); return r ? 'Card closed.' : 'Close failed.'; } },
   ];
 }
 
@@ -213,14 +247,14 @@ function walletsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 
 function deploymentTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
-    { tool: mkTool('deploy_app', 'Deploy an application.', { project: str('Project name or path'), environment: str('Target environment (default: production)') }, ['project']),
-      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.deploy(String(i.project), String(i.environment || 'production')); return r ? JSON.stringify(r, null, 2) : 'Deploy failed.'; } },
-    { tool: mkTool('deploy_status', 'Get deployment status.', { deployment_id: str('Deployment ID') }, ['deployment_id']),
-      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.getDeploymentStatus(String(i.deployment_id)); return r ? JSON.stringify(r, null, 2) : 'Not found.'; } },
-    { tool: mkTool('deploy_list', 'List deployments.', { limit: num('Max results') }),
-      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.listDeployments(Number(i.limit || 10)); return r?.length ? JSON.stringify(r, null, 2) : 'No deployments.'; } },
-    { tool: mkTool('deploy_rollback', 'Rollback a deployment.', { deployment_id: str('Deployment ID') }, ['deployment_id']),
-      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.rollback(String(i.deployment_id)); return r ? 'Rollback initiated.' : 'Rollback failed.'; } },
+    { tool: mkTool('deploy_app', 'Deploy an application to a target environment.', { project_id: str('Project ID'), environment_id: str('Environment ID'), image: str('Container image (optional)'), commit_sha: str('Git commit SHA (optional)'), version: str('Version tag (optional)') }, ['project_id', 'environment_id']),
+      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.deploy({ projectId: String(i.project_id), environmentId: String(i.environment_id), image: i.image ? String(i.image) : undefined, commitSha: i.commit_sha ? String(i.commit_sha) : undefined, version: i.version ? String(i.version) : undefined }); return r ? JSON.stringify(r, null, 2) : 'Deploy failed.'; } },
+    { tool: mkTool('deploy_status', 'Get deployment status for a project environment.', { project_id: str('Project ID'), environment_id: str('Environment ID') }, ['project_id', 'environment_id']),
+      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.getDeploymentStatus(String(i.project_id), String(i.environment_id)); return r ? JSON.stringify(r, null, 2) : 'Not found.'; } },
+    { tool: mkTool('deploy_list', 'List deployments.', { project_id: str('Filter by project ID (optional)'), status: str('Filter by status (optional)') }),
+      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.listDeployments({ projectId: i.project_id ? String(i.project_id) : undefined, status: i.status ? String(i.status) : undefined }); return r?.length ? JSON.stringify(r, null, 2) : 'No deployments.'; } },
+    { tool: mkTool('deploy_rollback', 'Rollback a deployment.', { project_id: str('Project ID'), environment_id: str('Environment ID'), target_deployment_id: str('Target deployment ID to rollback to (optional)') }, ['project_id', 'environment_id']),
+      executor: async (i) => { const a = await import('../deployment/sdk-adapter') as any; const r = await a.rollback(String(i.project_id), String(i.environment_id), i.target_deployment_id ? String(i.target_deployment_id) : undefined); return r ? JSON.stringify(r, null, 2) : 'Rollback failed.'; } },
   ];
 }
 
@@ -228,12 +262,12 @@ function deploymentTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 
 function sandboxesTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
-    { tool: mkTool('sandbox_create', 'Create a cloud sandbox.', { template: str('Template or image name (optional)') }),
-      executor: async (i) => { const a = await import('../sandboxes/sdk-adapter') as any; const r = await a.createSandbox(i.template ? String(i.template) : undefined); return r ? JSON.stringify(r, null, 2) : 'Failed.'; } },
+    { tool: mkTool('sandbox_create', 'Create a cloud sandbox.', { image: str('Container image (optional)'), timeout: num('Timeout in seconds (optional)'), provider: str('Provider name (optional, default: local)') }),
+      executor: async (i) => { const a = await import('../sandboxes/sdk-adapter') as any; const r = await a.createSandbox({ image: i.image ? String(i.image) : undefined, timeout: i.timeout ? Number(i.timeout) : undefined, provider: i.provider ? String(i.provider) : undefined }); return r ? JSON.stringify(r, null, 2) : 'Failed.'; } },
     { tool: mkTool('sandbox_exec', 'Execute a command in a sandbox.', { sandbox_id: str('Sandbox ID'), command: str('Shell command') }, ['sandbox_id', 'command']),
       executor: async (i) => { const a = await import('../sandboxes/sdk-adapter') as any; const r = await a.execCommand(String(i.sandbox_id), String(i.command)); return r ?? 'Execution failed.'; } },
-    { tool: mkTool('sandbox_list', 'List active sandboxes.', {}),
-      executor: async () => { const a = await import('../sandboxes/sdk-adapter') as any; const r = await a.listSandboxes(); return r?.length ? JSON.stringify(r, null, 2) : 'No sandboxes.'; } },
+    { tool: mkTool('sandbox_list', 'List sandboxes.', { status: str('Filter by status (optional)'), provider: str('Filter by provider (optional)') }),
+      executor: async (i) => { const a = await import('../sandboxes/sdk-adapter') as any; const r = await a.listSandboxes({ status: i.status ? String(i.status) : undefined, provider: i.provider ? String(i.provider) : undefined }); return r?.length ? JSON.stringify(r, null, 2) : 'No sandboxes.'; } },
     { tool: mkTool('sandbox_delete', 'Delete a sandbox.', { sandbox_id: str('Sandbox ID') }, ['sandbox_id']),
       executor: async (i) => { const a = await import('../sandboxes/sdk-adapter') as any; await a.deleteSandbox(String(i.sandbox_id)); return 'Sandbox deleted.'; } },
   ];
@@ -300,6 +334,29 @@ function mcpsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   ];
 }
 
+// ─── Telephony SDK ───────────────────────────────────────────────────────────
+
+function telephonySdkTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
+  return [
+    { tool: mkTool('telephony_sdk_send_sms', 'Send an SMS via @hasna/telephony SDK.', { to: str('Recipient phone (E.164)'), body: str('Message text'), from: str('Sender phone (optional)') }, ['to', 'body']),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.sendSms({ to: String(i.to), body: String(i.body), from: i.from ? String(i.from) : undefined }); return r ? JSON.stringify(r, null, 2) : 'Failed to send SMS. Is @hasna/telephony installed?'; } },
+    { tool: mkTool('telephony_sdk_send_whatsapp', 'Send a WhatsApp message via @hasna/telephony SDK.', { to: str('Recipient phone (E.164)'), body: str('Message text'), from: str('Sender phone (optional)') }, ['to', 'body']),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.sendWhatsApp({ to: String(i.to), body: String(i.body), from: i.from ? String(i.from) : undefined }); return r ? JSON.stringify(r, null, 2) : 'Failed to send WhatsApp. Is @hasna/telephony installed?'; } },
+    { tool: mkTool('telephony_sdk_call', 'Make an outbound voice call via @hasna/telephony SDK.', { to: str('Phone number to call (E.164)'), from: str('Caller phone (optional)'), first_message: str('First message the AI says (optional)') }, ['to']),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.makeCall({ to: String(i.to), from: i.from ? String(i.from) : undefined, firstMessage: i.first_message ? String(i.first_message) : undefined }); return r ? JSON.stringify(r, null, 2) : 'Failed to make call. Is @hasna/telephony installed?'; } },
+    { tool: mkTool('telephony_sdk_calls', 'List recent calls via @hasna/telephony SDK.', { limit: num('Max results') }),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.listCalls({ limit: Number(i.limit || 20) }); return r?.length ? JSON.stringify(r, null, 2) : 'No calls found.'; } },
+    { tool: mkTool('telephony_sdk_messages', 'List recent SMS/WhatsApp messages via @hasna/telephony SDK.', { limit: num('Max results'), type: str('Filter: sms or whatsapp') }),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.listMessages({ limit: Number(i.limit || 20), type: i.type ? String(i.type) : undefined }); return r?.length ? JSON.stringify(r, null, 2) : 'No messages found.'; } },
+    { tool: mkTool('telephony_sdk_numbers', 'List phone numbers via @hasna/telephony SDK.', {}),
+      executor: async () => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.listPhoneNumbers(); return r?.length ? JSON.stringify(r, null, 2) : 'No numbers found.'; } },
+    { tool: mkTool('telephony_sdk_status', 'Get telephony system status via @hasna/telephony SDK.', {}),
+      executor: async () => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.getStatus(); return r ? JSON.stringify(r, null, 2) : 'Status unavailable. Is @hasna/telephony installed?'; } },
+    { tool: mkTool('telephony_sdk_end_call', 'End/hang up a call via @hasna/telephony SDK.', { call_sid: str('Call SID to end') }, ['call_sid']),
+      executor: async (i) => { const a = await import('../telephony/sdk-adapter') as any; const r = await a.endCall({ callSid: String(i.call_sid) }); return r ? JSON.stringify(r, null, 2) : 'Failed to end call.'; } },
+  ];
+}
+
 // ─── Configs ──────────────────────────────────────────────────────────────────
 
 function configsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
@@ -343,4 +400,5 @@ export function registerAllSdkTools(registry: ToolRegistry): void {
   reg(registry, implementationsTools());
   reg(registry, mcpsTools());
   reg(registry, configsTools());
+  reg(registry, telephonySdkTools());
 }

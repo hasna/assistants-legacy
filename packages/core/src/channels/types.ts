@@ -93,16 +93,3 @@ export interface ChannelOperationResult {
   channelId?: string;
 }
 
-// ============================================
-// Config Sub-types
-// ============================================
-
-export interface ChannelsInjectionConfig {
-  enabled?: boolean;
-  maxPerTurn?: number;
-}
-
-export interface ChannelsStorageConfig {
-  maxMessagesPerChannel?: number;
-  maxAgeDays?: number;
-}

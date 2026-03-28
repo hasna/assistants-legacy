@@ -39,6 +39,4 @@ export type {
   OrderItemStatus,
   StoreCategory,
   OrdersConfig,
-  OrdersInjectionConfig,
-  OrdersStorageConfig,
 } from './types';

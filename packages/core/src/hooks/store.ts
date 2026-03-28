@@ -29,6 +29,69 @@ function generateHookId(event: string, hook: HookHandler): string {
 }
 
 /**
+ * Row type returned from the hooks SQLite table
+ */
+type HookRow = {
+  id: string;
+  event: string;
+  matcher: string | null;
+  type: string;
+  name: string | null;
+  description: string | null;
+  command: string | null;
+  prompt: string | null;
+  model: string | null;
+  timeout: number | null;
+  async: number;
+  enabled: number;
+  status_message: string | null;
+  scope: string;
+  source: string;
+  cli_name: string | null;
+};
+
+/**
+ * SQL columns selected from the hooks table (shared across queries)
+ */
+const HOOK_SELECT_COLS = `id, event, matcher, type, name, description, command, prompt, model, timeout, async, enabled, status_message, scope, source, cli_name`;
+
+/**
+ * Convert a database row to a HookHandler object
+ */
+function rowToHandler(row: HookRow): HookHandler {
+  const handler: HookHandler = {
+    id: row.id,
+    type: row.type as HookHandler['type'],
+    enabled: row.enabled === 1,
+  };
+  if (row.name) handler.name = row.name;
+  if (row.description) handler.description = row.description;
+  if (row.command) handler.command = row.command;
+  if (row.prompt) handler.prompt = row.prompt;
+  if (row.model) handler.model = row.model;
+  if (row.timeout) handler.timeout = row.timeout;
+  if (row.async) handler.async = true;
+  if (row.status_message) handler.statusMessage = row.status_message;
+  if (row.cli_name) handler.cliName = row.cli_name;
+  if (row.source) handler.source = row.source;
+  return handler;
+}
+
+/**
+ * Convert a database row to a HookInfo object
+ */
+function rowToHookInfo(row: HookRow): HookInfo {
+  return {
+    id: row.id,
+    event: row.event as HookEvent,
+    matcher: row.matcher || undefined,
+    handler: rowToHandler(row),
+    location: row.scope as HookLocation,
+    filePath: '',
+  };
+}
+
+/**
  * Hook store - manages hook persistence using SQLite
  */
 export class HookStore {
@@ -42,26 +105,8 @@ export class HookStore {
     const merged: HookConfig = {};
 
     const rows = db.prepare(
-      `SELECT id, event, matcher, type, name, description, command, prompt, model, timeout, async, enabled, status_message, scope, source, cli_name
-       FROM hooks ORDER BY priority ASC, rowid ASC`
-    ).all() as Array<{
-      id: string;
-      event: string;
-      matcher: string | null;
-      type: string;
-      name: string | null;
-      description: string | null;
-      command: string | null;
-      prompt: string | null;
-      model: string | null;
-      timeout: number | null;
-      async: number;
-      enabled: number;
-      status_message: string | null;
-      scope: string;
-      source: string;
-      cli_name: string | null;
-    }>;
+      `SELECT ${HOOK_SELECT_COLS} FROM hooks ORDER BY priority ASC, rowid ASC`
+    ).all() as HookRow[];
 
     for (const row of rows) {
       const event = row.event;
@@ -69,21 +114,7 @@ export class HookStore {
         merged[event] = [];
       }
 
-      const handler: HookHandler = {
-        id: row.id,
-        type: row.type as HookHandler['type'],
-        enabled: row.enabled === 1,
-      };
-      if (row.name) handler.name = row.name;
-      if (row.description) handler.description = row.description;
-      if (row.command) handler.command = row.command;
-      if (row.prompt) handler.prompt = row.prompt;
-      if (row.model) handler.model = row.model;
-      if (row.timeout) handler.timeout = row.timeout;
-      if (row.async) handler.async = true;
-      if (row.status_message) handler.statusMessage = row.status_message;
-      if (row.cli_name) handler.cliName = row.cli_name;
-      if (row.source) handler.source = row.source;
+      const handler = rowToHandler(row);
 
       // Find or create a matcher group for this event + matcher pattern
       const matcherKey = row.matcher || undefined;
@@ -168,55 +199,12 @@ export class HookStore {
    */
   getHook(hookId: string): HookInfo | null {
     const db = getDatabase();
-
     const row = db.prepare(
-      `SELECT id, event, matcher, type, name, description, command, prompt, model, timeout, async, enabled, status_message, scope, source, cli_name
-       FROM hooks WHERE id = ?`
-    ).get(hookId) as {
-      id: string;
-      event: string;
-      matcher: string | null;
-      type: string;
-      name: string | null;
-      description: string | null;
-      command: string | null;
-      prompt: string | null;
-      model: string | null;
-      timeout: number | null;
-      async: number;
-      enabled: number;
-      status_message: string | null;
-      scope: string;
-      source: string;
-      cli_name: string | null;
-    } | undefined;
+      `SELECT ${HOOK_SELECT_COLS} FROM hooks WHERE id = ?`
+    ).get(hookId) as HookRow | undefined;
 
     if (!row) return null;
-
-    const handler: HookHandler = {
-      id: row.id,
-      type: row.type as HookHandler['type'],
-      enabled: row.enabled === 1,
-    };
-    if (row.name) handler.name = row.name;
-    if (row.description) handler.description = row.description;
-    if (row.command) handler.command = row.command;
-    if (row.prompt) handler.prompt = row.prompt;
-    if (row.model) handler.model = row.model;
-    if (row.timeout) handler.timeout = row.timeout;
-    if (row.async) handler.async = true;
-    if (row.status_message) handler.statusMessage = row.status_message;
-    if (row.cli_name) handler.cliName = row.cli_name;
-    if (row.source) handler.source = row.source;
-
-    return {
-      id: row.id,
-      event: row.event as HookEvent,
-      matcher: row.matcher || undefined,
-      handler,
-      location: row.scope as HookLocation,
-      filePath: '',
-    };
+    return rowToHookInfo(row);
   }
 
   /**
@@ -224,58 +212,11 @@ export class HookStore {
    */
   listHooks(): HookInfo[] {
     const db = getDatabase();
-    const hooks: HookInfo[] = [];
-
     const rows = db.prepare(
-      `SELECT id, event, matcher, type, name, description, command, prompt, model, timeout, async, enabled, status_message, scope, source, cli_name
-       FROM hooks ORDER BY priority ASC, rowid ASC`
-    ).all() as Array<{
-      id: string;
-      event: string;
-      matcher: string | null;
-      type: string;
-      name: string | null;
-      description: string | null;
-      command: string | null;
-      prompt: string | null;
-      model: string | null;
-      timeout: number | null;
-      async: number;
-      enabled: number;
-      status_message: string | null;
-      scope: string;
-      source: string;
-      cli_name: string | null;
-    }>;
+      `SELECT ${HOOK_SELECT_COLS} FROM hooks ORDER BY priority ASC, rowid ASC`
+    ).all() as HookRow[];
 
-    for (const row of rows) {
-      const handler: HookHandler = {
-        id: row.id,
-        type: row.type as HookHandler['type'],
-        enabled: row.enabled === 1,
-      };
-      if (row.name) handler.name = row.name;
-      if (row.description) handler.description = row.description;
-      if (row.command) handler.command = row.command;
-      if (row.prompt) handler.prompt = row.prompt;
-      if (row.model) handler.model = row.model;
-      if (row.timeout) handler.timeout = row.timeout;
-      if (row.async) handler.async = true;
-      if (row.status_message) handler.statusMessage = row.status_message;
-      if (row.cli_name) handler.cliName = row.cli_name;
-      if (row.source) handler.source = row.source;
-
-      hooks.push({
-        id: row.id,
-        event: row.event as HookEvent,
-        matcher: row.matcher || undefined,
-        handler,
-        location: row.scope as HookLocation,
-        filePath: '',
-      });
-    }
-
-    return hooks;
+    return rows.map(rowToHookInfo);
   }
 
   /**

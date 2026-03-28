@@ -158,7 +158,7 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_memory_access_log_timestamp ON memory_access_log(timestamp)`,
 
   // ============================================
-  // Contacts (from contacts/store.ts)
+  // Contacts (LEGACY — kept for migration compat; live data is in @hasna/contacts SDK ~/.contacts/contacts.db)
   // ============================================
   `CREATE TABLE IF NOT EXISTS contacts (
     id TEXT PRIMARY KEY,

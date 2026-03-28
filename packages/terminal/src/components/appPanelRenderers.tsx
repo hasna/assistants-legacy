@@ -663,20 +663,10 @@ export function renderActivePanel(ctx: PanelRenderContext): React.ReactElement |
     );
   }
 
-  // Contacts panel
+  // Contacts panel — uses @hasna/contacts SDK directly (no local manager needed)
   if (ctx.showContactsPanel) {
-    const contactsManager = ctx.activeSession?.client.getContactsManager?.();
-    if (!contactsManager) {
-      return (
-        <CloseOnAnyKeyPanel
-          message="Contacts system is not available."
-          onClose={() => ctx.setShowContactsPanel(false)}
-        />
-      );
-    }
     return (
       <ContactsPanel
-        manager={contactsManager}
         onClose={() => ctx.setShowContactsPanel(false)}
       />
     );

@@ -102,13 +102,6 @@ export class TwilioClient {
     return this.post(`/Accounts/${this.accountSid}/Calls/${callSid}.json`, body);
   }
 
-  /**
-   * Get call details
-   */
-  async getCall(callSid: string): Promise<TwilioApiResponse> {
-    return this.get(`/Accounts/${this.accountSid}/Calls/${callSid}.json`);
-  }
-
   // ============================================
   // SMS / WhatsApp
   // ============================================
@@ -152,51 +145,6 @@ export class TwilioClient {
    */
   async listPhoneNumbers(): Promise<TwilioApiResponse> {
     return this.get(`/Accounts/${this.accountSid}/IncomingPhoneNumbers.json`);
-  }
-
-  /**
-   * Get details for a specific phone number
-   */
-  async getPhoneNumber(phoneSid: string): Promise<TwilioApiResponse> {
-    return this.get(`/Accounts/${this.accountSid}/IncomingPhoneNumbers/${phoneSid}.json`);
-  }
-
-  /**
-   * Update a phone number's webhook URLs
-   */
-  async updatePhoneNumber(phoneSid: string, updates: {
-    voiceUrl?: string;
-    voiceMethod?: string;
-    smsUrl?: string;
-    smsMethod?: string;
-    statusCallback?: string;
-  }): Promise<TwilioApiResponse> {
-    const body = new URLSearchParams();
-
-    if (updates.voiceUrl) {
-      body.append('VoiceUrl', updates.voiceUrl);
-      body.append('VoiceMethod', updates.voiceMethod || 'POST');
-    }
-    if (updates.smsUrl) {
-      body.append('SmsUrl', updates.smsUrl);
-      body.append('SmsMethod', updates.smsMethod || 'POST');
-    }
-    if (updates.statusCallback) {
-      body.append('StatusCallback', updates.statusCallback);
-    }
-
-    return this.post(`/Accounts/${this.accountSid}/IncomingPhoneNumbers/${phoneSid}.json`, body);
-  }
-
-  // ============================================
-  // Account
-  // ============================================
-
-  /**
-   * Verify credentials by fetching account info
-   */
-  async verifyCredentials(): Promise<TwilioApiResponse> {
-    return this.get(`/Accounts/${this.accountSid}.json`);
   }
 
   // ============================================

@@ -19,8 +19,6 @@ import type {
 } from './types';
 
 export interface OrdersManagerOptions {
-  assistantId: string;
-  assistantName: string;
   config: OrdersConfig;
 }
 
@@ -33,10 +31,6 @@ export class OrdersManager {
     this.config = options.config;
     this.store = new OrderStore();
     this.lastInjectionTime = new Date().toISOString();
-  }
-
-  getStore(): OrderStore {
-    return this.store;
   }
 
   // ============================================
@@ -262,13 +256,9 @@ export class OrdersManager {
  * Create an OrdersManager from config
  */
 export function createOrdersManager(
-  assistantId: string,
-  assistantName: string,
+  _assistantId: string,
+  _assistantName: string,
   config: OrdersConfig
 ): OrdersManager {
-  return new OrdersManager({
-    assistantId,
-    assistantName,
-    config,
-  });
+  return new OrdersManager({ config });
 }

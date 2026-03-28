@@ -1,5 +1,8 @@
 /**
  * Sandboxes SDK adapter — lazy loader for @hasna/sandboxes
+ *
+ * Exposes: create, exec, list, delete
+ * Uses db/ functions for CRUD and providers/ for runtime operations.
  */
 
 let _lib: any | null = null;
@@ -8,58 +11,50 @@ async function lib(): Promise<any> {
   return _lib;
 }
 
-export async function createSandbox(args?: any): Promise<any> {
+export async function createSandbox(input: { image?: string; timeout?: number; provider?: string; project_id?: string }): Promise<any> {
   try {
-    return await (await lib()).createSandbox(args);
+    const mod = await lib();
+    // Create DB record first
+    const sandbox = mod.createSandbox({ image: input.image, timeout: input.timeout, provider: input.provider ?? 'local', project_id: input.project_id });
+    // Start via provider
+    const provider = mod.getProvider(sandbox.provider);
+    const providerSandbox = await provider.create({ image: input.image, timeout: input.timeout });
+    mod.updateSandbox(sandbox.id, { provider_sandbox_id: providerSandbox.id, status: 'running' });
+    return { ...sandbox, provider_sandbox_id: providerSandbox.id, status: 'running' };
   } catch {
     return null;
   }
 }
 
-export async function getSandbox(args?: any): Promise<any> {
+export async function execCommand(sandboxId: string, command: string): Promise<string | null> {
   try {
-    return await (await lib()).getSandbox(args);
+    const mod = await lib();
+    const sandbox = mod.getSandbox(sandboxId);
+    const provider = mod.getProvider(sandbox.provider);
+    const result = await provider.exec(sandbox.provider_sandbox_id ?? sandboxId, command);
+    return typeof result === 'string' ? result : JSON.stringify(result);
   } catch {
     return null;
   }
 }
 
-export async function listSandboxes(args?: any): Promise<any> {
+export async function listSandboxes(opts?: { status?: string; provider?: string; project_id?: string }): Promise<any[]> {
   try {
-    return await (await lib()).listSandboxes(args);
+    return (await lib()).listSandboxes(opts) ?? [];
   } catch {
     return [];
   }
 }
 
-export async function execCommand(args?: any): Promise<any> {
+export async function deleteSandbox(sandboxId: string): Promise<void> {
   try {
-    return await (await lib()).execCommand(args);
+    const mod = await lib();
+    const sandbox = mod.getSandbox(sandboxId);
+    // Stop in provider first, then remove DB record
+    const provider = mod.getProvider(sandbox.provider);
+    await provider.delete(sandbox.provider_sandbox_id ?? sandboxId).catch(() => {});
+    mod.deleteSandbox(sandboxId);
   } catch {
-    return null;
-  }
-}
-
-export async function readFile(args?: any): Promise<any> {
-  try {
-    return await (await lib()).readFile(args);
-  } catch {
-    return null;
-  }
-}
-
-export async function writeFile(args?: any): Promise<any> {
-  try {
-    return await (await lib()).writeFile(args);
-  } catch {
-    return null;
-  }
-}
-
-export async function deleteSandbox(args?: any): Promise<any> {
-  try {
-    return await (await lib()).deleteSandbox(args);
-  } catch {
-    return null;
+    // silent — sandbox may already be gone
   }
 }

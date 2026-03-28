@@ -56,6 +56,9 @@ export {
   registerTelephonyTools,
 } from './tools';
 
+// SDK adapter (lazy @hasna/telephony bridge)
+export * as telephonySdk from './sdk-adapter';
+
 // Types
 export type {
   TelephonyConfig,

@@ -6,6 +6,7 @@ import { generateId, sleep } from '@hasna/assistants-shared';
 import { getRuntime } from '../runtime';
 import { HookLogger } from './logger';
 import { backgroundProcessManager } from './background';
+import { writeInputToStdin, writeInputToStdinAsync } from './process-io';
 
 function killSpawnedProcess(proc: { kill: () => void }): void {
   proc.kill();
@@ -228,23 +229,8 @@ export class HookExecutor {
         stderr: 'pipe',
       });
 
-      // Write input as JSON to stdin (handle Web streams and Bun FileSink)
-      const inputData = new TextEncoder().encode(JSON.stringify(input));
-      const stdin = proc.stdin as unknown as {
-        getWriter?: () => { write: (chunk: Uint8Array) => Promise<void> | void; close: () => Promise<void> | void };
-        write?: (chunk: Uint8Array) => Promise<void> | void;
-        end?: () => Promise<void> | void;
-      } | null;
-      if (stdin?.getWriter) {
-        const writer = stdin.getWriter();
-        await writer.write(inputData);
-        await writer.close();
-      } else if (stdin?.write) {
-        await stdin.write(inputData);
-        if (stdin.end) {
-          await stdin.end();
-        }
-      }
+      // Write input as JSON to stdin
+      await writeInputToStdin(proc.stdin, input);
 
       // Set up timeout
       const timeoutId = setTimeout(killSpawnedProcess, timeout, proc);
@@ -311,23 +297,8 @@ export class HookExecutor {
       // Track the background process
       const bgId = backgroundProcessManager.track(hook.id || 'unknown', proc, timeout);
 
-      // Write input as JSON to stdin (don't await)
-      const inputData = new TextEncoder().encode(JSON.stringify(input));
-      const stdin = proc.stdin as unknown as {
-        getWriter?: () => { write: (chunk: Uint8Array) => Promise<void> | void; close: () => Promise<void> | void };
-        write?: (chunk: Uint8Array) => Promise<void> | void;
-        end?: () => Promise<void> | void;
-      } | null;
-      if (stdin?.getWriter) {
-        const writer = stdin.getWriter();
-        void Promise.resolve(writer.write(inputData)).then(() => writer.close()).catch((err) => {
-          console.error(`[Hook] Async hook stdin error (${hook.id || hook.command}):`, err);
-        });
-      } else if (stdin?.write) {
-        void Promise.resolve(stdin.write(inputData)).then(() => stdin.end?.()).catch((err) => {
-          console.error(`[Hook] Async hook stdin error (${hook.id || hook.command}):`, err);
-        });
-      }
+      // Write input as JSON to stdin (fire-and-forget for async hooks)
+      writeInputToStdinAsync(proc.stdin, input, hook.id || hook.command || 'unknown');
 
       // Set up cleanup when process exits
       void proc.exited.then((exitCode) => {

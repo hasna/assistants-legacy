@@ -23,6 +23,7 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import type { HookInput, HookOutput } from '@hasna/assistants-shared';
 import { getRuntime } from '../runtime';
 import { getDatabase } from '../database';
+import { writeInputToStdin } from './process-io';
 
 /**
  * CLI hook manifest returned by `hook-<name> --manifest`
@@ -273,22 +274,7 @@ export class HookCliBridge {
       const timeout = eventConfig?.timeout || 30000;
 
       // Write input as JSON to stdin
-      const inputData = new TextEncoder().encode(JSON.stringify(input));
-      const stdin = proc.stdin as unknown as {
-        getWriter?: () => { write: (chunk: Uint8Array) => Promise<void> | void; close: () => Promise<void> | void };
-        write?: (chunk: Uint8Array) => Promise<void> | void;
-        end?: () => Promise<void> | void;
-      } | null;
-      if (stdin?.getWriter) {
-        const writer = stdin.getWriter();
-        await writer.write(inputData);
-        await writer.close();
-      } else if (stdin?.write) {
-        await stdin.write(inputData);
-        if (stdin.end) {
-          await stdin.end();
-        }
-      }
+      await writeInputToStdin(proc.stdin, input);
 
       // Set up timeout
       const timeoutId = setTimeout(() => {

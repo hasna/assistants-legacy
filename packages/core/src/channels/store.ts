@@ -428,9 +428,7 @@ export class ChannelStore {
     return deleted;
   }
 
-  /**
-   * Close the database connection
-   */
+  /** No-op — database lifecycle managed by shared connection */
   close(): void { }
 
   // ============================================

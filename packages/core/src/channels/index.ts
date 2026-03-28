@@ -1,6 +1,12 @@
 /**
- * Channels module exports
- * Provides Slack-like channel collaboration for agents and people
+ * Channels module — local SQLite-backed channel collaboration for agents and people.
+ *
+ * NOT replaceable by @hasna/conversations SDK. The two systems serve different purposes:
+ *   - channels/ (this module): In-process, SQLite-persisted, with full CRUD, membership,
+ *     context injection, agent-pool multi-agent responses, @mention parsing, and a rich
+ *     terminal UI (ChannelsPanel). Used for collaboration within a single assistant instance.
+ *   - @hasna/conversations SDK: Cross-process DMs and spaces between independent agent sessions.
+ *     Thin wrappers registered as messages_spaces_* tools in tools/conversations.ts.
  */
 
 // Core manager
@@ -40,7 +46,5 @@ export type {
   ChannelStatus,
   ChannelMemberRole,
   ChannelsConfig,
-  ChannelsInjectionConfig,
-  ChannelsStorageConfig,
   MemberType,
 } from './types';

@@ -47,7 +47,7 @@ const result = await Bun.build({
           namespace: 'stub',
         }));
         // Stub optional @hasna/* SDK packages that lack dist (lazy-loaded at runtime)
-        build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs)$/ }, (args) => ({
+        build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs|telephony)$/ }, (args) => ({
           path: args.path,
           namespace: 'stub',
         }));

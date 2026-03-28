@@ -1,16 +1,15 @@
 /**
- * Contacts module
+ * Contacts module — fully backed by @hasna/contacts SDK
  *
- * Tools use the @hasna/contacts SDK adapter (sdk-adapter.ts).
- * Terminal UI panel uses the internal ContactsManager (manager.ts) for
- * synchronous access — can be migrated to async SDK in a future pass.
+ * The SDK handles all CRUD and storage (~/.contacts/contacts.db).
+ * sdk-adapter.ts provides async wrappers with lazy-loading.
+ * tools.ts provides LLM tool definitions and executors.
+ *
+ * Legacy: store.ts, manager.ts, types.ts are retained for backward
+ * compatibility but are no longer used by the main code paths.
  */
 
-// Internal manager — still used by terminal ContactsPanel
-export { ContactsStore } from './store';
-export { ContactsManager, createContactsManager } from './manager';
-
-// SDK adapter (used by tools)
+// SDK adapter (used by tools and ContactsPanel)
 export {
   createContact, getContact, getContactByEmail, listContacts, updateContact,
   deleteContact, searchContacts, archiveContact, unarchiveContact, mergeContacts, listRecentContacts,
@@ -31,7 +30,23 @@ export type {
   CreateCompanyInput, UpdateCompanyInput, CompanyListOptions,
 } from './sdk-adapter';
 
-// Internal types — used by terminal ContactsPanel
+// Tools
+export {
+  contactsTools,
+  contactsListTool, contactsGetTool, contactsCreateTool, contactsUpdateTool,
+  contactsDeleteTool, contactsSearchTool,
+  contactsGroupsListTool, contactsGroupsCreateTool, contactsGroupsDeleteTool,
+  contactsGroupsAddMemberTool, contactsGroupsRemoveMemberTool,
+  contactsCompaniesListTool, contactsCompaniesGetTool, contactsCompaniesCreateTool,
+  contactsCompaniesUpdateTool, contactsCompaniesDeleteTool,
+  contactsCompaniesSearchTool, contactsCompaniesEmployeesTool,
+  createContactsToolExecutors,
+  registerContactsTools,
+} from './tools';
+
+// Legacy exports — retained for backward compat, no longer actively used
+export { ContactsStore } from './store';
+export { ContactsManager, createContactsManager } from './manager';
 export type {
   Contact,
   ContactEmail,
@@ -46,17 +61,3 @@ export type {
   UpdateContactOptions,
   ContactsListOptions,
 } from './types';
-
-// Tools
-export {
-  contactsTools,
-  contactsListTool, contactsGetTool, contactsCreateTool, contactsUpdateTool,
-  contactsDeleteTool, contactsSearchTool,
-  contactsGroupsListTool, contactsGroupsCreateTool, contactsGroupsDeleteTool,
-  contactsGroupsAddMemberTool, contactsGroupsRemoveMemberTool,
-  contactsCompaniesListTool, contactsCompaniesGetTool, contactsCompaniesCreateTool,
-  contactsCompaniesUpdateTool, contactsCompaniesDeleteTool,
-  contactsCompaniesSearchTool, contactsCompaniesEmployeesTool,
-  createContactsToolExecutors,
-  registerContactsTools,
-} from './tools';

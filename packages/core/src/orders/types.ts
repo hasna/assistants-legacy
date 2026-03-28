@@ -120,16 +120,3 @@ export interface OrderOperationResult {
   itemId?: string;
 }
 
-// ============================================
-// Config Sub-types
-// ============================================
-
-export interface OrdersInjectionConfig {
-  enabled?: boolean;
-  maxPerTurn?: number;
-}
-
-export interface OrdersStorageConfig {
-  maxOrders?: number;
-  maxAgeDays?: number;
-}

@@ -6,7 +6,7 @@
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from '../tools/registry';
 import type { TelephonyManager } from './manager';
-import type { ContactsManager } from '../contacts/manager';
+import { searchContacts as sdkSearchContacts } from '../contacts/sdk-adapter';
 
 // ============================================
 // Tool Definitions
@@ -238,7 +238,7 @@ export const telephonyActiveCallsTool: Tool = {
 
 export function createTelephonyToolExecutors(
   getTelephonyManager: () => TelephonyManager | null,
-  getContactsManager?: () => ContactsManager | null
+  _getContactsManager?: () => unknown,
 ): Record<string, ToolExecutor> {
   return {
     telephony_send_sms: async (input) => {
@@ -282,19 +282,22 @@ export function createTelephonyToolExecutors(
       let to = String(input.to || '').trim();
       const contactName = String(input.contact_name || '').trim();
 
-      // Resolve contact name to phone number
-      if (!to && contactName && getContactsManager) {
-        const contacts = getContactsManager();
-        if (contacts) {
-          const results = contacts.searchContacts(contactName);
+      // Resolve contact name to phone number via @hasna/contacts SDK
+      if (!to && contactName) {
+        try {
+          const results = await sdkSearchContacts(contactName);
           if (results.length === 0) {
             return `Error: No contact found matching "${contactName}".`;
           }
           const match = results[0];
-          if (!match.primaryPhone) {
-            return `Error: Contact "${match.name}" has no phone number.`;
+          const phone = match.phones?.[0]?.number;
+          if (!phone) {
+            const name = match.display_name || `${match.first_name ?? ''} ${match.last_name ?? ''}`.trim() || match.id;
+            return `Error: Contact "${name}" has no phone number.`;
           }
-          to = match.primaryPhone;
+          to = phone;
+        } catch {
+          // SDK not available — fall through
         }
       }
 
@@ -564,9 +567,9 @@ export const telephonyTools: Tool[] = [
 export function registerTelephonyTools(
   registry: ToolRegistry,
   getTelephonyManager: () => TelephonyManager | null,
-  getContactsManager?: () => ContactsManager | null
+  _getContactsManager?: () => unknown,
 ): void {
-  const executors = createTelephonyToolExecutors(getTelephonyManager, getContactsManager);
+  const executors = createTelephonyToolExecutors(getTelephonyManager);
 
   for (const tool of telephonyTools) {
     registry.register(tool, executors[tool.name]);

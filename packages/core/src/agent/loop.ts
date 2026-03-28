@@ -103,7 +103,7 @@ import { createChannelsManager, registerChannelTools, ChannelAgentPool, type Cha
 import { createPeopleManager, registerPeopleTools, type PeopleManager } from '../people';
 import { createTelephonyManager, registerTelephonyTools, type TelephonyManager } from '../telephony';
 import { createOrdersManager, registerOrderTools, type OrdersManager } from '../orders';
-import { createContactsManager, registerContactsTools, type ContactsManager } from '../contacts';
+import { registerContactsTools } from '../contacts';
 import { registerSessionTools, type SessionContext, type SessionQueryFunctions } from '../sessions';
 import { generateSessionName } from '../sessions/auto-name';
 import { registerProjectTools, type ProjectToolContext } from '../tools/projects';
@@ -232,7 +232,7 @@ export class AssistantLoop {
   private peopleManager: PeopleManager | null = null;
   private telephonyManager: TelephonyManager | null = null;
   private ordersManager: OrdersManager | null = null;
-  private contactsManager: ContactsManager | null = null;
+  // [seneca] ContactsManager removed — contacts tools use @hasna/contacts SDK directly
   private memoryManager: GlobalMemoryManager | null = null;
   private memoryInjector: MemoryInjector | null = null;
   private contextInjector: ContextInjector | null = null;
@@ -673,7 +673,7 @@ export class AssistantLoop {
     if (this.config?.telephony?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
       this.telephonyManager = createTelephonyManager(assistantId, assistantName, this.config.telephony);
-      registerTelephonyTools(this.toolRegistry, () => this.telephonyManager, () => this.contactsManager);
+      registerTelephonyTools(this.toolRegistry, () => this.telephonyManager);
 
       // Start WebSocket stream server for Twilio media streams if voice bridge is available
       if (this.telephonyManager.getVoiceBridge()) {
@@ -693,13 +693,8 @@ export class AssistantLoop {
       registerOrderTools(this.toolRegistry, () => this.ordersManager);
     }
 
-    // Initialize contacts (always available)
-    try {
-      this.contactsManager = createContactsManager();
-    } catch {
-      // Contacts manager is non-critical
-    }
-    registerContactsTools(this.toolRegistry, () => this.contactsManager);
+    // Initialize contacts tools — backed by @hasna/contacts SDK (no local manager)
+    registerContactsTools(this.toolRegistry);
 
     // Initialize memory system if enabled
     const memoryConfig = this.config?.memory;
@@ -2790,8 +2785,9 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     return this.peopleManager;
   }
 
-  getContactsManager(): ContactsManager | null {
-    return this.contactsManager;
+  /** @deprecated Contacts now use @hasna/contacts SDK directly — no local manager */
+  getContactsManager(): null {
+    return null;
   }
 
   getTelephonyManager(): TelephonyManager | null {

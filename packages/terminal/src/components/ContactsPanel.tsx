@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import type { ContactsManager, ContactListItem, Contact, ContactGroup, ContactGroupRef } from '@hasna/assistants-core';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  listContacts as sdkListContacts,
+  getContact as sdkGetContact,
+  updateContact as sdkUpdateContact,
+  deleteContact as sdkDeleteContact,
+  searchContacts as sdkSearchContacts,
+  createContact as sdkCreateContact,
+  listGroups as sdkListGroups,
+  listContactsInGroup as sdkListContactsInGroup,
+} from '@hasna/assistants-core';
+import type { ContactWithDetails, Group } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 interface ContactsPanelProps {
-  manager: ContactsManager;
   onClose: () => void;
 }
 
@@ -20,15 +29,39 @@ type Mode =
   | 'groups'
   | 'group-view';
 
-export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
+/** Slim list item projected from ContactWithDetails */
+interface ContactListEntry {
+  id: string;
+  name: string;
+  company?: string;
+  primaryEmail?: string;
+  primaryPhone?: string;
+  favorite: boolean;
+  tags: string[];
+}
+
+function toListEntry(c: ContactWithDetails): ContactListEntry {
+  return {
+    id: c.id,
+    name: c.display_name || `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || c.id,
+    company: (c as any).company?.name,
+    primaryEmail: c.emails?.[0]?.address,
+    primaryPhone: c.phones?.[0]?.number,
+    favorite: c.is_favorite ?? false,
+    tags: c.tags?.map((t: any) => typeof t === 'string' ? t : t.name) ?? [],
+  };
+}
+
+export function ContactsPanel({ onClose }: ContactsPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
-  const [contacts, setContacts] = useState<ContactListItem[]>([]);
+  const [contacts, setContacts] = useState<ContactListEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // View state
-  const [viewContact, setViewContact] = useState<Contact | null>(null);
+  const [viewContact, setViewContact] = useState<ContactWithDetails | null>(null);
 
   // Create wizard state
   const [createName, setCreateName] = useState('');
@@ -40,33 +73,37 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Groups state
-  const [groups, setGroups] = useState<ContactGroup[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
-  const [viewGroup, setViewGroup] = useState<ContactGroup | null>(null);
-  const [groupMembers, setGroupMembers] = useState<ContactListItem[]>([]);
+  const [viewGroup, setViewGroup] = useState<Group | null>(null);
+  const [groupMembers, setGroupMembers] = useState<ContactListEntry[]>([]);
 
-  const loadContacts = () => {
+  const loadContacts = useCallback(async () => {
     try {
-      const list = manager.listContacts({ limit: 100 });
+      setLoading(true);
+      const result = await sdkListContacts({ limit: 100 });
+      const list = (result.contacts ?? result).map(toListEntry);
       setContacts(list);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const loadGroups = () => {
+  const loadGroups = useCallback(async () => {
     try {
-      const list = manager.listGroups();
+      const list = await sdkListGroups();
       setGroups(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadContacts();
-  }, []);
+  }, [loadContacts]);
 
   useEffect(() => {
     setSelectedIndex((prev) => Math.min(prev, Math.max(0, contacts.length - 1)));
@@ -106,11 +143,12 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
         }
       } else if (key.return && contacts.length > 0) {
         const c = contacts[selectedIndex];
-        const full = manager.getContact(c.id);
-        if (full) {
-          setViewContact(full);
-          setMode('view');
-        }
+        sdkGetContact(c.id).then((full) => {
+          if (full) {
+            setViewContact(full);
+            setMode('view');
+          }
+        });
       } else if (input === 'c') {
         setCreateName('');
         setCreateEmail('');
@@ -128,56 +166,60 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
         setMode('groups');
       } else if (input === 'f' && contacts.length > 0) {
         const c = contacts[selectedIndex];
-        const full = manager.getContact(c.id);
-        if (full) {
-          manager.updateContact(c.id, { favorite: !full.favorite });
-          setStatusMessage(full.favorite ? `Unfavorited ${c.name}` : `Favorited ${c.name}`);
-          loadContacts();
-        }
+        sdkGetContact(c.id).then((full) => {
+          if (full) {
+            const newFav = !(full.is_favorite ?? false);
+            sdkUpdateContact(c.id, { is_favorite: newFav } as any).then(() => {
+              setStatusMessage(newFav ? `Favorited ${c.name}` : `Unfavorited ${c.name}`);
+              loadContacts();
+            });
+          }
+        });
       } else if (input === 'r') {
-        loadContacts();
-        setStatusMessage('Refreshed');
+        loadContacts().then(() => setStatusMessage('Refreshed'));
       }
     } else if (mode === 'view') {
       if (input === 'f' && viewContact) {
-        manager.updateContact(viewContact.id, { favorite: !viewContact.favorite });
-        const updated = manager.getContact(viewContact.id);
-        if (updated) setViewContact(updated);
-        loadContacts();
+        const newFav = !(viewContact.is_favorite ?? false);
+        sdkUpdateContact(viewContact.id, { is_favorite: newFav } as any).then(() => {
+          sdkGetContact(viewContact.id).then((updated) => {
+            if (updated) setViewContact(updated);
+          });
+          loadContacts();
+        });
       }
     } else if (mode === 'delete-confirm') {
       if (input === 'y' && contacts.length > 0) {
         const c = contacts[selectedIndex];
-        const deleted = manager.deleteContact(c.id);
-        if (deleted) {
-          setStatusMessage(`Deleted ${c.name}`);
-          loadContacts();
-          if (selectedIndex >= contacts.length - 1) {
-            setSelectedIndex(Math.max(0, selectedIndex - 1));
+        sdkDeleteContact(c.id).then((deleted) => {
+          if (deleted) {
+            setStatusMessage(`Deleted ${c.name}`);
+            loadContacts();
+            if (selectedIndex >= contacts.length - 1) {
+              setSelectedIndex(Math.max(0, selectedIndex - 1));
+            }
+          } else {
+            setStatusMessage('Error deleting contact');
           }
-        } else {
-          setStatusMessage('Error deleting contact');
-        }
-        setMode('list');
+          setMode('list');
+        });
       } else if (input === 'n') {
         setMode('list');
       }
     } else if (mode === 'create-confirm') {
       if (input === 'y') {
-        try {
-          const contact = manager.createContact({
-            name: createName,
-            company: createCompany || undefined,
-            emails: createEmail ? [{ email: createEmail, label: 'personal', isPrimary: true }] : undefined,
-            phones: createPhone ? [{ phone: createPhone, label: 'mobile', isPrimary: true }] : undefined,
-          });
-          setStatusMessage(`Created ${contact.name}`);
+        sdkCreateContact({
+          display_name: createName,
+          emails: createEmail ? [{ address: createEmail, is_primary: true }] : undefined,
+          phones: createPhone ? [{ number: createPhone, is_primary: true }] : undefined,
+        }).then((contact) => {
+          setStatusMessage(`Created ${contact.display_name}`);
           setMode('list');
           loadContacts();
-        } catch (err) {
+        }).catch((err) => {
           setStatusMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
           setMode('list');
-        }
+        });
       } else if (input === 'n') {
         setMode('list');
       }
@@ -191,9 +233,10 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
       } else if (key.return && groups.length > 0) {
         const g = groups[selectedGroupIndex];
         setViewGroup(g);
-        const members = manager.getGroupMembers(g.id);
-        setGroupMembers(members);
-        setMode('group-view');
+        sdkListContactsInGroup(g.id).then((members) => {
+          setGroupMembers(members.map(toListEntry));
+          setMode('group-view');
+        });
       }
     }
   });
@@ -219,6 +262,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
       <text fg="blue"><b>Contacts</b></text>
       <text fg="gray"> | </text>
       <text fg="gray">{getHeaderHints()}</text>
+      {loading && <text fg="yellow"> (loading...)</text>}
     </box>
   );
 
@@ -249,15 +293,18 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
               onChange={setSearchQuery}
               onSubmit={() => {
                 if (searchQuery.trim()) {
-                  const results = manager.searchContacts(searchQuery.trim());
-                  setContacts(results);
-                  setSelectedIndex(0);
-                  setStatusMessage(`Found ${results.length} contact(s)`);
+                  sdkSearchContacts(searchQuery.trim()).then((results) => {
+                    setContacts(results.map(toListEntry));
+                    setSelectedIndex(0);
+                    setStatusMessage(`Found ${results.length} contact(s)`);
+                    setMode('list');
+                  });
                 } else {
-                  loadContacts();
-                  setStatusMessage(null);
+                  loadContacts().then(() => {
+                    setStatusMessage(null);
+                    setMode('list');
+                  });
                 }
-                setMode('list');
               }}
               focused
               placeholder="Search by name, email, company..."
@@ -270,64 +317,62 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
 
   // View contact detail
   if (mode === 'view' && viewContact) {
+    const displayName = viewContact.display_name || `${viewContact.first_name ?? ''} ${viewContact.last_name ?? ''}`.trim() || viewContact.id;
+    const isFav = viewContact.is_favorite ?? false;
     return (
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
           <text fg="blue"><b>
-            {viewContact.favorite ? '* ' : ''}{viewContact.name}
+            {isFav ? '* ' : ''}{displayName}
           </b></text>
           <text fg="gray">ID: {viewContact.id}</text>
           <text> </text>
-          {viewContact.company && <text>Company: {viewContact.company}</text>}
-          {viewContact.title && <text>Title: {viewContact.title}</text>}
+          {(viewContact as any).company?.name && <text>Company: {(viewContact as any).company.name}</text>}
+          {viewContact.job_title && <text>Title: {viewContact.job_title}</text>}
           {viewContact.birthday && <text>Birthday: {viewContact.birthday}</text>}
-          <text>Relationship: {viewContact.relationship}</text>
-          {viewContact.emails.length > 0 && (
+          {viewContact.emails && viewContact.emails.length > 0 && (
             <>
               <text> </text>
               <text><b>Emails:</b></text>
-              {viewContact.emails.map((e, i) => (
-                <text key={i}>  {e.email} ({e.label}){e.isPrimary ? ' [primary]' : ''}</text>
+              {viewContact.emails.map((e: any, i: number) => (
+                <text key={i}>  {e.address} ({e.label || 'personal'}){e.is_primary ? ' [primary]' : ''}</text>
               ))}
             </>
           )}
-          {viewContact.phones.length > 0 && (
+          {viewContact.phones && viewContact.phones.length > 0 && (
             <>
               <text> </text>
               <text><b>Phones:</b></text>
-              {viewContact.phones.map((p, i) => (
-                <text key={i}>  {p.phone} ({p.label}){p.isPrimary ? ' [primary]' : ''}</text>
+              {viewContact.phones.map((p: any, i: number) => (
+                <text key={i}>  {p.number} ({p.label || 'mobile'}){p.is_primary ? ' [primary]' : ''}</text>
               ))}
             </>
           )}
-          {viewContact.addresses.length > 0 && (
+          {viewContact.addresses && viewContact.addresses.length > 0 && (
             <>
               <text> </text>
               <text><b>Addresses:</b></text>
-              {viewContact.addresses.map((a, i) => {
-                const parts = [a.street, a.city, a.state, a.postalCode, a.country].filter(Boolean);
-                return <text key={i}>  {parts.join(', ')} ({a.label})</text>;
+              {viewContact.addresses.map((a: any, i: number) => {
+                const parts = [a.street, a.city, a.state, a.postal_code, a.country].filter(Boolean);
+                return <text key={i}>  {parts.join(', ')} ({a.label || 'home'})</text>;
               })}
             </>
           )}
-          {viewContact.social.length > 0 && (
+          {viewContact.social_profiles && viewContact.social_profiles.length > 0 && (
             <>
               <text> </text>
               <text><b>Social:</b></text>
-              {viewContact.social.map((s, i) => (
-                <text key={i}>  {s.platform}: {s.handle}</text>
+              {viewContact.social_profiles.map((s: any, i: number) => (
+                <text key={i}>  {s.platform}: {s.handle || s.url}</text>
               ))}
             </>
           )}
-          {viewContact.tags.length > 0 && (
+          {viewContact.tags && viewContact.tags.length > 0 && (
             <>
               <text> </text>
-              <text>Tags: {viewContact.tags.join(', ')}</text>
+              <text>Tags: {viewContact.tags.map((t: any) => typeof t === 'string' ? t : t.name).join(', ')}</text>
             </>
-          )}
-          {viewContact.groups.length > 0 && (
-            <text>Groups: {viewContact.groups.map((g: ContactGroupRef) => g.name).join(', ')}</text>
           )}
           {viewContact.notes && (
             <>
@@ -496,7 +541,6 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
                 <text attributes={i === selectedGroupIndex ? 1 : undefined} fg={i === selectedGroupIndex ? 'blue' : undefined}><b>
                   {g.name}
                 </b></text>
-                <text fg="gray"> ({g.memberCount} members)</text>
                 {g.description && <text fg="gray"> - {g.description}</text>}
               </box>
             ))}
@@ -514,7 +558,6 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
         <box paddingX={1} flexDirection="column">
           <text fg="blue"><b>{viewGroup.name}</b></text>
           {viewGroup.description && <text fg="gray">{viewGroup.description}</text>}
-          <text fg="gray">{viewGroup.memberCount} members</text>
           <text> </text>
           {groupMembers.length === 0 ? (
             <text fg="gray">No members in this group.</text>

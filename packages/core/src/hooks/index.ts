@@ -7,6 +7,7 @@ export { HookStore, type HookLocation, type HookInfo } from './store';
 export { HookCliBridge, type HookCliManifest } from './cli-bridge';
 export { HookLogger, type HookLogEntry } from './logger';
 export { BackgroundProcessManager, backgroundProcessManager } from './background';
+export { writeInputToStdin, writeInputToStdinAsync } from './process-io';
 export { HookTester, type HookTestResult } from './tester';
 export {
   hooksTools,

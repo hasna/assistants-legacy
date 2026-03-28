@@ -1,5 +1,8 @@
 /**
  * Deployment SDK adapter — lazy loader for @hasna/deployment
+ *
+ * Exposes: deploy, status, rollback, list
+ * Uses the lib/deployer.ts functions which handle provider dispatch internally.
  */
 
 let _lib: any | null = null;
@@ -8,50 +11,34 @@ async function lib(): Promise<any> {
   return _lib;
 }
 
-export async function deploy(args?: any): Promise<any> {
+export async function deploy(input: { projectId: string; environmentId: string; image?: string; commitSha?: string; version?: string; config?: Record<string, unknown> }): Promise<any> {
   try {
-    return await (await lib()).deploy(args);
+    return await (await lib()).deploy(input);
   } catch {
     return null;
   }
 }
 
-export async function getDeploymentStatus(args?: any): Promise<any> {
+export async function getDeploymentStatus(projectId: string, environmentId: string): Promise<any> {
   try {
-    return await (await lib()).getDeploymentStatus(args);
+    return await (await lib()).getStatus(projectId, environmentId);
   } catch {
     return null;
   }
 }
 
-export async function listDeployments(args?: any): Promise<any> {
+export async function rollback(projectId: string, environmentId: string, targetDeploymentId?: string): Promise<any> {
   try {
-    return await (await lib()).listDeployments(args);
+    return await (await lib()).rollback(projectId, environmentId, targetDeploymentId);
+  } catch {
+    return null;
+  }
+}
+
+export async function listDeployments(filters?: { projectId?: string; environmentId?: string; status?: string }): Promise<any[]> {
+  try {
+    return await (await lib()).listDeployments(filters) ?? [];
   } catch {
     return [];
-  }
-}
-
-export async function rollback(args?: any): Promise<any> {
-  try {
-    return await (await lib()).rollback(args);
-  } catch {
-    return null;
-  }
-}
-
-export async function listEnvironments(args?: any): Promise<any> {
-  try {
-    return await (await lib()).listEnvironments(args);
-  } catch {
-    return [];
-  }
-}
-
-export async function getDeploymentLogs(args?: any): Promise<any> {
-  try {
-    return await (await lib()).getDeploymentLogs(args);
-  } catch {
-    return null;
   }
 }
