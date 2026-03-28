@@ -227,13 +227,8 @@ export function ModelPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       {/* Header */}
-      <box marginBottom={1} justifyContent="space-between">
-        <text><b>Model Selector</b></text>
-        {assistantName ? (
-          <text fg="gray">{assistantName}</text>
-        ) : (
-          <text fg="gray">Active assistant</text>
-        )}
+      <box marginBottom={1}>
+        <text><b>Model Selector</b>{' — '}<span fg="gray">{assistantName || 'Active assistant'}</span></text>
       </box>
 
       <box marginBottom={1}>
@@ -266,7 +261,7 @@ export function ModelPanel({
       {/* Scroll indicator: above */}
       {visibleRange.hasMore.above > 0 && (
         <box paddingLeft={2}>
-          <text fg="gray">↑ {visibleRange.hasMore.above} more</text>
+          <text fg="gray">{`↑ ${visibleRange.hasMore.above} more`}</text>
         </box>
       )}
 
@@ -319,7 +314,7 @@ export function ModelPanel({
       {/* Scroll indicator: below */}
       {visibleRange.hasMore.below > 0 && (
         <box paddingLeft={2}>
-          <text fg="gray">↓ {visibleRange.hasMore.below} more</text>
+          <text fg="gray">{`↓ ${visibleRange.hasMore.below} more`}</text>
         </box>
       )}
 

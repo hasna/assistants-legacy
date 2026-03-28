@@ -30,7 +30,7 @@ export class PanelErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <box flexDirection="column" padding={1}>
-          <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+          <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
             <text fg="red"><b>
               {this.props.panelName || 'Panel'} Error
             </b></text>

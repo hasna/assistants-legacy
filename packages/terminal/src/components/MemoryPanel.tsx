@@ -116,7 +116,7 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
         <box marginBottom={1}>
           <text fg="cyan"><b>Memory Detail</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           <text><text fg="gray">Key:</text> {selected.key}</text>
           <text><text fg="gray">Scope:</text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
           <text><text fg="gray">Category:</text> {selected.category}</text>
@@ -159,7 +159,7 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
         </box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {sorted.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">No memories yet.</text>

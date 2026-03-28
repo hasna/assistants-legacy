@@ -6,6 +6,7 @@
 
 import { $ } from 'bun';
 import { existsSync } from 'fs';
+import { resolve } from 'path';
 
 const outdir = './dist';
 
@@ -88,6 +89,72 @@ if (content.includes('__promiseAll') && !content.includes('var __promiseAll')) {
     content = polyfill + content;
   }
   console.log('  Fixed __promiseAll bundler bug');
+}
+
+// ─── Fix OpenTUI native binary loading ─────────────────────────────────────
+// OpenTUI uses a dynamic import to load the platform-specific native binary:
+//   import(`@opentui/core-${process.platform}-${process.arch}/index.ts`)
+// This won't resolve when running from dist/ or from a global install.
+// We copy the native binary to dist/native/ and replace the dynamic import
+// with inline code that resolves the path using import.meta.dir.
+
+const platform = process.platform;
+const arch = process.arch;
+const platformPkg = `@opentui/core-${platform}-${arch}`;
+
+// Find the native binary — check multiple locations (hoisted, pnpm virtual store)
+const nativeLibName = platform === 'win32' ? 'opentui.dll' : platform === 'darwin' ? 'libopentui.dylib' : 'libopentui.so';
+
+let nativeLibSrc: string | undefined;
+
+// Strategy 1: hoisted node_modules (npm, yarn, bun install)
+const hoistedPath = resolve(`node_modules/${platformPkg}/${nativeLibName}`);
+if (existsSync(hoistedPath)) {
+  nativeLibSrc = hoistedPath;
+}
+
+// Strategy 2: pnpm virtual store — use shell find since Bun.Glob doesn't traverse .pnpm well
+if (!nativeLibSrc) {
+  try {
+    const findResult = await $`find node_modules/.pnpm -path "*/@opentui/core-${platform}-${arch}/${nativeLibName}" -type f 2>/dev/null | head -1`.text();
+    const found = findResult.trim();
+    if (found && existsSync(resolve(found))) {
+      nativeLibSrc = resolve(found);
+    }
+  } catch {}
+}
+
+// Strategy 3: nested inside @opentui/core's own node_modules (some package managers)
+if (!nativeLibSrc) {
+  const nestedPath = resolve(`node_modules/@opentui/core/node_modules/${platformPkg}/${nativeLibName}`);
+  if (existsSync(nestedPath)) {
+    nativeLibSrc = nestedPath;
+  }
+}
+
+if (nativeLibSrc && existsSync(nativeLibSrc)) {
+  // Copy native binary to dist/native/
+  await $`mkdir -p ${outdir}/native`;
+  await $`cp ${nativeLibSrc} ${outdir}/native/${nativeLibName}`;
+  console.log(`  Copied native binary: ${nativeLibName} → dist/native/`);
+
+  // Replace the dynamic import with inline path resolution
+  // The bundled code has: module=await import(`@opentui/core-${process.platform}-${process.arch}/index.ts`),targetLibPath=module.default
+  // We replace it with code that resolves to dist/native/libopentui.{ext}
+  // Uses import.meta.dir (Bun-specific) to resolve relative to the bundle location
+  const dynamicImportPattern = 'module=await import(`@opentui/core-${process.platform}-${process.arch}/index.ts`),targetLibPath=module.default';
+  const replacement = `module={default:import.meta.dir+"/native/${nativeLibName}"},targetLibPath=module.default`;
+
+  if (content.includes(dynamicImportPattern)) {
+    content = content.replace(dynamicImportPattern, replacement);
+    console.log('  Fixed OpenTUI native binary path resolution');
+  } else {
+    console.warn('  Warning: Could not find OpenTUI dynamic import pattern to replace');
+    console.warn('  The native binary was copied but path resolution may not work');
+  }
+} else {
+  console.warn(`  Warning: Native binary not found for ${platformPkg}`);
+  console.warn('  OpenTUI rendering may not work in the bundled output');
 }
 
 // Add shebang to the output if not present

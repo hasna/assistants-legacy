@@ -334,13 +334,10 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
 
   const tabBar = (
     <box marginBottom={1}>
-      {MAIN_TABS.map((entry, index) => (
-        <box key={entry} marginRight={1}>
-          <text attributes={tab === entry ? 32 : undefined}>
-            {`${index + 1}:${entry}`}
-          </text>
-        </box>
-      ))}
+      <text>{MAIN_TABS.map((entry, index) => {
+        const label = `${index + 1}:${entry}`;
+        return tab === entry ? <span key={entry} attributes={32}>{label}{'  '}</span> : <span key={entry}>{label}{'  '}</span>;
+      })}</text>
     </box>
   );
 
@@ -364,9 +361,8 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   }, [tab, viewMode]);
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <text fg="blue"><b>Orders</b></text>
-      <text fg="gray"> | {controls}</text>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text><span fg="blue"><b>Orders</b></span><span fg="gray">{` | ${controls}`}</span></text>
     </box>
   );
 
@@ -392,7 +388,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                   setCreateOrderStep('description');
                 }}
                 placeholder="Store name"
-                focus
+                focused
               />
             </box>
           ) : (
@@ -416,7 +412,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                     switchTab('orders');
                   }}
                   placeholder="Optional description"
-                  focus
+                  focused
                 />
               </box>
               <text fg="gray">Submit empty description to create without one.</text>
@@ -451,7 +447,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 switchTab('stores');
               }}
               placeholder="Store name"
-              focus
+              focused
             />
           </box>
         </box>
@@ -499,7 +495,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
             {items.length === 0 ? (
               <text fg="gray">No items.</text>
             ) : (
-              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
                 <text><b>{`${fit('NAME', 24)} ${fit('QTY', 4, 'right')} ${fit('UNIT', 12, 'right')} ${fit('TOTAL', 12, 'right')} ${fit('STATUS', 10)}`}</b></text>
                 {items.map((item) => {
                   const row = `${fit(item.name, 24)} ${fit(String(item.quantity), 4, 'right')} ${fit(formatCurrency(item.unitPrice, order.currency), 12, 'right')} ${fit(formatCurrency(item.totalPrice, order.currency), 12, 'right')} ${fit(item.status, 10)}`;
@@ -537,7 +533,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
             {recent.length === 0 ? (
               <text fg="gray">No orders for this store yet.</text>
             ) : (
-              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
                 <text><b>{`${fit('ID', 14)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</b></text>
                 {recent.slice(0, 20).map((order) => {
                   const row = `${fit(order.id, 14)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
@@ -581,7 +577,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
 
       {tab === 'orders' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           {filteredOrders.length === 0 ? (
             <text fg="gray">No orders for this filter. Press n to create an order.</text>
           ) : (
@@ -611,7 +607,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       ) : null}
 
       {tab === 'stores' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           {stores.length === 0 ? (
             <text fg="gray">No stores yet. Press a to add one.</text>
           ) : (
@@ -641,7 +637,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       ) : null}
 
       {tab === 'overview' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           <text><b>Summary</b></text>
           <text>{`Orders: ${orders.length}`}</text>
           <text>{`Stores: ${stores.length}`}</text>
@@ -652,8 +648,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
           ) : (
             STATUS_FILTERS.filter((status) => status !== 'all').map((status) => (
               <box key={status}>
-                <text fg={statusColor(status)}>{fit(status, 10)}</text>
-                <text>{overviewCounts[status] || 0}</text>
+                <text><span fg={statusColor(status)}>{fit(status, 10)}</span>{String(overviewCounts[status] || 0)}</text>
               </box>
             ))
           )}

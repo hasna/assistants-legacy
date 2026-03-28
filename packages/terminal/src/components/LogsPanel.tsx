@@ -178,7 +178,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
           <text fg="cyan"><b>Log Entry Details</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
           <box><text><b>Timestamp: </b></text><text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</text></box>
           <box><text><b>Severity: </b></text><text fg={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</text></box>
           <box><text><b>Event Type: </b></text><text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</text></box>
@@ -212,7 +212,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1} justifyContent="space-between">
         <text><b>Security Logs</b></text>
-        <text fg="gray">{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}</text>
+        <text fg="gray">{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</text>
       </box>
 
       {hasFilters && (
@@ -227,7 +227,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
         </box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {filteredEvents.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">
@@ -247,9 +247,8 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
             return (
               <box key={`${event.timestamp}-${index}`} paddingY={0}>
                 <text attributes={isSelected ? 32 : undefined}>
-                  <text fg={severityColor}>{icon.padEnd(2)}</text>
-                  {' '}
-                  {time.padEnd(8)} {event.eventType.padEnd(20)} {truncate(reason, 40)}
+                  <span fg={severityColor}>{icon.padEnd(2)}</span>
+                  {' '}{time.padEnd(8)}{' '}{event.eventType.padEnd(20)}{' '}{truncate(reason, 40)}
                 </text>
               </box>
             );

@@ -319,7 +319,7 @@ export function HooksPanel({
                 setIsGenerating(false);
               }
             }}
-            focus
+            focused
             placeholder="e.g. Block dangerous bash commands like rm -rf"
           />
         </box>
@@ -354,10 +354,10 @@ export function HooksPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
         height={Math.min(18, totalHooks + 4)}
-        overflowY="hidden"
+        overflow="hidden"
       >
         {/* Native Hooks Section */}
         {nativeHooks.length > 0 && (

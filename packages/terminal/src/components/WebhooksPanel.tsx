@@ -208,7 +208,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
       <text fg="cyan"><b>Webhooks</b></text>
       <text fg="gray"> | </text>
       <text fg="gray">
@@ -374,7 +374,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
                   setMode('create-source');
                 }
               }}
-              focus
+              focused
               placeholder="e.g., gmail-notifications"
             />
           </box>
@@ -400,7 +400,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
               onSubmit={() => {
                 setMode('create-confirm');
               }}
-              focus
+              focused
               placeholder="e.g., gmail, notion, github, custom"
             />
           </box>

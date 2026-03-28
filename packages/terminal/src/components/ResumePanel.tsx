@@ -112,7 +112,7 @@ export function ResumePanel({
         </text>
       </box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {filteredSessions.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">

@@ -67,7 +67,7 @@ function QuestionTabs({
 
         if (isCurrent) {
           return (
-            <text key={q.id} backgroundColor="blue" fg="white">
+            <text key={q.id} bg="blue" fg="white">
               {' '}{checkbox} {label}{' '}
             </text>
           );
@@ -80,7 +80,7 @@ function QuestionTabs({
       })}
       <box key="submit">
         {isSubmitTab ? (
-          <text backgroundColor="blue" fg="white"> {TICK} Submit </text>
+          <text bg="blue" fg="white"> {TICK} Submit </text>
         ) : (
           <text> {TICK} Submit </text>
         )}
@@ -491,8 +491,7 @@ export function InterviewPanel({
       flexDirection="column"
       borderStyle="rounded"
       borderColor="#d4d4d8"
-      borderLeft={false}
-      borderRight={false}
+      border={["top", "bottom"]}
       paddingX={1}
       marginY={0}
     >

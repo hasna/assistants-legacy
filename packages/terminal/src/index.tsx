@@ -13,35 +13,61 @@ import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
 import { parseArgs, main } from './cli/main';
 import { printExitSummary, getExitStats } from './exit-summary';
+import { setupThemeDefaults } from './theme/setup';
 
 // --- Graceful shutdown handling ---
 
 // Forward reference for worktree cleanup (initialized after arg parsing)
 let _worktreeCleanup: (() => void) | null = null;
 
+// Forward reference for the renderer — once set, signal handlers delegate to
+// renderer.destroy() so that OpenTUI can properly restore terminal state
+// (cursor visibility, raw mode, alternate screen) before we exit.
+let _renderer: import('@opentui/core').CliRenderer | null = null;
+
 function cleanup(): void {
   if (_worktreeCleanup) _worktreeCleanup();
   closeDatabase();
 }
 
+// Early signal handlers — active before the renderer is created (covers headless
+// mode and subcommand dispatch). Once the interactive renderer is created, these
+// delegate to renderer.destroy() which triggers the 'destroy' event where
+// cleanup() and process.exit() are called in the correct order.
 process.on('SIGINT', () => {
+  if (_renderer && !_renderer.isDestroyed) {
+    _renderer.destroy();
+    return;
+  }
   cleanup();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
+  if (_renderer && !_renderer.isDestroyed) {
+    _renderer.destroy();
+    return;
+  }
   cleanup();
   process.exit(0);
 });
 
 process.on('uncaughtException', (error) => {
   process.stderr.write(`Uncaught exception: ${error}\n`);
+  if (_renderer && !_renderer.isDestroyed) {
+    _renderer.destroy();
+    return;
+  }
   cleanup();
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
   process.stderr.write(`Unhandled rejection: ${reason}\n`);
+  if (_renderer && !_renderer.isDestroyed) {
+    _renderer.destroy();
+    return;
+  }
   cleanup();
   process.exit(1);
 });
@@ -814,7 +840,18 @@ if (options.print !== null) {
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
     useAlternateScreen: false,
+    // Disable renderer's built-in signal handling — our process-level handlers
+    // (above) delegate to renderer.destroy() which gives us control over the
+    // shutdown order: unmount React tree -> restore terminal -> cleanup -> exit.
+    exitSignals: [],
   });
+
+  // Store renderer reference so signal handlers can delegate to it
+  _renderer = renderer;
+
+  // [cassius] Patch default text fg color based on terminal theme (light/dark).
+  // Must run BEFORE root.render() so all <text> elements get the correct default.
+  setupThemeDefaults(renderer);
 
   const root = createRoot(renderer);
   root.render(appElement);

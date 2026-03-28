@@ -395,18 +395,17 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
   if (mode === 'index') {
     return (
       <box flexDirection="column" paddingY={1}>
-        <box justifyContent="space-between" marginBottom={1}>
-          <text fg="cyan"><b>Documentation</b></text>
-          <text fg="gray">{DOCS_SECTIONS.length} sections</text>
+        <box marginBottom={1}>
+          <text><span fg="cyan"><b>Documentation</b></span>{' — '}<span fg="gray">{`${DOCS_SECTIONS.length} sections`}</span></text>
         </box>
 
-        <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
+        <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
           <text fg="gray">Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</text>
           <text fg="gray">Close with q or Esc.</text>
           <box marginTop={1} />
 
           {sectionWindow.above > 0 && (
-            <text fg="gray">... {sectionWindow.above} more above</text>
+            <text fg="gray">{`... ${sectionWindow.above} more above`}</text>
           )}
 
           {DOCS_SECTIONS.slice(sectionWindow.start, sectionWindow.end).map((section, offset) => {
@@ -415,14 +414,14 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
             return (
               <box key={section.id} marginBottom={0}>
                 <text fg={selected ? 'cyan' : undefined}>
-                  {selected ? '>' : ' '} {absoluteIndex + 1}. {section.title}
+                  {`${selected ? '>' : ' '} ${absoluteIndex + 1}. ${section.title}`}
                 </text>
               </box>
             );
           })}
 
           {sectionWindow.below > 0 && (
-            <text fg="gray">... {sectionWindow.below} more below</text>
+            <text fg="gray">{`... ${sectionWindow.below} more below`}</text>
           )}
 
           <box marginTop={1} />
@@ -441,12 +440,11 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box justifyContent="space-between" marginBottom={1}>
-        <text fg="cyan"><b>{selectedSection.title}</b></text>
-        <text fg="gray">{selectedIndex + 1}/{DOCS_SECTIONS.length}</text>
+      <box marginBottom={1}>
+        <text><span fg="cyan"><b>{selectedSection.title}</b></span>{' — '}<span fg="gray">{`${selectedIndex + 1}/${DOCS_SECTIONS.length}`}</span></text>
       </box>
 
-      <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} paddingY={0}>
+      <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
         {visibleContent.length === 0 ? (
           <text fg="gray">No content.</text>
         ) : (
@@ -458,19 +456,12 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
         )}
       </box>
 
-      <box justifyContent="space-between" marginTop={1}>
-        <text fg="gray">
-          Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom
-        </text>
-        <text fg="gray">
-          [b/Esc] index  [[/]] section  [q] close
-        </text>
+      <box marginTop={1}>
+        <text fg="gray">Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom  [b/Esc] index  [[/]] section  [q] close</text>
       </box>
 
       <box marginTop={0}>
-        <text fg="gray">
-          Lines {Math.min(sectionLines.length, clampedScroll + 1)}-{Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of {sectionLines.length}
-        </text>
+        <text fg="gray">{`Lines ${Math.min(sectionLines.length, clampedScroll + 1)}-${Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of ${sectionLines.length}`}</text>
       </box>
     </box>
   );

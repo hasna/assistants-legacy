@@ -597,7 +597,7 @@ export function OnboardingPanel({
                 setApiKeyValidated(false);
               }}
               onSubmit={submitApiKey}
-              focus
+              focused
               placeholder={selectedProvider === 'anthropic' ? 'sk-ant-...' : 'api-key'}
             />
         </box>

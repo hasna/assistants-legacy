@@ -444,7 +444,7 @@ export function SkillsPanel({
           </b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Step 1: Scope selection */}
           {createStep === 'scope' && (
             <box flexDirection="column">
@@ -495,7 +495,7 @@ export function SkillsPanel({
                   onSubmit={() => {
                     if (createName.trim()) setCreateStep('description');
                   }}
-                  focus
+                  focused
                   placeholder="e.g. my-helper"
                 />
               </box>
@@ -514,7 +514,7 @@ export function SkillsPanel({
                   value={createDescription}
                   onChange={setCreateDescription}
                   onSubmit={() => setCreateStep('tools')}
-                  focus
+                  focused
                   placeholder="What does this skill do?"
                 />
               </box>
@@ -533,7 +533,7 @@ export function SkillsPanel({
                   value={createTools}
                   onChange={setCreateTools}
                   onSubmit={() => setCreateStep('hint')}
-                  focus
+                  focused
                   placeholder="e.g. bash, filesystem"
                 />
               </box>
@@ -552,7 +552,7 @@ export function SkillsPanel({
                   value={createHint}
                   onChange={setCreateHint}
                   onSubmit={() => setCreateStep('content')}
-                  focus
+                  focused
                   placeholder="e.g. [filename] [options]"
                 />
               </box>
@@ -571,7 +571,7 @@ export function SkillsPanel({
                   value={createContent}
                   onChange={setCreateContent}
                   onSubmit={() => setCreateStep('confirm')}
-                  focus
+                  focused
                   placeholder="Instructions for the skill (or leave empty for default template)"
                 />
               </box>
@@ -671,7 +671,7 @@ export function SkillsPanel({
           <text fg="cyan"><b>Skill Details</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
           <box><text><b>Name: </b></text><text fg="cyan">{s.name}</text></box>
           <box><text><b>Scope: </b></text><text>{scope}</text>{s.source && <text fg="gray"> ({s.source})</text>}{s.version && <text fg="gray"> v{s.version}</text>}</box>
           {s.description && <box><text><b>Description: </b></text><text>{s.description}</text></box>}
@@ -734,7 +734,7 @@ export function SkillsPanel({
         </text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {sortedSkills.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">No skills loaded. Press n to create one.</text>

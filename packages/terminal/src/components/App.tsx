@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAppContext, useTerminalDimensions } from '@opentui/react';
+import { useDetectTheme, ThemeProvider } from '../hooks/useThemeColor';
 import { join } from 'path';
 import { homedir } from 'os';
 import { SessionRegistry, SessionStorage, findRecoverableSessions, clearRecoveryState, ConnectorBridge, AudioRecorder, ElevenLabsSTT, WhisperSTT, readHeartbeatHistoryBySession, type SessionInfo, type RecoverableSession, type CreateSessionOptions, type Identity, type Memory, type MemoryStats, type Heartbeat, type SavedSessionInfo } from '@hasna/assistants-core';
@@ -274,8 +275,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const [showResumePanel, setShowResumePanel] = useState(false);
   const [resumeSessions, setResumeSessions] = useState<SavedSessionInfo[]>([]);
   const [resumeFilter, setResumeFilter] = useState<'cwd' | 'all'>('cwd');
-  const [staticResetKey, setStaticResetKey] = useState(0);
-  const [staticMessages, setStaticMessages] = useState<DisplayMessage[]>([]);
+  // [cato] Removed staticResetKey and staticMessages — dead code from Ink <Static> removal
 
   // Per-session UI state stored by session ID
   const sessionUIStates = useRef<Map<string, SessionUIState>>(new Map());
@@ -1052,8 +1052,6 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     process.stdout.write(CLEAR_SCREEN_TOKEN);
     cachedDisplayMessagesRef.current.clear();
     staticMessageIdsRef.current.clear();
-    setStaticMessages([]);
-    setStaticResetKey((prev) => prev + 1);
   }, []);
 
   const isConnectorInstallCommand = useCallback((command: unknown): boolean => {

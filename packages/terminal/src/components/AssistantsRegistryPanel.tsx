@@ -139,7 +139,7 @@ export function AssistantsRegistryPanel({
           <text fg="gray">{selectedIndex + 1} of {sortedAssistants.length}</text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Identity */}
           <box marginBottom={1} flexDirection="column">
             <box>
@@ -289,10 +289,10 @@ export function AssistantsRegistryPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           height={Math.min(14, sortedAssistants.length + 2)}
-          overflowY="hidden"
+          overflow="hidden"
         >
           {sortedAssistants.length === 0 ? (
             <box paddingY={1}>
@@ -339,7 +339,7 @@ export function AssistantsRegistryPanel({
         </text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Summary Stats */}
         <box marginBottom={1} flexDirection="column">
           <box>

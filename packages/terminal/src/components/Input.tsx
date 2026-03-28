@@ -798,7 +798,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       {/* Assistant name badge above the input box */}
       {assistantName && (
         <box justifyContent="flex-end" marginBottom={0}>
-          <text backgroundColor={getAssistantColor(assistantName)} fg="whiteBright"><b> {assistantName} </b></text>
+          <text bg={getAssistantColor(assistantName)} fg="whiteBright"><b> {assistantName} </b></text>
         </box>
       )}
 
@@ -806,8 +806,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderLeft={false}
-        borderRight={false}
+        border={["top", "bottom"]}
         borderColor="#d4d4d8"
       >
         {/* Recording indicator */}
@@ -830,7 +829,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             </box>
             {partialTranscript ? (
               <box>
-                <text fg="cyan" fg="gray">{'> '}</text>
+                <text fg="gray">{'> '}</text>
                 <text fg="white"><i>{partialTranscript}</i></text>
               </box>
             ) : null}

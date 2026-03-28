@@ -91,7 +91,7 @@ export function SwarmPanel({
         <StatusBadge status={state.status} />
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Goal */}
         {state.plan?.goal && (
           <box marginBottom={1}>

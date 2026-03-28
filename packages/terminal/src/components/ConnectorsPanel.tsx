@@ -517,7 +517,7 @@ export function ConnectorsPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -551,7 +551,7 @@ export function ConnectorsPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -642,7 +642,7 @@ export function ConnectorsPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
         >
           <box paddingY={1} flexDirection="column">
@@ -788,7 +788,7 @@ export function ConnectorsPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
       >
         {filteredConnectors.length === 0 ? (

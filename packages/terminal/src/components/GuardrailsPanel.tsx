@@ -383,7 +383,7 @@ export function GuardrailsPanel({
         <box marginBottom={1}>
           <text fg="red"><b>Delete {deleteTarget.type === 'policy' ? 'Policy' : 'Rule'}</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text>Are you sure you want to delete this {deleteTarget.type}?</text>
           <text fg="gray">{deleteTarget.label}</text>
           <text fg="gray">This action cannot be undone.</text>
@@ -400,7 +400,7 @@ export function GuardrailsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}><text><b>Create New Policy</b></text></box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box>
             <text fg="gray">Name: </text>
             <text attributes={createField === 0 ? 32 : undefined}>{createName || ' '}</text>
@@ -432,7 +432,7 @@ export function GuardrailsPanel({
           <text><b>Add Tool Rule</b></text>
           {detailPolicy && <text fg="gray"> to {detailPolicy.name || detailPolicy.id}</text>}
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box>
             <text fg="gray">Pattern: </text>
             <text attributes={ruleField === 0 ? 32 : undefined}>{rulePattern || ' '}</text>
@@ -470,7 +470,7 @@ export function GuardrailsPanel({
           <text fg={SCOPE_COLORS[detailPolicy.scope]}>{detailPolicy.scope}</text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box><text fg="gray">ID: </text><text>{detailPolicy.id}</text></box>
           <box><text fg="gray">Location: </text><text>{detailPolicy.location}</text></box>
           {detailPolicy.policy.tools && (
@@ -487,7 +487,7 @@ export function GuardrailsPanel({
         <box marginTop={1} marginBottom={0}>
           <text fg="gray"><b>Tool Rules ({detailRules.length})</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} height={Math.min(8, detailRules.length + 2)} overflowY="hidden">
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} height={Math.min(8, detailRules.length + 2)} overflow="hidden">
           {detailRules.length === 0 ? (
             <box paddingY={0}><text fg="gray">{isSystem ? 'No tool rules.' : 'No tool rules. Press a to add one.'}</text></box>
           ) : (
@@ -523,7 +523,7 @@ export function GuardrailsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}><text><b>Select Preset Policy</b></text></box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box marginBottom={1}>
             <text fg="green"><b>1.</b></text>
             <text> Permissive - Allow most, warn on dangerous</text>
@@ -548,7 +548,7 @@ export function GuardrailsPanel({
           <text><b>Policies</b></text>
           <text fg="gray">{policies.length} polic{policies.length !== 1 ? 'ies' : 'y'}</text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} height={Math.min(12, policies.length + 2)} overflowY="hidden">
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} height={Math.min(12, policies.length + 2)} overflow="hidden">
           {policies.length === 0 ? (
             <box paddingY={1}><text fg="gray">No policies. Press n to create one.</text></box>
           ) : (
@@ -596,7 +596,7 @@ export function GuardrailsPanel({
           <text><b>Tool Rules</b></text>
           <text fg="gray">{toolRules.length} rule{toolRules.length !== 1 ? 's' : ''}</text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} height={Math.min(12, toolRules.length + 2)} overflowY="hidden">
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} height={Math.min(12, toolRules.length + 2)} overflow="hidden">
           {toolRules.length === 0 ? (
             <box paddingY={1}><text fg="gray">No tool rules configured.</text></box>
           ) : (
@@ -643,7 +643,7 @@ export function GuardrailsPanel({
         <text><b>Guardrails</b></text>
         <text fg={config.enabled ? 'green' : 'red'}>{config.enabled ? 'Enabled' : 'Disabled'}</text>
       </box>
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
         <box marginBottom={1}>
           <text><b>Status: </b></text>
           <text fg={config.enabled ? 'green' : 'red'}>

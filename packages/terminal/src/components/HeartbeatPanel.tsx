@@ -100,7 +100,7 @@ export function HeartbeatPanel({
     return (
       <box flexDirection="column">
         <text><b>Heartbeat Run Details</b></text>
-        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           <text>{JSON.stringify(selectedRun, null, 2)}</text>
         </box>
         <box marginTop={1}>
@@ -125,7 +125,7 @@ export function HeartbeatPanel({
         )}
       </box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {sortedRuns.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">No heartbeat runs recorded yet.</text>

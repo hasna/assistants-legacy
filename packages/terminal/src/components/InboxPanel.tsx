@@ -313,7 +313,7 @@ export function InboxPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -342,7 +342,7 @@ export function InboxPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -373,7 +373,7 @@ export function InboxPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -461,7 +461,7 @@ export function InboxPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
       >
         {emailRange.hasMore.above > 0 && (

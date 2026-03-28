@@ -386,7 +386,7 @@ export function TasksPanel({
           <text fg="cyan"><b>Add New Task</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
           {/* Description field */}
           <box>
             <text attributes={isFieldActive('description') ? 32 : undefined} fg={isFieldActive('description') ? 'cyan' : undefined}>
@@ -397,7 +397,7 @@ export function TasksPanel({
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={() => setCreateField('priority')}
-                focus
+                focused
                 placeholder="What needs to be done..."
               />
             ) : (
@@ -602,7 +602,7 @@ export function TasksPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
       >
         {tasks.length === 0 ? (
@@ -662,7 +662,7 @@ export function TasksPanel({
         const elapsed = getElapsed();
 
         return (
-          <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+          <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
             <text wrapMode="word"><b>{task.description}</b></text>
 
             {/* Timestamps and elapsed time */}

@@ -270,7 +270,7 @@ export function BudgetsPanel({
                 onSubmit={() => {
                   if (newName.trim()) setCreateStep('description');
                 }}
-                focus
+                focused
                 placeholder="e.g. Deep Work"
               />
             </box>
@@ -295,7 +295,7 @@ export function BudgetsPanel({
                   if (!newName.trim()) return;
                   setCreateStep('configure');
                 }}
-                focus
+                focused
                 placeholder="Optional"
               />
             </box>
@@ -384,7 +384,7 @@ export function BudgetsPanel({
         <text fg="gray">[n]ew [e]dit [d]elete</text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {profiles.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">No budget profiles. Press n to create one.</text>
@@ -395,7 +395,7 @@ export function BudgetsPanel({
             const isActive = profile.id === activeProfileId;
             return (
               <box key={profile.id} paddingY={0}>
-                <text attributes={isSelected ? 32 : undefined} fg={isActive ? 'green' : undefined} fg={!isSelected && !isActive ? "gray" : undefined}>
+                <text attributes={isSelected ? 32 : undefined} fg={isSelected ? undefined : isActive ? 'green' : "gray"}>
                   {isActive ? '*' : ' '} {index + 1}. {profile.name.padEnd(22)} {profile.description || ''}
                 </text>
               </box>

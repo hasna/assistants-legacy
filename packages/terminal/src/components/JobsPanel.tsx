@@ -349,16 +349,10 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
 
   const tabLabel = (
     <box marginBottom={1}>
-      {FILTER_TABS.map((tab, index) => (
-        <box key={tab} marginRight={1}>
-          <text fg={index === filterIndex ? 'cyan' : 'gray'}>
-            {index + 1}:{tab}
-          </text>
-        </box>
-      ))}
-      <text fg="gray">
-        ({jobs.length} total, {jobs.filter((job) => isActiveStatus(job.status)).length} active)
-      </text>
+      <text>{FILTER_TABS.map((tab, index) => {
+        const label = `${index + 1}:${tab}`;
+        return <span key={tab} fg={index === filterIndex ? 'cyan' : 'gray'}>{label}{'  '}</span>;
+      })}<span fg="gray">{`(${jobs.length} total, ${jobs.filter((job) => isActiveStatus(job.status)).length} active)`}</span></text>
     </box>
   );
 
@@ -372,8 +366,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
           <text>ID: {detailJob.id}</text>
         </box>
         <text>
-          Status:{' '}
-          <text fg={statusColor(detailJob.status)}>{statusBadge(detailJob.status)}</text>
+          {'Status: '}<span fg={statusColor(detailJob.status)}>{statusBadge(detailJob.status)}</span>
         </text>
         <text>Connector: {detailJob.connectorName}</text>
         <text>Command: {detailJob.command}</text>
@@ -381,7 +374,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
         <text>Created: {new Date(detailJob.createdAt).toLocaleString()}</text>
         <text>Started: {detailJob.startedAt ? new Date(detailJob.startedAt).toLocaleString() : '-'}</text>
         <text>Completed: {detailJob.completedAt ? new Date(detailJob.completedAt).toLocaleString() : '-'}</text>
-        <text>Timeout: {Math.round(detailJob.timeoutMs / 1000)}s</text>
+        <text>{`Timeout: ${Math.round(detailJob.timeoutMs / 1000)}s`}</text>
         <text>Duration: {formatDuration(detailJob)}</text>
         {resultPreview && (
           <box marginTop={1} flexDirection="column">
@@ -426,31 +419,19 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
       )}
 
       {windowed.above > 0 && (
-        <text fg="gray">... {windowed.above} above ...</text>
+        <text fg="gray">{`... ${windowed.above} above ...`}</text>
       )}
       {visibleRows.map((job, idx) => {
         const absolute = windowed.start + idx;
         const selected = absolute === selectedIndex;
         return (
           <box key={job.id}>
-            <text fg={selected ? 'cyan' : 'gray'}>{selected ? '>' : ' '}</text>
-            <text> </text>
-            <text fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</text>
-            <text> </text>
-            <text>{fit(job.id, 16)}</text>
-            <text> </text>
-            <text>{fit(job.connectorName, 14)}</text>
-            <text> </text>
-            <text>{fit(formatRelativeTime(job.createdAt), 6, 'right')}</text>
-            <text> </text>
-            <text>{fit(formatDuration(job), 6, 'right')}</text>
-            <text> </text>
-            <text>{truncateText(job.command, 28)}</text>
+            <text><span fg={selected ? 'cyan' : 'gray'}>{selected ? '>' : ' '}</span>{' '}<span fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</span>{' '}{fit(job.id, 16)}{' '}{fit(job.connectorName, 14)}{' '}{fit(formatRelativeTime(job.createdAt), 6, 'right')}{' '}{fit(formatDuration(job), 6, 'right')}{' '}{truncateText(job.command, 28)}</text>
           </box>
         );
       })}
       {windowed.below > 0 && (
-        <text fg="gray">... {windowed.below} below ...</text>
+        <text fg="gray">{`... ${windowed.below} below ...`}</text>
       )}
 
       {error && (

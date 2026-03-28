@@ -188,7 +188,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
       <text fg="green"><b>People</b></text>
       <text fg="gray"> | </text>
       <text fg="gray">{getHeaderHints()}</text>
@@ -302,7 +302,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               onSubmit={() => {
                 if (createName.trim()) setMode('create-email');
               }}
-              focus
+              focused
               placeholder="e.g., Jane Smith"
             />
           </box>
@@ -326,7 +326,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               value={createEmail}
               onChange={setCreateEmail}
               onSubmit={() => setMode('create-phone')}
-              focus
+              focused
               placeholder="(optional) e.g., jane@example.com"
             />
           </box>
@@ -351,7 +351,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               value={createPhone}
               onChange={setCreatePhone}
               onSubmit={() => setMode('create-role')}
-              focus
+              focused
               placeholder="(optional) e.g., +1-555-123-4567"
             />
           </box>
@@ -377,7 +377,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               value={createRole}
               onChange={setCreateRole}
               onSubmit={() => setMode('create-notes')}
-              focus
+              focused
               placeholder="(optional) e.g., Developer, Manager"
             />
           </box>
@@ -404,7 +404,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
               value={createNotes}
               onChange={setCreateNotes}
               onSubmit={() => setMode('create-confirm')}
-              focus
+              focused
               placeholder="(optional) Any notes about this person"
             />
           </box>

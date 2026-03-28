@@ -215,7 +215,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
       <text fg="blue"><b>Contacts</b></text>
       <text fg="gray"> | </text>
       <text fg="gray">{getHeaderHints()}</text>
@@ -259,7 +259,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
                 }
                 setMode('list');
               }}
-              focus
+              focused
               placeholder="Search by name, email, company..."
             />
           </box>
@@ -373,7 +373,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
               onSubmit={() => {
                 if (createName.trim()) setMode('create-email');
               }}
-              focus
+              focused
               placeholder="e.g., John Doe"
             />
           </box>
@@ -397,7 +397,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
               value={createEmail}
               onChange={setCreateEmail}
               onSubmit={() => setMode('create-phone')}
-              focus
+              focused
               placeholder="(optional) e.g., john@example.com"
             />
           </box>
@@ -422,7 +422,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
               value={createPhone}
               onChange={setCreatePhone}
               onSubmit={() => setMode('create-company')}
-              focus
+              focused
               placeholder="(optional) e.g., +1-555-123-4567"
             />
           </box>
@@ -448,7 +448,7 @@ export function ContactsPanel({ manager, onClose }: ContactsPanelProps) {
               value={createCompany}
               onChange={setCreateCompany}
               onSubmit={() => setMode('create-confirm')}
-              focus
+              focused
               placeholder="(optional) e.g., Acme Corp"
             />
           </box>

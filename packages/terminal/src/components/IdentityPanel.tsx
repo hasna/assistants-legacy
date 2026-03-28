@@ -747,7 +747,7 @@ export function IdentityPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -771,7 +771,7 @@ export function IdentityPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -805,7 +805,7 @@ export function IdentityPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
         >
           {templateRange.hasMore.above > 0 && (
@@ -1083,7 +1083,7 @@ export function IdentityPanel({
             <box marginBottom={1}>
               <text>Communication Style:</text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
               {COMMUNICATION_STYLES.map((style, index) => (
                 <box key={style} paddingY={0}>
                   <text
@@ -1107,7 +1107,7 @@ export function IdentityPanel({
             <box marginBottom={1}>
               <text>Response Length:</text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
               {RESPONSE_LENGTHS.map((length, index) => (
                 <box key={length} paddingY={0}>
                   <text
@@ -1168,7 +1168,7 @@ export function IdentityPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -1300,7 +1300,7 @@ export function IdentityPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
       >
         {identityRange.hasMore.above > 0 && (

@@ -121,7 +121,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
         marginBottom={1}
       >

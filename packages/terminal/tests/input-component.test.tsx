@@ -99,13 +99,15 @@ describe('Input component', () => {
 
     ref.current?.setValue('submit me');
     await new Promise((resolve) => setTimeout(resolve, 50));
-    // Send ESC+CR as a single sequence (tmux-style enter)
+    // In OpenTUI, ESC+Enter is interpreted as Meta+Enter (queue mode),
+    // unlike Ink where ESC+CR was a raw byte sequence treated as normal enter.
+    // This is the expected OpenTUI behavior for tmux ESC+CR sequences.
     mockInput.pressEscape();
     mockInput.pressEnter();
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(submitted.length).toBe(1);
-    expect(submitted[0]).toEqual({ value: 'submit me', mode: 'normal' });
+    expect(submitted[0]).toEqual({ value: 'submit me', mode: 'queue' });
     expect(ref.current?.getValue()).toBe('');
   });
 });

@@ -24,7 +24,7 @@ export interface Key {
   meta: boolean;
 }
 
-const NON_ALPHA_KEYS = ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'delete', 'backspace', 'return', 'escape', 'tab', 'enter'];
+const NON_ALPHA_KEYS = ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'delete', 'backspace', 'return', 'escape', 'tab', 'linefeed', 'insert', 'clear', 'space'];
 
 type Handler = (input: string, key: Key) => void;
 type Options = { isActive?: boolean };
@@ -40,29 +40,37 @@ function keyEventToKey(e: KeyEvent): Key {
     pageUp: name === 'pageup',
     home: name === 'home',
     end: name === 'end',
-    return: name === 'return' || name === 'enter',
+    return: name === 'return' || name === 'linefeed',
     escape: name === 'escape',
     ctrl: e.ctrl,
     shift: e.shift,
     tab: name === 'tab',
     backspace: name === 'backspace',
     delete: name === 'delete',
-    meta: e.meta,
+    meta: e.meta || e.option,
   };
 }
 
 function keyEventToInput(e: KeyEvent): string {
   const name = e.name.toLowerCase();
+  // Space bar: OpenTUI names it "space", but components expect ' ' as input
+  if (name === 'space') {
+    return ' ';
+  }
+  // Linefeed (Ctrl+J / \n): return newline char, components see key.return=true
+  if (name === 'linefeed') {
+    return '\n';
+  }
   // For non-alpha keys, return empty string (matches old Ink behavior)
   if (NON_ALPHA_KEYS.includes(name)) {
     return '';
   }
-  // For ctrl+key, return the key name
+  // For ctrl+key, return the key name (e.g. ctrl+c → input='c')
   if (e.ctrl) {
     return e.name;
   }
-  // For meta+key sequences
-  if (e.meta && !e.ctrl && e.name.length === 1) {
+  // For meta/option+key sequences
+  if ((e.meta || e.option) && !e.ctrl && e.name.length === 1) {
     return e.name;
   }
   // For printable characters, use the sequence (preserves actual typed char)
@@ -88,9 +96,10 @@ export function useSafeInput(handler: Handler, options: Options = {}): void {
     const key = keyEventToKey(e);
     const input = keyEventToInput(e);
 
-    // Normalize Ctrl+M / Ctrl+J to return (some terminals send these for Enter)
-    if ((input === 'm' || input === 'j') && key.ctrl && !key.return) {
-      handler(input === 'j' ? '\n' : '\r', { ...key, return: true, ctrl: false });
+    // Normalize Ctrl+M to return (some terminals send this instead of Enter).
+    // Note: Ctrl+J (linefeed) is handled in keyEventToKey/keyEventToInput above.
+    if (input === 'm' && key.ctrl && !key.return) {
+      handler('\r', { ...key, return: true, ctrl: false });
       return;
     }
 

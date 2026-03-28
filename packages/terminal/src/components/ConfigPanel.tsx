@@ -592,7 +592,7 @@ export function ConfigPanel({
         <box marginBottom={1}>
           <text fg="cyan"><b>Save to which config?</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
           {locations.map((loc, index) => (
             <box key={loc.id} flexDirection="column">
               <text
@@ -632,7 +632,7 @@ export function ConfigPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           marginRight={1}
           width={26}
@@ -653,7 +653,7 @@ export function ConfigPanel({
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+          borderColor="#d4d4d8" border={["top", "bottom"]}
           paddingX={1}
           flexGrow={1}
         >

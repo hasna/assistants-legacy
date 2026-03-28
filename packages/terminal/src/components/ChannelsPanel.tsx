@@ -346,8 +346,8 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <text backgroundColor={SLACK_COLOR} fg="white"><b> Channels </b></text>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text bg={SLACK_COLOR} fg="white"><b> Channels </b></text>
       <text fg="gray"> | </text>
       <text fg="gray">
         {mode === 'list' ? 'q:close c:create enter:open m:members i:invite l:leave d:delete r:refresh' :
@@ -437,10 +437,10 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
         {/* Channel name badge above input (like assistant name badge) */}
         <box justifyContent="flex-end" marginTop={0}>
-          <text backgroundColor={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
+          <text bg={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
         </box>
 
-        <box paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false}>
+        <box paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]}>
           <text fg="gray">{'> '}</text>
           <input
             value={chatInput}
@@ -500,13 +500,13 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                 }
               }
             }}
-            focus
+            focused
             placeholder="Type a message... (@ to mention)"
           />
         </box>
 
         {mentionActive && mentionCandidates.length > 0 && (
-          <box flexDirection="column" paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} marginTop={0}>
+          <box flexDirection="column" paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} marginTop={0}>
             <text fg="yellow"><b>Members (Tab to select, Esc to dismiss)</b></text>
             {mentionCandidates.slice(0, 8).map((m, i) => (
               <box key={m.assistantId}>
@@ -533,7 +533,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
       <box flexDirection="column">
         {header}
         <box paddingX={1} marginBottom={1}>
-          <text backgroundColor={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
+          <text bg={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
           <text><b> Members ({members.length})</b></text>
         </box>
         <box flexDirection="column" paddingX={1}>
@@ -586,7 +586,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                   setMode('create-desc');
                 }
               }}
-              focus
+              focused
               placeholder="e.g., general"
             />
           </box>
@@ -612,7 +612,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
               onSubmit={() => {
                 setMode('create-confirm');
               }}
-              focus
+              focused
               placeholder="(optional) What is this channel for?"
             />
           </box>
@@ -659,7 +659,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                   loadChannels();
                 }
               }}
-              focus
+              focused
               placeholder="e.g., alice"
             />
           </box>

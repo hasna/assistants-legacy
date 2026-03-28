@@ -281,7 +281,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               flexDirection="column"
               marginTop={1}
               borderStyle="rounded"
-              borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+              borderColor="#d4d4d8" border={["top", "bottom"]}
               paddingX={1}
               height={Math.min(10, HOOK_EVENTS.length + 2)}
             >
@@ -381,7 +381,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
                 value={command}
                 onChange={(v) => { setCommand(v); setError(null); }}
                 onSubmit={handleCommandSubmit}
-                focus
+                focused
                 placeholder={hookType === 'command' ? './scripts/validate.sh' : 'Should this action be allowed?'}
               />
             </box>
@@ -409,7 +409,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
                 value={timeout}
                 onChange={(v) => { setTimeout(v); setError(null); }}
                 onSubmit={handleTimeoutSubmit}
-                focus
+                focused
                 placeholder="30000"
               />
               <text fg="gray"> ms</text>
@@ -521,7 +521,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
             <box marginBottom={1}>
               <text fg="cyan"><b>Confirm Hook</b></text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
               <box><text fg="gray">Event:   </text><text><b>{event}</b></text></box>
               <box><text fg="gray">Matcher: </text><text>{matcher || '*'}</text></box>
               <box><text fg="gray">Type:    </text><text>{hookType}</text></box>

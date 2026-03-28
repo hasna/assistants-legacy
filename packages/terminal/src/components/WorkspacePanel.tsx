@@ -232,7 +232,7 @@ export function WorkspacePanel({
         <box marginBottom={1}>
           <text fg="cyan"><b>Workspaces</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text fg="gray">No workspaces found.</text>
           <text fg="gray">Use /workspace create &lt;name&gt; to create one.</text>
         </box>
@@ -250,7 +250,7 @@ export function WorkspacePanel({
         <box marginBottom={1}>
           <text fg="red"><b>Delete Workspace</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text>Are you sure you want to delete this workspace?</text>
           <text fg="gray">Name: {deleteTarget.name}</text>
           <text fg="gray">ID: {deleteTarget.id}</text>
@@ -270,7 +270,7 @@ export function WorkspacePanel({
         <box marginBottom={1}>
           <text fg="yellow"><b>Archive Workspace</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text>Archive this workspace?</text>
           <text fg="gray">Name: {archiveTarget.name}</text>
           <text fg="gray">ID: {archiveTarget.id}</text>
@@ -294,7 +294,7 @@ export function WorkspacePanel({
           {isActive && <text fg="green"> [current]</text>}
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box>
             <text fg="gray">ID: </text>
             <text>{currentWs.id}</text>
@@ -360,7 +360,7 @@ export function WorkspacePanel({
         )}
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {wsRange.hasMore.above > 0 && (
           <box paddingY={0}>
             <text fg="gray">  ↑ {wsRange.hasMore.above} more above</text>

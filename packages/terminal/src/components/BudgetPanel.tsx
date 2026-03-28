@@ -75,27 +75,21 @@ function formatDuration(ms: number): string {
   return `${Math.round(ms / 1000)}s`;
 }
 
-function UsageBar({ used, limit }: { used: number; limit?: number }) {
-  if (!limit) {
-    return <text fg="gray">no limit</text>;
-  }
-
+function usageBarText(used: number, limit?: number): string {
+  if (!limit) return 'no limit';
   const percent = Math.min(100, Math.round((used / limit) * 100));
   const barWidth = 20;
   const filledWidth = Math.round((percent / 100) * barWidth);
   const emptyWidth = barWidth - filledWidth;
+  return `${'█'.repeat(filledWidth)}${'░'.repeat(emptyWidth)} ${percent}%`;
+}
 
-  let barColor = 'green';
-  if (percent >= 90) barColor = 'red';
-  else if (percent >= 75) barColor = 'yellow';
-
-  return (
-    <box>
-      <text fg={barColor}>{'█'.repeat(filledWidth)}</text>
-      <text fg="gray">{'░'.repeat(emptyWidth)}</text>
-      <text> {percent}%</text>
-    </box>
-  );
+function usageBarColor(used: number, limit?: number): string {
+  if (!limit) return 'gray';
+  const percent = Math.min(100, Math.round((used / limit) * 100));
+  if (percent >= 90) return 'red';
+  if (percent >= 75) return 'yellow';
+  return 'green';
 }
 
 export function BudgetPanel({
@@ -360,7 +354,7 @@ export function BudgetPanel({
           <text fg="gray"> (session scope)</text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {EDIT_FIELDS.map((field, index) => {
             const isSelected = index === editFieldIndex;
             const value = editValues[field.key] || '';
@@ -428,7 +422,7 @@ export function BudgetPanel({
           <text><b>Select Budget Preset</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {presetKeys.map((key, index) => {
             const preset = PRESET_LIMITS[key];
             const isSelected = index === selectedPreset;
@@ -463,7 +457,7 @@ export function BudgetPanel({
           <text><b>Budget Limits</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box marginBottom={1}>
             <text><b>Session Limits:</b></text>
           </box>
@@ -483,11 +477,11 @@ export function BudgetPanel({
             </box>
             <box>
               <text fg="gray">Max LLM Calls: </text>
-              <text>{limits.maxLlmCalls ?? 'unlimited'}</text>
+              <text>{limits.maxLlmCalls != null ? String(limits.maxLlmCalls) : 'unlimited'}</text>
             </box>
             <box>
               <text fg="gray">Max Tool Calls: </text>
-              <text>{limits.maxToolCalls ?? 'unlimited'}</text>
+              <text>{limits.maxToolCalls != null ? String(limits.maxToolCalls) : 'unlimited'}</text>
             </box>
             <box>
               <text fg="gray">Max Duration: </text>
@@ -518,20 +512,14 @@ export function BudgetPanel({
 
   return (
     <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1} justifyContent="space-between">
-        <text><b>Budget</b></text>
-        <text fg={config.enabled ? 'green' : 'red'}>
-          {config.enabled ? 'Enforcing' : 'Disabled'}
-        </text>
+      <box marginBottom={1}>
+        <text><b>Budget</b>{' — '}<span fg={config.enabled ? 'green' : 'red'}>{config.enabled ? 'Enforcing' : 'Disabled'}</span></text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Status */}
         <box marginBottom={1}>
-          <text><b>Status: </b></text>
-          <text fg={overallExceeded ? 'red' : config.enabled ? 'green' : 'gray'}>
-            {overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}
-          </text>
+          <text><b>Status: </b><span fg={overallExceeded ? 'red' : config.enabled ? 'green' : 'gray'}>{overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}</span></text>
         </box>
 
         {/* Usage */}
@@ -540,67 +528,23 @@ export function BudgetPanel({
 
           <box marginTop={1} flexDirection="column">
             {/* Tokens */}
-            <box>
-              <text>{'Tokens:'.padEnd(15)}</text>
-              <text>{formatNumber(usage.totalTokens).padStart(8)}</text>
-              {limits.maxTotalTokens && (
-                <>
-                  <text fg="gray"> / </text>
-                  <text>{formatNumber(limits.maxTotalTokens)}</text>
-                </>
-              )}
-              <text>  </text>
-              <UsageBar used={usage.totalTokens} limit={limits.maxTotalTokens} />
-            </box>
+            <text>{'Tokens:'.padEnd(15)}{formatNumber(usage.totalTokens).padStart(8)}{limits.maxTotalTokens ? ` / ${formatNumber(limits.maxTotalTokens)}` : ''}{'  '}<span fg={usageBarColor(usage.totalTokens, limits.maxTotalTokens)}>{usageBarText(usage.totalTokens, limits.maxTotalTokens)}</span></text>
 
             {/* LLM Calls */}
-            <box>
-              <text>{'LLM Calls:'.padEnd(15)}</text>
-              <text>{String(usage.llmCalls).padStart(8)}</text>
-              {limits.maxLlmCalls && (
-                <>
-                  <text fg="gray"> / </text>
-                  <text>{limits.maxLlmCalls}</text>
-                </>
-              )}
-              <text>  </text>
-              <UsageBar used={usage.llmCalls} limit={limits.maxLlmCalls} />
-            </box>
+            <text>{'LLM Calls:'.padEnd(15)}{String(usage.llmCalls).padStart(8)}{limits.maxLlmCalls ? ` / ${limits.maxLlmCalls}` : ''}{'  '}<span fg={usageBarColor(usage.llmCalls, limits.maxLlmCalls)}>{usageBarText(usage.llmCalls, limits.maxLlmCalls)}</span></text>
 
             {/* Tool Calls */}
-            <box>
-              <text>{'Tool Calls:'.padEnd(15)}</text>
-              <text>{String(usage.toolCalls).padStart(8)}</text>
-              {limits.maxToolCalls && (
-                <>
-                  <text fg="gray"> / </text>
-                  <text>{limits.maxToolCalls}</text>
-                </>
-              )}
-              <text>  </text>
-              <UsageBar used={usage.toolCalls} limit={limits.maxToolCalls} />
-            </box>
+            <text>{'Tool Calls:'.padEnd(15)}{String(usage.toolCalls).padStart(8)}{limits.maxToolCalls ? ` / ${limits.maxToolCalls}` : ''}{'  '}<span fg={usageBarColor(usage.toolCalls, limits.maxToolCalls)}>{usageBarText(usage.toolCalls, limits.maxToolCalls)}</span></text>
 
             {/* Duration */}
-            <box>
-              <text>{'Duration:'.padEnd(15)}</text>
-              <text>{formatDuration(usage.durationMs).padStart(8)}</text>
-              {limits.maxDurationMs && (
-                <>
-                  <text fg="gray"> / </text>
-                  <text>{formatDuration(limits.maxDurationMs)}</text>
-                </>
-              )}
-              <text>  </text>
-              <UsageBar used={usage.durationMs} limit={limits.maxDurationMs} />
-            </box>
+            <text>{'Duration:'.padEnd(15)}{formatDuration(usage.durationMs).padStart(8)}{limits.maxDurationMs ? ` / ${formatDuration(limits.maxDurationMs)}` : ''}{'  '}<span fg={usageBarColor(usage.durationMs, limits.maxDurationMs)}>{usageBarText(usage.durationMs, limits.maxDurationMs)}</span></text>
           </box>
         </box>
 
         {/* Warnings */}
         {sessionStatus.warningsCount > 0 && (
           <box marginTop={1}>
-            <text fg="yellow">! {sessionStatus.warningsCount} warning{sessionStatus.warningsCount !== 1 ? 's' : ''}</text>
+            <text fg="yellow">{`! ${sessionStatus.warningsCount} warning${sessionStatus.warningsCount !== 1 ? 's' : ''}`}</text>
           </box>
         )}
 

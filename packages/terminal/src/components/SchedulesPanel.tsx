@@ -469,7 +469,7 @@ export function SchedulesPanel({
           <text fg="cyan"><b>New Schedule</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Step 1: Kind selection */}
           {createStep === 'kind' && (
             <box flexDirection="column">
@@ -504,7 +504,7 @@ export function SchedulesPanel({
                       setCreateStep('command');
                     }
                   }}
-                  focus
+                  focused
                   placeholder='e.g. "0 9 * * *" (daily at 9am, 5-6 fields)'
                 />
               </box>
@@ -529,7 +529,7 @@ export function SchedulesPanel({
                       setCreateStep('command');
                     }
                   }}
-                  focus
+                  focused
                   placeholder="e.g. 2026-02-08T09:00:00 (valid ISO date)"
                 />
               </box>
@@ -567,7 +567,7 @@ export function SchedulesPanel({
                   onSubmit={() => {
                     if (createCommand.trim()) setCreateStep('description');
                   }}
-                  focus
+                  focused
                   placeholder="e.g. /summarize or any slash command"
                 />
               </box>
@@ -586,7 +586,7 @@ export function SchedulesPanel({
                   value={createDescription}
                   onChange={setCreateDescription}
                   onSubmit={() => setCreateStep('confirm')}
-                  focus
+                  focused
                   placeholder="What does this schedule do?"
                 />
               </box>
@@ -674,7 +674,7 @@ export function SchedulesPanel({
           <text fg="cyan"><b>Schedule Details</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
           <box><text><b>ID: </b></text><text>{s.id}</text></box>
           <box><text><b>Status: </b></text><text fg={statusColor}>{statusIcon} {s.status}</text></box>
           <box><text><b>Type: </b></text><text>{KIND_LABELS[s.schedule.kind] || s.schedule.kind}</text></box>
@@ -741,7 +741,7 @@ export function SchedulesPanel({
         </text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {sortedSchedules.length === 0 ? (
           <box paddingY={1}>
             <text fg="gray">No schedules. Press n to create one.</text>

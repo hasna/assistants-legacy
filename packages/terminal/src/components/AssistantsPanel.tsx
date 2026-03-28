@@ -461,7 +461,7 @@ export function AssistantsPanel({
         {newDescription && <text fg="gray">Description: {newDescription}</text>}
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
         {ANTHROPIC_MODELS.map((model, index) => (
           <box key={model.id} paddingY={0}>
             <text
@@ -687,7 +687,7 @@ export function AssistantsPanel({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" borderLeft={false} borderRight={false}
+        borderColor="#d4d4d8" border={["top", "bottom"]}
         paddingX={1}
       >
         {sortedAssistants.length === 0 ? (

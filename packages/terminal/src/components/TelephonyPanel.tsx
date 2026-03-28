@@ -239,11 +239,10 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
   // Tab bar
   const tabBar = (
     <box marginBottom={1}>
-      {tabs.map((t, i) => (
-        <box key={t} marginRight={1}>
-          <text attributes={tab === t ? 32 : undefined}>{`${i + 1}:${t}`}</text>
-        </box>
-      ))}
+      <text>{tabs.map((t, i) => {
+        const label = `${i + 1}:${t}`;
+        return tab === t ? <span key={t} attributes={32}>{label}{'  '}</span> : <span key={t}>{label}{'  '}</span>;
+      })}</text>
     </box>
   );
 
@@ -255,10 +254,8 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       : 'q close | 1-5 tabs | s sms | c call | r refresh';
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" borderLeft={false} borderRight={false} paddingX={1} marginBottom={1}>
-      <text fg="blue"><b>Communication</b></text>
-      <text fg="gray"> | </text>
-      <text fg="gray">{headerHint}</text>
+    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text><span fg="blue"><b>Communication</b></span><span fg="gray">{' | '}{headerHint}</span></text>
     </box>
   );
 
@@ -287,7 +284,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                 onSubmit={() => {
                   if (composeTo.trim()) setComposeStep('body');
                 }}
-                focus
+                focused
                 placeholder="+15551234567"
               />
             </box>
@@ -308,7 +305,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                       loadData();
                     }
                   }}
-                  focus
+                  focused
                   placeholder="Type your message..."
                 />
               </box>
@@ -341,7 +338,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                   loadData();
                 }
               }}
-              focus
+              focused
               placeholder="+15551234567"
             />
           </box>
@@ -363,12 +360,12 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
           <text> </text>
           {status ? (
             <>
-              <text>Twilio:       {status.twilioConfigured ? <text fg="green">Connected</text> : <text fg="red">Not configured</text>}</text>
-              <text>ElevenLabs:   {status.elevenLabsConfigured ? <text fg="green">Connected</text> : <text fg="red">Not configured</text>}</text>
-              <text>Default #:    {status.defaultPhoneNumber ? <text fg="cyan">{status.defaultPhoneNumber}</text> : <text fg="red">Not set</text>} {status.defaultPhoneNumberSource ? <text fg="gray">({status.defaultPhoneNumberSource})</text> : null}</text>
-              <text>Phone #s:     {status.phoneNumbers}</text>
-              <text>Active calls: {status.activeCalls}</text>
-              <text>Routes:       {status.routingRules}</text>
+              <text>Twilio:       {status.twilioConfigured ? <span fg="green">Connected</span> : <span fg="red">Not configured</span>}</text>
+              <text>ElevenLabs:   {status.elevenLabsConfigured ? <span fg="green">Connected</span> : <span fg="red">Not configured</span>}</text>
+              <text>Default #:    {status.defaultPhoneNumber ? <span fg="cyan">{status.defaultPhoneNumber}</span> : <span fg="red">Not set</span>}{' '}{status.defaultPhoneNumberSource ? <span fg="gray">{'('}{status.defaultPhoneNumberSource}{')'}</span> : null}</text>
+              <text>{`Phone #s:     ${status.phoneNumbers}`}</text>
+              <text>{`Active calls: ${status.activeCalls}`}</text>
+              <text>{`Routes:       ${status.routingRules}`}</text>
               <text> </text>
               <text fg="gray">Press 's' to send SMS, 'c' to make a call</text>
               <text> </text>
@@ -408,7 +405,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                 </text>
                 <text> {call.fromNumber} → {call.toNumber}</text>
                 <text fg="gray"> | {call.status}</text>
-                {call.duration != null && <text fg="gray"> | {call.duration}s</text>}
+                {call.duration != null && <text fg="gray">{` | ${call.duration}s`}</text>}
                 <text fg="gray"> | {formatRelativeTime(call.createdAt)}</text>
                 <text fg="gray"> | by {resolveActor(call.assistantId)}</text>
               </box>
@@ -513,7 +510,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
                   <text attributes={i === selectedIndex ? 1 : undefined}><b>{rule.name}</b></text>
-                  <text fg="gray"> (priority: {rule.priority})</text>
+                  <text fg="gray">{` (priority: ${rule.priority})`}</text>
                   {!rule.enabled && <text fg="red"> [DISABLED]</text>}
                 </box>
                 <box paddingLeft={4}>

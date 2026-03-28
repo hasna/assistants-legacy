@@ -18,6 +18,7 @@ import { App } from './components/App';
 import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
 import { parseArgs } from './cli/main';
+import { setupThemeDefaults } from './theme/setup';
 
 // Version is embedded at build time via define in build.ts
 const VERSION = process.env.ASSISTANTS_VERSION || 'dev';
@@ -164,10 +165,27 @@ if (options.print !== null) {
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
     useAlternateScreen: false,
+    // Disable renderer's built-in signal handling — we add our own handlers
+    // that delegate to renderer.destroy() for proper shutdown sequencing.
+    exitSignals: [],
   });
+
+  // [cassius] Patch default text fg color based on terminal theme (light/dark).
+  // Must run BEFORE root.render() so all <text> elements get the correct default.
+  setupThemeDefaults(renderer);
 
   const root = createRoot(renderer);
   root.render(appElement);
+
+  // Signal handlers — delegate to renderer.destroy() so OpenTUI can properly
+  // restore terminal state (cursor, raw mode) before we exit.
+  const handleSignal = () => {
+    if (!renderer.isDestroyed) {
+      renderer.destroy();
+    }
+  };
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
 
   renderer.on('destroy', () => {
     disableSyncOutput();
