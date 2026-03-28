@@ -7,6 +7,7 @@ import {
   type ModelDefinition,
 } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 const MAX_VISIBLE_ROWS = 12;
 const NAME_WIDTH = 28;
@@ -228,11 +229,11 @@ export function ModelPanel({
     <box flexDirection="column" paddingY={1}>
       {/* Header */}
       <box marginBottom={1}>
-        <text><b>Model Selector</b>{' — '}<span fg="gray">{assistantName || 'Active assistant'}</span></text>
+        <text><b>Model Selector</b>{' — '}<span fg={themeColor('muted')}>{assistantName || 'Active assistant'}</span></text>
       </box>
 
       <box marginBottom={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           Current: {getModelDisplayName(currentModelId || 'unknown')} ({currentModelId || 'unknown'})
         </text>
       </box>
@@ -240,7 +241,7 @@ export function ModelPanel({
       {/* Status message */}
       {status && (
         <box marginBottom={1}>
-          <text fg={status.type === 'error' ? 'red' : status.type === 'success' ? 'green' : 'yellow'}>
+          <text fg={status.type === 'error' ? 'red' : status.type === 'success' ? themeColor('success') : 'yellow'}>
             {status.text}
           </text>
         </box>
@@ -249,7 +250,7 @@ export function ModelPanel({
       {/* Search bar */}
       {isSearching && (
         <box marginBottom={1}>
-          <text fg="blue"><b>/ </b></text>
+          <text fg={themeColor('secondary')}><b>/ </b></text>
           <input
             value={searchQuery}
             onChange={setSearchQuery}
@@ -261,13 +262,13 @@ export function ModelPanel({
       {/* Scroll indicator: above */}
       {visibleRange.hasMore.above > 0 && (
         <box paddingLeft={2}>
-          <text fg="gray">{`↑ ${visibleRange.hasMore.above} more`}</text>
+          <text fg={themeColor('muted')}>{`↑ ${visibleRange.hasMore.above} more`}</text>
         </box>
       )}
 
       {/* Column header */}
       <box paddingLeft={2}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {padRight('Model', NAME_WIDTH)}
           {padLeft('Ctx', CTX_WIDTH)}
           {padLeft('Out', OUT_WIDTH)}
@@ -283,7 +284,7 @@ export function ModelPanel({
           if (row.type === 'provider') {
             return (
               <box key={`p-${row.label}`} paddingLeft={1}>
-                <text fg="cyan"><b> {row.label}</b></text>
+                <text fg={themeColor('info')}><b> {row.label}</b></text>
               </box>
             );
           }
@@ -302,10 +303,10 @@ export function ModelPanel({
               <text attributes={isSelected ? 1 : undefined} fg={isSelected ? 'blue' : undefined}><b>
                 {name}
               </b></text>
-              <text fg={isSelected ? 'blue' : 'gray'}>
+              <text fg={isSelected ? 'blue' : themeColor('muted')}>
                 {ctx}{out}{cost}
               </text>
-              {isCurrent && <text fg="green"> ← current</text>}
+              {isCurrent && <text fg={themeColor('success')}> ← current</text>}
             </box>
           );
         })}
@@ -314,20 +315,20 @@ export function ModelPanel({
       {/* Scroll indicator: below */}
       {visibleRange.hasMore.below > 0 && (
         <box paddingLeft={2}>
-          <text fg="gray">{`↓ ${visibleRange.hasMore.below} more`}</text>
+          <text fg={themeColor('muted')}>{`↓ ${visibleRange.hasMore.below} more`}</text>
         </box>
       )}
 
       {/* No results */}
       {selectableIndices.length === 0 && isSearching && (
         <box paddingLeft={2} marginY={1}>
-          <text fg="gray">No models match "{searchQuery}"</text>
+          <text fg={themeColor('muted')}>No models match "{searchQuery}"</text>
         </box>
       )}
 
       {/* Footer */}
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {isSwitching
             ? 'Switching model...'
             : isSearching

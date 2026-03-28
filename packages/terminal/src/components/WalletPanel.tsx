@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
 const MAX_VISIBLE_ITEMS = 5;
@@ -390,21 +391,21 @@ export function WalletPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Remove Card</b></text>
+          <text fg={themeColor('error')}><b>Remove Card</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Are you sure you want to remove "{deleteTarget.name}"?</text>
-          <text fg="gray">Card ending in {deleteTarget.last4}</text>
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>Card ending in {deleteTarget.last4}</text>
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -415,42 +416,42 @@ export function WalletPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{detailCard.name}</b></text>
-          {detailCard.isDefault && <text fg="yellow"> (default)</text>}
+          <text fg={themeColor('info')}><b>{detailCard.name}</b></text>
+          {detailCard.isDefault && <text fg={themeColor('warning')}> (default)</text>}
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <box>
-            <text fg="gray">Card Number: </text>
+            <text fg={themeColor('muted')}>Card Number: </text>
             <text>**** **** **** {detailCard.last4}</text>
           </box>
 
           {detailCard.cardholderName && (
             <box>
-              <text fg="gray">Cardholder: </text>
+              <text fg={themeColor('muted')}>Cardholder: </text>
               <text>{detailCard.cardholderName}</text>
             </box>
           )}
 
           <box>
-            <text fg="gray">Brand: </text>
+            <text fg={themeColor('muted')}>Brand: </text>
             <text>{formatCardType(detailCard.cardType || detailCard.brand)}</text>
           </box>
 
           <box>
-            <text fg="gray">Expires: </text>
+            <text fg={themeColor('muted')}>Expires: </text>
             <text>{formatExpiry(detailCard.expiryMonth, detailCard.expiryYear, detailCard.expiry)}</text>
           </box>
 
           {detailCard.createdAt && (
             <box>
-              <text fg="gray">Added: </text>
+              <text fg={themeColor('muted')}>Added: </text>
               <text>{new Date(detailCard.createdAt).toLocaleString()}</text>
             </box>
           )}
@@ -458,14 +459,14 @@ export function WalletPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'green'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             x remove | n add card | Esc back
           </text>
         </box>
@@ -478,14 +479,14 @@ export function WalletPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Add Card</b></text>
-          <text fg="gray"> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
+          <text fg={themeColor('info')}><b>Add Card</b></text>
+          <text fg={themeColor('muted')}> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -497,7 +498,7 @@ export function WalletPanel({
             if (isCurrent) {
               return (
                 <box key={field.key}>
-                  <text fg="cyan">{label}</text>
+                  <text fg={themeColor('info')}>{label}</text>
                   <input
                     value={value}
                     onChange={(nextValue) => {
@@ -518,7 +519,7 @@ export function WalletPanel({
             if (isCompleted) {
               return (
                 <box key={field.key}>
-                  <text fg="gray">{label}</text>
+                  <text fg={themeColor('muted')}>{label}</text>
                   <text>{maskFieldValue(field, value)}</text>
                 </box>
               );
@@ -526,8 +527,8 @@ export function WalletPanel({
 
             return (
               <box key={field.key}>
-                <text fg="gray">{label}</text>
-                <text fg="gray">{field.placeholder}</text>
+                <text fg={themeColor('muted')}>{label}</text>
+                <text fg={themeColor('muted')}>{field.placeholder}</text>
               </box>
             );
           })}
@@ -542,7 +543,7 @@ export function WalletPanel({
         )}
 
         <box marginTop={1}>
-          <text fg="gray">Enter next field | Esc back</text>
+          <text fg={themeColor('muted')}>Enter next field | Esc back</text>
         </box>
       </box>
     );
@@ -553,21 +554,21 @@ export function WalletPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Wallet</b></text>
+          <text fg={themeColor('info')}><b>Wallet</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg="gray">No cards stored in wallet.</text>
-          <text fg="gray">Press n to add your first card.</text>
+          <text fg={themeColor('muted')}>No cards stored in wallet.</text>
+          <text fg={themeColor('muted')}>Press n to add your first card.</text>
           <box marginTop={1}>
-            <text fg="yellow">Warning:</text>
+            <text fg={themeColor('warning')}>Warning:</text>
           </box>
-          <text fg="gray">Store card data only if you have proper compliance controls.</text>
+          <text fg={themeColor('muted')}>Store card data only if you have proper compliance controls.</text>
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
@@ -577,7 +578,7 @@ export function WalletPanel({
           </box>
         )}
         <box marginTop={1}>
-          <text fg="gray">n add card | q quit</text>
+          <text fg={themeColor('muted')}>n add card | q quit</text>
         </box>
       </box>
     );
@@ -589,21 +590,21 @@ export function WalletPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg="cyan"><b>Wallet</b></text>
+        <text fg={themeColor('info')}><b>Wallet</b></text>
         {cards.length > MAX_VISIBLE_ITEMS && (
-          <text fg="gray"> ({cardIndex + 1}/{cards.length})</text>
+          <text fg={themeColor('muted')}> ({cardIndex + 1}/{cards.length})</text>
         )}
       </box>
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {cardRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {cardRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {cardRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -612,25 +613,25 @@ export function WalletPanel({
           const isSelected = actualIdx === cardIndex;
           const prefix = isSelected ? '> ' : '  ';
           const statusIcon = card.isDefault ? '*' : 'o';
-          const statusColor = card.isDefault ? 'yellow' : 'gray';
+          const statusColor = card.isDefault ? 'yellow' : themeColor('muted');
           const cardType = card.cardType || card.brand || '';
 
           return (
             <box key={card.id} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : statusColor}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : statusColor}>
                 {statusIcon}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{card.name}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}**** {card.last4}
               </text>
               {cardType && (
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                   {' '}({cardType})
                 </text>
               )}
@@ -640,7 +641,7 @@ export function WalletPanel({
 
         {cardRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {cardRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {cardRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
@@ -654,7 +655,7 @@ export function WalletPanel({
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | n add card | q quit
         </text>
       </box>

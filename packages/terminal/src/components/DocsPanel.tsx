@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTerminalDimensions } from '@opentui/react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface DocsPanelProps {
   onClose: () => void;
@@ -396,16 +397,16 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text><span fg="cyan"><b>Documentation</b></span>{' — '}<span fg="gray">{`${DOCS_SECTIONS.length} sections`}</span></text>
+          <text><span fg={themeColor('info')}><b>Documentation</b></span>{' — '}<span fg={themeColor('muted')}>{`${DOCS_SECTIONS.length} sections`}</span></text>
         </box>
 
-        <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
-          <text fg="gray">Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</text>
-          <text fg="gray">Close with q or Esc.</text>
+        <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
+          <text fg={themeColor('muted')}>Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</text>
+          <text fg={themeColor('muted')}>Close with q or Esc.</text>
           <box marginTop={1} />
 
           {sectionWindow.above > 0 && (
-            <text fg="gray">{`... ${sectionWindow.above} more above`}</text>
+            <text fg={themeColor('muted')}>{`... ${sectionWindow.above} more above`}</text>
           )}
 
           {DOCS_SECTIONS.slice(sectionWindow.start, sectionWindow.end).map((section, offset) => {
@@ -421,7 +422,7 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
           })}
 
           {sectionWindow.below > 0 && (
-            <text fg="gray">{`... ${sectionWindow.below} more below`}</text>
+            <text fg={themeColor('muted')}>{`... ${sectionWindow.below} more below`}</text>
           )}
 
           <box marginTop={1} />
@@ -432,7 +433,7 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
         </box>
 
         <box marginTop={1}>
-          <text fg="gray">Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</text>
+          <text fg={themeColor('muted')}>Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</text>
         </box>
       </box>
     );
@@ -441,12 +442,12 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text><span fg="cyan"><b>{selectedSection.title}</b></span>{' — '}<span fg="gray">{`${selectedIndex + 1}/${DOCS_SECTIONS.length}`}</span></text>
+        <text><span fg={themeColor('info')}><b>{selectedSection.title}</b></span>{' — '}<span fg={themeColor('muted')}>{`${selectedIndex + 1}/${DOCS_SECTIONS.length}`}</span></text>
       </box>
 
-      <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
+      <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
         {visibleContent.length === 0 ? (
-          <text fg="gray">No content.</text>
+          <text fg={themeColor('muted')}>No content.</text>
         ) : (
           visibleContent.map((line, index) => (
             <text key={`${selectedSection.id}-line-${clampedScroll + index}`} wrapMode="word">
@@ -457,11 +458,11 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom  [b/Esc] index  [[/]] section  [q] close</text>
+        <text fg={themeColor('muted')}>Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom  [b/Esc] index  [[/]] section  [q] close</text>
       </box>
 
       <box marginTop={0}>
-        <text fg="gray">{`Lines ${Math.min(sectionLines.length, clampedScroll + 1)}-${Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of ${sectionLines.length}`}</text>
+        <text fg={themeColor('muted')}>{`Lines ${Math.min(sectionLines.length, clampedScroll + 1)}-${Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of ${sectionLines.length}`}</text>
       </box>
     </box>
   );

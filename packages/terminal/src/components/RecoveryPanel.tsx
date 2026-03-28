@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { RecoverableSession } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface RecoveryPanelProps {
   sessions: RecoverableSession[];
@@ -107,13 +108,13 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
   return (
     <box flexDirection="column" paddingX={1} paddingY={1}>
       <box marginBottom={1}>
-        <text fg="yellow"><b>
+        <text fg={themeColor('warning')}><b>
           Session Recovery
         </b></text>
       </box>
 
       <box marginBottom={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {sessions.length} recoverable session{sessions.length !== 1 ? 's' : ''} found.
         </text>
       </box>
@@ -121,26 +122,26 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
         marginBottom={1}
       >
         {/* Start fresh option — always on top */}
         <box paddingY={0}>
-          <text bg={selectedIndex === 0 ? "#0055aa" : undefined} fg={selectedIndex === 0 ? 'whiteBright' : undefined}>
+          <text bg={selectedIndex === 0 ? themeColor('primary') : undefined} fg={selectedIndex === 0 ? themeColor('text') : undefined}>
             {selectedIndex === 0 ? '▶' : ' '} Start fresh (new session)
           </text>
         </box>
 
         {/* Separator */}
         <box marginY={0}>
-          <text fg="gray">────────────────────────────────────</text>
+          <text fg={themeColor('muted')}>────────────────────────────────────</text>
         </box>
 
         {/* Scroll up indicator */}
         {showUpArrow && (
           <box>
-            <text fg="gray">  ↑ {startIdx} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {startIdx} more above</text>
           </box>
         )}
 
@@ -156,12 +157,12 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
 
           return (
             <box key={session.sessionId} flexDirection="column" paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
-                {isSelected ? '▶' : ' '} {displayName} <text fg="gray">({timeAgo})</text>
-                {meta ? <text fg="gray"> — {meta}</text> : null}
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                {isSelected ? '▶' : ' '} {displayName} <text fg={themeColor('muted')}>({timeAgo})</text>
+                {meta ? <text fg={themeColor('muted')}> — {meta}</text> : null}
               </text>
               {session.lastMessage && (
-                <text fg="gray">    {'\u2018'}{session.lastMessage}{'\u2019'}</text>
+                <text fg={themeColor('muted')}>    {'\u2018'}{session.lastMessage}{'\u2019'}</text>
               )}
             </box>
           );
@@ -170,7 +171,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
         {/* Scroll down indicator */}
         {showDownArrow && (
           <box>
-            <text fg="gray">  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</text>
           </box>
         )}
       </box>
@@ -186,18 +187,18 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
         ].filter(Boolean).join(' · ');
         return (
           <box flexDirection="column" marginBottom={1}>
-            <text fg="gray">Selected:</text>
-            <text>  <text fg="cyan">{s.cwd}</text></text>
+            <text fg={themeColor('muted')}>Selected:</text>
+            <text>  <text fg={themeColor('info')}>{s.cwd}</text></text>
             <text>  {details}</text>
             {s.lastMessage && (
-              <text fg="gray">  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</text>
+              <text fg={themeColor('muted')}>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</text>
             )}
           </box>
         );
       })()}
 
       <box>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑/↓ navigate · Enter select · Esc fresh start
         </text>
       </box>

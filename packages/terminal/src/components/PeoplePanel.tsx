@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { PeopleManager, PersonListItem, Person } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface PeoplePanelProps {
   manager: PeopleManager;
@@ -188,24 +189,24 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg="green"><b>People</b></text>
-      <text fg="gray"> | </text>
-      <text fg="gray">{getHeaderHints()}</text>
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text fg={themeColor('success')}><b>People</b></text>
+      <text fg={themeColor('muted')}> | </text>
+      <text fg={themeColor('muted')}>{getHeaderHints()}</text>
     </box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
     <box marginBottom={1}>
-      <text fg="yellow">{statusMessage}</text>
+      <text fg={themeColor('warning')}>{statusMessage}</text>
     </box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
     <box marginBottom={1}>
-      <text fg="red">Error: {error}</text>
+      <text fg={themeColor('error')}>Error: {error}</text>
     </box>
   ) : null;
 
@@ -215,8 +216,8 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="green"><b>{viewPerson.name}</b></text>
-          <text fg="gray">ID: {viewPerson.id}</text>
+          <text fg={themeColor('success')}><b>{viewPerson.name}</b></text>
+          <text fg={themeColor('muted')}>ID: {viewPerson.id}</text>
           <text>{' '}</text>
           {viewPerson.email && <text>Email:  {viewPerson.email}</text>}
           {viewPerson.phone && <text>Phone:  {viewPerson.phone}</text>}
@@ -229,8 +230,8 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
             </box>
           )}
           <text>{' '}</text>
-          <text fg="gray">Created: {viewPerson.createdAt}</text>
-          <text fg="gray">Updated: {viewPerson.updatedAt}</text>
+          <text fg={themeColor('muted')}>Created: {viewPerson.createdAt}</text>
+          <text fg={themeColor('muted')}>Updated: {viewPerson.updatedAt}</text>
         </box>
       </box>
     );
@@ -245,22 +246,22 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
         {errorBar}
         {people.length === 0 ? (
           <box paddingX={1}>
-            <text fg="gray">No people registered. Press 'c' to create one.</text>
+            <text fg={themeColor('muted')}>No people registered. Press 'c' to create one.</text>
           </box>
         ) : (
           <box flexDirection="column" paddingX={1}>
             {people.map((p) => (
               <box key={p.id}>
-                <text fg={p.id === people[selectedIndex]?.id ? 'green' : undefined}>
+                <text fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}>
                   {p.id === people[selectedIndex]?.id ? '> ' : '  '}
                 </text>
-                <text attributes={p.id === people[selectedIndex]?.id ? 1 : undefined} fg={p.id === people[selectedIndex]?.id ? 'green' : undefined}><b>
+                <text attributes={p.id === people[selectedIndex]?.id ? 1 : undefined} fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}><b>
                   {p.name}
                 </b></text>
-                {p.role && <text fg="gray"> ({p.role})</text>}
-                {p.email && <text fg="gray"> &lt;{p.email}&gt;</text>}
-                {p.phone && <text fg="gray"> {p.phone}</text>}
-                {p.isActive && <text fg="cyan"> (active)</text>}
+                {p.role && <text fg={themeColor('muted')}> ({p.role})</text>}
+                {p.email && <text fg={themeColor('muted')}> &lt;{p.email}&gt;</text>}
+                {p.phone && <text fg={themeColor('muted')}> {p.phone}</text>}
+                {p.isActive && <text fg={themeColor('info')}> (active)</text>}
               </box>
             ))}
           </box>
@@ -276,7 +277,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="red"><b>Delete person?</b></text>
+          <text fg={themeColor('error')}><b>Delete person?</b></text>
           <text>{' '}</text>
           <text>This will permanently delete {person.name} ({person.id})</text>
           <text>{' '}</text>
@@ -436,7 +437,7 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   return (
     <box flexDirection="column">
       {header}
-      <text fg="gray">Loading...</text>
+      <text fg={themeColor('muted')}>Loading...</text>
     </box>
   );
 }

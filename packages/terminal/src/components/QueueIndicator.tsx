@@ -1,5 +1,6 @@
 import React from 'react';
 import type { QueuedMessage } from './appTypes';
+import { themeColor } from '../theme/colors';
 
 interface QueueIndicatorProps {
   messages: QueuedMessage[];
@@ -40,11 +41,11 @@ export function QueueIndicator({
             {msg.mode === 'inline' ? '⚡' : '⏳'}{' '}
             {msg.mode === 'inline' ? 'in-stream' : 'queued'}:{' '}
           </text>
-          <text fg="gray">"{truncateQueued(msg.content, 60)}"</text>
+          <text fg={themeColor('muted')}>"{truncateQueued(msg.content, 60)}"</text>
         </box>
       ))}
       {hasMore && (
-        <text fg="gray">  +{totalCount - maxPreview} more ({summary})</text>
+        <text fg={themeColor('muted')}>  +{totalCount - maxPreview} more ({summary})</text>
       )}
     </box>
   );

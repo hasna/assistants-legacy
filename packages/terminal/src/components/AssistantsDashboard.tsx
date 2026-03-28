@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { BudgetStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface SessionEntry {
   id: string;
@@ -36,9 +37,9 @@ function formatElapsed(startedAt: number): string {
 }
 
 function StateIndicator({ isProcessing, isPaused }: { isProcessing: boolean; isPaused: boolean }) {
-  if (isPaused) return <text fg="yellow"><b>PAUSED</b></text>;
-  if (isProcessing) return <text fg="green">active</text>;
-  return <text fg="gray">idle</text>;
+  if (isPaused) return <text fg={themeColor('warning')}><b>PAUSED</b></text>;
+  if (isProcessing) return <text fg={themeColor('success')}>active</text>;
+  return <text fg={themeColor('muted')}>idle</text>;
 }
 
 export function AssistantsDashboard({
@@ -118,11 +119,11 @@ export function AssistantsDashboard({
         <text><b>Assistants Dashboard</b></text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Sessions */}
-        <text fg="gray"><b>Sessions ({sessions.length}):</b></text>
+        <text fg={themeColor('muted')}><b>Sessions ({sessions.length}):</b></text>
         {sessions.length === 0 ? (
-          <box marginTop={1}><text fg="gray">No active sessions.</text></box>
+          <box marginTop={1}><text fg={themeColor('muted')}>No active sessions.</text></box>
         ) : (
         <box flexDirection="column" marginTop={1}>
           {sessions.map((session, i) => {
@@ -131,19 +132,19 @@ export function AssistantsDashboard({
 
             return (
               <box key={session.id} gap={1}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
+                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                   {isSelected ? '>' : ' '} {String(i + 1)}
                 </text>
-                <text attributes={isSelected ? 1 : undefined} fg={session.isActive ? 'green' : undefined}><b>
+                <text attributes={isSelected ? 1 : undefined} fg={session.isActive ? themeColor('success') : undefined}><b>
                   {label.slice(0, 20).padEnd(20)}
                 </b></text>
                 <StateIndicator isProcessing={session.isProcessing} isPaused={session.isPaused} />
-                <text fg="gray"> {formatElapsed(session.startedAt)}</text>
+                <text fg={themeColor('muted')}> {formatElapsed(session.startedAt)}</text>
                 {session.unreadMessages > 0 && (
-                  <text fg="yellow"> [{session.unreadMessages} msg]</text>
+                  <text fg={themeColor('warning')}> [{session.unreadMessages} msg]</text>
                 )}
                 {session.budgetStatus?.overallExceeded && (
-                  <text fg="red"> [budget!]</text>
+                  <text fg={themeColor('error')}> [budget!]</text>
                 )}
               </box>
             );
@@ -154,15 +155,15 @@ export function AssistantsDashboard({
         {/* Project Budget */}
         {projectBudget && (
           <box marginTop={1} flexDirection="column">
-            <text fg="gray"><b>Project Budget{projectName ? `: ${projectName}` : ''}:</b></text>
+            <text fg={themeColor('muted')}><b>Project Budget{projectName ? `: ${projectName}` : ''}:</b></text>
             <box paddingLeft={1}>
-              <text fg="gray">Tokens: </text>
+              <text fg={themeColor('muted')}>Tokens: </text>
               <text>{projectBudget.usage.totalTokens.toLocaleString()}</text>
               {projectBudget.limits.maxTotalTokens && (
-                <text fg="gray"> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</text>
+                <text fg={themeColor('muted')}> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</text>
               )}
               {projectBudget.overallExceeded && (
-                <text fg="red"><b> EXCEEDED</b></text>
+                <text fg={themeColor('error')}><b> EXCEEDED</b></text>
               )}
             </box>
           </box>
@@ -171,19 +172,19 @@ export function AssistantsDashboard({
         {/* Swarm Status */}
         {swarmStatus && (
           <box marginTop={1}>
-            <text fg="gray"><b>Swarm: </b></text>
-            <text fg={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? 'green' : 'gray'}>
+            <text fg={themeColor('muted')}><b>Swarm: </b></text>
+            <text fg={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? themeColor('success') : themeColor('muted')}>
               {swarmStatus}
             </text>
             {swarmTaskProgress && (
-              <text fg="gray"> ({swarmTaskProgress})</text>
+              <text fg={themeColor('muted')}> ({swarmTaskProgress})</text>
             )}
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ navigate | Enter switch | [m]essage | [p]ause/resume | [q]uit
         </text>
       </box>

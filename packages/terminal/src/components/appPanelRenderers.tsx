@@ -136,6 +136,7 @@ import {
   normalizeAllowedTools,
   deepMerge,
 } from './appHelpers';
+import { themeColor } from '../theme/colors';
 
 // ─── Small utility component ───────────────────────────────────────────────
 function CloseOnAnyKeyPanel({ message, onClose }: { message: string; onClose: () => void }) {
@@ -145,8 +146,8 @@ function CloseOnAnyKeyPanel({ message, onClose }: { message: string; onClose: ()
 
   return (
     <box flexDirection="column" padding={1}>
-      <text fg="red">{message}</text>
-      <text fg="gray">Press any key to close.</text>
+      <text fg={themeColor('error')}>{message}</text>
+      <text fg={themeColor('muted')}>Press any key to close.</text>
     </box>
   );
 }
@@ -2355,20 +2356,20 @@ function renderMessagesPanel(ctx: PanelRenderContext): React.ReactElement {
     return (
       <box flexDirection="column" padding={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Messages</b></text>
+          <text fg={themeColor('info')}><b>Messages</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Messages are not enabled.</text>
-          <text fg="gray">Configure messages in config.json to enable.</text>
+          <text fg={themeColor('muted')}>Configure messages in config.json to enable.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">q quit</text>
+          <text fg={themeColor('muted')}>q quit</text>
         </box>
       </box>
     );

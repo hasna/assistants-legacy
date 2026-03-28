@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedSessionInfo } from '@hasna/assistants-core';
 import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 type FilterMode = 'cwd' | 'all';
 
@@ -116,15 +117,15 @@ export function ResumePanel({
     <box flexDirection="column">
       <text><b>Resume Sessions</b></text>
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           Filter: {mode === 'cwd' ? 'current folder' : 'all sessions'} | Tab toggle | Enter resume | r refresh | q quit
         </text>
       </box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {filteredSessions.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">
+            <text fg={themeColor('muted')}>
               {mode === 'cwd'
                 ? 'No saved sessions for this folder.'
                 : 'No saved sessions found.'}
@@ -146,7 +147,7 @@ export function ResumePanel({
 
       {selected && (
         <box marginTop={1} flexDirection="column">
-          <text fg="gray">Selected</text>
+          <text fg={themeColor('muted')}>Selected</text>
           <text>ID: {selected.id}</text>
           <text>Assistant: {selected.assistantId || 'default'}</text>
           <text>Updated: {selected.updatedAt}</text>

@@ -19,6 +19,7 @@ import { QueueIndicator } from './QueueIndicator';
 import { AskUserPanel } from './AskUserPanel';
 import { InterviewPanel } from './InterviewPanel';
 import { Sidebar } from './Sidebar';
+import type { ModifiedFile } from './Sidebar';
 import type { OnboardingResult } from './OnboardingPanel';
 import { getProviderInfo, LLM_PROVIDERS } from '@hasna/assistants-shared';
 import type { QueuedMessage } from './appTypes';
@@ -85,6 +86,7 @@ import {
   formatElapsedDuration,
   deepMerge,
 } from './appHelpers';
+import { themeColor } from '../theme/colors';
 
 export function App({ cwd, version, permissionMode: initialPermissionMode }: AppProps) {
   const appCtx = useAppContext();
@@ -299,6 +301,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const [verboseTools, setVerboseTools] = useState(false);
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Set<string>>(new Set());
   const [gitBranch, setGitBranch] = useState<string | undefined>();
+  const [modifiedFiles, setModifiedFiles] = useState<ModifiedFile[]>([]);
   const [askUserState, setAskUserState] = useState<AskUserState | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState | null>(null);
   const [processingStartTime, setProcessingStartTime] = useState<number | undefined>();
@@ -624,6 +627,31 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         setGitBranch(stdout.trim());
       }
     });
+  }, [cwd]);
+
+  // Poll git diff --numstat for modified files (sidebar display)
+  useEffect(() => {
+    const fetchModifiedFiles = () => {
+      const { exec } = require('child_process');
+      exec('git diff --numstat HEAD 2>/dev/null', { cwd }, (err: Error | null, stdout: string) => {
+        if (err || !stdout?.trim()) {
+          setModifiedFiles([]);
+          return;
+        }
+        const files: ModifiedFile[] = stdout.trim().split('\n').map(line => {
+          const [add, del, path] = line.split('\t');
+          return {
+            path: path || '',
+            additions: parseInt(add, 10) || 0,
+            removals: parseInt(del, 10) || 0,
+          };
+        }).filter(f => f.path);
+        setModifiedFiles(files);
+      });
+    };
+    fetchModifiedFiles();
+    const interval = setInterval(fetchModifiedFiles, 10000); // refresh every 10s
+    return () => clearInterval(interval);
   }, [cwd]);
 
   const buildFullResponse = useCallback(() => {
@@ -3020,124 +3048,161 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return undefined;
   })();
 
+  // OpenCode layout: status bar = 1 row at bottom, split pane gets the rest
+  const statusHeight = 1;
+  const splitPaneHeight = rows - statusHeight;
+  // Sidebar visible only when session active AND terminal wide enough
+  const showSidebar = Boolean(activeSessionId) && columns >= 100;
+  // 70/30 horizontal split per OpenCode spec
+  const leftWidth = showSidebar ? Math.floor(columns * 0.7) : columns;
+  const rightWidth = showSidebar ? columns - leftWidth : 0;
+  // 90/10 vertical split: 90% messages, 10% editor (min 3 lines)
+  const editorHeight = Math.max(3, Math.floor(splitPaneHeight * 0.1));
+  const messagesHeight = splitPaneHeight - editorHeight;
+
   return (
-    <box flexDirection="row" height={rows}>
-      {/* Left: chat panel (75%) */}
-      <box flexDirection="column" flexGrow={3} paddingX={1}>
-        {/* Welcome banner */}
-        {showWelcome && (
-          <WelcomeBanner
-            version={version ?? 'unknown'}
-            model={activeSession?.client.getModel() ?? 'unknown'}
-            directory={activeSession?.cwd || cwd}
-          />
-        )}
+    <box flexDirection="column" height={rows} width={columns}>
+      {/* Split pane area (everything except status bar) */}
+      <box flexDirection="column" height={splitPaneHeight} width={columns}>
+        {/* Top section: horizontal split (messages + sidebar) */}
+        <box flexDirection="row" height={messagesHeight} width={columns}>
+          {/* Left panel: Messages — padding: top=1, right=1, bottom=0, left=1 */}
+          <box flexDirection="column" width={leftWidth} paddingTop={1} paddingRight={1} paddingBottom={0} paddingLeft={1}>
+            {/* Welcome banner */}
+            {showWelcome && (
+              <WelcomeBanner
+              />
+            )}
 
-        {/* Background processing indicator */}
-        {backgroundProcessingCount > 0 && (
-          <box marginBottom={1}>
-            <text fg="yellow">
-              {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
-            </text>
+            {/* Background processing indicator */}
+            {backgroundProcessingCount > 0 && (
+              <box marginBottom={1}>
+                <text fg={themeColor('warning')}>
+                  {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
+                </text>
+              </box>
+            )}
+
+            {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
+            <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
+              {/* All messages rendered in a scrollable container */}
+              <Messages
+                key="all-messages"
+                messages={displayMessages}
+                currentResponse={undefined}
+                streamingMessages={isProcessing ? streamingMessages : []}
+                currentToolCall={undefined}
+                lastToolResult={undefined}
+                activityLog={isProcessing ? activityTrim.entries : []}
+                queuedMessageIds={queuedMessageIds}
+                verboseTools={verboseTools}
+              />
+            </scrollbox>
+
+            {/* Ask-user simple interview */}
+            {askUserState && activeAskQuestion && !interviewState && (
+              <AskUserPanel
+                sessionId={askUserState.sessionId}
+                request={askUserState.request}
+                question={activeAskQuestion}
+                index={askUserState.index}
+                total={askUserState.request.questions.length}
+              />
+            )}
+
+            {/* Rich interview wizard */}
+            {interviewState && interviewState.sessionId === activeSessionId && (
+              <InterviewPanel
+                request={interviewState.request}
+                onComplete={completeInterview}
+                onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
+                isActive={!isPanelOpen}
+              />
+            )}
+
+            {/* Error */}
+            {error && <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} />}
+
+            {/* Processing indicator */}
+            <ProcessingIndicator
+              isProcessing={isProcessing}
+              startTime={processingStartTime}
+              tokenCount={currentTurnTokens}
+              isThinking={isThinking}
+            />
+
+            {/* Worked-for timer - shows only most recent, sticky above input */}
+            {!isProcessing && lastWorkedFor && (
+              <box marginBottom={0} marginLeft={2}>
+                <text fg={themeColor('muted')}>✻ Worked for {lastWorkedFor}</text>
+              </box>
+            )}
+
+            {/* Exit hint for double Ctrl+C */}
+            {showExitHint && (
+              <box marginLeft={2} marginBottom={0}>
+                <text fg={themeColor('warning')}>(Press Ctrl+C again to exit)</text>
+              </box>
+            )}
+
+            {/* Queue indicator - sticky above input */}
+            <QueueIndicator
+              messages={[...activeInline, ...activeQueue]}
+              maxPreview={MAX_QUEUED_PREVIEW}
+            />
+
+            {stopHint && (
+              <box marginLeft={2}>
+                <text fg={themeColor('muted')}>{stopHint}</text>
+              </box>
+            )}
           </box>
-        )}
 
-        {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
-        <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
-          {/* All messages rendered in a scrollable container */}
-          <Messages
-            key="all-messages"
-            messages={displayMessages}
-            currentResponse={undefined}
-            streamingMessages={isProcessing ? streamingMessages : []}
-            currentToolCall={undefined}
-            lastToolResult={undefined}
-            activityLog={isProcessing ? activityTrim.entries : []}
-            queuedMessageIds={queuedMessageIds}
-            verboseTools={verboseTools}
+          {/* Right panel: Sidebar (30%) — only when session active AND terminal >= 100 cols */}
+          {showSidebar && (
+            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1}>
+              <Sidebar
+                title={sidebarTitle}
+                modelId={activeSession?.client.getModel() ?? undefined}
+                cwd={activeSession?.cwd || cwd}
+                modifiedFiles={modifiedFiles}
+              />
+            </box>
+          )}
+        </box>
+
+        {/* Bottom panel: Editor/Input — border-top only (single line, borderNormal color) */}
+        <box flexDirection="column" height={editorHeight} width={columns} border={['top']} borderColor={themeColor('border')}>
+          <Input
+            ref={inputRef}
+            onSubmit={handleSubmit}
+            onStopProcessing={() => {
+              stopActiveProcessing('stopped');
+            }}
+            isProcessing={isBusy}
+            queueLength={activeQueue.length + inlineCount}
+            commands={commands}
+            skills={skills}
+            isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
+            askPlaceholder={askPlaceholder}
+            allowBlankAnswer={activeAskQuestion?.required === false}
+            assistantName={identityInfo?.assistant?.name || undefined}
+            isRecording={pttRecording}
+            recordingStatus={pttStatus}
+            onStopRecording={togglePushToTalk}
+            onFileSearch={searchFiles}
+            partialTranscript={partialTranscript}
+            pasteConfig={currentConfig?.input?.paste ? {
+              enabled: currentConfig.input.paste.enabled,
+              thresholds: currentConfig.input.paste.thresholds,
+              mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+            } : undefined}
           />
-        </scrollbox>
+        </box>
+      </box>
 
-        {/* Ask-user simple interview */}
-        {askUserState && activeAskQuestion && !interviewState && (
-          <AskUserPanel
-            sessionId={askUserState.sessionId}
-            request={askUserState.request}
-            question={activeAskQuestion}
-            index={askUserState.index}
-            total={askUserState.request.questions.length}
-          />
-        )}
-
-        {/* Rich interview wizard */}
-        {interviewState && interviewState.sessionId === activeSessionId && (
-          <InterviewPanel
-            request={interviewState.request}
-            onComplete={completeInterview}
-            onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
-            isActive={!isPanelOpen}
-          />
-        )}
-
-        {/* Error */}
-        {error && <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} />}
-
-        {/* Processing indicator */}
-        <ProcessingIndicator
-          isProcessing={isProcessing}
-          startTime={processingStartTime}
-          tokenCount={currentTurnTokens}
-          isThinking={isThinking}
-        />
-
-        {/* Worked-for timer - shows only most recent, sticky above input */}
-        {!isProcessing && lastWorkedFor && (
-          <box marginBottom={0} marginLeft={2}>
-            <text fg="gray">✻ Worked for {lastWorkedFor}</text>
-          </box>
-        )}
-
-        {/* Exit hint for double Ctrl+C */}
-        {showExitHint && (
-          <box marginLeft={2} marginBottom={0}>
-            <text fg="yellow">(Press Ctrl+C again to exit)</text>
-          </box>
-        )}
-
-        {/* Queue indicator - sticky above input */}
-        <QueueIndicator
-          messages={[...activeInline, ...activeQueue]}
-          maxPreview={MAX_QUEUED_PREVIEW}
-        />
-
-        {/* Input - always enabled, supports queue/interrupt */}
-        <Input
-          ref={inputRef}
-          onSubmit={handleSubmit}
-          onStopProcessing={() => {
-            stopActiveProcessing('stopped');
-          }}
-          isProcessing={isBusy}
-          queueLength={activeQueue.length + inlineCount}
-          commands={commands}
-          skills={skills}
-          isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
-          askPlaceholder={askPlaceholder}
-          allowBlankAnswer={activeAskQuestion?.required === false}
-          assistantName={identityInfo?.assistant?.name || undefined}
-          isRecording={pttRecording}
-          recordingStatus={pttStatus}
-          onStopRecording={togglePushToTalk}
-          onFileSearch={searchFiles}
-          partialTranscript={partialTranscript}
-          pasteConfig={currentConfig?.input?.paste ? {
-            enabled: currentConfig.input.paste.enabled,
-            thresholds: currentConfig.input.paste.thresholds,
-            mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
-          } : undefined}
-        />
-
-        {/* Status bar */}
+      {/* Status bar: exactly 1 row at bottom, OUTSIDE the split pane */}
+      <box height={statusHeight} width={columns}>
         <Status
           isProcessing={isBusy}
           cwd={activeSession?.cwd || cwd}
@@ -3168,27 +3233,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
               };
             })}
         />
-
-        {stopHint && (
-          <box marginLeft={2}>
-            <text fg="gray">{stopHint}</text>
-          </box>
-        )}
       </box>
-
-      {/* Right: sidebar (25%) — hidden when terminal < 100 cols wide */}
-      {columns >= 100 && (
-        <box flexDirection="column" flexGrow={1} border={['left']} borderColor="#44475a" paddingX={1}>
-          <Sidebar
-            title={sidebarTitle}
-            tokenUsage={tokenUsage}
-            modelId={activeSession?.client.getModel() ?? undefined}
-            cwd={activeSession?.cwd || cwd}
-            gitBranch={gitBranch}
-            isProcessing={isBusy}
-          />
-        </box>
-      )}
     </box>
   );
 }

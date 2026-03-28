@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { Identity, CreateIdentityOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
 const MAX_VISIBLE_ITEMS = 5;
@@ -731,7 +732,7 @@ export function IdentityPanel({
     return (
       <box marginBottom={1} flexDirection="column">
         {completedFields.map((field) => (
-          <text key={field.label} fg="gray">{field.label}: {field.value}</text>
+          <text key={field.label} fg={themeColor('muted')}>{field.label}: {field.value}</text>
         ))}
       </box>
     );
@@ -742,20 +743,20 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Identities</b></text>
+          <text fg={themeColor('info')}><b>Identities</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg="gray">No identities found.</text>
-          <text fg="gray">Press n to create a new identity.</text>
+          <text fg={themeColor('muted')}>No identities found.</text>
+          <text fg={themeColor('muted')}>Press n to create a new identity.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">n new | q quit</text>
+          <text fg={themeColor('muted')}>n new | q quit</text>
         </box>
       </box>
     );
@@ -766,20 +767,20 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Identity</b></text>
+          <text fg={themeColor('error')}><b>Delete Identity</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -796,21 +797,21 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Create Identity</b></text>
+          <text fg={themeColor('info')}><b>Create Identity</b></text>
           {totalCreateOptions > MAX_VISIBLE_ITEMS && (
-            <text fg="gray"> ({templateIndex + 1}/{totalCreateOptions})</text>
+            <text fg={themeColor('muted')}> ({templateIndex + 1}/{totalCreateOptions})</text>
           )}
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
         >
           {templateRange.hasMore.above > 0 && (
             <box paddingY={0}>
-              <text fg="gray">  ↑ {templateRange.hasMore.above} more above</text>
+              <text fg={themeColor('muted')}>  ↑ {templateRange.hasMore.above} more above</text>
             </box>
           )}
 
@@ -823,8 +824,8 @@ export function IdentityPanel({
             return (
               <box key={option.name} paddingY={0}>
                 <text
-                  bg={isSelected ? "#0055aa" : undefined}
-                  fg={isSelected ? "whiteBright" : undefined}
+                  bg={isSelected ? themeColor('primary') : undefined}
+                  fg={isSelected ? themeColor('text') : undefined}
                 >
                   {prefix}{option.name.padEnd(24)} {option.description}
                 </text>
@@ -834,13 +835,13 @@ export function IdentityPanel({
 
           {templateRange.hasMore.below > 0 && (
             <box paddingY={0}>
-              <text fg="gray">  ↓ {templateRange.hasMore.below} more below</text>
+              <text fg={themeColor('muted')}>  ↓ {templateRange.hasMore.below} more below</text>
             </box>
           )}
         </box>
 
         <box marginTop={1}>
-          <text fg="gray">↑↓ select | Enter create | Esc back</text>
+          <text fg={themeColor('muted')}>↑↓ select | Enter create | Esc back</text>
         </box>
       </box>
     );
@@ -855,8 +856,8 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
-          <text fg="gray"> - {stepLabel}</text>
+          <text fg={themeColor('info')}><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
+          <text fg={themeColor('muted')}> - {stepLabel}</text>
         </box>
 
         {renderFormSummary()}
@@ -874,7 +875,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</text>
             </box>
           </box>
         )}
@@ -892,7 +893,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -910,7 +911,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -928,7 +929,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -946,7 +947,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -964,7 +965,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -982,7 +983,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1000,7 +1001,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1018,7 +1019,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1036,7 +1037,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1054,7 +1055,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1072,7 +1073,7 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1082,12 +1083,12 @@ export function IdentityPanel({
             <box marginBottom={1}>
               <text>Communication Style:</text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
               {COMMUNICATION_STYLES.map((style, index) => (
                 <box key={style} paddingY={0}>
                   <text
-                    bg={index === formStyleIndex ? "#0055aa" : undefined}
-                    fg={index === formStyleIndex ? "whiteBright" : undefined}
+                    bg={index === formStyleIndex ? themeColor('primary') : undefined}
+                    fg={index === formStyleIndex ? themeColor('text') : undefined}
                   >
                     {index === formStyleIndex ? '>' : ' '} {style}
                   </text>
@@ -1095,7 +1096,7 @@ export function IdentityPanel({
               ))}
             </box>
             <box marginTop={1}>
-              <text fg="gray">↑↓ select | Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1105,12 +1106,12 @@ export function IdentityPanel({
             <box marginBottom={1}>
               <text>Response Length:</text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
               {RESPONSE_LENGTHS.map((length, index) => (
                 <box key={length} paddingY={0}>
                   <text
-                    bg={index === formLengthIndex ? "#0055aa" : undefined}
-                    fg={index === formLengthIndex ? "whiteBright" : undefined}
+                    bg={index === formLengthIndex ? themeColor('primary') : undefined}
+                    fg={index === formLengthIndex ? themeColor('text') : undefined}
                   >
                     {index === formLengthIndex ? '>' : ' '} {length}
                   </text>
@@ -1118,7 +1119,7 @@ export function IdentityPanel({
               ))}
             </box>
             <box marginTop={1}>
-              <text fg="gray">↑↓ select | Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</text>
             </box>
           </box>
         )}
@@ -1136,14 +1137,14 @@ export function IdentityPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to {isEdit ? 'save' : 'create'} | Esc back</text>
+              <text fg={themeColor('muted')}>Enter to {isEdit ? 'save' : 'create'} | Esc back</text>
             </box>
           </box>
         )}
 
         {isProcessing && (
           <box marginTop={1}>
-            <text fg="yellow">{isEdit ? 'Saving...' : 'Creating...'}</text>
+            <text fg={themeColor('warning')}>{isEdit ? 'Saving...' : 'Creating...'}</text>
           </box>
         )}
       </box>
@@ -1157,15 +1158,15 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{currentIdentity.name}</b></text>
-          {currentIdentity.isDefault && <text fg="yellow"> (default)</text>}
-          {isActive && <text fg="green"> (active)</text>}
+          <text fg={themeColor('info')}><b>{currentIdentity.name}</b></text>
+          {currentIdentity.isDefault && <text fg={themeColor('warning')}> (default)</text>}
+          {isActive && <text fg={themeColor('success')}> (active)</text>}
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -1173,23 +1174,23 @@ export function IdentityPanel({
             <text><b>Profile</b></text>
           </box>
           <box marginLeft={2}>
-            <text fg="gray">Display Name: </text>
+            <text fg={themeColor('muted')}>Display Name: </text>
             <text>{currentIdentity.profile.displayName}</text>
           </box>
           {currentIdentity.profile.title && (
             <box marginLeft={2}>
-              <text fg="gray">Role: </text>
+              <text fg={themeColor('muted')}>Role: </text>
               <text>{currentIdentity.profile.title}</text>
             </box>
           )}
           {currentIdentity.profile.company && (
             <box marginLeft={2}>
-              <text fg="gray">Company: </text>
+              <text fg={themeColor('muted')}>Company: </text>
               <text>{currentIdentity.profile.company}</text>
             </box>
           )}
           <box marginLeft={2}>
-            <text fg="gray">Timezone: </text>
+            <text fg={themeColor('muted')}>Timezone: </text>
             <text>{currentIdentity.profile.timezone}</text>
           </box>
 
@@ -1197,15 +1198,15 @@ export function IdentityPanel({
             <text><b>Preferences</b></text>
           </box>
           <box marginLeft={2}>
-            <text fg="gray">Language: </text>
+            <text fg={themeColor('muted')}>Language: </text>
             <text>{currentIdentity.preferences.language}</text>
           </box>
           <box marginLeft={2}>
-            <text fg="gray">Style: </text>
+            <text fg={themeColor('muted')}>Style: </text>
             <text>{currentIdentity.preferences.communicationStyle}</text>
           </box>
           <box marginLeft={2}>
-            <text fg="gray">Response: </text>
+            <text fg={themeColor('muted')}>Response: </text>
             <text>{currentIdentity.preferences.responseLength}</text>
           </box>
 
@@ -1219,19 +1220,19 @@ export function IdentityPanel({
               </box>
               {currentIdentity.contacts.emails.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg="gray">Email: </text>
+                  <text fg={themeColor('muted')}>Email: </text>
                   <text>{currentIdentity.contacts.emails[0].value}</text>
                 </box>
               )}
               {currentIdentity.contacts.phones.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg="gray">Phone: </text>
+                  <text fg={themeColor('muted')}>Phone: </text>
                   <text>{currentIdentity.contacts.phones[0].value}</text>
                 </box>
               )}
               {currentIdentity.contacts.addresses.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg="gray">Address: </text>
+                  <text fg={themeColor('muted')}>Address: </text>
                   <text>
                     {[
                       currentIdentity.contacts.addresses[0].street,
@@ -1245,7 +1246,7 @@ export function IdentityPanel({
               )}
               {currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg="gray">Virtual: </text>
+                  <text fg={themeColor('muted')}>Virtual: </text>
                   <text>{currentIdentity.contacts.virtualAddresses[0].value}</text>
                 </box>
               )}
@@ -1258,7 +1259,7 @@ export function IdentityPanel({
                 <text><b>Context</b></text>
               </box>
               <box marginLeft={2}>
-                <text fg="gray">{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</text>
+                <text fg={themeColor('muted')}>{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</text>
               </box>
             </>
           )}
@@ -1266,12 +1267,12 @@ export function IdentityPanel({
 
         {error && (
           <box marginTop={1}>
-            <text fg="red">{error}</text>
+            <text fg={themeColor('error')}>{error}</text>
           </box>
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {!isActive && 's switch | '}
             e edit |{' '}
             {!currentIdentity.isDefault && 'd set default | '}
@@ -1288,21 +1289,21 @@ export function IdentityPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg="cyan"><b>Identities</b></text>
+        <text fg={themeColor('info')}><b>Identities</b></text>
         {identities.length > MAX_VISIBLE_ITEMS && (
-          <text fg="gray"> ({identityIndex + 1}/{identities.length})</text>
+          <text fg={themeColor('muted')}> ({identityIndex + 1}/{identities.length})</text>
         )}
       </box>
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {identityRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {identityRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {identityRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -1313,20 +1314,20 @@ export function IdentityPanel({
           const prefix = isSelected ? '> ' : '  ';
           const nameDisplay = identity.name.padEnd(20);
           const statusIcon = identity.isDefault ? '★' : isActive ? '●' : '○';
-          const statusColor = identity.isDefault ? 'yellow' : isActive ? 'green' : 'gray';
+          const statusColor = identity.isDefault ? 'yellow' : isActive ? themeColor('success') : themeColor('muted');
 
           return (
             <box key={identity.id} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : statusColor}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : statusColor}>
                 {statusIcon}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{nameDisplay}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{identity.profile.displayName}
               </text>
             </box>
@@ -1335,23 +1336,23 @@ export function IdentityPanel({
 
         {identityRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {identityRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {identityRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Legend: </text>
-        <text fg="yellow">★</text>
-        <text fg="gray"> default | </text>
-        <text fg="green">●</text>
-        <text fg="gray"> active | </text>
-        <text fg="gray">○</text>
-        <text fg="gray"> inactive</text>
+        <text fg={themeColor('muted')}>Legend: </text>
+        <text fg={themeColor('warning')}>★</text>
+        <text fg={themeColor('muted')}> default | </text>
+        <text fg={themeColor('success')}>●</text>
+        <text fg={themeColor('muted')}> active | </text>
+        <text fg={themeColor('muted')}>○</text>
+        <text fg={themeColor('muted')}> inactive</text>
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | n new | q quit
         </text>
       </box>

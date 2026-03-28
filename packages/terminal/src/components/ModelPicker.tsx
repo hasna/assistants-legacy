@@ -7,6 +7,7 @@ import {
 } from '@hasna/assistants-shared';
 import type { SelectOption } from '@opentui/core';
 import { Modal } from './Modal';
+import { themeColor } from '../theme/colors';
 
 interface ModelPickerProps {
   visible: boolean;
@@ -16,86 +17,89 @@ interface ModelPickerProps {
 }
 
 /**
- * Model picker modal — opens on Ctrl+T.
- * Shows all models grouped by provider using the native <select> component.
+ * Model picker dialog — opens on Ctrl+T.
+ *
+ * Per OpenCode spec (section 8.5):
+ * - Title: "Select {Provider} Model" in Primary, Bold
+ * - Uses SimpleList (our <select>) to show model entries with name and provider
+ * - Selected item highlighted with accent color (Primary bg, Background fg, Bold)
+ * - Width: 40 (fixed), max visible: 10
+ * - 60% width, 60% height overlay via Modal
+ * - Scroll indicators for provider navigation (left/right arrows)
+ * - Keys: up/k, down/j, left/h prev provider, right/l next provider, enter select, esc close
  */
 export function ModelPicker({ visible, currentModelId, onSelectModel, onClose }: ModelPickerProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [providerIndex, setProviderIndex] = useState(() => {
+    // Start on the provider of the current model, if any
+    if (currentModelId) {
+      const model = ALL_MODELS.find(m => m.id === currentModelId);
+      if (model) {
+        const idx = LLM_PROVIDER_IDS.indexOf(model.provider as any);
+        if (idx >= 0) return idx;
+      }
+    }
+    return 0;
+  });
 
-  // Build options list grouped by provider
-  const { options, modelMap } = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+  // Theme colors
+  const primaryColor = themeColor('primary');
+  const bgColor = themeColor('bg');
+  const textColor = themeColor('text');
+  const mutedColor = themeColor('muted');
+
+  const currentProvider = LLM_PROVIDER_IDS[providerIndex] ?? LLM_PROVIDER_IDS[0];
+
+  // Build options list for current provider
+  const { options, modelMap, initialIndex } = useMemo(() => {
     const opts: SelectOption[] = [];
     const map = new Map<string, ModelDefinition>();
 
-    for (const providerId of LLM_PROVIDER_IDS) {
-      const providerModels = ALL_MODELS.filter((m) => {
-        if (m.provider !== providerId) return false;
-        if (q && !m.name.toLowerCase().includes(q) && !m.id.toLowerCase().includes(q)) return false;
-        return true;
-      });
+    const providerModels = ALL_MODELS.filter(m => m.provider === currentProvider);
 
-      if (providerModels.length === 0) continue;
-
-      // Add provider header as a non-selectable separator
+    for (const model of providerModels) {
+      const isCurrent = model.id === currentModelId;
       opts.push({
-        name: `── ${getProviderLabel(providerId)} ──`,
-        description: '',
-        value: `__provider__${providerId}`,
+        name: model.name,
+        description: getProviderLabel(model.provider),
+        value: model.id,
       });
-
-      for (const model of providerModels) {
-        const isCurrent = model.id === currentModelId;
-        const suffix = isCurrent ? ' (current)' : '';
-        opts.push({
-          name: `${model.name}${suffix}`,
-          description: model.id,
-          value: model.id,
-        });
-        map.set(model.id, model);
-      }
+      map.set(model.id, model);
     }
 
-    return { options: opts, modelMap: map };
-  }, [searchQuery, currentModelId]);
-
-  // Find initial selected index (current model or first real model)
-  const initialIndex = useMemo(() => {
+    // Find initial selected index (current model or first)
+    let activeIdx = 0;
     if (currentModelId) {
-      const idx = options.findIndex((o) => o.value === currentModelId);
-      if (idx >= 0) return idx;
+      const idx = opts.findIndex(o => o.value === currentModelId);
+      if (idx >= 0) activeIdx = idx;
     }
-    // Find first non-header option
-    return options.findIndex((o) => !String(o.value).startsWith('__provider__'));
-  }, [options, currentModelId]);
+
+    return { options: opts, modelMap: map, initialIndex: activeIdx };
+  }, [currentProvider, currentModelId]);
 
   const handleSelect = useCallback((_index: number, option: SelectOption | null) => {
     if (!option) return;
     const value = String(option.value);
-    // Skip provider headers
-    if (value.startsWith('__provider__')) return;
     onSelectModel(value);
     onClose();
   }, [onSelectModel, onClose]);
 
-  const handleChange = useCallback((index: number, option: SelectOption | null) => {
-    // Skip over provider headers — could implement skip logic here if needed
-  }, []);
-
   if (!visible) return null;
 
+  const providerLabel = getProviderLabel(currentProvider);
+  const hasMultipleProviders = LLM_PROVIDER_IDS.length > 1;
+
   return (
-    <Modal visible={visible} onClose={onClose} title="Select Model (Ctrl+T)">
-      {/* Search input */}
-      <box marginBottom={1}>
-        <text fg="#888888">/ </text>
-        <input
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search models..."
-          focused={visible}
-        />
-      </box>
+    <Modal visible={visible} onClose={onClose} title={`Select ${providerLabel} Model`}>
+      {/* Provider navigation indicators */}
+      {hasMultipleProviders && (
+        <box marginBottom={1} justifyContent="flex-end">
+          <text fg={primaryColor}><b>
+            {providerIndex > 0 ? '← ' : '  '}
+            {providerLabel}
+            {providerIndex < LLM_PROVIDER_IDS.length - 1 ? ' →' : '  '}
+          </b></text>
+        </box>
+      )}
 
       {/* Model list */}
       {options.length > 0 ? (
@@ -103,28 +107,28 @@ export function ModelPicker({ visible, currentModelId, onSelectModel, onClose }:
           options={options}
           selectedIndex={Math.max(0, initialIndex)}
           onSelect={handleSelect}
-          onChange={handleChange}
-          focused={visible && !searchQuery}
+          focused={visible}
           showDescription={true}
           wrapSelection={true}
           showScrollIndicator={true}
-          backgroundColor="#1a1a2e"
-          textColor="#cccccc"
-          selectedBackgroundColor="#3333aa"
-          selectedTextColor="#ffffff"
-          descriptionColor="#666688"
-          selectedDescriptionColor="#aaaacc"
+          backgroundColor={bgColor}
+          textColor={textColor}
+          selectedBackgroundColor={primaryColor}
+          selectedTextColor={bgColor}
+          descriptionColor={mutedColor}
+          selectedDescriptionColor={bgColor}
           flexGrow={1}
+          maxVisible={10}
         />
       ) : (
         <box>
-          <text fg="#666666">No models match "{searchQuery}"</text>
+          <text fg={mutedColor}>No models available for {providerLabel}</text>
         </box>
       )}
 
       {/* Footer */}
       <box marginTop={1}>
-        <text fg="#555555">Enter select | Up/Down navigate | Esc close</text>
+        <text fg={mutedColor}>Enter select | Up/Down navigate{hasMultipleProviders ? ' | Left/Right provider' : ''} | Esc close</text>
       </box>
     </Modal>
   );

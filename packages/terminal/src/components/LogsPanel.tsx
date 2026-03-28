@@ -3,6 +3,7 @@ import { getSecurityLogger, SecurityLogger } from '@hasna/assistants-core';
 import type { SecurityEvent, Severity } from '@hasna/assistants-core';
 import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface LogsPanelProps {
   onCancel: () => void;
@@ -23,7 +24,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   critical: 'red',
   high: 'yellow',
   medium: 'cyan',
-  low: 'gray',
+  low: themeColor('muted'),
 };
 
 const SEVERITY_CYCLE: SeverityFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
@@ -184,21 +185,21 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Log Entry Details</b></text>
+          <text fg={themeColor('info')}><b>Log Entry Details</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
           <box><text><b>Timestamp: </b></text><text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</text></box>
           <box><text><b>Severity: </b></text><text fg={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</text></box>
           <box><text><b>Event Type: </b></text><text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</text></box>
-          <box><text><b>Session: </b></text><text fg="gray">{e.sessionId}</text></box>
+          <box><text><b>Session: </b></text><text fg={themeColor('muted')}>{e.sessionId}</text></box>
 
           <box marginTop={1}><text><b>Details:</b></text></box>
           {e.details.tool && (
             <box marginLeft={2}><text><b>Tool: </b></text><text>{e.details.tool}</text></box>
           )}
           {e.details.command && (
-            <box marginLeft={2}><text><b>Command: </b></text><text fg="cyan" wrapMode="word">{e.details.command}</text></box>
+            <box marginLeft={2}><text><b>Command: </b></text><text fg={themeColor('info')} wrapMode="word">{e.details.command}</text></box>
           )}
           {e.details.path && (
             <box marginLeft={2}><text><b>Path: </b></text><text wrapMode="word">{e.details.path}</text></box>
@@ -207,7 +208,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
         </box>
 
         <box marginTop={1}>
-          <text fg="gray">Esc/q back</text>
+          <text fg={themeColor('muted')}>Esc/q back</text>
         </box>
       </box>
     );
@@ -221,25 +222,25 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Security Logs</b></text>
-        <text fg="gray">{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</text>
+        <text fg={themeColor('muted')}>{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</text>
       </box>
 
       {hasFilters && (
         <box marginBottom={1}>
-          <text fg="gray">Filters: </text>
+          <text fg={themeColor('muted')}>Filters: </text>
           {severityFilter !== 'all' && (
             <text fg={SEVERITY_COLORS[severityFilter]}>[severity: {severityFilter}] </text>
           )}
           {eventTypeFilter !== 'all' && (
-            <text fg="cyan">[type: {eventTypeFilter}] </text>
+            <text fg={themeColor('info')}>[type: {eventTypeFilter}] </text>
           )}
         </box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {filteredEvents.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">
+            <text fg={themeColor('muted')}>
               {allEvents.length === 0
                 ? 'No security events recorded.'
                 : 'No events match current filters.'}
@@ -260,7 +261,7 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ navigate | Enter details | [s]everity filter | [t]ype filter | [r]efresh | q quit
         </text>
       </box>

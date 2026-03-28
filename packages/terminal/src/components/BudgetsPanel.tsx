@@ -4,6 +4,7 @@ import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { BudgetPanel } from './BudgetPanel';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import type { BudgetProfile } from '../lib/budgets';
+import { themeColor } from '../theme/colors';
 
 interface BudgetsPanelProps {
   profiles: BudgetProfile[];
@@ -257,7 +258,7 @@ export function BudgetsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Create Budget Profile</b></text>
+          <text fg={themeColor('info')}><b>Create Budget Profile</b></text>
         </box>
 
         {createStep === 'name' && (
@@ -275,7 +276,7 @@ export function BudgetsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc to cancel</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
             </box>
           </box>
         )}
@@ -283,7 +284,7 @@ export function BudgetsPanel({
         {createStep === 'description' && (
           <box flexDirection="column">
             <box>
-              <text fg="gray">Name: </text>
+              <text fg={themeColor('muted')}>Name: </text>
               <text>{newName}</text>
             </box>
             <box marginTop={1}>
@@ -300,7 +301,7 @@ export function BudgetsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to configure limits | Esc to cancel</text>
+              <text fg={themeColor('muted')}>Enter to configure limits | Esc to cancel</text>
             </box>
           </box>
         )}
@@ -308,12 +309,12 @@ export function BudgetsPanel({
         {createStep === 'configure' && (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="gray">Name: </text>
+              <text fg={themeColor('muted')}>Name: </text>
               <text>{newName}</text>
             </box>
             {newDescription.trim() && (
               <box marginBottom={1}>
-                <text fg="gray">Description: </text>
+                <text fg={themeColor('muted')}>Description: </text>
                 <text>{newDescription.trim()}</text>
               </box>
             )}
@@ -349,7 +350,7 @@ export function BudgetsPanel({
 
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">Creating profile...</text>
+            <text fg={themeColor('warning')}>Creating profile...</text>
           </box>
         )}
       </box>
@@ -360,7 +361,7 @@ export function BudgetsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Budget Profile</b></text>
+          <text fg={themeColor('error')}><b>Delete Budget Profile</b></text>
         </box>
         <box marginBottom={1}>
           <text>
@@ -369,8 +370,8 @@ export function BudgetsPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg="green"><b>y</b></text> to confirm or{' '}
-            <text fg="red"><b>n</b></text> to cancel
+            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
+            <text fg={themeColor('error')}><b>n</b></text> to cancel
           </text>
         </box>
       </box>
@@ -381,13 +382,13 @@ export function BudgetsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Budgets</b></text>
-        <text fg="gray">[n]ew [e]dit [d]elete</text>
+        <text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {profiles.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No budget profiles. Press n to create one.</text>
+            <text fg={themeColor('muted')}>No budget profiles. Press n to create one.</text>
           </box>
         ) : (
           profiles.map((profile, index) => {
@@ -395,7 +396,7 @@ export function BudgetsPanel({
             const isActive = profile.id === activeProfileId;
             return (
               <box key={profile.id} paddingY={0}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : isActive ? 'green' : "gray"}>
+                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : isActive ? themeColor('success') : "gray"}>
                   {isActive ? '*' : ' '} {index + 1}. {profile.name.padEnd(22)} {profile.description || ''}
                 </text>
               </box>
@@ -406,8 +407,8 @@ export function BudgetsPanel({
         {/* New profile option */}
         <box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
           <text
-            bg={selectedIndex === profiles.length ? "#0055aa" : undefined}
-            fg={selectedIndex === profiles.length ? "whiteBright" : undefined}
+            bg={selectedIndex === profiles.length ? themeColor('primary') : undefined}
+            fg={selectedIndex === profiles.length ? themeColor('text') : undefined}
           >
             + New profile (n)
           </text>
@@ -416,14 +417,14 @@ export function BudgetsPanel({
 
       {selectedProfile && (
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {selectedProfile.id === activeProfileId ? 'Active for this session' : 'Enter to activate'}
           </text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</text>
+        <text fg={themeColor('muted')}>Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</text>
       </box>
     </box>
   );

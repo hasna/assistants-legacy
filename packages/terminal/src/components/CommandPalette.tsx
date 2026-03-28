@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import type { SelectOption } from '@opentui/core';
 import { Modal } from './Modal';
+import { themeColor } from '../theme/colors';
 
 /**
  * A command entry for the palette.
@@ -20,11 +21,27 @@ interface CommandPaletteProps {
 }
 
 /**
- * Command palette modal — opens on Ctrl+P.
- * Shows a filterable list of available commands using <select> and <input>.
+ * Command palette dialog — opens on Ctrl+P.
+ *
+ * Per OpenCode spec (section 8.4):
+ * - Title: "Commands" in Primary, Bold, Padding(0,1)
+ * - Text input at top for filtering
+ * - List below with command name + description (two-line format)
+ * - 60% width, 60% height overlay via Modal
+ * - Min width: 40, expands to fit longest command title/description
+ * - Max visible: 10
+ * - Selected: Primary bg, Background fg, Bold
+ * - Normal title: Text color; Normal description: TextMuted
+ * - Keys: up/down/j/k navigate, enter select, esc close
  */
 export function CommandPalette({ visible, commands, onClose }: CommandPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Theme colors
+  const primaryColor = themeColor('primary');
+  const bgColor = themeColor('bg');
+  const textColor = themeColor('text');
+  const mutedColor = themeColor('muted');
 
   // Filter and build options
   const { options, commandMap } = useMemo(() => {
@@ -70,10 +87,10 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} onClose={handleClose} title="Command Palette (Ctrl+P)">
-      {/* Search input */}
+    <Modal visible={visible} onClose={handleClose} title="Commands">
+      {/* Search/filter input */}
       <box marginBottom={1}>
-        <text fg="#888888">&gt; </text>
+        <text fg={mutedColor}>&gt; </text>
         <input
           value={searchQuery}
           onChange={setSearchQuery}
@@ -82,7 +99,7 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
         />
       </box>
 
-      {/* Command list */}
+      {/* Command list with name + description */}
       {options.length > 0 ? (
         <select
           options={options}
@@ -92,23 +109,24 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
           showDescription={true}
           wrapSelection={true}
           showScrollIndicator={true}
-          backgroundColor="#1a1a2e"
-          textColor="#cccccc"
-          selectedBackgroundColor="#3333aa"
-          selectedTextColor="#ffffff"
-          descriptionColor="#666688"
-          selectedDescriptionColor="#aaaacc"
+          backgroundColor={bgColor}
+          textColor={textColor}
+          selectedBackgroundColor={primaryColor}
+          selectedTextColor={bgColor}
+          descriptionColor={mutedColor}
+          selectedDescriptionColor={bgColor}
           flexGrow={1}
+          maxVisible={10}
         />
       ) : (
         <box>
-          <text fg="#666666">No commands match "{searchQuery}"</text>
+          <text fg={mutedColor}>No commands match "{searchQuery}"</text>
         </box>
       )}
 
       {/* Footer */}
       <box marginTop={1}>
-        <text fg="#555555">Enter select | Up/Down navigate | Esc close</text>
+        <text fg={mutedColor}>Enter select | Up/Down navigate | Esc close</text>
       </box>
     </Modal>
   );

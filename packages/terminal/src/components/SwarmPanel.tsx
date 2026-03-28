@@ -1,6 +1,7 @@
 import React from 'react';
 import type { SerializableSwarmState, SwarmConfig } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface SwarmPanelProps {
   state: SerializableSwarmState | null;
@@ -12,17 +13,17 @@ interface SwarmPanelProps {
 
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    idle: 'gray',
+    idle: themeColor('muted'),
     planning: 'cyan',
     executing: 'blue',
     reviewing: 'yellow',
     aggregating: 'magenta',
-    completed: 'green',
+    completed: themeColor('success'),
     failed: 'red',
     cancelled: 'red',
   };
 
-  return <text fg={colorMap[status] || 'gray'}><b>{status.toUpperCase()}</b></text>;
+  return <text fg={colorMap[status] || themeColor('muted')}><b>{status.toUpperCase()}</b></text>;
 }
 
 function TaskStatusIcon({ status }: { status: string }) {
@@ -36,16 +37,16 @@ function TaskStatusIcon({ status }: { status: string }) {
     cancelled: '—',
   };
   const colors: Record<string, string> = {
-    pending: 'gray',
+    pending: themeColor('muted'),
     assigned: 'cyan',
     running: 'blue',
-    completed: 'green',
+    completed: themeColor('success'),
     failed: 'red',
     blocked: 'yellow',
-    cancelled: 'gray',
+    cancelled: themeColor('muted'),
   };
 
-  return <text fg={colors[status] || 'gray'}>{icons[status] || '?'}</text>;
+  return <text fg={colors[status] || themeColor('muted')}>{icons[status] || '?'}</text>;
 }
 
 export function SwarmPanel({
@@ -71,10 +72,10 @@ export function SwarmPanel({
       <box flexDirection="column" paddingY={1}>
         <text><b>Swarm</b></text>
         <box marginTop={1}>
-          <text fg="gray">No swarm currently running. Use /swarm &lt;goal&gt; to start.</text>
+          <text fg={themeColor('muted')}>No swarm currently running. Use /swarm &lt;goal&gt; to start.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">[q]uit</text>
+          <text fg={themeColor('muted')}>[q]uit</text>
         </box>
       </box>
     );
@@ -91,11 +92,11 @@ export function SwarmPanel({
         <StatusBadge status={state.status} />
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Goal */}
         {state.plan?.goal && (
           <box flexDirection="row" marginBottom={1}>
-            <text fg="gray">Goal: </text>
+            <text fg={themeColor('muted')}>Goal: </text>
             <text>{state.plan.goal}</text>
           </box>
         )}
@@ -103,19 +104,19 @@ export function SwarmPanel({
         {/* Task Graph */}
         {tasks.length > 0 && (
           <box flexDirection="column" marginBottom={1}>
-            <text fg="gray"><b>Tasks ({state.metrics.completedTasks}/{state.metrics.totalTasks}):</b></text>
+            <text fg={themeColor('muted')}><b>Tasks ({state.metrics.completedTasks}/{state.metrics.totalTasks}):</b></text>
             <box flexDirection="column" marginTop={1}>
               {tasks.slice(0, 15).map((task, i) => (
                 <box key={task.id || i} gap={1}>
                   <TaskStatusIcon status={task.status} />
                   <text fg={task.status === 'completed' ? "gray" : undefined}>{task.description.slice(0, 60)}</text>
                   {task.assignedAssistantId && (
-                    <text fg="cyan"> [{task.assignedAssistantId.slice(0, 6)}]</text>
+                    <text fg={themeColor('info')}> [{task.assignedAssistantId.slice(0, 6)}]</text>
                   )}
                 </box>
               ))}
               {tasks.length > 15 && (
-                <text fg="gray">  ...and {tasks.length - 15} more</text>
+                <text fg={themeColor('muted')}>  ...and {tasks.length - 15} more</text>
               )}
             </box>
           </box>
@@ -123,26 +124,26 @@ export function SwarmPanel({
 
         {/* Metrics */}
         <box flexDirection="column">
-          <text fg="gray"><b>Metrics:</b></text>
+          <text fg={themeColor('muted')}><b>Metrics:</b></text>
           <box paddingLeft={1} flexDirection="column">
             <box>
-              <text fg="gray">{'LLM Calls:'.padEnd(16)}</text>
+              <text fg={themeColor('muted')}>{'LLM Calls:'.padEnd(16)}</text>
               <text>{state.metrics.llmCalls}</text>
             </box>
             <box>
-              <text fg="gray">{'Tool Calls:'.padEnd(16)}</text>
+              <text fg={themeColor('muted')}>{'Tool Calls:'.padEnd(16)}</text>
               <text>{state.metrics.toolCalls}</text>
             </box>
             <box>
-              <text fg="gray">{'Tokens Used:'.padEnd(16)}</text>
+              <text fg={themeColor('muted')}>{'Tokens Used:'.padEnd(16)}</text>
               <text>{state.metrics.tokensUsed.toLocaleString()}</text>
               {config?.tokenBudget && config.tokenBudget > 0 && (
-                <text fg="gray"> / {config.tokenBudget.toLocaleString()}</text>
+                <text fg={themeColor('muted')}> / {config.tokenBudget.toLocaleString()}</text>
               )}
             </box>
             {state.metrics.replans > 0 && (
               <box>
-                <text fg="gray">{'Replans:'.padEnd(16)}</text>
+                <text fg={themeColor('muted')}>{'Replans:'.padEnd(16)}</text>
                 <text>{state.metrics.replans}</text>
               </box>
             )}
@@ -152,20 +153,20 @@ export function SwarmPanel({
         {/* Active Assistants */}
         {state.activeAssistants && state.activeAssistants.length > 0 && (
           <box marginTop={1}>
-            <text fg="gray">Active workers: </text>
-            <text fg="cyan">{state.activeAssistants.length}</text>
+            <text fg={themeColor('muted')}>Active workers: </text>
+            <text fg={themeColor('info')}>{state.activeAssistants.length}</text>
           </box>
         )}
 
         {/* Shared Memory */}
         {memoryStats && memoryStats.totalEntries > 0 && (
           <box marginTop={1} flexDirection="column">
-            <text fg="gray"><b>Shared Memory: {memoryStats.totalEntries} entries</b></text>
+            <text fg={themeColor('muted')}><b>Shared Memory: {memoryStats.totalEntries} entries</b></text>
             <box paddingLeft={1}>
               {Object.entries(memoryStats.byCategory)
                 .filter(([_, count]) => count > 0)
                 .map(([cat, count]) => (
-                  <text key={cat} fg="gray">{cat}: {count}  </text>
+                  <text key={cat} fg={themeColor('muted')}>{cat}: {count}  </text>
                 ))}
             </box>
           </box>
@@ -174,16 +175,16 @@ export function SwarmPanel({
         {/* Errors */}
         {state.errors && state.errors.length > 0 && (
           <box marginTop={1} flexDirection="column">
-            <text fg="red"><b>Errors:</b></text>
+            <text fg={themeColor('error')}><b>Errors:</b></text>
             {state.errors.slice(-3).map((err, i) => (
-              <text key={i} fg="red">  - {err.slice(0, 80)}</text>
+              <text key={i} fg={themeColor('error')}>  - {err.slice(0, 80)}</text>
             ))}
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {isRunning ? '[s]top ' : ''}[q]uit
         </text>
       </box>

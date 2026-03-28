@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 const MAX_VISIBLE_ITEMS = 5;
 
@@ -230,14 +231,14 @@ export function WorkspacePanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Workspaces</b></text>
+          <text fg={themeColor('info')}><b>Workspaces</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <text fg="gray">No workspaces found.</text>
-          <text fg="gray">Use /workspace create &lt;name&gt; to create one.</text>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <text fg={themeColor('muted')}>No workspaces found.</text>
+          <text fg={themeColor('muted')}>Use /workspace create &lt;name&gt; to create one.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">q quit</text>
+          <text fg={themeColor('muted')}>q quit</text>
         </box>
       </box>
     );
@@ -248,16 +249,16 @@ export function WorkspacePanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Workspace</b></text>
+          <text fg={themeColor('error')}><b>Delete Workspace</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text>Are you sure you want to delete this workspace?</text>
-          <text fg="gray">Name: {deleteTarget.name}</text>
-          <text fg="gray">ID: {deleteTarget.id}</text>
-          <text fg="gray">This will remove all workspace files permanently.</text>
+          <text fg={themeColor('muted')}>Name: {deleteTarget.name}</text>
+          <text fg={themeColor('muted')}>ID: {deleteTarget.id}</text>
+          <text fg={themeColor('muted')}>This will remove all workspace files permanently.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -268,16 +269,16 @@ export function WorkspacePanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="yellow"><b>Archive Workspace</b></text>
+          <text fg={themeColor('warning')}><b>Archive Workspace</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <text>Archive this workspace?</text>
-          <text fg="gray">Name: {archiveTarget.name}</text>
-          <text fg="gray">ID: {archiveTarget.id}</text>
-          <text fg="gray">Archived workspaces are hidden from the default list.</text>
+          <text fg={themeColor('muted')}>Name: {archiveTarget.name}</text>
+          <text fg={themeColor('muted')}>ID: {archiveTarget.id}</text>
+          <text fg={themeColor('muted')}>Archived workspaces are hidden from the default list.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -289,42 +290,42 @@ export function WorkspacePanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Workspace: {currentWs.name}</b></text>
-          <text fg={currentWs.status === 'active' ? 'green' : 'gray'}> [{currentWs.status}]</text>
-          {isActive && <text fg="green"> [current]</text>}
+          <text fg={themeColor('info')}><b>Workspace: {currentWs.name}</b></text>
+          <text fg={currentWs.status === 'active' ? themeColor('success') : themeColor('muted')}> [{currentWs.status}]</text>
+          {isActive && <text fg={themeColor('success')}> [current]</text>}
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           <box>
-            <text fg="gray">ID: </text>
+            <text fg={themeColor('muted')}>ID: </text>
             <text>{currentWs.id}</text>
           </box>
 
           {currentWs.description && (
             <box>
-              <text fg="gray">Description: </text>
+              <text fg={themeColor('muted')}>Description: </text>
               <text>{currentWs.description}</text>
             </box>
           )}
 
           <box>
-            <text fg="gray">Created by: </text>
+            <text fg={themeColor('muted')}>Created by: </text>
             <text>{currentWs.createdBy}</text>
           </box>
 
           <box>
-            <text fg="gray">Created: </text>
+            <text fg={themeColor('muted')}>Created: </text>
             <text>{formatRelativeTime(currentWs.createdAt)}</text>
-            <text fg="gray"> ({new Date(currentWs.createdAt).toLocaleString()})</text>
+            <text fg={themeColor('muted')}> ({new Date(currentWs.createdAt).toLocaleString()})</text>
           </box>
 
           <box>
-            <text fg="gray">Updated: </text>
+            <text fg={themeColor('muted')}>Updated: </text>
             <text>{formatRelativeTime(currentWs.updatedAt)}</text>
           </box>
 
           <box marginTop={1} flexDirection="column">
-            <text fg="gray">Participants ({currentWs.participants.length}):</text>
+            <text fg={themeColor('muted')}>Participants ({currentWs.participants.length}):</text>
             {currentWs.participants.map((p, i) => (
               <text key={i}>  - {p}</text>
             ))}
@@ -333,14 +334,14 @@ export function WorkspacePanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
+            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             u use | {currentWs.status === 'active' ? 'a archive | ' : ''}x delete | Esc back
           </text>
         </box>
@@ -354,16 +355,16 @@ export function WorkspacePanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg="cyan"><b>Workspaces</b></text>
+        <text fg={themeColor('info')}><b>Workspaces</b></text>
         {workspaces.length > MAX_VISIBLE_ITEMS && (
-          <text fg="gray"> ({wsIndex + 1}/{workspaces.length})</text>
+          <text fg={themeColor('muted')}> ({wsIndex + 1}/{workspaces.length})</text>
         )}
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {wsRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {wsRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {wsRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -378,19 +379,19 @@ export function WorkspacePanel({
 
           return (
             <box key={ws.id} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{statusIcon}{' '}
               </text>
               <text attributes={isSelected ? 33 : 1}><b>
                 {name}
               </b></text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : isActive ? 'green' : undefined}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : isActive ? themeColor('success') : undefined}>
                 {isActive ? ' •' : '  '}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{participants}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{formatRelativeTime(ws.updatedAt)}
               </text>
             </box>
@@ -399,19 +400,19 @@ export function WorkspacePanel({
 
         {wsRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {wsRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {wsRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
 
       {statusMessage && (
         <box marginTop={1}>
-          <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+          <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | u use | q quit
         </text>
       </box>

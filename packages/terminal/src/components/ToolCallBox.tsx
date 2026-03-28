@@ -68,7 +68,7 @@ interface ToolCallRowProps {
 function ToolCallRow({ entry }: ToolCallRowProps) {
   const { toolCall, result } = entry;
   const statusIcon = result ? (result.isError ? '✗' : '✓') : '○';
-  const statusColor = result ? (result.isError ? themeColor('red') : themeColor('green')) : themeColor('muted');
+  const statusColor = result ? (result.isError ? themeColor('error') : themeColor('success')) : themeColor('muted');
 
   return (
     <box flexDirection="row">

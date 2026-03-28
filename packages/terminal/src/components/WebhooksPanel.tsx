@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { WebhookListItem, WebhookRegistration, WebhookEventListItem, WebhooksManager } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface WebhooksPanelProps {
   manager: WebhooksManager;
@@ -16,9 +17,9 @@ const STATUS_ICONS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string | undefined> = {
-  active: 'green',
+  active: themeColor('success'),
   paused: 'yellow',
-  deleted: 'gray',
+  deleted: themeColor('muted'),
 };
 
 const EVENT_STATUS_ICONS: Record<string, string> = {
@@ -208,10 +209,10 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg="cyan"><b>Webhooks</b></text>
-      <text fg="gray"> | </text>
-      <text fg="gray">
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text fg={themeColor('info')}><b>Webhooks</b></text>
+      <text fg={themeColor('muted')}> | </text>
+      <text fg={themeColor('muted')}>
         {mode === 'list' ? 'q:close c:create d:delete p:pause/resume t:test e:events r:refresh' :
          mode === 'detail' ? 'esc:back r:reveal/hide secret e:events' :
          mode === 'events' ? 'esc:back' :
@@ -225,14 +226,14 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
   // Status message
   const statusBar = statusMessage ? (
     <box marginBottom={1}>
-      <text fg="yellow">{statusMessage}</text>
+      <text fg={themeColor('warning')}>{statusMessage}</text>
     </box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
     <box marginBottom={1}>
-      <text fg="red">Error: {error}</text>
+      <text fg={themeColor('error')}>Error: {error}</text>
     </box>
   ) : null;
 
@@ -245,7 +246,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
         {errorBar}
         {webhooks.length === 0 ? (
           <box paddingX={1}>
-            <text fg="gray">No webhooks registered. Press 'c' to create one.</text>
+            <text fg={themeColor('muted')}>No webhooks registered. Press 'c' to create one.</text>
           </box>
         ) : (
           <box flexDirection="column" paddingX={1}>
@@ -260,7 +261,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
                 <text attributes={i === selectedIndex ? 1 : undefined}><b>
                   {wh.name}
                 </b></text>
-                <text fg="gray">
+                <text fg={themeColor('muted')}>
                   {' '}({wh.source}) | {wh.deliveryCount} events | Last: {formatRelativeTime(wh.lastDeliveryAt)}
                 </text>
               </box>
@@ -284,14 +285,14 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
         <box flexDirection="column" paddingX={1}>
           <text><b>{selectedWebhook.name}</b></text>
           <text> </text>
-          <text>ID:          <text fg="cyan">{selectedWebhook.id}</text></text>
+          <text>ID:          <text fg={themeColor('info')}>{selectedWebhook.id}</text></text>
           <text>Source:      {selectedWebhook.source}</text>
           <text>Status:      <text fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</text></text>
           {selectedWebhook.description && (
             <text>Description: {selectedWebhook.description}</text>
           )}
-          <text>URL:         <text fg="green">/api/v1/webhooks/receive/{selectedWebhook.id}</text></text>
-          <text>Secret:      <text fg={showSecret ? 'yellow' : 'gray'}>{maskedSecret}</text> <text fg="gray">(r to {showSecret ? 'hide' : 'reveal'})</text></text>
+          <text>URL:         <text fg={themeColor('success')}>/api/v1/webhooks/receive/{selectedWebhook.id}</text></text>
+          <text>Secret:      <text fg={showSecret ? 'yellow' : themeColor('muted')}>{maskedSecret}</text> <text fg={themeColor('muted')}>(r to {showSecret ? 'hide' : 'reveal'})</text></text>
           <text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</text>
           <text>Deliveries:  {selectedWebhook.deliveryCount}</text>
           <text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</text>
@@ -310,7 +311,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
         {header}
         {events.length === 0 ? (
           <box paddingX={1}>
-            <text fg="gray">No events received yet.</text>
+            <text fg={themeColor('muted')}>No events received yet.</text>
           </box>
         ) : (
           <box flexDirection="column" paddingX={1}>
@@ -319,15 +320,15 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
                 <box>
                   <text>{EVENT_STATUS_ICONS[evt.status] || '?'} </text>
                   <text><b>{evt.eventType}</b></text>
-                  <text fg="gray"> ({evt.id})</text>
+                  <text fg={themeColor('muted')}> ({evt.id})</text>
                 </box>
                 <box paddingLeft={2}>
-                  <text fg="gray">
+                  <text fg={themeColor('muted')}>
                     {evt.source} | {evt.status} | {new Date(evt.timestamp).toLocaleString()}
                   </text>
                 </box>
                 <box paddingLeft={2}>
-                  <text fg="gray" truncate={true} wrapMode="none">
+                  <text fg={themeColor('muted')} truncate={true} wrapMode="none">
                     {evt.preview}
                   </text>
                 </box>
@@ -345,7 +346,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="red"><b>Delete webhook?</b></text>
+          <text fg={themeColor('error')}><b>Delete webhook?</b></text>
           <text> </text>
           <text>This will permanently delete "{selectedWebhook.name}" ({selectedWebhook.id})</text>
           <text>and all its event history.</text>
@@ -429,7 +430,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
   return (
     <box flexDirection="column">
       {header}
-      <text fg="gray">Loading...</text>
+      <text fg={themeColor('muted')}>Loading...</text>
     </box>
   );
 }

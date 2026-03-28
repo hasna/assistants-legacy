@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
 const MAX_VISIBLE_ITEMS = 5;
@@ -308,25 +309,25 @@ export function InboxPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Inbox</b></text>
+          <text fg={themeColor('info')}><b>Inbox</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg="gray">No emails in inbox.</text>
-          <text fg="gray">Press f to fetch new emails from server.</text>
+          <text fg={themeColor('muted')}>No emails in inbox.</text>
+          <text fg={themeColor('muted')}>Press f to fetch new emails from server.</text>
         </box>
         {statusMessage && (
           <box marginTop={1}>
-            <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+            <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
           </box>
         )}
         <box marginTop={1}>
-          <text fg="gray">f fetch | q quit</text>
+          <text fg={themeColor('muted')}>f fetch | q quit</text>
         </box>
       </box>
     );
@@ -337,22 +338,22 @@ export function InboxPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Email</b></text>
+          <text fg={themeColor('error')}><b>Delete Email</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Are you sure you want to delete this email?</text>
-          <text fg="gray">From: {deleteTarget.from}</text>
-          <text fg="gray">Subject: {deleteTarget.subject}</text>
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>From: {deleteTarget.from}</text>
+          <text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</text>
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -366,27 +367,27 @@ export function InboxPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{statusIcon} Email</b></text>
+          <text fg={themeColor('info')}><b>{statusIcon} Email</b></text>
           {emailItem?.hasAttachments && <text> 📎</text>}
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <box>
-            <text fg="gray">From: </text>
+            <text fg={themeColor('muted')}>From: </text>
             <text>{detailEmail.from.name || detailEmail.from.address}</text>
             {detailEmail.from.name && (
-              <text fg="gray"> &lt;{detailEmail.from.address}&gt;</text>
+              <text fg={themeColor('muted')}> &lt;{detailEmail.from.address}&gt;</text>
             )}
           </box>
 
           <box>
-            <text fg="gray">To: </text>
+            <text fg={themeColor('muted')}>To: </text>
             <text>
               {detailEmail.to.map((t) => t.name || t.address).join(', ')}
             </text>
@@ -394,7 +395,7 @@ export function InboxPanel({
 
           {detailEmail.cc && detailEmail.cc.length > 0 && (
             <box>
-              <text fg="gray">Cc: </text>
+              <text fg={themeColor('muted')}>Cc: </text>
               <text>
                 {detailEmail.cc.map((c) => c.name || c.address).join(', ')}
               </text>
@@ -402,19 +403,19 @@ export function InboxPanel({
           )}
 
           <box>
-            <text fg="gray">Subject: </text>
+            <text fg={themeColor('muted')}>Subject: </text>
             <text><b>{detailEmail.subject}</b></text>
           </box>
 
           <box>
-            <text fg="gray">Date: </text>
+            <text fg={themeColor('muted')}>Date: </text>
             <text>{formatRelativeTime(detailEmail.date)}</text>
-            <text fg="gray"> ({new Date(detailEmail.date).toLocaleString()})</text>
+            <text fg={themeColor('muted')}> ({new Date(detailEmail.date).toLocaleString()})</text>
           </box>
 
           {detailEmail.attachments && detailEmail.attachments.length > 0 && (
             <box>
-              <text fg="gray">Attachments: </text>
+              <text fg={themeColor('muted')}>Attachments: </text>
               <text>
                 {detailEmail.attachments.map((a) => a.filename).join(', ')}
               </text>
@@ -422,7 +423,7 @@ export function InboxPanel({
           )}
 
           <box marginTop={1} flexDirection="column">
-            <text fg="gray">Message:</text>
+            <text fg={themeColor('muted')}>Message:</text>
             <text wrapMode="word">
               {detailEmail.body.text || '(No text content)'}
             </text>
@@ -431,14 +432,14 @@ export function InboxPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : 'green'}>
+            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             r reply | u toggle read | d delete | Esc back
           </text>
         </box>
@@ -452,21 +453,21 @@ export function InboxPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg="cyan"><b>Inbox</b></text>
+        <text fg={themeColor('info')}><b>Inbox</b></text>
         {emails.length > MAX_VISIBLE_ITEMS && (
-          <text fg="gray"> ({emailIndex + 1}/{emails.length})</text>
+          <text fg={themeColor('muted')}> ({emailIndex + 1}/{emails.length})</text>
         )}
       </box>
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {emailRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {emailRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {emailRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -481,16 +482,16 @@ export function InboxPanel({
 
           return (
             <box key={email.id} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{statusIcon}{attachIcon}{' '}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : email.isRead ? "gray" : undefined}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
                 {fromStr}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : email.isRead ? "gray" : undefined}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
                 {' '}{subject}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{formatRelativeTime(email.date)}
               </text>
             </box>
@@ -499,29 +500,29 @@ export function InboxPanel({
 
         {emailRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {emailRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {emailRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Legend: </text>
+        <text fg={themeColor('muted')}>Legend: </text>
         <text>📬</text>
-        <text fg="gray"> unread | </text>
+        <text fg={themeColor('muted')}> unread | </text>
         <text>📖</text>
-        <text fg="gray"> read | </text>
+        <text fg={themeColor('muted')}> read | </text>
         <text>📎</text>
-        <text fg="gray"> attachment</text>
+        <text fg={themeColor('muted')}> attachment</text>
       </box>
 
       {statusMessage && (
         <box marginTop={1}>
-          <text fg={statusMessage.startsWith('Error') ? 'red' : 'green'}>{statusMessage}</text>
+          <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | f fetch | q quit
         </text>
       </box>

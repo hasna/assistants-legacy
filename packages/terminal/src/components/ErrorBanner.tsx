@@ -32,7 +32,7 @@ interface ErrorBannerProps {
 
 export function ErrorBanner({ error, showErrorCodes = false }: ErrorBannerProps) {
   const parsed = parseErrorMessage(error);
-  const severity = parsed.code && /TIMEOUT|RATE_LIMITED/.test(parsed.code) ? themeColor('yellow') : themeColor('red');
+  const severity = parsed.code && /TIMEOUT|RATE_LIMITED/.test(parsed.code) ? themeColor('warning') : themeColor('error');
   const prefix = showErrorCodes && parsed.code ? `${parsed.code}: ` : '';
 
   return (

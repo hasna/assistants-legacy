@@ -11,6 +11,7 @@ import {
 } from '@hasna/assistants-core';
 import type { ContactWithDetails, Group } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface ContactsPanelProps {
   onClose: () => void;
@@ -258,23 +259,23 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg="blue"><b>Contacts</b></text>
-      <text fg="gray"> | </text>
-      <text fg="gray">{getHeaderHints()}</text>
-      {loading && <text fg="yellow"> (loading...)</text>}
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text fg={themeColor('secondary')}><b>Contacts</b></text>
+      <text fg={themeColor('muted')}> | </text>
+      <text fg={themeColor('muted')}>{getHeaderHints()}</text>
+      {loading && <text fg={themeColor('warning')}> (loading...)</text>}
     </box>
   );
 
   const statusBar = statusMessage ? (
     <box marginBottom={1}>
-      <text fg="yellow">{statusMessage}</text>
+      <text fg={themeColor('warning')}>{statusMessage}</text>
     </box>
   ) : null;
 
   const errorBar = error ? (
     <box marginBottom={1}>
-      <text fg="red">Error: {error}</text>
+      <text fg={themeColor('error')}>Error: {error}</text>
     </box>
   ) : null;
 
@@ -323,10 +324,10 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="blue"><b>
+          <text fg={themeColor('secondary')}><b>
             {isFav ? '* ' : ''}{displayName}
           </b></text>
-          <text fg="gray">ID: {viewContact.id}</text>
+          <text fg={themeColor('muted')}>ID: {viewContact.id}</text>
           <text> </text>
           {(viewContact as any).company?.name && <text>Company: {(viewContact as any).company.name}</text>}
           {viewContact.job_title && <text>Title: {viewContact.job_title}</text>}
@@ -392,7 +393,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="red"><b>Delete contact?</b></text>
+          <text fg={themeColor('error')}><b>Delete contact?</b></text>
           <text> </text>
           <text>This will permanently delete {c.name} ({c.id})</text>
           <text> </text>
@@ -529,7 +530,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
         {statusBar}
         {groups.length === 0 ? (
           <box paddingX={1}>
-            <text fg="gray">No groups. Groups can be created via the AI assistant.</text>
+            <text fg={themeColor('muted')}>No groups. Groups can be created via the AI assistant.</text>
           </box>
         ) : (
           <box flexDirection="column" paddingX={1}>
@@ -541,7 +542,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
                 <text attributes={i === selectedGroupIndex ? 1 : undefined} fg={i === selectedGroupIndex ? 'blue' : undefined}><b>
                   {g.name}
                 </b></text>
-                {g.description && <text fg="gray"> - {g.description}</text>}
+                {g.description && <text fg={themeColor('muted')}> - {g.description}</text>}
               </box>
             ))}
           </box>
@@ -556,11 +557,11 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="blue"><b>{viewGroup.name}</b></text>
-          {viewGroup.description && <text fg="gray">{viewGroup.description}</text>}
+          <text fg={themeColor('secondary')}><b>{viewGroup.name}</b></text>
+          {viewGroup.description && <text fg={themeColor('muted')}>{viewGroup.description}</text>}
           <text> </text>
           {groupMembers.length === 0 ? (
-            <text fg="gray">No members in this group.</text>
+            <text fg={themeColor('muted')}>No members in this group.</text>
           ) : (
             groupMembers.map((m) => {
               const email = m.primaryEmail ? ` <${m.primaryEmail}>` : '';
@@ -583,7 +584,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
       {errorBar}
       {contacts.length === 0 ? (
         <box paddingX={1}>
-          <text fg="gray">No contacts. Press 'c' to create one, or ask the AI to add contacts.</text>
+          <text fg={themeColor('muted')}>No contacts. Press 'c' to create one, or ask the AI to add contacts.</text>
         </box>
       ) : (
         <box flexDirection="column" paddingX={1}>
@@ -595,14 +596,14 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
               <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? 'blue' : undefined}><b>
                 {c.favorite ? '* ' : ''}{truncate(c.name, 16).padEnd(16)}
               </b></text>
-              <text fg="gray">
+              <text fg={themeColor('muted')}>
                 {' '}{truncate(c.company || '', 14).padEnd(14)}
               </text>
               <text>
                 {' '}{truncate(c.primaryEmail || '', 24).padEnd(24)}
               </text>
               {c.tags.length > 0 && (
-                <text fg="gray"> [{c.tags.join(', ')}]</text>
+                <text fg={themeColor('muted')}> [{c.tags.join(', ')}]</text>
               )}
             </box>
           ))}

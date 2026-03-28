@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { InboxPanel } from './InboxPanel';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
 const MAX_VISIBLE_ITEMS = 5;
@@ -115,7 +116,7 @@ function getPriorityColor(priority: MessageEntry['priority']): string {
     case 'normal':
       return 'white';
     case 'low':
-      return 'gray';
+      return themeColor('muted');
     default:
       return 'white';
   }
@@ -148,19 +149,19 @@ function TabBar({ activeTab, inboxEnabled }: { activeTab: ActiveTab; inboxEnable
   return (
     <box marginBottom={1}>
       <text
-        fg={activeTab === 'assistant' ? 'cyan' : 'gray'}
+        fg={activeTab === 'assistant' ? 'cyan' : themeColor('muted')}
         attributes={activeTab === 'assistant' ? 33 : undefined}
       ><b>
         {' Assistant Messages '}
       </b></text>
-      <text fg="gray"> | </text>
+      <text fg={themeColor('muted')}> | </text>
       <text
-        fg={activeTab === 'email' ? 'cyan' : 'gray'}
+        fg={activeTab === 'email' ? 'cyan' : themeColor('muted')}
         attributes={activeTab === 'email' ? 33 : undefined}
       ><b>
         {' Email Inbox '}
       </b></text>
-      <text fg="gray">  [Tab] switch</text>
+      <text fg={themeColor('muted')}>  [Tab] switch</text>
     </box>
   );
 }
@@ -366,21 +367,21 @@ function AssistantMessagesContent({
       <box flexDirection="column">
         {!showTabBar && (
           <box marginBottom={1}>
-            <text fg="cyan"><b>Messages</b></text>
+            <text fg={themeColor('info')}><b>Messages</b></text>
           </box>
         )}
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg="gray">No messages in inbox.</text>
-          <text fg="gray">Use the messages_send tool to send messages to other assistants.</text>
+          <text fg={themeColor('muted')}>No messages in inbox.</text>
+          <text fg={themeColor('muted')}>Use the messages_send tool to send messages to other assistants.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">q quit</text>
+          <text fg={themeColor('muted')}>q quit</text>
         </box>
       </box>
     );
@@ -391,22 +392,22 @@ function AssistantMessagesContent({
     return (
       <box flexDirection="column">
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Message</b></text>
+          <text fg={themeColor('error')}><b>Delete Message</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Are you sure you want to delete this message?</text>
-          <text fg="gray">From: {deleteTarget.fromAssistantName}</text>
-          {deleteTarget.subject && <text fg="gray">Subject: {deleteTarget.subject}</text>}
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>From: {deleteTarget.fromAssistantName}</text>
+          {deleteTarget.subject && <text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</text>}
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -417,22 +418,22 @@ function AssistantMessagesContent({
     return (
       <box flexDirection="column">
         <box marginBottom={1}>
-          <text fg="green"><b>Inject Message</b></text>
+          <text fg={themeColor('success')}><b>Inject Message</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Inject this message into the current conversation?</text>
-          <text fg="gray">From: {injectTarget.fromAssistantName}</text>
-          {injectTarget.subject && <text fg="gray">Subject: {injectTarget.subject}</text>}
-          <text fg="gray">The message will be added to the context.</text>
+          <text fg={themeColor('muted')}>From: {injectTarget.fromAssistantName}</text>
+          {injectTarget.subject && <text fg={themeColor('muted')}>Subject: {injectTarget.subject}</text>}
+          <text fg={themeColor('muted')}>The message will be added to the context.</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -443,49 +444,49 @@ function AssistantMessagesContent({
     return (
       <box flexDirection="column">
         <box marginBottom={1}>
-          <text fg="cyan"><b>{getStatusIcon(detailMessage.status)} Message</b></text>
+          <text fg={themeColor('info')}><b>{getStatusIcon(detailMessage.status)} Message</b></text>
           <text fg={getPriorityColor(detailMessage.priority)}> [{detailMessage.priority}]</text>
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <box>
-            <text fg="gray">From: </text>
+            <text fg={themeColor('muted')}>From: </text>
             <text>{detailMessage.fromAssistantName}</text>
           </box>
 
           {detailMessage.subject && (
             <box>
-              <text fg="gray">Subject: </text>
+              <text fg={themeColor('muted')}>Subject: </text>
               <text><b>{detailMessage.subject}</b></text>
             </box>
           )}
 
           <box>
-            <text fg="gray">Received: </text>
+            <text fg={themeColor('muted')}>Received: </text>
             <text>{formatRelativeTime(detailMessage.createdAt)}</text>
-            <text fg="gray"> ({new Date(detailMessage.createdAt).toLocaleString()})</text>
+            <text fg={themeColor('muted')}> ({new Date(detailMessage.createdAt).toLocaleString()})</text>
           </box>
 
           <box marginTop={1} flexDirection="column">
-            <text fg="gray">Message:</text>
+            <text fg={themeColor('muted')}>Message:</text>
             <text>{detailMessage.body || detailMessage.preview}</text>
           </box>
         </box>
 
         {error && (
           <box marginTop={1}>
-            <text fg="red">{error}</text>
+            <text fg={themeColor('error')}>{error}</text>
           </box>
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             i inject | x delete | Esc back
           </text>
         </box>
@@ -500,9 +501,9 @@ function AssistantMessagesContent({
     <box flexDirection="column">
       {!showTabBar && (
         <box marginBottom={1}>
-          <text fg="cyan"><b>Messages</b></text>
+          <text fg={themeColor('info')}><b>Messages</b></text>
           {messages.length > MAX_VISIBLE_ITEMS && (
-            <text fg="gray"> ({messageIndex + 1}/{messages.length})</text>
+            <text fg={themeColor('muted')}> ({messageIndex + 1}/{messages.length})</text>
           )}
         </box>
       )}
@@ -510,12 +511,12 @@ function AssistantMessagesContent({
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {messageRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {messageRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {messageRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -530,19 +531,19 @@ function AssistantMessagesContent({
 
           return (
             <box key={msg.id} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{statusIcon}{' '}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : priorityColor}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : priorityColor}>
                 {msg.priority === 'urgent' ? '!' : msg.priority === 'high' ? '↑' : ' '}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : msg.status === 'read' ? "gray" : undefined}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? "gray" : undefined}>
                 {' '}{fromName}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : msg.status === 'read' ? "gray" : undefined}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? "gray" : undefined}>
                 {' '}{subject}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{formatRelativeTime(msg.createdAt)}
               </text>
             </box>
@@ -551,23 +552,23 @@ function AssistantMessagesContent({
 
         {messageRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {messageRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {messageRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Legend: </text>
+        <text fg={themeColor('muted')}>Legend: </text>
         <text>📬</text>
-        <text fg="gray"> unread | </text>
+        <text fg={themeColor('muted')}> unread | </text>
         <text>📖</text>
-        <text fg="gray"> read | </text>
+        <text fg={themeColor('muted')}> read | </text>
         <text>👁️</text>
-        <text fg="gray"> injected</text>
+        <text fg={themeColor('muted')}> injected</text>
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | q quit
         </text>
       </box>

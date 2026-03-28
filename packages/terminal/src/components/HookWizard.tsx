@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { HookEvent, HookHandler } from '@hasna/assistants-shared';
 import type { HookLocation } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface HookWizardInitial {
   event?: HookEvent;
@@ -274,22 +275,22 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 1/9: Select Event</b></text>
+              <text fg={themeColor('info')}><b>Step 1/9: Select Event</b></text>
             </box>
-            <text fg="gray">When should this hook run?</text>
+            <text fg={themeColor('muted')}>When should this hook run?</text>
             <box
               flexDirection="column"
               marginTop={1}
               borderStyle="rounded"
-              borderColor="#d4d4d8" border={["top", "bottom"]}
+              borderColor={themeColor('border')} border={["top", "bottom"]}
               paddingX={1}
               height={Math.min(10, HOOK_EVENTS.length + 2)}
             >
               {HOOK_EVENTS.map((ev, index) => (
                 <box key={ev}>
                   <text
-                    bg={index === eventIndex ? "#0055aa" : undefined}
-                    fg={index === eventIndex ? "whiteBright" : undefined}
+                    bg={index === eventIndex ? themeColor('primary') : undefined}
+                    fg={index === eventIndex ? themeColor('text') : undefined}
                   >
                     {index === eventIndex ? '>' : ' '} {index + 1}. {ev}
                   </text>
@@ -297,7 +298,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               ))}
             </box>
             <box marginTop={1}>
-              <text fg="gray">↑↓ navigate | Enter select | Esc cancel</text>
+              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc cancel</text>
             </box>
           </box>
         );
@@ -306,10 +307,10 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 2/9: Matcher Pattern</b></text>
+              <text fg={themeColor('info')}><b>Step 2/9: Matcher Pattern</b></text>
             </box>
-            <text fg="gray">Filter which {event} events trigger this hook (regex or exact match)</text>
-            <text fg="gray">Leave empty or use * to match all</text>
+            <text fg={themeColor('muted')}>Filter which {event} events trigger this hook (regex or exact match)</text>
+            <text fg={themeColor('muted')}>Leave empty or use * to match all</text>
             <box marginTop={1}>
               <text>Pattern: </text>
               <input
@@ -321,7 +322,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -330,18 +331,18 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 3/9: Hook Type</b></text>
+              <text fg={themeColor('info')}><b>Step 3/9: Hook Type</b></text>
             </box>
-            <text fg="gray">How should the hook execute?</text>
+            <text fg={themeColor('muted')}>How should the hook execute?</text>
             <box flexDirection="column" marginTop={1}>
               {HOOK_TYPES.map((type, index) => (
                 <box key={type}>
                   <text
-                    bg={index === typeIndex ? "#0055aa" : undefined}
-                    fg={index === typeIndex ? "whiteBright" : undefined}
+                    bg={index === typeIndex ? themeColor('primary') : undefined}
+                    fg={index === typeIndex ? themeColor('text') : undefined}
                   >
                     {index === typeIndex ? '>' : ' '} {type === 'command' ? 'command  ' : type === 'prompt' ? 'prompt   ' : 'assistant'}
-                    <text fg="gray">
+                    <text fg={themeColor('muted')}>
                       {type === 'command' && ' - Run a shell command'}
                       {type === 'prompt' && ' - Single-turn LLM decision'}
                       {type === 'assistant' && ' - Multi-turn assistant with tools'}
@@ -351,7 +352,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               ))}
             </box>
             <box marginTop={1}>
-              <text fg="gray">↑↓ navigate | Enter select | Esc back</text>
+              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</text>
             </box>
           </box>
         );
@@ -360,17 +361,17 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</b></text>
+              <text fg={themeColor('info')}><b>Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</b></text>
             </box>
             {hookType === 'command' ? (
               <>
-                <text fg="gray">Shell command to run. Input is passed as JSON via stdin.</text>
-                <text fg="gray">Exit 0 = allow, Exit 2 = block, other = error</text>
+                <text fg={themeColor('muted')}>Shell command to run. Input is passed as JSON via stdin.</text>
+                <text fg={themeColor('muted')}>Exit 0 = allow, Exit 2 = block, other = error</text>
               </>
             ) : (
               <>
-                <text fg="gray">Prompt to send to the LLM. Context will be appended.</text>
-                <text fg="gray">LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</text>
+                <text fg={themeColor('muted')}>Prompt to send to the LLM. Context will be appended.</text>
+                <text fg={themeColor('muted')}>LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</text>
               </>
             )}
             <box marginTop={1}>
@@ -385,11 +386,11 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
             </box>
             {error && (
               <box marginTop={1}>
-                <text fg="red">{error}</text>
+                <text fg={themeColor('error')}>{error}</text>
               </box>
             )}
             <box marginTop={1}>
-              <text fg="gray">Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -398,9 +399,9 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 5/9: Timeout</b></text>
+              <text fg={themeColor('info')}><b>Step 5/9: Timeout</b></text>
             </box>
-            <text fg="gray">Maximum time to wait for hook to complete (milliseconds)</text>
+            <text fg={themeColor('muted')}>Maximum time to wait for hook to complete (milliseconds)</text>
             <box marginTop={1}>
               <text>Timeout: </text>
               <input
@@ -410,15 +411,15 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
                 focused
                 placeholder="30000"
               />
-              <text fg="gray"> ms</text>
+              <text fg={themeColor('muted')}> ms</text>
             </box>
             {error && (
               <box marginTop={1}>
-                <text fg="red">{error}</text>
+                <text fg={themeColor('error')}>{error}</text>
               </box>
             )}
             <box marginTop={1}>
-              <text fg="gray">Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -427,15 +428,15 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 6/9: Async Execution</b></text>
+              <text fg={themeColor('info')}><b>Step 6/9: Async Execution</b></text>
             </box>
-            <text fg="gray">Run in background without blocking?</text>
+            <text fg={themeColor('muted')}>Run in background without blocking?</text>
             <box marginTop={1}>
               <text>Run async: </text>
-              <text fg={isAsync ? 'green' : 'gray'}>[{isAsync ? 'Yes' : 'No '}]</text>
+              <text fg={isAsync ? themeColor('success') : themeColor('muted')}>[{isAsync ? 'Yes' : 'No '}]</text>
             </box>
             <box marginTop={1}>
-              <text fg="gray">y yes | n no | Space toggle | Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>y yes | n no | Space toggle | Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -444,9 +445,9 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 7/9: Name (optional)</b></text>
+              <text fg={themeColor('info')}><b>Step 7/9: Name (optional)</b></text>
             </box>
-            <text fg="gray">Give your hook a friendly name</text>
+            <text fg={themeColor('muted')}>Give your hook a friendly name</text>
             <box marginTop={1}>
               <text>Name: </text>
               <input
@@ -458,7 +459,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -467,9 +468,9 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 8/9: Description (optional)</b></text>
+              <text fg={themeColor('info')}><b>Step 8/9: Description (optional)</b></text>
             </box>
-            <text fg="gray">Short note about why this hook exists</text>
+            <text fg={themeColor('muted')}>Short note about why this hook exists</text>
             <box marginTop={1}>
               <text>Description: </text>
               <input
@@ -481,7 +482,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter continue | Esc back</text>
+              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
             </box>
           </box>
         );
@@ -490,24 +491,24 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Step 9/9: Save Location</b></text>
+              <text fg={themeColor('info')}><b>Step 9/9: Save Location</b></text>
             </box>
-            <text fg="gray">Where should this hook be stored?</text>
+            <text fg={themeColor('muted')}>Where should this hook be stored?</text>
             <box flexDirection="column" marginTop={1}>
               {HOOK_LOCATIONS.map((loc, index) => (
                 <box key={loc}>
                   <text
-                    bg={index === locationIndex ? "#0055aa" : undefined}
-                    fg={index === locationIndex ? "whiteBright" : undefined}
+                    bg={index === locationIndex ? themeColor('primary') : undefined}
+                    fg={index === locationIndex ? themeColor('text') : undefined}
                   >
                     {index === locationIndex ? '>' : ' '} {loc.padEnd(8)}
-                    <text fg="gray"> {getLocationDescription(loc)}</text>
+                    <text fg={themeColor('muted')}> {getLocationDescription(loc)}</text>
                   </text>
                 </box>
               ))}
             </box>
             <box marginTop={1}>
-              <text fg="gray">↑↓ navigate | Enter select | Esc back</text>
+              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</text>
             </box>
           </box>
         );
@@ -516,33 +517,33 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
         return (
           <box flexDirection="column">
             <box marginBottom={1}>
-              <text fg="cyan"><b>Confirm Hook</b></text>
+              <text fg={themeColor('info')}><b>Confirm Hook</b></text>
             </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
-              <box><text fg="gray">Event:   </text><text><b>{event}</b></text></box>
-              <box><text fg="gray">Matcher: </text><text>{matcher || '*'}</text></box>
-              <box><text fg="gray">Type:    </text><text>{hookType}</text></box>
-              <box><text fg="gray">{hookType === 'command' ? 'Command' : 'Prompt'}:</text><text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</text></box>
-              <box><text fg="gray">Timeout: </text><text>{timeout}ms</text></box>
-              <box><text fg="gray">Async:   </text><text>{isAsync ? 'Yes' : 'No'}</text></box>
-              {name && <box><text fg="gray">Name:    </text><text>{name}</text></box>}
-              {description && <box><text fg="gray">Desc:    </text><text>{description}</text></box>}
-              <box><text fg="gray">Location:</text><text> {location}</text></box>
+            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+              <box><text fg={themeColor('muted')}>Event:   </text><text><b>{event}</b></text></box>
+              <box><text fg={themeColor('muted')}>Matcher: </text><text>{matcher || '*'}</text></box>
+              <box><text fg={themeColor('muted')}>Type:    </text><text>{hookType}</text></box>
+              <box><text fg={themeColor('muted')}>{hookType === 'command' ? 'Command' : 'Prompt'}:</text><text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</text></box>
+              <box><text fg={themeColor('muted')}>Timeout: </text><text>{timeout}ms</text></box>
+              <box><text fg={themeColor('muted')}>Async:   </text><text>{isAsync ? 'Yes' : 'No'}</text></box>
+              {name && <box><text fg={themeColor('muted')}>Name:    </text><text>{name}</text></box>}
+              {description && <box><text fg={themeColor('muted')}>Desc:    </text><text>{description}</text></box>}
+              <box><text fg={themeColor('muted')}>Location:</text><text> {location}</text></box>
             </box>
             {error && (
               <box marginTop={1}>
-                <text fg="red">{error}</text>
+                <text fg={themeColor('error')}>{error}</text>
               </box>
             )}
             {isSubmitting ? (
               <box marginTop={1}>
-                <text fg="yellow">Saving hook...</text>
+                <text fg={themeColor('warning')}>Saving hook...</text>
               </box>
             ) : (
               <box marginTop={1}>
                 <text>
-                  Press <text fg="green"><b>y</b></text> to save or{' '}
-                  <text fg="red"><b>n</b></text> to cancel
+                  Press <text fg={themeColor('success')}><b>y</b></text> to save or{' '}
+                  <text fg={themeColor('error')}><b>n</b></text> to cancel
                 </text>
               </box>
             )}

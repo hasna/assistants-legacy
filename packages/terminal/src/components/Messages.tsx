@@ -17,6 +17,7 @@ import {
   capitalizeToolName,
   linkifyText,
   indentMultiline,
+  formatDuration,
 } from './ToolCallDisplay';
 // [brutus] Re-export for backward compatibility — hook lives in hooks/ to avoid circular deps
 export { useCopyToClipboard } from '../hooks/useCopyToClipboard';
@@ -132,8 +133,14 @@ export function Messages({
       {visibleActivity
         .filter((entry) => entry.type === 'text' && entry.content)
         .map((entry) => (
-          <box key={entry.id} marginY={1} flexDirection="row">
-            <box flexGrow={1}>
+          <box key={entry.id} flexDirection="column">
+            <box height={1} />
+            <box
+              borderStyle="single"
+              borderColor={themeColor('primary')}
+              border={['left']}
+              paddingLeft={1}
+            >
               <Markdown content={entry.content!} indent={0} />
             </box>
           </box>
@@ -159,8 +166,16 @@ export function Messages({
 
       {/* Show current streaming response */}
       {showCurrentResponse && (
-        <box marginY={1}>
-          <Markdown content={currentResponse ?? ''} indent={0} />
+        <box flexDirection="column">
+          <box height={1} />
+          <box
+            borderStyle="single"
+            borderColor={themeColor('primary')}
+            border={['left']}
+            paddingLeft={1}
+          >
+            <Markdown content={currentResponse ?? ''} indent={0} />
+          </box>
         </box>
       )}
     </box>
@@ -168,7 +183,8 @@ export function Messages({
 }
 
 // ============================================
-// User Message — dark background box
+// User Message — left border with secondary color
+// Per OpenCode spec: thick left border, secondary color, raw text
 // ============================================
 
 function UserMessage({
@@ -190,33 +206,37 @@ function UserMessage({
   const toolResults = message.toolResults || [];
   const showToolResultsOnly = toolResults.length > 0 && !isContinuation;
   const hasContent = Boolean(content.trim());
-  const borderCol = themeColor('border');
+  const secondaryCol = themeColor('secondary');
+  const mutedCol = themeColor('muted');
 
   return (
-    <box marginY={isContinuation ? 0 : 1} flexDirection="column">
+    <box flexDirection="column">
+      {/* 1 empty line separator (skip for continuations) */}
+      {!isContinuation && <box height={1} />}
+
       {isDraft && !isContinuation && (
         <box>
-          <text fg={themeColor('muted')}>  Live dictation</text>
+          <text fg={mutedCol}>  Live dictation</text>
         </box>
       )}
+
       {hasContent && (
         <box
           borderStyle="single"
-          borderColor={borderCol}
+          borderColor={secondaryCol}
           border={['left']}
           paddingLeft={1}
-          backgroundColor="#282a36"
-          paddingX={1}
         >
           {isQueued && !isContinuation ? (
-            <text fg={themeColor('muted')}>{linkifyText(content)}</text>
+            <text fg={mutedCol}>{linkifyText(content)}</text>
           ) : (
-            <text fg={isDraft ? themeColor('muted') : undefined}>{linkifyText(displayContent)}</text>
+            <text fg={isDraft ? mutedCol : themeColor('text')}>{linkifyText(displayContent)}</text>
           )}
         </box>
       )}
+
       {showToolResultsOnly && (
-        <box marginTop={hasContent ? 1 : 0}>
+        <box marginTop={hasContent ? 0 : 0}>
           <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
         </box>
       )}
@@ -225,7 +245,9 @@ function UserMessage({
 }
 
 // ============================================
-// Assistant Message — markdown + tool calls
+// Assistant Message — left border with primary color, markdown + finish info
+// Per OpenCode spec: thick left border, primary color, markdown content,
+// finish info line showing model + duration at bottom
 // ============================================
 
 function AssistantMessage({
@@ -243,6 +265,8 @@ function AssistantMessage({
   const toolCalls = message.toolCalls || [];
   const toolResults = message.toolResults || [];
   const showToolResultsOnly = toolCalls.length === 0 && toolResults.length > 0;
+  const primaryCol = themeColor('primary');
+  const mutedCol = themeColor('muted');
 
   const resultMap = useMemo(() => {
     const map = new Map<string, ToolResult>();
@@ -253,17 +277,26 @@ function AssistantMessage({
   }, [toolResults]);
 
   return (
-    <box marginY={isContinuation ? 0 : 1} flexDirection="column">
-      {/* Assistant text content rendered as markdown */}
+    <box flexDirection="column">
+      {/* 1 empty line separator (skip for continuations) */}
+      {!isContinuation && <box height={1} />}
+
+      {/* Assistant text content — left border with primary color, markdown rendered */}
       {hasContent && (
-        <box>
+        <box
+          borderStyle="single"
+          borderColor={primaryCol}
+          border={['left']}
+          paddingLeft={1}
+          flexDirection="column"
+        >
           <Markdown content={content} preRendered={Boolean(message.__rendered)} indent={0} />
         </box>
       )}
 
-      {/* Tool calls rendered in OpenCode arrow style */}
+      {/* Tool calls rendered below the text content */}
       {toolCalls.length > 0 && (
-        <box marginTop={hasContent ? 1 : 0} flexDirection="column">
+        <box marginTop={0} flexDirection="column">
           <ToolCallsBlock
             toolCalls={toolCalls}
             toolResults={toolResults}
@@ -274,7 +307,7 @@ function AssistantMessage({
 
       {/* Orphan tool results */}
       {showToolResultsOnly && (
-        <box marginTop={hasContent ? 1 : 0}>
+        <box marginTop={0}>
           <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
         </box>
       )}
@@ -283,7 +316,9 @@ function AssistantMessage({
 }
 
 // ============================================
-// Tool calls block — arrow style with compact summary
+// Tool calls block — left border with borderDim, tool name + params + result
+// Per OpenCode spec: thick left border, TextMuted (borderDim) color,
+// "ToolName: params" header, result truncated to max 10 lines
 // ============================================
 
 function ToolCallsBlock({
@@ -381,7 +416,8 @@ function CombinedToolMessage({ messages, verboseTools }: { messages: DisplayMess
   }
 
   return (
-    <box marginY={1}>
+    <box flexDirection="column">
+      <box height={1} />
       <ToolCallsBlock toolCalls={allToolCalls} toolResults={allToolResults} verboseTools={verboseTools} />
     </box>
   );
@@ -447,12 +483,9 @@ function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveToolsPanelPr
 
   if (toolCalls.length === 0) return null;
 
-  const mutedCol = themeColor('muted');
-
   // Compact summary for 2+ tool calls when not verbose
   if (!verboseTools && toolCalls.length >= 2) {
     const anyRunning = toolCalls.some((c) => c.status === 'running');
-    const anyError = toolCalls.some((c) => c.status === 'failed');
     return (
       <ToolCallSummary
         toolCalls={toolCalls.map((c) => c.toolCall)}
@@ -494,17 +527,14 @@ function ToolResultPanel({
 }) {
   if (toolResults.length === 0) return null;
 
-  const successCol = themeColor('success');
-  const errorCol = themeColor('error');
   const mutedCol = themeColor('muted');
-  const accentCol = themeColor('accent');
+  const borderDimCol = themeColor('borderDim');
+  const errorCol = themeColor('error');
 
   return (
     <box flexDirection="column">
       {toolResults.map((result, index) => {
         const isError = result.isError;
-        const arrow = isError ? '\u2717' : '\u2192';
-        const arrowColor = isError ? errorCol : successCol;
         const title = result.toolName
           ? capitalizeToolName(result.toolName)
           : `Result ${index + 1}`;
@@ -516,44 +546,53 @@ function ToolResultPanel({
             if (data.path) {
               return (
                 <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-                  <box flexDirection="row">
-                    <text fg={arrowColor}>{arrow} </text>
-                    <text fg={accentCol}><b>{title}</b></text>
+                  <box
+                    borderStyle="single"
+                    borderColor={borderDimCol}
+                    border={['left']}
+                    paddingLeft={1}
+                    flexDirection="column"
+                  >
+                    <text fg={mutedCol}>{title}</text>
+                    <TerminalImage src={data.path} width={data.width} height={data.height} alt={data.alt || basename(data.path)} />
                   </box>
-                  <TerminalImage src={data.path} width={data.width} height={data.height} alt={data.alt || basename(data.path)} />
                 </box>
               );
             }
           } catch { /* fall through to text display */ }
         }
 
-        const truncatedResult = truncateToolResultWithInfo(result, 4, 400, { verbose: verboseTools });
+        // Truncate to max 10 lines per OpenCode spec
+        const truncatedResult = truncateToolResultWithInfo(result, 10, 400, { verbose: verboseTools });
         const resultText = truncatedResult.content;
-        const showExpandHint = !verboseTools && truncatedResult.truncation.wasTruncated;
+        const showMoreHint = !verboseTools && truncatedResult.truncation.wasTruncated;
+        const moreLines = truncatedResult.truncation.originalLines - truncatedResult.truncation.displayedLines;
         const useHighlight = shouldHighlightToolResult(result.toolName, resultText, result.isError);
+
         return (
           <box key={`${result.toolCallId}-${index}`} flexDirection="column">
-            <box flexDirection="row">
-              <text fg={arrowColor}>{arrow} </text>
-              <text fg={accentCol}><b>{title}</b></text>
-            </box>
-            {useHighlight ? (
-              <box marginLeft={3}>
+            <box
+              borderStyle="single"
+              borderColor={borderDimCol}
+              border={['left']}
+              paddingLeft={1}
+              flexDirection="column"
+            >
+              <text fg={mutedCol}>{title}</text>
+              {isError ? (
+                <text fg={errorCol}>Error: {resultText}</text>
+              ) : useHighlight ? (
                 <CodeBlock
                   content={resultText}
                   filetype={result.toolName === 'bash' ? 'bash' : undefined}
                 />
-              </box>
-            ) : (
-              <box marginLeft={3}>
-                <text fg={mutedCol}>{linkifyText(indentMultiline(resultText, '   '))}</text>
-              </box>
-            )}
-            {showExpandHint && (
-              <box marginLeft={3}>
-                <text fg={mutedCol}>(Ctrl+O for full output)</text>
-              </box>
-            )}
+              ) : (
+                <text fg={mutedCol}>{linkifyText(resultText)}</text>
+              )}
+              {showMoreHint && moreLines > 0 && (
+                <text fg={mutedCol}>[{moreLines} more lines]</text>
+              )}
+            </box>
           </box>
         );
       })}

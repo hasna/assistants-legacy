@@ -14,9 +14,9 @@ import { TextRenderable, TextNodeRenderable, RGBA, type ThemeMode } from '@opent
 import type { CliRenderer } from '@opentui/core';
 import { extend } from '@opentui/react';
 
-// [cassius] Theme-aware default fg colors
-const DARK_FG = '#e0e0e0';  // Light gray on dark backgrounds
-const LIGHT_FG = '#1a1a1a'; // Near-black on light backgrounds
+// [cassius] Theme-aware default fg colors — must match spec section 11.4
+const DARK_FG = '#e0e0e0';  // OpenCode dark Text color
+const LIGHT_FG = '#2a2a2a'; // OpenCode light Text color
 
 /** Shared mutable state — the current default fg for text elements. */
 let currentDefaultFg: string = DARK_FG;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { TelephonyManager, CallListItem, SmsListItem, PhoneNumber, RoutingRule, TelephonyStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface TelephonyPanelProps {
   manager: TelephonyManager;
@@ -223,8 +224,8 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
   const tabBar = (
     <tab-select
       options={tabSelectOptions}
-      selectedBackgroundColor="#0055aa"
-      selectedTextColor="whiteBright"
+      selectedBackgroundColor={themeColor('primary')}
+      selectedTextColor={themeColor('text')}
       textColor="gray"
       showDescription={false}
       wrapSelection
@@ -248,17 +249,17 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       : 'q close | 1-5 tabs | s sms | c call | r refresh';
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text><span fg="blue"><b>Communication</b></span><span fg="gray">{' | '}{headerHint}</span></text>
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text><span fg={themeColor('secondary')}><b>Communication</b></span><span fg={themeColor('muted')}>{' | '}{headerHint}</span></text>
     </box>
   );
 
   const statusBar2 = statusMessage ? (
-    <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box>
+    <box marginBottom={1}><text fg={themeColor('warning')}>{statusMessage}</text></box>
   ) : null;
 
   const errorBar = error ? (
-    <box marginBottom={1}><text fg="red">Error: {error}</text></box>
+    <box marginBottom={1}><text fg={themeColor('error')}>Error: {error}</text></box>
   ) : null;
 
   // SMS compose
@@ -354,23 +355,23 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
           <text> </text>
           {status ? (
             <>
-              <text>Twilio:       {status.twilioConfigured ? <span fg="green">Connected</span> : <span fg="red">Not configured</span>}</text>
-              <text>ElevenLabs:   {status.elevenLabsConfigured ? <span fg="green">Connected</span> : <span fg="red">Not configured</span>}</text>
-              <text>Default #:    {status.defaultPhoneNumber ? <span fg="cyan">{status.defaultPhoneNumber}</span> : <span fg="red">Not set</span>}{' '}{status.defaultPhoneNumberSource ? <span fg="gray">{'('}{status.defaultPhoneNumberSource}{')'}</span> : null}</text>
+              <text>Twilio:       {status.twilioConfigured ? <span fg={themeColor('success')}>Connected</span> : <span fg={themeColor('error')}>Not configured</span>}</text>
+              <text>ElevenLabs:   {status.elevenLabsConfigured ? <span fg={themeColor('success')}>Connected</span> : <span fg={themeColor('error')}>Not configured</span>}</text>
+              <text>Default #:    {status.defaultPhoneNumber ? <span fg={themeColor('info')}>{status.defaultPhoneNumber}</span> : <span fg={themeColor('error')}>Not set</span>}{' '}{status.defaultPhoneNumberSource ? <span fg={themeColor('muted')}>{'('}{status.defaultPhoneNumberSource}{')'}</span> : null}</text>
               <text>{`Phone #s:     ${status.phoneNumbers}`}</text>
               <text>{`Active calls: ${status.activeCalls}`}</text>
               <text>{`Routes:       ${status.routingRules}`}</text>
               <text> </text>
-              <text fg="gray">Press 's' to send SMS, 'c' to make a call</text>
+              <text fg={themeColor('muted')}>Press 's' to send SMS, 'c' to make a call</text>
               <text> </text>
               <text><b>Quick Setup</b></text>
-              <text fg="gray">1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</text>
-              <text fg="gray">2) Run /communication sync to import numbers</text>
-              <text fg="gray">3) Pick a default number (numbers tab → 'd')</text>
-              <text fg="gray">4) Set telephony.webhookUrl for voice calls</text>
+              <text fg={themeColor('muted')}>1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</text>
+              <text fg={themeColor('muted')}>2) Run /communication sync to import numbers</text>
+              <text fg={themeColor('muted')}>3) Pick a default number (numbers tab → 'd')</text>
+              <text fg={themeColor('muted')}>4) Set telephony.webhookUrl for voice calls</text>
             </>
           ) : (
-            <text fg="gray">Loading...</text>
+            <text fg={themeColor('muted')}>Loading...</text>
           )}
         </box>
       </box>
@@ -386,7 +387,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
         {statusBar2}
         {errorBar}
         {calls.length === 0 ? (
-          <box paddingX={1}><text fg="gray">No call history. Press 'c' to make a call.</text></box>
+          <box paddingX={1}><text fg={themeColor('muted')}>No call history. Press 'c' to make a call.</text></box>
         ) : (
           <box flexDirection="column" paddingX={1}>
             {calls.map((call, i) => (
@@ -394,14 +395,14 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                 <text fg={i === selectedIndex ? 'blue' : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
                 </text>
-                <text fg={call.direction === 'inbound' ? 'green' : 'cyan'}>
+                <text fg={call.direction === 'inbound' ? themeColor('success') : 'cyan'}>
                   {call.direction === 'inbound' ? 'IN ' : 'OUT'}
                 </text>
                 <text> {call.fromNumber} → {call.toNumber}</text>
-                <text fg="gray"> | {call.status}</text>
-                {call.duration != null && <text fg="gray">{` | ${call.duration}s`}</text>}
-                <text fg="gray"> | {formatRelativeTime(call.createdAt)}</text>
-                <text fg="gray"> | by {resolveActor(call.assistantId)}</text>
+                <text fg={themeColor('muted')}> | {call.status}</text>
+                {call.duration != null && <text fg={themeColor('muted')}>{` | ${call.duration}s`}</text>}
+                <text fg={themeColor('muted')}> | {formatRelativeTime(call.createdAt)}</text>
+                <text fg={themeColor('muted')}> | by {resolveActor(call.assistantId)}</text>
               </box>
             ))}
           </box>
@@ -419,7 +420,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
         {statusBar2}
         {errorBar}
         {messages.length === 0 ? (
-          <box paddingX={1}><text fg="gray">No messages. Press 's' to send an SMS.</text></box>
+          <box paddingX={1}><text fg={themeColor('muted')}>No messages. Press 's' to send an SMS.</text></box>
         ) : (
           <box flexDirection="column" paddingX={1}>
             {messages.map((msg, i) => (
@@ -428,18 +429,18 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                   <text fg={i === selectedIndex ? 'blue' : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
-                  <text fg={msg.direction === 'inbound' ? 'green' : 'cyan'}>
+                  <text fg={msg.direction === 'inbound' ? themeColor('success') : 'cyan'}>
                     {msg.direction === 'inbound' ? 'IN ' : 'OUT'}
                   </text>
-                  <text fg={msg.messageType === 'whatsapp' ? 'green' : undefined}>
+                  <text fg={msg.messageType === 'whatsapp' ? themeColor('success') : undefined}>
                     [{msg.messageType === 'whatsapp' ? 'WA' : 'SMS'}]
                   </text>
                   <text> {msg.fromNumber} → {msg.toNumber}</text>
-                  <text fg="gray"> | {formatRelativeTime(msg.createdAt)}</text>
-                  <text fg="gray"> | by {resolveActor(msg.assistantId)}</text>
+                  <text fg={themeColor('muted')}> | {formatRelativeTime(msg.createdAt)}</text>
+                  <text fg={themeColor('muted')}> | by {resolveActor(msg.assistantId)}</text>
                 </box>
                 <box paddingLeft={4}>
-                  <text fg="gray">{msg.bodyPreview}</text>
+                  <text fg={themeColor('muted')}>{msg.bodyPreview}</text>
                 </box>
               </box>
             ))}
@@ -458,7 +459,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
         {statusBar2}
         {errorBar}
         {numbers.length === 0 ? (
-          <box paddingX={1}><text fg="gray">No phone numbers. Run /communication sync to import from Twilio.</text></box>
+          <box paddingX={1}><text fg={themeColor('muted')}>No phone numbers. Run /communication sync to import from Twilio.</text></box>
         ) : (
           <box flexDirection="column" paddingX={1}>
             {numbers.map((num, i) => {
@@ -472,10 +473,10 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                   <text fg={i === selectedIndex ? 'blue' : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
-                  {isDefault && <text fg="yellow">★ </text>}
+                  {isDefault && <text fg={themeColor('warning')}>★ </text>}
                   <text attributes={i === selectedIndex ? 1 : undefined}><b>{num.number}</b></text>
-                  {num.friendlyName && <text fg="gray"> ({num.friendlyName})</text>}
-                  <text fg="gray"> [{caps.join(', ')}]{isDefault ? ' default' : ''}</text>
+                  {num.friendlyName && <text fg={themeColor('muted')}> ({num.friendlyName})</text>}
+                  <text fg={themeColor('muted')}> [{caps.join(', ')}]{isDefault ? ' default' : ''}</text>
                 </box>
               );
             })}
@@ -494,7 +495,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
         {statusBar2}
         {errorBar}
         {routes.length === 0 ? (
-          <box paddingX={1}><text fg="gray">No routing rules configured.</text></box>
+          <box paddingX={1}><text fg={themeColor('muted')}>No routing rules configured.</text></box>
         ) : (
           <box flexDirection="column" paddingX={1}>
             {routes.map((rule, i) => (
@@ -504,11 +505,11 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
                   <text attributes={i === selectedIndex ? 1 : undefined}><b>{rule.name}</b></text>
-                  <text fg="gray">{` (priority: ${rule.priority})`}</text>
-                  {!rule.enabled && <text fg="red"> [DISABLED]</text>}
+                  <text fg={themeColor('muted')}>{` (priority: ${rule.priority})`}</text>
+                  {!rule.enabled && <text fg={themeColor('error')}> [DISABLED]</text>}
                 </box>
                 <box paddingLeft={4}>
-                  <text fg="gray">
+                  <text fg={themeColor('muted')}>
                     Type: {rule.messageType} → {rule.targetAssistantName}
                   </text>
                 </box>
@@ -523,7 +524,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
   return (
     <box flexDirection="column">
       {header}
-      <text fg="gray">Loading...</text>
+      <text fg={themeColor('muted')}>Loading...</text>
     </box>
   );
 }

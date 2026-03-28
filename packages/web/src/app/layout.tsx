@@ -1,10 +1,10 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
-import { Inter, Sora, JetBrains_Mono } from 'next/font/google';
+import { Inter, Outfit, JetBrains_Mono } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const sora = Sora({ subsets: ['latin'], variable: '--font-sora' });
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${jetbrains.variable}`}>
+    <html lang="en" dir="rtl" suppressHydrationWarning className={`${inter.variable} ${outfit.variable} ${jetbrains.variable}`}>
       <body className="min-h-screen bg-background font-[family-name:var(--font-body)] text-foreground antialiased">
         {children}
         <Toaster position="bottom-right" richColors closeButton />

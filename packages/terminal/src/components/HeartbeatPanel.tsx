@@ -3,6 +3,7 @@ import type { Heartbeat } from '@hasna/assistants-core';
 import type { HeartbeatState } from '@hasna/assistants-shared';
 import type { SelectOption } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface HeartbeatPanelProps {
   runs: Heartbeat[];
@@ -106,11 +107,11 @@ export function HeartbeatPanel({
     return (
       <box flexDirection="column">
         <text><b>Heartbeat Run Details</b></text>
-        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
           <text>{JSON.stringify(selectedRun, null, 2)}</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">Esc / q to go back</text>
+          <text fg={themeColor('muted')}>Esc / q to go back</text>
         </box>
       </box>
     );
@@ -122,19 +123,19 @@ export function HeartbeatPanel({
 
       <box marginTop={1}>
         {heartbeatState ? (
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             State: {heartbeatState.state} | Stale: {heartbeatState.isStale ? 'yes' : 'no'} | Last Activity:{' '}
             {formatRelativeTime(heartbeatState.lastActivity)} | Uptime: {heartbeatState.uptimeSeconds}s
           </text>
         ) : (
-          <text fg="gray">Heartbeat status unavailable.</text>
+          <text fg={themeColor('muted')}>Heartbeat status unavailable.</text>
         )}
       </box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sortedRuns.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No heartbeat runs recorded yet.</text>
+            <text fg={themeColor('muted')}>No heartbeat runs recorded yet.</text>
           </box>
         ) : (
           <select
@@ -151,7 +152,7 @@ export function HeartbeatPanel({
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">↑↓ navigate | Enter details | r refresh | q quit</text>
+        <text fg={themeColor('muted')}>↑↓ navigate | Enter details | r refresh | q quit</text>
       </box>
     </box>
   );

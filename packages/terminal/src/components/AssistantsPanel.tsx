@@ -10,6 +10,7 @@ import {
   TEMPERATURE_STEP,
   getModelDisplayName,
 } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 interface AssistantsPanelProps {
   assistants: Assistant[];
@@ -452,31 +453,31 @@ export function AssistantsPanel({
   const renderModelSelection = () => (
     <box flexDirection="column">
       <box marginBottom={1}>
-        <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-        <text fg="gray"> - Model</text>
+        <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+        <text fg={themeColor('muted')}> - Model</text>
       </box>
 
       <box marginBottom={1} flexDirection="column">
-        <text fg="gray">Name: {newName}</text>
-        {newDescription && <text fg="gray">Description: {newDescription}</text>}
+        <text fg={themeColor('muted')}>Name: {newName}</text>
+        {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {ANTHROPIC_MODELS.map((model, index) => (
           <box key={model.id} paddingY={0}>
             <text
-              bg={index === selectedModelIndex ? "#0055aa" : undefined}
-              fg={index === selectedModelIndex ? "whiteBright" : undefined}
+              bg={index === selectedModelIndex ? themeColor('primary') : undefined}
+              fg={index === selectedModelIndex ? themeColor('text') : undefined}
             >
               {index === selectedModelIndex ? '>' : ' '} {model.name}
-              <text fg="gray"> - {model.description}</text>
+              <text fg={themeColor('muted')}> - {model.description}</text>
             </text>
           </box>
         ))}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Up/Down select | Enter continue | Esc back</text>
+        <text fg={themeColor('muted')}>Up/Down select | Enter continue | Esc back</text>
       </box>
     </box>
   );
@@ -491,34 +492,34 @@ export function AssistantsPanel({
     return (
       <box flexDirection="column">
         <box marginBottom={1}>
-          <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-          <text fg="gray"> - Temperature</text>
+          <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+          <text fg={themeColor('muted')}> - Temperature</text>
         </box>
 
         <box marginBottom={1} flexDirection="column">
-          <text fg="gray">Name: {newName}</text>
-          {newDescription && <text fg="gray">Description: {newDescription}</text>}
-          <text fg="gray">Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+          <text fg={themeColor('muted')}>Name: {newName}</text>
+          {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
+          <text fg={themeColor('muted')}>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
         </box>
 
         <box>
           <text>Temperature: </text>
-          <text fg="cyan">{temperature.toFixed(1)}</text>
-          <text fg="gray"> {slider}</text>
+          <text fg={themeColor('info')}>{temperature.toFixed(1)}</text>
+          <text fg={themeColor('muted')}> {slider}</text>
         </box>
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {temperature < 0.5 ? 'More deterministic' : temperature > 1.5 ? 'More creative' : 'Balanced'}
           </text>
         </box>
 
         <box marginTop={1}>
-          <text fg="gray">Left/Right adjust | Enter continue | Esc back</text>
+          <text fg={themeColor('muted')}>Left/Right adjust | Enter continue | Esc back</text>
         </box>
 
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">{mode === 'create' ? 'Creating...' : 'Saving...'}</text>
+            <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating...' : 'Saving...'}</text>
           </box>
         )}
       </box>
@@ -549,15 +550,15 @@ export function AssistantsPanel({
       return (
         <box flexDirection="column" paddingY={1}>
           <box marginBottom={1}>
-            <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-            <text fg="gray"> - Custom Instructions</text>
+            <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+            <text fg={themeColor('muted')}> - Custom Instructions</text>
           </box>
 
           <box marginBottom={1} flexDirection="column">
-            <text fg="gray">Name: {newName}</text>
-            {newDescription && <text fg="gray">Description: {newDescription}</text>}
-            <text fg="gray">Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
-            <text fg="gray">Temperature: {temperature.toFixed(1)}</text>
+            <text fg={themeColor('muted')}>Name: {newName}</text>
+            {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
+            <text fg={themeColor('muted')}>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+            <text fg={themeColor('muted')}>Temperature: {temperature.toFixed(1)}</text>
           </box>
 
           <box>
@@ -571,12 +572,12 @@ export function AssistantsPanel({
             />
           </box>
           <box marginTop={1}>
-            <text fg="gray">Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</text>
+            <text fg={themeColor('muted')}>Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</text>
           </box>
 
           {isSubmitting && (
             <box marginTop={1}>
-              <text fg="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
+              <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
             </box>
           )}
         </box>
@@ -586,7 +587,7 @@ export function AssistantsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
+          <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
         </box>
 
         {currentStep === 'name' && (
@@ -602,7 +603,7 @@ export function AssistantsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc to cancel</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
             </box>
           </box>
         )}
@@ -610,7 +611,7 @@ export function AssistantsPanel({
         {currentStep === 'description' && (
           <box flexDirection="column">
             <box>
-              <text fg="gray">Name: </text>
+              <text fg={themeColor('muted')}>Name: </text>
               <text>{newName}</text>
             </box>
             <box marginTop={1}>
@@ -624,14 +625,14 @@ export function AssistantsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Tab to skip | Esc to go back</text>
+              <text fg={themeColor('muted')}>Enter to continue | Tab to skip | Esc to go back</text>
             </box>
           </box>
         )}
 
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
+            <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
           </box>
         )}
       </box>
@@ -644,7 +645,7 @@ export function AssistantsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Assistant</b></text>
+          <text fg={themeColor('error')}><b>Delete Assistant</b></text>
         </box>
         <box marginBottom={1}>
           <text>
@@ -652,17 +653,17 @@ export function AssistantsPanel({
           </text>
         </box>
         <box>
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg="green"><b>y</b></text> to confirm or{' '}
-            <text fg="red"><b>n</b></text> to cancel
+            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
+            <text fg={themeColor('error')}><b>n</b></text> to cancel
           </text>
         </box>
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">Deleting...</text>
+            <text fg={themeColor('warning')}>Deleting...</text>
           </box>
         )}
       </box>
@@ -674,24 +675,24 @@ export function AssistantsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Assistants</b></text>
-        <text fg="gray">[n]ew [e]dit [d]elete</text>
+        <text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</text>
       </box>
 
       {error && (
         <box marginBottom={1}>
-          <text fg="red">Error: {error}</text>
+          <text fg={themeColor('error')}>Error: {error}</text>
         </box>
       )}
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {sortedAssistants.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No assistants yet. Press n to create one.</text>
+            <text fg={themeColor('muted')}>No assistants yet. Press n to create one.</text>
           </box>
         ) : (
           sortedAssistants.map((assistant, index) => {
@@ -706,8 +707,8 @@ export function AssistantsPanel({
             return (
               <box key={assistant.id} paddingY={0}>
                 <text
-                  bg={isSelected ? "#0055aa" : undefined}
-                  fg={isSelected ? "whiteBright" : undefined}
+                  bg={isSelected ? themeColor('primary') : undefined}
+                  fg={isSelected ? themeColor('text') : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {systemBadge}{assistant.name.padEnd(16)} {modelName.padEnd(18)} {backendLabel.padEnd(10)} T:{temp} {time}
                 </text>
@@ -719,8 +720,8 @@ export function AssistantsPanel({
         {/* New assistant option */}
         <box marginTop={1} paddingY={0}>
           <text
-            bg={selectedIndex === sortedAssistants.length ? "#0055aa" : undefined}
-            fg={selectedIndex === sortedAssistants.length ? "whiteBright" : undefined}
+            bg={selectedIndex === sortedAssistants.length ? themeColor('primary') : undefined}
+            fg={selectedIndex === sortedAssistants.length ? themeColor('text') : undefined}
           >
             + New assistant (n)
           </text>
@@ -730,17 +731,17 @@ export function AssistantsPanel({
       {/* Selected assistant details */}
       {sortedAssistants.length > 0 && selectedIndex < sortedAssistants.length && (
         <box marginTop={1} flexDirection="column">
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {sortedAssistants[selectedIndex].description || 'No description'}
           </text>
           {sortedAssistants[selectedIndex].settings.systemPromptAddition && (
-            <text fg="gray">
+            <text fg={themeColor('muted')}>
               System prompt: {sortedAssistants[selectedIndex].settings.systemPromptAddition.slice(0, 50)}
               {(sortedAssistants[selectedIndex].settings.systemPromptAddition?.length || 0) > 50 ? '...' : ''}
             </text>
           )}
           {sortedAssistants[selectedIndex].isSystem && (
-            <text fg="yellow">
+            <text fg={themeColor('warning')}>
               System assistant — cannot be deleted
             </text>
           )}
@@ -748,7 +749,7 @@ export function AssistantsPanel({
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           Enter select | e edit | d delete | Esc close | 1-{Math.max(1, sortedAssistants.length)} jump
         </text>
       </box>

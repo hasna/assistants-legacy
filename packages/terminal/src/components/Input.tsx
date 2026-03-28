@@ -586,99 +586,93 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
   // [cassius] Theme-aware colors for light/dark terminal contrast
   const mutedColor = themeColor('muted');
-  const accentColor = themeColor('primary'); // cyan #61dafb on dark
 
   const lineCount = value.split('\n').length;
 
-  // Left accent border character (full block for a solid accent line)
-  const accent = '\u2588'; // █
+  // OpenCode spec colors
+  const bgSecondary = themeColor('surface');    // BackgroundSecondary: #252525 dark / #f0f0f0 light
+  const borderNormal = themeColor('border');    // BorderNormal: #4b4c5c
+  const textColor = themeColor('text');         // Text: #e0e0e0
+  const textMuted = themeColor('muted');        // TextMuted: #6a6a6a
+
+  // Top border line (Unicode box-drawing thin horizontal)
+  const borderChar = '\u2500'; // ─
+  const borderLine = borderChar.repeat(Math.max(10, screenWidth));
 
   return (
     <box flexDirection="column" marginTop={0}>
-      {/* Assistant name badge above the input box */}
-      {assistantName && (
-        <box flexDirection="row" justifyContent="flex-end" marginBottom={0}>
-          <text bg={getAssistantColor(assistantName)} fg="whiteBright"><b> {assistantName} </b></text>
-        </box>
-      )}
+      {/* Top border only (per spec: editor has border-top only, borderNormal color) */}
+      <text fg={borderNormal}>{borderLine}</text>
 
-      {/* OpenCode-style input box: dark background with left accent border */}
-      <box flexDirection="row" minHeight={2}>
-        {/* Left accent border — cyan vertical bar */}
-        <box flexDirection="column">
-          {Array.from({ length: Math.max(2, lineCount + (recordingStatus ? 1 : 0)) }).map((_, i) => (
-            <text key={i} fg={accentColor}>{accent}</text>
-          ))}
-        </box>
-
-        {/* Input content area with dark background */}
-        <box
-          flexDirection="column"
-          flexGrow={1}
-          bg="#282a36"
-          paddingX={1}
-          minHeight={2}
-        >
-          {/* Recording indicator */}
-          {recordingStatus === 'recording' && (
-            <box flexDirection="row" paddingY={0}>
-              <text fg={themeColor('error')} bg="#282a36"><b>Recording... </b></text>
-              <text fg={mutedColor} bg="#282a36">[Ctrl+R or Enter to stop]</text>
+      {/* Editor area with backgroundSecondary */}
+      <box
+        flexDirection="column"
+        flexGrow={1}
+        bg={bgSecondary}
+        paddingX={1}
+        minHeight={1}
+      >
+        {/* Recording indicator */}
+        {recordingStatus === 'recording' && (
+          <box flexDirection="row" paddingY={0}>
+            <text fg={themeColor('error')} bg={bgSecondary}><b>Recording... </b></text>
+            <text fg={textMuted} bg={bgSecondary}>[Ctrl+R or Enter to stop]</text>
+          </box>
+        )}
+        {recordingStatus === 'transcribing' && (
+          <box flexDirection="row" paddingY={0}>
+            <text fg={themeColor('warning')} bg={bgSecondary}><b>Transcribing...</b></text>
+          </box>
+        )}
+        {recordingStatus === 'talking' && (
+          <box paddingY={0} flexDirection="column">
+            <box flexDirection="row">
+              <text fg={themeColor('success')} bg={bgSecondary}><b>Talk mode </b></text>
+              <text fg={textMuted} bg={bgSecondary}>[listening... Ctrl+C to stop]</text>
             </box>
-          )}
-          {recordingStatus === 'transcribing' && (
-            <box flexDirection="row" paddingY={0}>
-              <text fg={themeColor('warning')} bg="#282a36"><b>Transcribing...</b></text>
-            </box>
-          )}
-          {recordingStatus === 'talking' && (
-            <box paddingY={0} flexDirection="column">
+            {partialTranscript ? (
               <box flexDirection="row">
-                <text fg={themeColor('success')} bg="#282a36"><b>Talk mode </b></text>
-                <text fg={mutedColor} bg="#282a36">[listening... Ctrl+C to stop]</text>
+                <text fg={textMuted} bg={bgSecondary}>{'> '}</text>
+                <text bg={bgSecondary}><i>{partialTranscript}</i></text>
               </box>
-              {partialTranscript ? (
-                <box flexDirection="row">
-                  <text fg={mutedColor} bg="#282a36">{'> '}</text>
-                  <text bg="#282a36"><i>{partialTranscript}</i></text>
-                </box>
-              ) : null}
-            </box>
-          )}
+            ) : null}
+          </box>
+        )}
 
-          {/* Input area - OpenTUI <textarea> handles all editing natively */}
-          {largePaste ? (
-            /* Large paste placeholder view */
-            <box flexDirection="row">
-              <box flexDirection="row" flexGrow={1}>
-                <text fg={themeColor('warning')} bg="#282a36">{largePaste.placeholder}</text>
-                <text fg={mutedColor} bg="#282a36"> [Enter to send, Esc to cancel]</text>
-              </box>
+        {/* Input area - OpenTUI <textarea> handles all editing natively */}
+        {/* No prompt character — per spec OpenCode has no ">" prompt */}
+        {largePaste ? (
+          /* Large paste placeholder view */
+          <box flexDirection="row">
+            <box flexDirection="row" flexGrow={1}>
+              <text fg={themeColor('warning')} bg={bgSecondary}>{largePaste.placeholder}</text>
+              <text fg={textMuted} bg={bgSecondary}> [Enter to send, Esc to cancel]</text>
             </box>
-          ) : (
-            <box flexDirection="row">
-              <textarea
-                ref={textareaRef}
-                placeholder={placeholder}
-                placeholderColor="#6272a4"
-                wrapMode="word"
-                focused
-                flexGrow={1}
-                height={Math.max(1, lineCount)}
-                bg="#282a36"
-                onContentChange={handleContentChange}
-                onSubmit={() => handleSubmit(value)}
-              />
-            </box>
-          )}
+          </box>
+        ) : (
+          <box flexDirection="row">
+            <textarea
+              ref={textareaRef}
+              placeholder={placeholder}
+              placeholderColor={textMuted}
+              wrapMode="word"
+              focused
+              flexGrow={1}
+              height={Math.max(1, lineCount)}
+              fg={textColor}
+              bg={bgSecondary}
+              onContentChange={handleContentChange}
+              onSubmit={() => handleSubmit(value)}
+            />
+          </box>
+        )}
 
-          {/* Show line count if multiline */}
-          {lineCount > 1 && (
-            <box>
-              <text fg={mutedColor} bg="#282a36">({lineCount} lines)</text>
-            </box>
-          )}
-        </box>
+        {/* Show line count if multiline */}
+        {lineCount > 1 && (
+          <box>
+            <text fg={textMuted} bg={bgSecondary}>({lineCount} lines)</text>
+          </box>
+        )}
       </box>
 
       {/* Skills autocomplete dropdown - below input */}
@@ -686,18 +680,18 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleSkills.startIndex > 0 && (
-            <text fg="gray">  ↑ {visibleSkills.startIndex} more above</text>
+            <text fg={mutedColor}>  ↑ {visibleSkills.startIndex} more above</text>
           )}
           {visibleSkills.items.map((skill, i) => {
             const actualIndex = visibleSkills.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             return (
-              <box flexDirection="row" key={skill.name} bg={isSelected ? '#0055aa' : undefined}>
-                <text fg={isSelected ? 'whiteBright' : '#5fb3a1'} bg={isSelected ? '#0055aa' : undefined}>
+              <box flexDirection="row" key={skill.name} bg={isSelected ? themeColor('primary') : undefined}>
+                <text fg={isSelected ? themeColor('text') : themeColor('info')} bg={isSelected ? themeColor('primary') : undefined}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{skill.name.padEnd(18)}</b>
                 </text>
-                <text fg={isSelected ? '#bbddff' : 'gray'} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? themeColor('text') : themeColor('muted')} bg={isSelected ? themeColor('primary') : undefined}>
                   {truncateDescription(skill.description)}
                 </text>
               </box>
@@ -705,7 +699,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           })}
           {/* Scroll indicator - bottom */}
           {visibleSkills.startIndex + maxVisible < filteredSkills.length && (
-            <text fg="gray">  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
+            <text fg={mutedColor}>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
           )}
         </box>
       )}
@@ -715,18 +709,18 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleCommands.startIndex > 0 && (
-            <text fg="gray">  ↑ {visibleCommands.startIndex} more above</text>
+            <text fg={mutedColor}>  ↑ {visibleCommands.startIndex} more above</text>
           )}
           {visibleCommands.items.map((cmd, i) => {
             const actualIndex = visibleCommands.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             return (
-              <box flexDirection="row" key={cmd.name} bg={isSelected ? '#0055aa' : undefined}>
-                <text fg={isSelected ? 'whiteBright' : themeColor('primary')} bg={isSelected ? '#0055aa' : undefined}>
+              <box flexDirection="row" key={cmd.name} bg={isSelected ? themeColor('primary') : undefined}>
+                <text fg={isSelected ? themeColor('bg') : themeColor('primary')} bg={isSelected ? themeColor('primary') : undefined}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{cmd.name.padEnd(18)}</b>
                 </text>
-                <text fg={isSelected ? '#bbddff' : mutedColor} bg={isSelected ? '#0055aa' : undefined}>
+                <text fg={isSelected ? themeColor('bg') : mutedColor} bg={isSelected ? themeColor('primary') : undefined}>
                   {cmd.description}
                 </text>
               </box>
@@ -734,7 +728,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           })}
           {/* Scroll indicator - bottom */}
           {visibleCommands.startIndex + maxVisible < filteredCommands.length && (
-            <text fg="gray">  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
+            <text fg={mutedColor}>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
           )}
         </box>
       )}
@@ -744,14 +738,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         <box flexDirection="column">
           {/* Scroll indicator - top */}
           {visibleFiles.startIndex > 0 && (
-            <text fg="gray">  ↑ {visibleFiles.startIndex} more above</text>
+            <text fg={mutedColor}>  ↑ {visibleFiles.startIndex} more above</text>
           )}
           {visibleFiles.items.map((file, i) => {
             const actualIndex = visibleFiles.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             return (
-              <box flexDirection="row" key={file.name} bg={isSelected ? '#0055aa' : undefined}>
-                <text fg={isSelected ? 'whiteBright' : '#5fb3a1'} bg={isSelected ? '#0055aa' : undefined}>
+              <box flexDirection="row" key={file.name} bg={isSelected ? themeColor('primary') : undefined}>
+                <text fg={isSelected ? themeColor('text') : themeColor('info')} bg={isSelected ? themeColor('primary') : undefined}>
                   {isSelected ? '▸ ' : '  '}
                   {file.name}
                 </text>
@@ -760,7 +754,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           })}
           {/* Scroll indicator - bottom */}
           {visibleFiles.startIndex + maxVisible < filteredFiles.length && (
-            <text fg="gray">  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
+            <text fg={mutedColor}>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
           )}
         </box>
       )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
+import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared'; // kept for StatusProps interface
 import { getModelById } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
 
@@ -55,43 +55,11 @@ interface StatusProps {
   onVariantSelect?: (variant: ModelVariant) => void;
 }
 
-// [nero] Default model variants derived from commonly-used models
-function getDefaultVariants(currentModelId?: string): ModelVariant[] {
-  const defaults: ModelVariant[] = [
-    { label: 'Opus', modelId: 'claude-opus-4-6' },
-    { label: 'Sonnet', modelId: 'claude-sonnet-4-6' },
-    { label: 'Haiku', modelId: 'claude-haiku-4-5-20251001' },
-  ];
-
-  // If current model is not in defaults, prepend it
-  if (currentModelId && !defaults.some((v) => v.modelId === currentModelId)) {
-    const model = getModelById(currentModelId);
-    if (model) {
-      defaults.unshift({ label: model.name.split(' ').pop() || model.name, modelId: currentModelId });
-    }
-  }
-
-  return defaults;
-}
-
 export function Status({
   isProcessing,
-  cwd,
-  queueLength = 0,
   tokenUsage,
   modelId,
-  voiceState,
-  heartbeatState,
-  identityInfo,
-  sessionIndex,
-  sessionCount,
-  backgroundProcessingCount = 0,
   processingStartTime,
-  verboseTools = false,
-  recentTools = [],
-  gitBranch,
-  variants,
-  onVariantSelect,
 }: StatusProps) {
   const [elapsed, setElapsed] = useState(0);
 
@@ -141,74 +109,70 @@ export function Status({
     contextPercent = Math.max(0, Math.min(100, Math.round((tokenUsage.totalTokens / tokenUsage.maxContextTokens) * 100)));
   }
 
-  // --- LEFT SIDE: Model variants ---
-  const resolvedVariants = variants || getDefaultVariants(modelId);
-
-  const leftElements: React.ReactNode[] = [];
-  resolvedVariants.forEach((variant, i) => {
-    const isActive = modelId === variant.modelId;
-    const color = isActive ? themeColor('purple') : themeColor('muted');
-    const separator = i < resolvedVariants.length - 1 ? (
-      <text key={`sep-${i}`} fg={themeColor('muted')}> </text>
-    ) : null;
-    leftElements.push(
-      isActive
-        ? <text key={variant.modelId} fg={color}><b>{variant.label}</b></text>
-        : <text key={variant.modelId} fg={color}>{variant.label}</text>,
-    );
-    if (separator) leftElements.push(separator);
-  });
-
-  // Processing indicator + cost after variants
-  if (isProcessing && processingStartTime) {
-    leftElements.push(
-      <text key="timer" fg={themeColor('orange')}> {formatDuration(elapsed)}</text>,
-    );
-  }
-  if (costInfo) {
-    leftElements.push(
-      <text key="cost" fg={themeColor('muted')}> {costInfo}</text>,
-    );
-  }
-
-  // Context warning
-  if (contextPercent >= 80) {
-    const warnColor = contextPercent >= 95 ? themeColor('red') : themeColor('orange');
-    const warnLabel = contextPercent >= 95 ? `!! ${contextPercent}%` : `! ${contextPercent}%`;
-    leftElements.push(
-      <text key="ctx" fg={warnColor}> {warnLabel}</text>,
-    );
-  }
-
-  // --- RIGHT SIDE: Keyboard shortcuts ---
-  const shortcuts: Array<{ key: string; label: string }> = [];
-
-  if (isProcessing) {
-    shortcuts.push({ key: 'esc', label: 'stop' });
-  }
-  shortcuts.push({ key: 'ctrl+t', label: 'variants' });
-  shortcuts.push({ key: 'tab', label: 'agents' });
-  shortcuts.push({ key: 'ctrl+p', label: 'commands' });
-
-  const rightElements: React.ReactNode[] = [];
-  shortcuts.forEach((sc, i) => {
-    if (i > 0) {
-      rightElements.push(
-        <text key={`rsep-${i}`} fg={themeColor('muted')}>  </text>,
-      );
+  // --- Format token count like OpenCode: >=1M -> "1.2M", >=1K -> "1.2K", else raw ---
+  const formatTokens = (n: number): string => {
+    if (n >= 1_000_000) {
+      const val = (n / 1_000_000).toFixed(1).replace(/\.0$/, '');
+      return `${val}M`;
     }
-    rightElements.push(
-      <text key={`key-${sc.key}`} fg={themeColor('text')}><b>{sc.key}</b></text>,
-    );
-    rightElements.push(
-      <text key={`lbl-${sc.key}`} fg={themeColor('muted')}> {sc.label}</text>,
-    );
-  });
+    if (n >= 1_000) {
+      const val = (n / 1_000).toFixed(1).replace(/\.0$/, '');
+      return `${val}K`;
+    }
+    return String(n);
+  };
 
+  // --- LEFT: Help widget "[?]" in textMuted ---
+  const helpWidget = (
+    <text key="help" fg={themeColor('muted')}>[?]</text>
+  );
+
+  // --- CENTER-LEFT: Token info "14,413  5% ($0.00)" in textMuted ---
+  // Percentage colored by threshold (warning at 80%, error at 95%)
+  let tokenInfo: React.ReactNode = null;
+  if (tokenUsage && tokenUsage.totalTokens > 0) {
+    const tokenStr = formatTokens(tokenUsage.totalTokens);
+    const percentColor = contextPercent >= 95
+      ? themeColor('error')
+      : contextPercent >= 80
+        ? themeColor('warning')
+        : themeColor('muted');
+    const costStr = costInfo || '$0.00';
+
+    tokenInfo = (
+      <box key="tokens" flexDirection="row">
+        <text fg={themeColor('muted')}>  {tokenStr}  </text>
+        <text fg={percentColor}>{contextPercent}%</text>
+        <text fg={themeColor('muted')}> ({costStr})</text>
+      </box>
+    );
+  }
+
+  // --- CENTER: Status message (processing timer, etc.) ---
+  let statusMessage: React.ReactNode = null;
+  if (isProcessing && processingStartTime) {
+    statusMessage = (
+      <text key="status" fg={themeColor('muted')}>  {formatDuration(elapsed)}</text>
+    );
+  }
+
+  // --- RIGHT: Model name in primary color ---
+  const modelName = modelId ? (getModelById(modelId)?.name || modelId) : '';
+  const modelDisplay = modelName ? (
+    <text key="model" fg={themeColor('primary')}>{modelName}</text>
+  ) : null;
+
+  // Single row, transparent background (no bg set)
   return (
     <box flexDirection="row" justifyContent="space-between">
-      <box flexDirection="row">{leftElements}</box>
-      <box flexDirection="row">{rightElements}</box>
+      <box flexDirection="row">
+        {helpWidget}
+        {tokenInfo}
+        {statusMessage}
+      </box>
+      <box flexDirection="row">
+        {modelDisplay}
+      </box>
     </box>
   );
 }

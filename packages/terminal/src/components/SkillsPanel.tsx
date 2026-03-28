@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Skill } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import type { CreateSkillOptions, CreateSkillResult, SkillScope } from '@hasna/assistants-core';
+import { themeColor } from '../theme/colors';
 
 interface SkillsPanelProps {
   skills: Skill[];
@@ -439,12 +440,12 @@ export function SkillsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>
+          <text fg={themeColor('info')}><b>
             {createMode === 'prompt' ? 'New Skill (Prompt)' : 'New Skill'}
           </b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Step 1: Scope selection */}
           {createStep === 'scope' && (
             <box flexDirection="column">
@@ -452,14 +453,14 @@ export function SkillsPanel({
               <box flexDirection="column" marginTop={1}>
                 {SCOPE_OPTIONS.map((opt, idx) => (
                   <box key={opt.id}>
-                    <text bg={idx === createScopeIndex ? "#0055aa" : undefined}>
-                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <text fg="gray">{opt.desc}</text>
+                    <text bg={idx === createScopeIndex ? themeColor('primary') : undefined}>
+                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <text fg={themeColor('muted')}>{opt.desc}</text>
                     </text>
                   </box>
                 ))}
               </box>
               <box marginTop={1}>
-                <text fg="gray">↑↓ select | Enter confirm | Esc cancel</text>
+                <text fg={themeColor('muted')}>↑↓ select | Enter confirm | Esc cancel</text>
               </box>
             </box>
           )}
@@ -478,7 +479,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter generate | Esc back</text>
+                <text fg={themeColor('muted')}>Enter generate | Esc back</text>
               </box>
             </box>
           )}
@@ -500,7 +501,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter next | Esc back</text>
+                <text fg={themeColor('muted')}>Enter next | Esc back</text>
               </box>
             </box>
           )}
@@ -519,7 +520,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter next | Esc back</text>
+                <text fg={themeColor('muted')}>Enter next | Esc back</text>
               </box>
             </box>
           )}
@@ -538,7 +539,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter next | Esc back</text>
+                <text fg={themeColor('muted')}>Enter next | Esc back</text>
               </box>
             </box>
           )}
@@ -557,7 +558,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter next | Esc back</text>
+                <text fg={themeColor('muted')}>Enter next | Esc back</text>
               </box>
             </box>
           )}
@@ -576,7 +577,7 @@ export function SkillsPanel({
                 />
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter next | Esc back</text>
+                <text fg={themeColor('muted')}>Enter next | Esc back</text>
               </box>
             </box>
           )}
@@ -586,41 +587,41 @@ export function SkillsPanel({
             <box flexDirection="column">
               <text><b>Confirm new skill:</b></text>
               <box flexDirection="column" marginTop={1} marginLeft={1}>
-                <text>Scope: <text fg="cyan">{SCOPE_OPTIONS[createScopeIndex].label}</text></text>
-                <text>Name: <text fg="cyan">{createName}</text></text>
-                {createDescription && <text>Description: <text fg="gray">{createDescription}</text></text>}
-                {createTools && <text>Tools: <text fg="gray">{createTools}</text></text>}
-                {createHint && <text>Hint: <text fg="gray">{createHint}</text></text>}
+                <text>Scope: <text fg={themeColor('info')}>{SCOPE_OPTIONS[createScopeIndex].label}</text></text>
+                <text>Name: <text fg={themeColor('info')}>{createName}</text></text>
+                {createDescription && <text>Description: <text fg={themeColor('muted')}>{createDescription}</text></text>}
+                {createTools && <text>Tools: <text fg={themeColor('muted')}>{createTools}</text></text>}
+                {createHint && <text>Hint: <text fg={themeColor('muted')}>{createHint}</text></text>}
                 {createContent && (
                   <>
                     <text>Content:</text>
                     <box marginLeft={2} flexDirection="column">
                       {createContent.split('\n').slice(0, 6).map((line, i) => (
-                        <text key={i} fg="gray">{line}</text>
+                        <text key={i} fg={themeColor('muted')}>{line}</text>
                       ))}
                       {createContent.split('\n').length > 6 && (
-                        <text fg="gray">... ({createContent.split('\n').length - 6} more lines)</text>
+                        <text fg={themeColor('muted')}>... ({createContent.split('\n').length - 6} more lines)</text>
                       )}
                     </box>
                   </>
                 )}
               </box>
               <box marginTop={1}>
-                <text fg="gray">Enter/y create | n cancel | Esc back</text>
+                <text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</text>
               </box>
             </box>
           )}
 
           {createError && (
             <box marginTop={1}>
-              <text fg="red">{createError}</text>
+              <text fg={themeColor('error')}>{createError}</text>
             </box>
           )}
         </box>
 
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">
+            <text fg={themeColor('warning')}>
               {createMode === 'prompt' && createStep === 'prompt' ? 'Generating draft...' : 'Creating skill...'}
             </text>
           </box>
@@ -637,7 +638,7 @@ export function SkillsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Skill</b></text>
+          <text fg={themeColor('error')}><b>Delete Skill</b></text>
         </box>
         <box marginBottom={1}>
           <text>
@@ -646,13 +647,13 @@ export function SkillsPanel({
         </box>
         {skill && (
           <box marginBottom={1}>
-            <text fg="gray">File: {skill.filePath}</text>
+            <text fg={themeColor('muted')}>File: {skill.filePath}</text>
           </box>
         )}
         <box marginTop={1}>
           <text>
-            Press <text fg="green"><b>y</b></text> to confirm or{' '}
-            <text fg="red"><b>n</b></text> to cancel
+            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
+            <text fg={themeColor('error')}><b>n</b></text> to cancel
           </text>
         </box>
       </box>
@@ -668,29 +669,29 @@ export function SkillsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Skill Details</b></text>
+          <text fg={themeColor('info')}><b>Skill Details</b></text>
         </box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} paddingY={0}>
-          <box><text><b>Name: </b></text><text fg="cyan">{s.name}</text></box>
-          <box><text><b>Scope: </b></text><text>{scope}</text>{s.source && <text fg="gray"> ({s.source})</text>}{s.version && <text fg="gray"> v{s.version}</text>}</box>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
+          <box><text><b>Name: </b></text><text fg={themeColor('info')}>{s.name}</text></box>
+          <box><text><b>Scope: </b></text><text>{scope}</text>{s.source && <text fg={themeColor('muted')}> ({s.source})</text>}{s.version && <text fg={themeColor('muted')}> v{s.version}</text>}</box>
           {s.description && <box><text><b>Description: </b></text><text>{s.description}</text></box>}
           {s.argumentHint && <box><text><b>Argument Hint: </b></text><text>{s.argumentHint}</text></box>}
           {s.allowedTools && s.allowedTools.length > 0 && (
             <box><text><b>Allowed Tools: </b></text><text>{s.allowedTools.join(', ')}</text></box>
           )}
           {s.model && <box><text><b>Model: </b></text><text>{s.model}</text></box>}
-          <box><text><b>File: </b></text><text fg="gray">{s.filePath}</text></box>
+          <box><text><b>File: </b></text><text fg={themeColor('muted')}>{s.filePath}</text></box>
 
           {s.contentLoaded && s.content && (
             <>
               <box marginTop={1}><text><b>Content:</b></text></box>
               <box marginLeft={2} flexDirection="column">
                 {s.content.split('\n').slice(0, 20).map((line, i) => (
-                  <text key={i} wrapMode="word" fg="gray">{line}</text>
+                  <text key={i} wrapMode="word" fg={themeColor('muted')}>{line}</text>
                 ))}
                 {s.content.split('\n').length > 20 && (
-                  <text fg="gray">... ({s.content.split('\n').length - 20} more lines)</text>
+                  <text fg={themeColor('muted')}>... ({s.content.split('\n').length - 20} more lines)</text>
                 )}
               </box>
             </>
@@ -698,12 +699,12 @@ export function SkillsPanel({
         </box>
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             [x]execute | [d]elete | Esc/q back
           </text>
         </box>
 
-        {isSubmitting && <box marginTop={1}><text fg="yellow">Loading...</text></box>}
+        {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Loading...</text></box>}
       </box>
     );
   }
@@ -725,25 +726,25 @@ export function SkillsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Skills</b></text>
-        <text fg="gray">[n]ew [p]rompt [x]execute [d]elete [f]refresh</text>
+        <text fg={themeColor('muted')}>[n]ew [p]rompt [x]execute [d]elete [f]refresh</text>
       </box>
 
       <box marginBottom={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {sortedSkills.length} skill(s) — {projectSkills.length} project, {globalSkills.length} global
         </text>
       </box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sortedSkills.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No skills loaded. Press n to create one.</text>
+            <text fg={themeColor('muted')}>No skills loaded. Press n to create one.</text>
           </box>
         ) : (
           <>
             {skillRange.hasMore.above > 0 && (
               <box paddingY={0}>
-                <text fg="gray">  ↑ {skillRange.hasMore.above} more above</text>
+                <text fg={themeColor('muted')}>  ↑ {skillRange.hasMore.above} more above</text>
               </box>
             )}
             {visibleEntries.map((entry) => {
@@ -752,7 +753,7 @@ export function SkillsPanel({
               const header = entry.group !== lastGroup
                 ? (
                   <box marginTop={lastGroup ? 1 : 0}>
-                    <text fg="gray"><b>
+                    <text fg={themeColor('muted')}><b>
                       {entry.group === 'project' ? 'Project Skills' : 'Global Skills'}
                     </b></text>
                   </box>
@@ -764,7 +765,7 @@ export function SkillsPanel({
                 <React.Fragment key={`${entry.skill.name}-${entry.actualIdx}`}>
                   {header}
                   <box paddingY={0}>
-                    <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>
+                    <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                       {isSelected ? '>' : ' '} {(entry.actualIdx + 1).toString().padStart(2)}. {entry.skill.name.padEnd(20)}{desc.slice(0, 40)}{badge}
                     </text>
                   </box>
@@ -773,7 +774,7 @@ export function SkillsPanel({
             })}
             {skillRange.hasMore.below > 0 && (
               <box paddingY={0}>
-                <text fg="gray">  ↓ {skillRange.hasMore.below} more below</text>
+                <text fg={themeColor('muted')}>  ↓ {skillRange.hasMore.below} more below</text>
               </box>
             )}
           </>
@@ -782,8 +783,8 @@ export function SkillsPanel({
         {/* New skill option at bottom */}
         <box marginTop={1} paddingY={0}>
           <text
-            bg={selectedIndex === sortedSkills.length ? "#0055aa" : undefined}
-            fg={selectedIndex === sortedSkills.length ? "whiteBright" : "gray"}
+            bg={selectedIndex === sortedSkills.length ? themeColor('primary') : undefined}
+            fg={selectedIndex === sortedSkills.length ? themeColor('text') : "gray"}
           >
             + New skill (n) | Prompt (p)
           </text>
@@ -793,17 +794,17 @@ export function SkillsPanel({
       {/* Compact preview of selected */}
       {selectedSkill && selectedIndex < sortedSkills.length && (
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {getSkillScope(selectedSkill.filePath)} | {selectedSkill.argumentHint || 'no args'} | Enter for details
           </text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | [x]execute | q quit</text>
+        <text fg={themeColor('muted')}>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | [x]execute | q quit</text>
       </box>
 
-      {isSubmitting && <box marginTop={1}><text fg="yellow">Processing...</text></box>}
+      {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Processing...</text></box>}
     </box>
   );
 }

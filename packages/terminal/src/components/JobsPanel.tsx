@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Job, JobManager, JobStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface JobsPanelProps {
   manager: JobManager;
@@ -28,13 +29,13 @@ function statusColor(status: JobStatus): string {
     case 'running':
       return 'cyan';
     case 'completed':
-      return 'green';
+      return themeColor('success');
     case 'failed':
       return 'red';
     case 'timeout':
       return 'magenta';
     case 'cancelled':
-      return 'gray';
+      return themeColor('muted');
     default:
       return 'white';
   }
@@ -342,7 +343,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
     return (
       <box flexDirection="column">
         <text><b>Jobs</b></text>
-        <text fg="gray">Loading jobs...</text>
+        <text fg={themeColor('muted')}>Loading jobs...</text>
       </box>
     );
   }
@@ -351,8 +352,8 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
     <box marginBottom={1}>
       <text>{FILTER_TABS.map((tab, index) => {
         const label = `${index + 1}:${tab}`;
-        return <span key={tab} fg={index === filterIndex ? 'cyan' : 'gray'}>{label}{'  '}</span>;
-      })}<span fg="gray">{`(${jobs.length} total, ${jobs.filter((job) => isActiveStatus(job.status)).length} active)`}</span></text>
+        return <span key={tab} fg={index === filterIndex ? 'cyan' : themeColor('muted')}>{label}{'  '}</span>;
+      })}<span fg={themeColor('muted')}>{`(${jobs.length} total, ${jobs.filter((job) => isActiveStatus(job.status)).length} active)`}</span></text>
     </box>
   );
 
@@ -378,24 +379,24 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
         <text>Duration: {formatDuration(detailJob)}</text>
         {resultPreview && (
           <box marginTop={1} flexDirection="column">
-            <text fg="green">Result:</text>
+            <text fg={themeColor('success')}>Result:</text>
             <text>{resultPreview}</text>
           </box>
         )}
         {errorPreview && (
           <box marginTop={1} flexDirection="column">
-            <text fg="red">Error:</text>
+            <text fg={themeColor('error')}>Error:</text>
             <text>{errorPreview}</text>
           </box>
         )}
         {error && (
-          <text fg="red">{error}</text>
+          <text fg={themeColor('error')}>{error}</text>
         )}
         {statusMessage && (
-          <text fg="cyan">{statusMessage}</text>
+          <text fg={themeColor('info')}>{statusMessage}</text>
         )}
         <box marginTop={1}>
-          <text fg="gray">d/x/c kill selected  K kill all active  r refresh  esc back  q close</text>
+          <text fg={themeColor('muted')}>d/x/c kill selected  K kill all active  r refresh  esc back  q close</text>
         </box>
       </box>
     );
@@ -409,43 +410,43 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
       <text><b>Jobs</b></text>
       {tabLabel}
 
-      <text fg="gray">{fit('Status', 10)} {fit('ID', 16)} {fit('Connector', 14)} {fit('Age', 6, 'right')} {fit('Run', 6, 'right')} Command</text>
-      <text fg="gray">{'-'.repeat(86)}</text>
+      <text fg={themeColor('muted')}>{fit('Status', 10)} {fit('ID', 16)} {fit('Connector', 14)} {fit('Age', 6, 'right')} {fit('Run', 6, 'right')} Command</text>
+      <text fg={themeColor('muted')}>{'-'.repeat(86)}</text>
 
       {filteredJobs.length === 0 && (
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           {activeFilter === 'all' ? 'No jobs in this session.' : activeFilter === 'active' ? 'No active jobs.' : 'No completed/failed jobs.'}
         </text>
       )}
 
       {windowed.above > 0 && (
-        <text fg="gray">{`... ${windowed.above} above ...`}</text>
+        <text fg={themeColor('muted')}>{`... ${windowed.above} above ...`}</text>
       )}
       {visibleRows.map((job, idx) => {
         const absolute = windowed.start + idx;
         const selected = absolute === selectedIndex;
         return (
           <box key={job.id}>
-            <text><span fg={selected ? 'cyan' : 'gray'}>{selected ? '>' : ' '}</span>{' '}<span fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</span>{' '}{fit(job.id, 16)}{' '}{fit(job.connectorName, 14)}{' '}{fit(formatRelativeTime(job.createdAt), 6, 'right')}{' '}{fit(formatDuration(job), 6, 'right')}{' '}{truncateText(job.command, 28)}</text>
+            <text><span fg={selected ? 'cyan' : themeColor('muted')}>{selected ? '>' : ' '}</span>{' '}<span fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</span>{' '}{fit(job.id, 16)}{' '}{fit(job.connectorName, 14)}{' '}{fit(formatRelativeTime(job.createdAt), 6, 'right')}{' '}{fit(formatDuration(job), 6, 'right')}{' '}{truncateText(job.command, 28)}</text>
           </box>
         );
       })}
       {windowed.below > 0 && (
-        <text fg="gray">{`... ${windowed.below} below ...`}</text>
+        <text fg={themeColor('muted')}>{`... ${windowed.below} below ...`}</text>
       )}
 
       {error && (
-        <text fg="red">{error}</text>
+        <text fg={themeColor('error')}>{error}</text>
       )}
       {statusMessage && (
-        <text fg="cyan">{statusMessage}</text>
+        <text fg={themeColor('info')}>{statusMessage}</text>
       )}
       {isWorking && (
-        <text fg="yellow">Applying action...</text>
+        <text fg={themeColor('warning')}>Applying action...</text>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">j/k or arrows move  enter view  d/x/c kill selected  K kill all active  r refresh  1/2/3 filter  q close</text>
+        <text fg={themeColor('muted')}>j/k or arrows move  enter view  d/x/c kill selected  K kill all active  r refresh  1/2/3 filter  q close</text>
       </box>
     </box>
   );

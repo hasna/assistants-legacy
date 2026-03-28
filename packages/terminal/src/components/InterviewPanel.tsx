@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { InterviewQuestion, InterviewRequest, InterviewResponse } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // ============================================
 // Types
@@ -58,7 +59,7 @@ function QuestionTabs({
 
   return (
     <box flexDirection="row" marginBottom={1}>
-      <text fg={currentIndex === 0 ? undefined : 'gray'}>← </text>
+      <text fg={currentIndex === 0 ? undefined : themeColor('muted')}>← </text>
       {questions.map((q, idx) => {
         const isAnswered = q.id in answers;
         const isCurrent = idx === currentIndex;
@@ -67,7 +68,7 @@ function QuestionTabs({
 
         if (isCurrent) {
           return (
-            <text key={q.id} bg="blue" fg="white">
+            <text key={q.id} bg={themeColor('secondary')} fg={themeColor('text')}>
               {' '}{checkbox} {label}{' '}
             </text>
           );
@@ -80,12 +81,12 @@ function QuestionTabs({
       })}
       <box key="submit">
         {isSubmitTab ? (
-          <text bg="blue" fg="white"> {TICK} Submit </text>
+          <text bg={themeColor('secondary')} fg={themeColor('text')}> {TICK} Submit </text>
         ) : (
           <text> {TICK} Submit </text>
         )}
       </box>
-      <text fg={isSubmitTab ? undefined : 'gray'}> →</text>
+      <text fg={isSubmitTab ? undefined : themeColor('muted')}> →</text>
     </box>
   );
 }
@@ -134,7 +135,7 @@ function OptionList({
             </box>
             {opt.description && (
               <box marginLeft={6}>
-                <text fg="gray">{opt.description}</text>
+                <text fg={themeColor('muted')}>{opt.description}</text>
               </box>
             )}
           </box>
@@ -150,7 +151,7 @@ function OptionList({
         </box>
         {isInOtherInput && (
           <box marginLeft={6}>
-            <text fg="cyan">{otherText || ''}</text>
+            <text fg={themeColor('info')}>{otherText || ''}</text>
             <text attributes={32}> </text>
           </box>
         )}
@@ -182,7 +183,7 @@ function ReviewPanel({
     <box flexDirection="column" marginTop={1}>
       {!allAnswered && (
         <box marginBottom={1}>
-          <text fg="yellow">⚠ You have not answered all questions</text>
+          <text fg={themeColor('warning')}>⚠ You have not answered all questions</text>
         </box>
       )}
 
@@ -197,7 +198,7 @@ function ReviewPanel({
                 <box key={q.id} flexDirection="column" marginLeft={1}>
                   <text>{BULLET} {q.header || q.question}</text>
                   <box marginLeft={2}>
-                    <text fg="green">→ {displayAnswer}</text>
+                    <text fg={themeColor('success')}>→ {displayAnswer}</text>
                   </box>
                 </box>
               );
@@ -205,7 +206,7 @@ function ReviewPanel({
         </box>
       )}
 
-      <text fg="gray">Ready to submit your answers?</text>
+      <text fg={themeColor('muted')}>Ready to submit your answers?</text>
       <box flexDirection="column" marginTop={1}>
         <text fg={selectedIndex === 0 ? 'cyan' : undefined}>
           {selectedIndex === 0 ? POINTER : ' '} Submit answers
@@ -482,7 +483,7 @@ export function InterviewPanel({
   // Separator line
   const Divider = useMemo(() => (
     <box marginY={0}>
-      <text fg="gray">{'─'.repeat(60)}</text>
+      <text fg={themeColor('muted')}>{'─'.repeat(60)}</text>
     </box>
   ), []);
 
@@ -490,7 +491,7 @@ export function InterviewPanel({
     <box
       flexDirection="column"
       borderStyle="rounded"
-      borderColor="#d4d4d8"
+      borderColor={themeColor('border')}
       border={["top", "bottom"]}
       paddingX={1}
       marginY={0}
@@ -498,12 +499,12 @@ export function InterviewPanel({
       {/* Title */}
       {request.title && (
         <box marginBottom={0}>
-          <text fg="cyan"><b>{request.title}</b></text>
+          <text fg={themeColor('info')}><b>{request.title}</b></text>
         </box>
       )}
       {request.description && (
         <box marginBottom={0}>
-          <text fg="gray">{request.description}</text>
+          <text fg={themeColor('muted')}>{request.description}</text>
         </box>
       )}
 
@@ -557,7 +558,7 @@ export function InterviewPanel({
 
       {/* Help text */}
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           Enter to select · {questions.length > 1 ? '←/→ to navigate · ' : ''}↑/↓ to browse · Esc to cancel
         </text>
       </box>

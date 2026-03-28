@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Memory, MemoryStats } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface MemoryPanelProps {
   memories: Memory[];
@@ -114,26 +115,26 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Memory Detail</b></text>
+          <text fg={themeColor('info')}><b>Memory Detail</b></text>
         </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
-          <text><text fg="gray">Key:</text> {selected.key}</text>
-          <text><text fg="gray">Scope:</text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
-          <text><text fg="gray">Category:</text> {selected.category}</text>
-          <text><text fg="gray">Importance:</text> {selected.importance}/10</text>
-          <text><text fg="gray">Tags:</text> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
-          <text><text fg="gray">Created:</text> {selected.createdAt}</text>
-          <text><text fg="gray">Updated:</text> {selected.updatedAt}</text>
-          <text><text fg="gray">Accessed:</text> {selected.accessCount} times</text>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+          <text><text fg={themeColor('muted')}>Key:</text> {selected.key}</text>
+          <text><text fg={themeColor('muted')}>Scope:</text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
+          <text><text fg={themeColor('muted')}>Category:</text> {selected.category}</text>
+          <text><text fg={themeColor('muted')}>Importance:</text> {selected.importance}/10</text>
+          <text><text fg={themeColor('muted')}>Tags:</text> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
+          <text><text fg={themeColor('muted')}>Created:</text> {selected.createdAt}</text>
+          <text><text fg={themeColor('muted')}>Updated:</text> {selected.updatedAt}</text>
+          <text><text fg={themeColor('muted')}>Accessed:</text> {selected.accessCount} times</text>
           <box marginTop={1}>
-            <text fg="gray">Value:</text>
+            <text fg={themeColor('muted')}>Value:</text>
           </box>
           <box>
             <text>{formatValue(selected.value)}</text>
           </box>
         </box>
         <box marginTop={1}>
-          <text fg="gray">Esc back | r refresh | q close</text>
+          <text fg={themeColor('muted')}>Esc back | r refresh | q close</text>
         </box>
       </box>
     );
@@ -145,24 +146,24 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
         <box flexDirection="row">
           <text><b>Memory</b></text>
           {stats && (
-            <text fg="gray">
+            <text fg={themeColor('muted')}>
               {' '}({stats.totalCount} total · G{stats.byScope.global}/S{stats.byScope.shared}/P{stats.byScope.private})
             </text>
           )}
         </box>
-        <text fg="gray">[r]efresh</text>
+        <text fg={themeColor('muted')}>[r]efresh</text>
       </box>
 
       {error && (
         <box marginBottom={1}>
-          <text fg="red">Error: {error}</text>
+          <text fg={themeColor('error')}>Error: {error}</text>
         </box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sorted.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No memories yet.</text>
+            <text fg={themeColor('muted')}>No memories yet.</text>
           </box>
         ) : (
           sorted.map((memory, index) => {
@@ -171,7 +172,7 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
             const scopeTag = SCOPE_TAG[memory.scope];
             return (
               <box key={memory.id} paddingY={0}>
-                <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                   {scopeTag} {index + 1}. {memory.key.padEnd(18)} {summary}
                 </text>
               </box>
@@ -182,12 +183,12 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
 
       {isRefreshing && (
         <box marginTop={1}>
-          <text fg="yellow">Refreshing...</text>
+          <text fg={themeColor('warning')}>Refreshing...</text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">Enter view | Esc close | ↑↓ navigate | 1-9 jump</text>
+        <text fg={themeColor('muted')}>Enter view | Esc close | ↑↓ navigate | 1-9 jump</text>
       </box>
     </box>
   );

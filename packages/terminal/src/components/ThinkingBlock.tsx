@@ -2,13 +2,12 @@ import React from 'react';
 import { themeColor } from '../theme/colors';
 
 /**
- * ThinkingBlock renders thinking/reasoning content in a subtle bordered box
- * with yellow italic text, inspired by OpenCode's thinking display.
+ * ThinkingBlock renders thinking/reasoning content per OpenCode spec:
+ * - "Thinking:" prefix in warning color (orange)
+ * - Content in italic
+ * - Left border using borderDim color
  *
- * When `content` is provided, it shows the thinking text.
- * When no content, it shows a generic "Thinking..." indicator.
- *
- * [brutus] Created for OpenCode-style thinking display.
+ * [brutus] Updated to match OpenCode spec colors exactly.
  */
 
 interface ThinkingBlockProps {
@@ -20,26 +19,46 @@ interface ThinkingBlockProps {
 
 export function ThinkingBlock({ content, isActive = false }: ThinkingBlockProps) {
   const warningCol = themeColor('warning');
+  const borderDimCol = themeColor('borderDim');
   const mutedCol = themeColor('muted');
-  const borderCol = themeColor('border');
 
-  const displayText = content
-    ? `Thinking: ${content}`
-    : isActive
-      ? 'Thinking...'
-      : 'Thinking';
+  if (!content && !isActive) {
+    return (
+      <box
+        borderStyle="single"
+        borderColor={borderDimCol}
+        border={['left']}
+        paddingLeft={1}
+      >
+        <text fg={warningCol}>Thinking</text>
+      </box>
+    );
+  }
+
+  if (!content) {
+    return (
+      <box
+        borderStyle="single"
+        borderColor={borderDimCol}
+        border={['left']}
+        paddingLeft={1}
+      >
+        <text fg={warningCol}>Thinking...</text>
+      </box>
+    );
+  }
 
   return (
     <box
       flexDirection="column"
       borderStyle="single"
-      borderColor={borderCol}
+      borderColor={borderDimCol}
       border={['left']}
       paddingLeft={1}
-      marginY={0}
     >
-      <text fg={warningCol}>
-        {displayText}
+      <text>
+        <text fg={warningCol}>Thinking: </text>
+        <text fg={mutedCol}><i>{content}</i></text>
       </text>
     </box>
   );

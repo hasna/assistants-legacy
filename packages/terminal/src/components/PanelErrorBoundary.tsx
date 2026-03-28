@@ -1,4 +1,5 @@
 import React, { Component, type ReactNode } from 'react';
+import { themeColor } from '../theme/colors';
 
 interface Props {
   children: ReactNode;
@@ -30,17 +31,17 @@ export class PanelErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <box flexDirection="column" padding={1}>
-          <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-            <text fg="red"><b>
+          <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+            <text fg={themeColor('error')}><b>
               {this.props.panelName || 'Panel'} Error
             </b></text>
           </box>
           <box paddingX={1} flexDirection="column">
-            <text fg="red">An error occurred while rendering this panel.</text>
+            <text fg={themeColor('error')}>An error occurred while rendering this panel.</text>
             <text> </text>
-            <text fg="gray">{this.state.error?.message || 'Unknown error'}</text>
+            <text fg={themeColor('muted')}>{this.state.error?.message || 'Unknown error'}</text>
             <text> </text>
-            <text fg="gray">Press 'q' or Escape to close.</text>
+            <text fg={themeColor('muted')}>Press 'q' or Escape to close.</text>
           </box>
         </box>
       );

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AskUserQuestion, AskUserRequest } from '@hasna/assistants-shared';
+import { themeColor } from '../theme/colors';
 
 interface AskUserPanelProps {
   sessionId: string;
@@ -17,14 +18,14 @@ export function AskUserPanel({
   total,
 }: AskUserPanelProps) {
   return (
-    <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginY={1}>
+    <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginY={1}>
       <box flexDirection="row" justifyContent="space-between">
-        <text fg="cyan"><b>{request.title || 'Question'}</b></text>
-        <text fg="gray">{index + 1}/{total}</text>
+        <text fg={themeColor('info')}><b>{request.title || 'Question'}</b></text>
+        <text fg={themeColor('muted')}>{index + 1}/{total}</text>
       </box>
       {request.description && (
         <box marginTop={1}>
-          <text fg="gray">{request.description}</text>
+          <text fg={themeColor('muted')}>{request.description}</text>
         </box>
       )}
       <box marginTop={1}>
@@ -33,7 +34,7 @@ export function AskUserPanel({
       {question.options && question.options.length > 0 && (
         <box flexDirection="column" marginTop={1}>
           {question.options.map((opt, idx) => (
-            <text key={`${opt}-${idx}`} fg="gray">
+            <text key={`${opt}-${idx}`} fg={themeColor('muted')}>
               • {opt}
             </text>
           ))}
@@ -41,11 +42,11 @@ export function AskUserPanel({
       )}
       {question.multiline && (
         <box marginTop={1}>
-          <text fg="gray">Multi-line answer allowed. Use Alt+Enter to insert newlines.</text>
+          <text fg={themeColor('muted')}>Multi-line answer allowed. Use Alt+Enter to insert newlines.</text>
         </box>
       )}
       <box marginTop={1}>
-        <text fg="gray">Session: {sessionId}</text>
+        <text fg={themeColor('muted')}>Session: {sessionId}</text>
       </box>
     </box>
   );

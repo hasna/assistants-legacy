@@ -9,6 +9,7 @@ import type {
   OrderStatus,
 } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface OrdersPanelProps {
   manager: OrdersManager;
@@ -63,10 +64,10 @@ function statusColor(status: string): string {
     case 'pending': return 'yellow';
     case 'processing': return 'cyan';
     case 'shipped': return 'blue';
-    case 'delivered': return 'green';
+    case 'delivered': return themeColor('success');
     case 'cancelled': return 'red';
     case 'returned': return 'magenta';
-    default: return 'gray';
+    default: return themeColor('muted');
   }
 }
 
@@ -317,8 +318,8 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   const tabBar = (
     <tab-select
       options={tabSelectOptions}
-      selectedBackgroundColor="#0055aa"
-      selectedTextColor="whiteBright"
+      selectedBackgroundColor={themeColor('primary')}
+      selectedTextColor={themeColor('text')}
       textColor="gray"
       showDescription={false}
       wrapSelection
@@ -350,8 +351,8 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   }, [tab, viewMode]);
 
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text><span fg="blue"><b>Orders</b></span><span fg="gray">{` | ${controls}`}</span></text>
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text><span fg={themeColor('secondary')}><b>Orders</b></span><span fg={themeColor('muted')}>{` | ${controls}`}</span></text>
     </box>
   );
 
@@ -361,7 +362,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
         {header}
         <box flexDirection="column" paddingX={1}>
           <text><b>Create Order</b></text>
-          <text fg="gray">Store can be existing or new. New stores are auto-registered.</text>
+          <text fg={themeColor('muted')}>Store can be existing or new. New stores are auto-registered.</text>
           <text> </text>
           {createOrderStep === 'store' ? (
             <box>
@@ -404,7 +405,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                   focused
                 />
               </box>
-              <text fg="gray">Submit empty description to create without one.</text>
+              <text fg={themeColor('muted')}>Submit empty description to create without one.</text>
             </box>
           )}
         </box>
@@ -451,8 +452,8 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     return (
       <box flexDirection="column">
         {header}
-        {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
-        {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
+        {statusMessage ? <box marginBottom={1}><text fg={themeColor('warning')}>{statusMessage}</text></box> : null}
+        {error ? <box marginBottom={1}><text fg={themeColor('error')}>Error: {error}</text></box> : null}
 
         <box flexDirection="column" paddingX={1}>
           <text><b>Order Detail</b></text>
@@ -482,9 +483,9 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
           <box flexDirection="column" marginTop={1}>
             <text><b>{`Items (${items.length})`}</b></text>
             {items.length === 0 ? (
-              <text fg="gray">No items.</text>
+              <text fg={themeColor('muted')}>No items.</text>
             ) : (
-              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+              <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
                 <text><b>{`${fit('NAME', 24)} ${fit('QTY', 4, 'right')} ${fit('UNIT', 12, 'right')} ${fit('TOTAL', 12, 'right')} ${fit('STATUS', 10)}`}</b></text>
                 {items.map((item) => {
                   const row = `${fit(item.name, 24)} ${fit(String(item.quantity), 4, 'right')} ${fit(formatCurrency(item.unitPrice, order.currency), 12, 'right')} ${fit(formatCurrency(item.totalPrice, order.currency), 12, 'right')} ${fit(item.status, 10)}`;
@@ -506,8 +507,8 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
     return (
       <box flexDirection="column">
         {header}
-        {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
-        {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
+        {statusMessage ? <box marginBottom={1}><text fg={themeColor('warning')}>{statusMessage}</text></box> : null}
+        {error ? <box marginBottom={1}><text fg={themeColor('error')}>Error: {error}</text></box> : null}
 
         <box flexDirection="column" paddingX={1}>
           <text><b>Store Detail</b></text>
@@ -520,9 +521,9 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
           <box flexDirection="column" marginTop={1}>
             <text><b>{`Recent Orders (${recent.length})`}</b></text>
             {recent.length === 0 ? (
-              <text fg="gray">No orders for this store yet.</text>
+              <text fg={themeColor('muted')}>No orders for this store yet.</text>
             ) : (
-              <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+              <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
                 <text><b>{`${fit('ID', 14)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</b></text>
                 {recent.slice(0, 20).map((order) => {
                   const row = `${fit(order.id, 14)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
@@ -555,26 +556,26 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
 
       {tab === 'orders' ? (
         <box marginBottom={1}>
-          <text fg="gray">Status filter: </text>
+          <text fg={themeColor('muted')}>Status filter: </text>
           {STATUS_FILTERS.map((status, idx) => (
-            <text key={status} bg={idx === statusFilterIndex ? "#0055aa" : undefined} fg={idx === statusFilterIndex ? "whiteBright" : "gray"}>{` ${status} `}</text>
+            <text key={status} bg={idx === statusFilterIndex ? themeColor('primary') : undefined} fg={idx === statusFilterIndex ? themeColor('text') : "gray"}>{` ${status} `}</text>
           ))}
         </box>
       ) : null}
 
-      {statusMessage ? <box marginBottom={1}><text fg="yellow">{statusMessage}</text></box> : null}
-      {error ? <box marginBottom={1}><text fg="red">Error: {error}</text></box> : null}
+      {statusMessage ? <box marginBottom={1}><text fg={themeColor('warning')}>{statusMessage}</text></box> : null}
+      {error ? <box marginBottom={1}><text fg={themeColor('error')}>Error: {error}</text></box> : null}
 
       {tab === 'orders' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
           {filteredOrders.length === 0 ? (
-            <text fg="gray">No orders for this filter. Press n to create an order.</text>
+            <text fg={themeColor('muted')}>No orders for this filter. Press n to create an order.</text>
           ) : (
             <>
               <text><b>{`${fit('ID', 14)} ${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('ITEMS', 5, 'right')} ${fit('UPDATED', 10)}`}</b></text>
 
               {tableWindow.above > 0 ? (
-                <text fg="gray">{`... ${tableWindow.above} more above`}</text>
+                <text fg={themeColor('muted')}>{`... ${tableWindow.above} more above`}</text>
               ) : null}
 
               {visibleOrders.map((order, idx) => {
@@ -583,12 +584,12 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(order.id, 14)} ${fit(order.storeName, 18)} ${fit(order.status, 10)} ${fit(formatCurrency(order.totalAmount, order.currency), 12)} ${fit(String(order.itemCount), 5, 'right')} ${fit(formatRelativeTime(order.updatedAt), 10)}`;
                 return (
-                  <text key={order.id} bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>{row}</text>
+                  <text key={order.id} bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>{row}</text>
                 );
               })}
 
               {tableWindow.below > 0 ? (
-                <text fg="gray">{`... ${tableWindow.below} more below`}</text>
+                <text fg={themeColor('muted')}>{`... ${tableWindow.below} more below`}</text>
               ) : null}
             </>
           )}
@@ -596,15 +597,15 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       ) : null}
 
       {tab === 'stores' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
           {stores.length === 0 ? (
-            <text fg="gray">No stores yet. Press a to add one.</text>
+            <text fg={themeColor('muted')}>No stores yet. Press a to add one.</text>
           ) : (
             <>
               <text><b>{`${fit('ID', 14)} ${fit('NAME', 22)} ${fit('CATEGORY', 12)} ${fit('ORD', 4, 'right')} ${fit('LAST', 10)}`}</b></text>
 
               {tableWindow.above > 0 ? (
-                <text fg="gray">{`... ${tableWindow.above} more above`}</text>
+                <text fg={themeColor('muted')}>{`... ${tableWindow.above} more above`}</text>
               ) : null}
 
               {visibleStores.map((store, idx) => {
@@ -613,12 +614,12 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
                 const marker = isSelected ? '> ' : '  ';
                 const row = `${marker}${fit(store.id, 14)} ${fit(store.name, 22)} ${fit(store.category, 12)} ${fit(String(store.orderCount), 4, 'right')} ${fit(formatRelativeTime(store.lastOrderAt), 10)}`;
                 return (
-                  <text key={store.id} bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : undefined}>{row}</text>
+                  <text key={store.id} bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>{row}</text>
                 );
               })}
 
               {tableWindow.below > 0 ? (
-                <text fg="gray">{`... ${tableWindow.below} more below`}</text>
+                <text fg={themeColor('muted')}>{`... ${tableWindow.below} more below`}</text>
               ) : null}
             </>
           )}
@@ -626,14 +627,14 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       ) : null}
 
       {tab === 'overview' ? (
-        <box flexDirection="column" borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1}>
+        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
           <text><b>Summary</b></text>
           <text>{`Orders: ${orders.length}`}</text>
           <text>{`Stores: ${stores.length}`}</text>
           <text> </text>
           <text><b>Status counts</b></text>
           {Object.keys(overviewCounts).length === 0 ? (
-            <text fg="gray">No orders yet.</text>
+            <text fg={themeColor('muted')}>No orders yet.</text>
           ) : (
             STATUS_FILTERS.filter((status) => status !== 'all').map((status) => (
               <box key={status}>
@@ -645,7 +646,7 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
           <text> </text>
           <text><b>Recent orders</b></text>
           {orders.length === 0 ? (
-            <text fg="gray">No recent orders.</text>
+            <text fg={themeColor('muted')}>No recent orders.</text>
           ) : (
             <>
               <text><b>{`${fit('STORE', 18)} ${fit('STATUS', 10)} ${fit('TOTAL', 12)} ${fit('UPDATED', 10)}`}</b></text>

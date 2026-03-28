@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 import type { ChannelsManager, ChannelListItem, ChannelMessage, ChannelMember, Channel } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Slack's base aubergine color for channel badges
 const SLACK_COLOR = '#4A154B';
@@ -346,10 +347,10 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text bg={SLACK_COLOR} fg="white"><b> Channels </b></text>
-      <text fg="gray"> | </text>
-      <text fg="gray">
+    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <text bg={SLACK_COLOR} fg={themeColor('text')}><b> Channels </b></text>
+      <text fg={themeColor('muted')}> | </text>
+      <text fg={themeColor('muted')}>
         {mode === 'list' ? 'q:close c:create enter:open m:members i:invite l:leave d:delete r:refresh' :
          mode === 'chat' ? 'esc:back (type to chat, @ to mention)' :
          mode === 'members' ? 'esc:back' :
@@ -363,14 +364,14 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
   // Status message
   const statusBar = statusMessage ? (
     <box marginBottom={1}>
-      <text fg="yellow">{statusMessage}</text>
+      <text fg={themeColor('warning')}>{statusMessage}</text>
     </box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
     <box marginBottom={1}>
-      <text fg="red">Error: {error}</text>
+      <text fg={themeColor('error')}>Error: {error}</text>
     </box>
   ) : null;
 
@@ -383,7 +384,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
         {errorBar}
         {channels.length === 0 ? (
           <box paddingX={1}>
-            <text fg="gray">No channels. Press 'c' to create one.</text>
+            <text fg={themeColor('muted')}>No channels. Press 'c' to create one.</text>
           </box>
         ) : (
           <box flexDirection="column" paddingX={1}>
@@ -396,13 +397,13 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                   <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? 'blue' : undefined}><b>
                     #{ch.name}
                   </b></text>
-                  <text fg="gray"> · {ch.memberCount} members</text>
+                  <text fg={themeColor('muted')}> · {ch.memberCount} members</text>
                   {ch.unreadCount > 0 && (
-                    <text fg="red"> · {ch.unreadCount} unread</text>
+                    <text fg={themeColor('error')}> · {ch.unreadCount} unread</text>
                   )}
                 </box>
                 <box paddingLeft={2}>
-                  <text fg="gray">
+                  <text fg={themeColor('muted')}>
                     {ch.lastMessagePreview ? ch.lastMessagePreview : 'No messages yet'}
                   </text>
                 </box>
@@ -423,12 +424,12 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
         <box flexDirection="column" paddingX={1}>
           {messages.length === 0 ? (
-            <text fg="gray">No messages yet. Be the first to say something!</text>
+            <text fg={themeColor('muted')}>No messages yet. Be the first to say something!</text>
           ) : (
             messages.slice(-20).map((msg) => (
               <box key={msg.id} marginBottom={0}>
                 <text fg={getAssistantColor(msg.senderName)}><b>{msg.senderName}</b></text>
-                <text fg="gray"> {formatRelativeTime(msg.createdAt)}  </text>
+                <text fg={themeColor('muted')}> {formatRelativeTime(msg.createdAt)}  </text>
                 <text>{msg.content}</text>
               </box>
             ))
@@ -437,11 +438,11 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
         {/* Channel name badge above input (like assistant name badge) */}
         <box flexDirection="row" justifyContent="flex-end" marginTop={0}>
-          <text bg={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
+          <text bg={SLACK_COLOR} fg={themeColor('text')}><b> #{selectedChannel.name} </b></text>
         </box>
 
-        <box paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]}>
-          <text fg="gray">{'> '}</text>
+        <box paddingX={1} borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]}>
+          <text fg={themeColor('muted')}>{'> '}</text>
           <input
             value={chatInput}
             onChange={handleChatInputChange}
@@ -506,8 +507,8 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
         </box>
 
         {mentionActive && mentionCandidates.length > 0 && (
-          <box flexDirection="column" paddingX={1} borderStyle="rounded" borderColor="#d4d4d8" border={["top", "bottom"]} marginTop={0}>
-            <text fg="yellow"><b>Members (Tab to select, Esc to dismiss)</b></text>
+          <box flexDirection="column" paddingX={1} borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} marginTop={0}>
+            <text fg={themeColor('warning')}><b>Members (Tab to select, Esc to dismiss)</b></text>
             {mentionCandidates.slice(0, 8).map((m, i) => (
               <box key={m.assistantId}>
                 <text fg={i === mentionIndex ? 'blue' : undefined}>
@@ -516,7 +517,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                 <text attributes={i === mentionIndex ? 1 : undefined} fg={i === mentionIndex ? 'blue' : undefined}><b>
                   {m.assistantName}
                 </b></text>
-                <text fg="gray">
+                <text fg={themeColor('muted')}>
                   {m.memberType === 'person' ? ' [person]' : ' [assistant]'}
                 </text>
               </box>
@@ -533,7 +534,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
       <box flexDirection="column">
         {header}
         <box paddingX={1} marginBottom={1}>
-          <text bg={SLACK_COLOR} fg="white"><b> #{selectedChannel.name} </b></text>
+          <text bg={SLACK_COLOR} fg={themeColor('text')}><b> #{selectedChannel.name} </b></text>
           <text><b> Members ({members.length})</b></text>
         </box>
         <box flexDirection="column" paddingX={1}>
@@ -541,9 +542,9 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
             <box key={`${m.channelId}-${m.assistantId}`}>
               <text>  </text>
               <text fg={getAssistantColor(m.assistantName)}><b>{m.assistantName}</b></text>
-              {m.role === 'owner' && <text fg="yellow"> (owner)</text>}
-              {m.memberType === 'person' && <text fg="green"> [person]</text>}
-              <text fg="gray"> — joined {new Date(m.joinedAt).toLocaleDateString()}</text>
+              {m.role === 'owner' && <text fg={themeColor('warning')}> (owner)</text>}
+              {m.memberType === 'person' && <text fg={themeColor('success')}> [person]</text>}
+              <text fg={themeColor('muted')}> — joined {new Date(m.joinedAt).toLocaleDateString()}</text>
             </box>
           ))}
         </box>
@@ -557,7 +558,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
       <box flexDirection="column">
         {header}
         <box paddingX={1} flexDirection="column">
-          <text fg="red"><b>Archive channel?</b></text>
+          <text fg={themeColor('error')}><b>Archive channel?</b></text>
           <text> </text>
           <text>This will archive #{selectedChannel.name} ({selectedChannel.id})</text>
           <text>Messages will be preserved but the channel will be inactive.</text>
@@ -671,7 +672,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
   return (
     <box flexDirection="column">
       {header}
-      <text fg="gray">Loading...</text>
+      <text fg={themeColor('muted')}>Loading...</text>
     </box>
   );
 }

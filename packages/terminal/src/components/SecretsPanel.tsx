@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
 const MAX_VISIBLE_ITEMS = 5;
@@ -380,14 +381,14 @@ export function SecretsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Add Secret</b></text>
-          <text fg="gray"> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
+          <text fg={themeColor('info')}><b>Add Secret</b></text>
+          <text fg={themeColor('muted')}> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
@@ -400,7 +401,7 @@ export function SecretsPanel({
             if (isCurrent) {
               return (
                 <box key={field.key}>
-                  <text fg="cyan">{label}</text>
+                  <text fg={themeColor('info')}>{label}</text>
                   <input
                     value={value}
                     onChange={(nextValue) => {
@@ -421,7 +422,7 @@ export function SecretsPanel({
             if (isCompleted) {
               return (
                 <box key={field.key}>
-                  <text fg="gray">{label}</text>
+                  <text fg={themeColor('muted')}>{label}</text>
                   <text>{maskFieldValue(field, value)}</text>
                 </box>
               );
@@ -429,8 +430,8 @@ export function SecretsPanel({
 
             return (
               <box key={field.key}>
-                <text fg="gray">{label}</text>
-                <text fg="gray">{field.placeholder}</text>
+                <text fg={themeColor('muted')}>{label}</text>
+                <text fg={themeColor('muted')}>{field.placeholder}</text>
               </box>
             );
           })}
@@ -445,7 +446,7 @@ export function SecretsPanel({
         )}
 
         <box marginTop={1}>
-          <text fg="gray">Enter next field | Esc back</text>
+          <text fg={themeColor('muted')}>Enter next field | Esc back</text>
         </box>
       </box>
     );
@@ -456,17 +457,17 @@ export function SecretsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Secrets</b></text>
+          <text fg={themeColor('info')}><b>Secrets</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg="gray">No secrets stored.</text>
-          <text fg="gray">Press n to add your first secret.</text>
+          <text fg={themeColor('muted')}>No secrets stored.</text>
+          <text fg={themeColor('muted')}>Press n to add your first secret.</text>
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
@@ -476,7 +477,7 @@ export function SecretsPanel({
           </box>
         )}
         <box marginTop={1}>
-          <text fg="gray">n add secret | q quit</text>
+          <text fg={themeColor('muted')}>n add secret | q quit</text>
         </box>
       </box>
     );
@@ -487,18 +488,18 @@ export function SecretsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Secret</b></text>
+          <text fg={themeColor('error')}><b>Delete Secret</b></text>
         </box>
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
-          <text fg="gray">Scope: {deleteTarget.scope}</text>
-          <text fg="gray">This action cannot be undone.</text>
+          <text fg={themeColor('muted')}>Scope: {deleteTarget.scope}</text>
+          <text fg={themeColor('muted')}>This action cannot be undone.</text>
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
@@ -508,7 +509,7 @@ export function SecretsPanel({
           </box>
         )}
         <box marginTop={1}>
-          <text fg="gray">y confirm | n cancel</text>
+          <text fg={themeColor('muted')}>y confirm | n cancel</text>
         </box>
       </box>
     );
@@ -519,18 +520,18 @@ export function SecretsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>{currentSecret.name}</b></text>
+          <text fg={themeColor('info')}><b>{currentSecret.name}</b></text>
         </box>
 
         <box
           flexDirection="column"
           borderStyle="rounded"
-          borderColor="#d4d4d8" border={["top", "bottom"]}
+          borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
           <box>
-            <text fg="gray">Scope: </text>
+            <text fg={themeColor('muted')}>Scope: </text>
             <text fg={currentSecret.scope === 'global' ? 'yellow' : 'blue'}>
               {currentSecret.scope}
             </text>
@@ -538,24 +539,24 @@ export function SecretsPanel({
 
           {currentSecret.createdAt && (
             <box>
-              <text fg="gray">Created: </text>
+              <text fg={themeColor('muted')}>Created: </text>
               <text>{new Date(currentSecret.createdAt).toLocaleString()}</text>
             </box>
           )}
 
           {currentSecret.updatedAt && (
             <box>
-              <text fg="gray">Updated: </text>
+              <text fg={themeColor('muted')}>Updated: </text>
               <text>{new Date(currentSecret.updatedAt).toLocaleString()}</text>
             </box>
           )}
 
           <box marginTop={1}>
-            <text fg="gray">Value: </text>
+            <text fg={themeColor('muted')}>Value: </text>
             {revealedValue !== null ? (
-              <text fg="green">{revealedValue}</text>
+              <text fg={themeColor('success')}>{revealedValue}</text>
             ) : (
-              <text fg="gray">••••••••</text>
+              <text fg={themeColor('muted')}>••••••••</text>
             )}
           </box>
         </box>
@@ -569,7 +570,7 @@ export function SecretsPanel({
         )}
 
         <box marginTop={1}>
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {revealedValue === null && 'r reveal | '}
             x delete | n add | Esc back
           </text>
@@ -584,21 +585,21 @@ export function SecretsPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg="cyan"><b>Secrets</b></text>
+        <text fg={themeColor('info')}><b>Secrets</b></text>
         {secrets.length > MAX_VISIBLE_ITEMS && (
-          <text fg="gray"> ({secretIndex + 1}/{secrets.length})</text>
+          <text fg={themeColor('muted')}> ({secretIndex + 1}/{secrets.length})</text>
         )}
       </box>
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {secretRange.hasMore.above > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↑ {secretRange.hasMore.above} more above</text>
+            <text fg={themeColor('muted')}>  ↑ {secretRange.hasMore.above} more above</text>
           </box>
         )}
 
@@ -611,10 +612,10 @@ export function SecretsPanel({
 
           return (
             <box key={`${secret.name}-${secret.scope}`} paddingY={0}>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : "gray"}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{nameDisplay}
               </text>
-              <text bg={isSelected ? "#0055aa" : undefined} fg={isSelected ? "whiteBright" : scopeColor}>
+              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : scopeColor}>
                 {secret.scope.padEnd(8)}
               </text>
             </box>
@@ -623,17 +624,17 @@ export function SecretsPanel({
 
         {secretRange.hasMore.below > 0 && (
           <box paddingY={0}>
-            <text fg="gray">  ↓ {secretRange.hasMore.below} more below</text>
+            <text fg={themeColor('muted')}>  ↓ {secretRange.hasMore.below} more below</text>
           </box>
         )}
       </box>
 
       <box marginTop={1}>
-        <text fg="gray">Legend: </text>
-        <text fg="yellow">global</text>
-        <text fg="gray"> = shared | </text>
-        <text fg="blue">assistant</text>
-        <text fg="gray"> = assistant-specific</text>
+        <text fg={themeColor('muted')}>Legend: </text>
+        <text fg={themeColor('warning')}>global</text>
+        <text fg={themeColor('muted')}> = shared | </text>
+        <text fg={themeColor('secondary')}>assistant</text>
+        <text fg={themeColor('muted')}> = assistant-specific</text>
       </box>
 
       {(error || statusMessage) && (
@@ -645,7 +646,7 @@ export function SecretsPanel({
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           ↑↓ select | Enter view | n add | q quit
         </text>
       </box>

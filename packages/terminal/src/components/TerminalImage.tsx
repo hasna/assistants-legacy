@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { readFileSync, existsSync } from 'fs';
+import { themeColor } from '../theme/colors';
 
 interface TerminalImageProps {
   src: string;
@@ -72,7 +73,7 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
     // Image was written directly to stdout — show alt text below
     return alt ? (
       <box marginY={1}>
-        <text fg="gray">{alt}</text>
+        <text fg={themeColor('muted')}>{alt}</text>
       </box>
     ) : null;
   }
@@ -80,7 +81,7 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
   if (status === 'fallback') {
     return (
       <box marginY={1}>
-        <text fg="gray">[Image: {alt || src}]</text>
+        <text fg={themeColor('muted')}>[Image: {alt || src}]</text>
       </box>
     );
   }
@@ -88,7 +89,7 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
   // Loading
   return (
     <box marginY={1}>
-      <text fg="gray">Loading image...</text>
+      <text fg={themeColor('muted')}>Loading image...</text>
     </box>
   );
 }

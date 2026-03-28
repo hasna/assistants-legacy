@@ -242,9 +242,13 @@ interface ToolCallDisplayProps {
 }
 
 /**
- * Single tool call display in OpenCode arrow style:
- *   -> Read file.ts
- *   -> Bash git status
+ * Single tool call display per OpenCode spec:
+ * - Left border with borderDim (TextMuted) color
+ * - "ToolName: params" header line in muted text
+ * - Result content truncated to max 10 lines with "[N more lines]"
+ * - Error results shown in error color
+ *
+ * [brutus] Rewritten to match OpenCode spec exactly.
  */
 export function ToolCallDisplay({
   toolCall,
@@ -254,19 +258,19 @@ export function ToolCallDisplay({
   verboseTools = false,
 }: ToolCallDisplayProps) {
   const mutedCol = themeColor('muted');
-  const successCol = themeColor('success');
   const errorCol = themeColor('error');
-  const accentCol = themeColor('accent');
+  const borderDimCol = themeColor('borderDim');
 
   const isError = result?.isError;
   const toolName = capitalizeToolName(toolCall.name);
   const params = getToolParams(toolCall);
 
-  // Arrow style: -> ToolName params
-  const arrowColor = isRunning ? mutedCol : isError ? errorCol : successCol;
-  const arrow = isRunning ? '\u2192' : isError ? '\u2717' : '\u2192'; // -> or x
-
-  const elapsedText = elapsedMs != null ? formatDuration(elapsedMs) : '';
+  // Build header: "ToolName: params" or "ToolName: Building command..." when running
+  const headerText = isRunning
+    ? `${toolName}: ${getInProgressText(toolCall.name)}`
+    : params
+      ? `${toolName}: ${params}`
+      : toolName;
 
   // Handle display_image specially
   if (result && toolCall.name === 'display_image' && !result.isError) {
@@ -274,13 +278,14 @@ export function ToolCallDisplay({
       const imgData = JSON.parse(result.content);
       if (imgData.path) {
         return (
-          <box flexDirection="column">
-            <box flexDirection="row">
-              <text fg={arrowColor}>{arrow} </text>
-              <text fg={accentCol}><b>{toolName}</b></text>
-              <text fg={mutedCol}> {params}</text>
-              {elapsedText ? <text fg={mutedCol}> {'\u00b7'} {elapsedText}</text> : null}
-            </box>
+          <box
+            borderStyle="single"
+            borderColor={borderDimCol}
+            border={['left']}
+            paddingLeft={1}
+            flexDirection="column"
+          >
+            <text fg={mutedCol}>{headerText}</text>
             <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
           </box>
         );
@@ -289,16 +294,17 @@ export function ToolCallDisplay({
   }
 
   return (
-    <box flexDirection="column">
-      {/* Tool call header: -> ToolName params */}
-      <box flexDirection="row">
-        <text fg={arrowColor}>{arrow} </text>
-        <text fg={accentCol}><b>{toolName}</b></text>
-        {params ? <text fg={mutedCol}> {params}</text> : null}
-        {elapsedText ? <text fg={mutedCol}> {'\u00b7'} {elapsedText}</text> : null}
-      </box>
+    <box
+      borderStyle="single"
+      borderColor={borderDimCol}
+      border={['left']}
+      paddingLeft={1}
+      flexDirection="column"
+    >
+      {/* Tool call header: "ToolName: params" in muted */}
+      <text fg={mutedCol}>{headerText}</text>
 
-      {/* Result content */}
+      {/* Result content — truncated to 10 lines per spec */}
       {result && !isRunning && (
         <ToolCallResultContent
           toolCall={toolCall}
@@ -311,8 +317,11 @@ export function ToolCallDisplay({
 }
 
 /**
- * Renders tool result content below the arrow line.
- * Uses <diff> for edits, <code> for file/code content, plain text otherwise.
+ * Renders tool result content below the header line.
+ * Per OpenCode spec: max 10 lines, "[N more lines]" truncation indicator,
+ * error results in error color. Uses <diff> for edits, <code> for file/code.
+ *
+ * [brutus] Updated to match OpenCode spec — 10 line max, "[N more lines]" hint.
  */
 function ToolCallResultContent({
   toolCall,
@@ -324,38 +333,68 @@ function ToolCallResultContent({
   verboseTools?: boolean;
 }) {
   const mutedCol = themeColor('muted');
+  const errorCol = themeColor('error');
+
+  // Error results shown in error color
+  if (result.isError) {
+    const errorText = result.content || 'Unknown error';
+    return <text fg={errorCol}>Error: {errorText}</text>;
+  }
 
   // Show <diff> for edit tool calls
-  if (!result.isError && isEditToolCall(toolCall)) {
+  if (isEditToolCall(toolCall)) {
     return <EditDiffView toolCall={toolCall} />;
   }
 
-  const truncatedResult = truncateToolResultWithInfo(result, 4, 400, { verbose: verboseTools });
+  // Truncate to 10 lines per OpenCode spec
+  const truncatedResult = truncateToolResultWithInfo(result, 10, 800, { verbose: verboseTools });
   const resultText = truncatedResult?.content || '';
   if (!resultText) return null;
 
-  const showExpandHint = !verboseTools && truncatedResult?.truncation.wasTruncated;
+  const wasTruncated = !verboseTools && truncatedResult?.truncation.wasTruncated;
+  const moreLines = truncatedResult ? truncatedResult.truncation.originalLines - truncatedResult.truncation.displayedLines : 0;
 
   if (shouldHighlightToolResult(toolCall.name, resultText, result.isError)) {
     const filetype = getFiletypeForToolResult(toolCall);
     return (
-      <box marginLeft={3} flexDirection="column">
+      <box flexDirection="column">
         <CopyableCodeBlock content={resultText} filetype={filetype} />
-        {showExpandHint && (
-          <text fg={mutedCol}>  (Ctrl+O for full output)</text>
+        {wasTruncated && moreLines > 0 && (
+          <text fg={mutedCol}>[{moreLines} more lines]</text>
         )}
       </box>
     );
   }
 
   return (
-    <box marginLeft={3} flexDirection="column">
-      <text fg={mutedCol}>{linkifyText(indentMultiline(resultText, '   '))}</text>
-      {showExpandHint && (
-        <text fg={mutedCol}>  (Ctrl+O for full output)</text>
+    <box flexDirection="column">
+      <text fg={mutedCol}>{linkifyText(resultText)}</text>
+      {wasTruncated && moreLines > 0 && (
+        <text fg={mutedCol}>[{moreLines} more lines]</text>
       )}
     </box>
   );
+}
+
+/**
+ * Returns in-progress text for a tool call per OpenCode spec.
+ */
+function getInProgressText(toolName: string): string {
+  switch (toolName) {
+    case 'bash': return 'Building command...';
+    case 'edit':
+    case 'file_edit': return 'Preparing edit...';
+    case 'write': return 'Preparing write...';
+    case 'read':
+    case 'view': return 'Reading...';
+    case 'grep':
+    case 'glob': return 'Searching...';
+    case 'web_search': return 'Searching...';
+    case 'web_fetch':
+    case 'curl':
+    case 'fetch': return 'Fetching...';
+    default: return 'Working...';
+  }
 }
 
 function EditDiffView({ toolCall }: { toolCall: ToolCall }) {
@@ -389,7 +428,7 @@ function CopyableCodeBlock({ content, filetype }: { content: string; filetype?: 
     <box flexDirection="column">
       <box flexDirection="row" justifyContent="flex-end">
         <box onMouseUp={() => copy(content)}>
-          <text fg={justCopied ? 'green' : '#636d83'}>
+          <text fg={justCopied ? themeColor('success') : '#636d83'}>
             {justCopied ? '[copied]' : '[copy]'}
           </text>
         </box>
@@ -411,24 +450,25 @@ interface ToolCallSummaryProps {
 
 /**
  * Renders a compact one-line summary for 2+ tool calls.
- * e.g., "-> Searched 2 patterns, read 3 files"
+ * Uses borderDim left border per OpenCode spec.
+ *
+ * [brutus] Updated to use left border instead of arrow prefix.
  */
 export function ToolCallSummary({ toolCalls, toolResults = [], isRunning = false }: ToolCallSummaryProps) {
   const mutedCol = themeColor('muted');
-  const successCol = themeColor('success');
-  const errorCol = themeColor('error');
+  const borderDimCol = themeColor('borderDim');
 
-  const anyError = toolResults.some((r) => r.isError);
   const summary = buildToolCallSummary(toolCalls, !!isRunning);
-  const arrowColor = isRunning ? mutedCol : anyError ? errorCol : successCol;
-  const arrow = isRunning ? '\u2192' : anyError ? '\u2717' : '\u2192';
   const suffix = isRunning ? '\u2026' : '';
 
   return (
-    <box flexDirection="row">
-      <text fg={arrowColor}>{arrow} </text>
-      <text>{summary}{suffix}</text>
-      <text fg={mutedCol}> (ctrl+o to expand)</text>
+    <box
+      borderStyle="single"
+      borderColor={borderDimCol}
+      border={['left']}
+      paddingLeft={1}
+    >
+      <text fg={mutedCol}>{summary}{suffix}</text>
     </box>
   );
 }

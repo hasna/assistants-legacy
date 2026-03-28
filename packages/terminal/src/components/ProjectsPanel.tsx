@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ProjectRecord } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { themeColor } from '../theme/colors';
 
 interface ProjectsPanelProps {
   projects: ProjectRecord[];
@@ -192,7 +193,7 @@ export function ProjectsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="cyan"><b>Create New Project</b></text>
+          <text fg={themeColor('info')}><b>Create New Project</b></text>
         </box>
 
         {createStep === 'name' && (
@@ -208,7 +209,7 @@ export function ProjectsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to continue | Esc to cancel</text>
+              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
             </box>
           </box>
         )}
@@ -216,7 +217,7 @@ export function ProjectsPanel({
         {createStep === 'description' && (
           <box flexDirection="column">
             <box>
-              <text fg="gray">Name: </text>
+              <text fg={themeColor('muted')}>Name: </text>
               <text>{newName}</text>
             </box>
             <box marginTop={1}>
@@ -230,14 +231,14 @@ export function ProjectsPanel({
               />
             </box>
             <box marginTop={1}>
-              <text fg="gray">Enter to create | Tab to skip | Esc to cancel</text>
+              <text fg={themeColor('muted')}>Enter to create | Tab to skip | Esc to cancel</text>
             </box>
           </box>
         )}
 
         {isSubmitting && (
           <box marginTop={1}>
-            <text fg="yellow">Creating project...</text>
+            <text fg={themeColor('warning')}>Creating project...</text>
           </box>
         )}
       </box>
@@ -250,7 +251,7 @@ export function ProjectsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg="red"><b>Delete Project</b></text>
+          <text fg={themeColor('error')}><b>Delete Project</b></text>
         </box>
         <box marginBottom={1}>
           <text>
@@ -258,12 +259,12 @@ export function ProjectsPanel({
           </text>
         </box>
         <box>
-          <text fg="gray">This will delete all plans in this project.</text>
+          <text fg={themeColor('muted')}>This will delete all plans in this project.</text>
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg="green"><b>y</b></text> to confirm or{' '}
-            <text fg="red"><b>n</b></text> to cancel
+            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
+            <text fg={themeColor('error')}><b>n</b></text> to cancel
           </text>
         </box>
       </box>
@@ -275,18 +276,18 @@ export function ProjectsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Projects</b></text>
-        <text fg="gray">[n]ew</text>
+        <text fg={themeColor('muted')}>[n]ew</text>
       </box>
 
       <box
         flexDirection="column"
         borderStyle="rounded"
-        borderColor="#d4d4d8" border={["top", "bottom"]}
+        borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {projects.length === 0 ? (
           <box paddingY={1}>
-            <text fg="gray">No projects yet. Press n to create one.</text>
+            <text fg={themeColor('muted')}>No projects yet. Press n to create one.</text>
           </box>
         ) : (
           projects.map((project, index) => {
@@ -299,8 +300,8 @@ export function ProjectsPanel({
             return (
               <box key={project.id} paddingY={0}>
                 <text
-                  bg={isSelected ? "#0055aa" : undefined}
-                  fg={isSelected ? "whiteBright" : undefined}
+                  bg={isSelected ? themeColor('primary') : undefined}
+                  fg={isSelected ? themeColor('text') : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {project.name.padEnd(20)} {planCount} plan{planCount !== 1 ? 's' : ''} {contextCount > 0 ? `${contextCount} ctx` : ''} {time}
                 </text>
@@ -312,8 +313,8 @@ export function ProjectsPanel({
         {/* New project option */}
         <box marginTop={1} paddingY={0}>
           <text
-            bg={selectedIndex === projects.length ? "#0055aa" : undefined}
-            fg={selectedIndex === projects.length ? "whiteBright" : undefined}
+            bg={selectedIndex === projects.length ? themeColor('primary') : undefined}
+            fg={selectedIndex === projects.length ? themeColor('text') : undefined}
           >
             + New project (n)
           </text>
@@ -323,14 +324,14 @@ export function ProjectsPanel({
       {/* Selected project details */}
       {projects.length > 0 && selectedIndex < projects.length && (
         <box marginTop={1} flexDirection="column">
-          <text fg="gray">
+          <text fg={themeColor('muted')}>
             {projects[selectedIndex].description || 'No description'}
           </text>
         </box>
       )}
 
       <box marginTop={1}>
-        <text fg="gray">
+        <text fg={themeColor('muted')}>
           Enter select | p plans | d delete | Esc close | 1-{Math.max(1, projects.length)} jump
         </text>
       </box>
