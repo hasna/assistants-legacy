@@ -175,6 +175,12 @@ interface InputProps {
   onFileSearch?: (query: string) => string[];
   /** Live partial transcript from streaming STT (talk mode) */
   partialTranscript?: string;
+  /** Model variant labels for the variants bar (e.g. ["Build", "MiMo V2", ...]) */
+  modelVariants?: string[];
+  /** Index of the active variant (default 0) */
+  activeVariant?: number;
+  /** Reasoning effort level (e.g. "low", "medium", "high") */
+  reasoningEffort?: string;
 }
 
 export interface InputHandle {
@@ -202,6 +208,9 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   onStopRecording,
   onFileSearch,
   partialTranscript = '',
+  modelVariants = [],
+  activeVariant = 0,
+  reasoningEffort,
 }: InputProps, ref) {
   // Paste handling configuration with defaults
   const pasteEnabled = pasteConfig?.enabled !== false;
@@ -599,16 +608,26 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const textColor = themeColor('text');         // Text: #e0e0e0
   const textMuted = themeColor('muted');        // TextMuted: #6a6a6a
 
+  const secondaryCol = themeColor('secondary');
+
   return (
     <box flexDirection="column" marginTop={0}>
       {/* Top border provided by parent <box border={['top']}> in App.tsx — no duplicate here */}
 
-      {/* Editor area with backgroundSecondary */}
+      {/* Editor area with backgroundSecondary and left blue accent pipe */}
+      <box
+        flexDirection="row"
+        flexGrow={1}
+        bg={bgSecondary}
+        minHeight={1}
+      >
+        {/* Left blue accent pipe */}
+        <text fg={secondaryCol} bg={bgSecondary}>{'\u2502'} </text>
       <box
         flexDirection="column"
         flexGrow={1}
         bg={bgSecondary}
-        paddingX={1}
+        paddingRight={1}
         minHeight={1}
       >
         {/* Recording indicator */}
@@ -672,6 +691,26 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             <text fg={textMuted} bg={bgSecondary}>({lineCount} lines)</text>
           </box>
         )}
+
+        {/* Model variants bar: "Build MiMo V2 Omni Free ... · low" */}
+        {modelVariants.length > 0 && (
+          <box flexDirection="row" bg={bgSecondary}>
+            {modelVariants.map((variant, i) => (
+              <text
+                key={variant}
+                fg={i === activeVariant ? secondaryCol : textMuted}
+                bg={bgSecondary}
+              >
+                {i === activeVariant ? variant : variant}
+                {i < modelVariants.length - 1 ? ' ' : ''}
+              </text>
+            ))}
+            {reasoningEffort && (
+              <text fg={themeColor('warning')} bg={bgSecondary}> {'\u00B7'} {reasoningEffort}</text>
+            )}
+          </box>
+        )}
+      </box>
       </box>
 
       {/* Skills autocomplete dropdown - below input */}

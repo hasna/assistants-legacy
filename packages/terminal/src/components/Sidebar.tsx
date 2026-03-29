@@ -1,15 +1,6 @@
 import React from 'react';
-import { getModelDisplayName } from '@hasna/assistants-shared';
+import { getModelDisplayName, getModelById } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
-
-// ASCII logo — same as WelcomeBanner, rendered in textMuted
-const LOGO_LINES = [
-  ' _                           ',
-  '| |__   __ _ ___ _ __   __ _ ',
-  "| '_ \\ / _` / __| '_ \\ / _` |",
-  '| | | | (_| \\__ \\ | | | (_| |',
-  '|_| |_|\\__,_|___/_| |_|\\__,_|',
-];
 
 export interface ModifiedFile {
   path: string;
@@ -28,95 +19,120 @@ export interface SidebarProps {
   modifiedFiles?: ModifiedFile[];
   /** LSP diagnostics count */
   diagnosticsCount?: number;
+  /** Token usage info for context section */
+  tokenUsage?: {
+    totalTokens: number;
+    maxContextTokens: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  };
+  /** Git branch name */
+  gitBranch?: string;
+  /** App version string */
+  appVersion?: string;
 }
 
 /**
- * Sidebar panel — per OpenCode spec section 6.
+ * Sidebar panel — matches OpenCode reference layout:
  *
- * Top:    ASCII logo in textMuted color
- * Middle: Session title (text), model (primary), modified files (+N/-M)
- * Bottom: LSP diagnostics count
+ * Top:    Session title (bold)
+ * Upper:  Context section (tokens, %, cost)
+ * Middle: LSP section
+ * Bottom: path:branch, then app name + version
  */
-export function Sidebar({ title, modelId, cwd, modifiedFiles, diagnosticsCount }: SidebarProps) {
+export function Sidebar({ title, modelId, cwd, modifiedFiles, diagnosticsCount, tokenUsage, gitBranch, appVersion }: SidebarProps) {
   const mutedColor = themeColor('muted');
   const textColor = themeColor('text');
-  const primaryColor = themeColor('primary');
-  const successColor = themeColor('success');
-  const errorColor = themeColor('error');
 
   // Strip home dir from cwd for display
   const home = process.env.HOME || process.env.USERPROFILE || '';
   const displayCwd = home && cwd.startsWith(home)
-    ? '~' + cwd.slice(home.length)
+    ? '~/' + cwd.slice(home.length + 1)
     : cwd;
 
-  const modelDisplay = modelId ? getModelDisplayName(modelId) : undefined;
+  // Compute cost from token usage
+  let costStr = '$0.00';
+  if (tokenUsage && modelId) {
+    const model = getModelById(modelId);
+    if (model?.inputCostPer1M && model?.outputCostPer1M) {
+      const inputCost = (tokenUsage.inputTokens * model.inputCostPer1M) / 1_000_000;
+      const outputCost = (tokenUsage.outputTokens * model.outputCostPer1M) / 1_000_000;
+      const cacheReadCost = tokenUsage.cacheReadTokens
+        ? (tokenUsage.cacheReadTokens * model.inputCostPer1M * 0.1) / 1_000_000
+        : 0;
+      const cacheWriteCost = tokenUsage.cacheWriteTokens
+        ? (tokenUsage.cacheWriteTokens * model.inputCostPer1M * 1.25) / 1_000_000
+        : 0;
+      const total = inputCost + outputCost + cacheReadCost + cacheWriteCost;
+      costStr = total < 0.01 ? `$${total.toFixed(3)}` : `$${total.toFixed(2)}`;
+    }
+  }
 
-  // Sort files alphabetically and strip cwd prefix
-  const sortedFiles = (modifiedFiles || [])
-    .slice()
-    .sort((a, b) => a.path.localeCompare(b.path))
-    .map(f => ({
-      ...f,
-      path: f.path.startsWith(cwd) ? f.path.slice(cwd.length + 1) : f.path,
-    }));
+  // Context percentage
+  let contextPercent = 0;
+  if (tokenUsage && tokenUsage.maxContextTokens > 0) {
+    contextPercent = Math.max(0, Math.min(100, Math.round((tokenUsage.totalTokens / tokenUsage.maxContextTokens) * 100)));
+  }
+
+  // Format token count
+  const formatTokens = (n: number): string => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    return n.toLocaleString();
+  };
+
+  const tokenStr = tokenUsage ? formatTokens(tokenUsage.totalTokens) : '0';
+
+  // Path with branch
+  const pathWithBranch = gitBranch
+    ? `${displayCwd}:${gitBranch}`
+    : displayCwd;
 
   return (
-    <box flexDirection="column" flexGrow={1} paddingLeft={4} paddingRight={2}>
-      {/* ASCII logo in textMuted */}
-      <box flexDirection="column">
-        {LOGO_LINES.map((line, i) => (
-          <text key={i} fg={mutedColor}>{line}</text>
-        ))}
-      </box>
+    <box flexDirection="column" flexGrow={1} paddingLeft={2} paddingRight={1}>
+      {/* Session title — bold at top */}
+      {title && (
+        <text fg={textColor}><b>{title}</b></text>
+      )}
 
       {/* Empty line */}
       <box height={1} />
 
-      {/* CWD */}
-      <text fg={mutedColor}>cwd: {displayCwd}</text>
+      {/* Context section */}
+      <text fg={textColor}><b>Context</b></text>
+      <text fg={mutedColor}>{tokenStr} tokens</text>
+      <text fg={mutedColor}>{contextPercent}% used</text>
+      <text fg={mutedColor}>{costStr} spent</text>
 
-      {/* Space separator */}
-      <text> </text>
+      {/* Empty line */}
+      <box height={1} />
 
-      {/* Session section */}
-      {title && (
-        <text fg={textColor}>Session: {title}</text>
-      )}
-
-      {/* Model in primary color */}
-      {modelDisplay && (
-        <text fg={primaryColor}>{modelDisplay}</text>
-      )}
-
-      {/* Space separator */}
-      <text> </text>
-
-      {/* Modified Files section */}
-      <text fg={primaryColor}><b>Modified Files</b></text>
-      {sortedFiles.length > 0 ? (
-        <box flexDirection="column">
-          {sortedFiles.map((file, i) => (
-            <box key={i} flexDirection="row">
-              <text fg={textColor}>{file.path}</text>
-              <text fg={successColor}> +{file.additions}</text>
-              <text fg={errorColor}> -{file.removals}</text>
-            </box>
-          ))}
-        </box>
-      ) : (
-        <text fg={mutedColor}>No modified files</text>
-      )}
-
-      {/* Spacer to push diagnostics to bottom */}
-      <box flexGrow={1} />
-
-      {/* LSP diagnostics count at bottom */}
+      {/* LSP section */}
+      <text fg={textColor}><b>LSP</b></text>
       {diagnosticsCount !== undefined && diagnosticsCount > 0 ? (
         <text fg={themeColor('warning')}>{diagnosticsCount} diagnostic{diagnosticsCount !== 1 ? 's' : ''}</text>
       ) : (
-        <text fg={mutedColor}>No diagnostics</text>
+        <text fg={mutedColor}>LSPs will activate as files are read</text>
       )}
+
+      {/* Spacer to push bottom content down */}
+      <box flexGrow={1} />
+
+      {/* Path:branch near bottom */}
+      <text fg={mutedColor}>{pathWithBranch}</text>
+
+      {/* Empty line */}
+      <box height={1} />
+
+      {/* App name + version at very bottom */}
+      <box flexDirection="row">
+        <text fg={mutedColor}>{'\u2022'} </text>
+        <text fg={textColor}><b>Open</b></text>
+        <text fg={textColor}>Assistants</text>
+        <text fg={mutedColor}> {appVersion || '1.0.0'}</text>
+      </box>
     </box>
   );
 }

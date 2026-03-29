@@ -31,6 +31,15 @@ interface ActivityEntry {
   timestamp: number;
 }
 
+export interface FinishInfo {
+  /** Variant label e.g. "Build" */
+  variant?: string;
+  /** Model display name */
+  modelName?: string;
+  /** Duration string e.g. "2.8s" */
+  duration?: string;
+}
+
 interface MessagesProps {
   messages: DisplayMessage[];
   currentResponse?: string;
@@ -40,6 +49,8 @@ interface MessagesProps {
   activityLog?: ActivityEntry[];
   queuedMessageIds?: Set<string>;
   verboseTools?: boolean;
+  /** Finish line shown after last assistant response */
+  finishInfo?: FinishInfo;
 }
 
 export function Messages({
@@ -51,6 +62,7 @@ export function Messages({
   activityLog = [],
   queuedMessageIds,
   verboseTools = false,
+  finishInfo,
 }: MessagesProps) {
   const [now, setNow] = useState(Date.now());
 
@@ -180,6 +192,18 @@ export function Messages({
           </box>
         </box>
       )}
+
+      {/* Finish line: ■ Build · model-name · duration */}
+      {finishInfo && (finishInfo.variant || finishInfo.modelName || finishInfo.duration) && (
+        <box flexDirection="row" marginTop={1}>
+          <text fg={themeColor('secondary')}>{'\u25A0'}</text>
+          <text fg={themeColor('muted')}>
+            {finishInfo.variant ? `  ${finishInfo.variant}` : ''}
+            {finishInfo.modelName ? ` \u00B7 ${finishInfo.modelName}` : ''}
+            {finishInfo.duration ? ` \u00B7 ${finishInfo.duration}` : ''}
+          </text>
+        </box>
+      )}
     </box>
   );
 }
@@ -210,6 +234,7 @@ function UserMessage({
   const hasContent = Boolean(content.trim());
   const secondaryCol = themeColor('secondary');
   const mutedCol = themeColor('muted');
+  const surfaceCol = themeColor('surface');
 
   return (
     <box flexDirection="column">
@@ -226,13 +251,14 @@ function UserMessage({
         <box
           flexDirection="row"
           width="100%"
+          bg={surfaceCol}
         >
-          <text fg={secondaryCol}>{'\u2502'} </text>
-          <box flexGrow={1} flexShrink={1}>
+          <text fg={secondaryCol} bg={surfaceCol}>{'\u2502'} </text>
+          <box flexGrow={1} flexShrink={1} bg={surfaceCol}>
             {isQueued && !isContinuation ? (
-              <text fg={mutedCol}>{linkifyText(content)}</text>
+              <text fg={mutedCol} bg={surfaceCol}>{linkifyText(content)}</text>
             ) : (
-              <text fg={isDraft ? mutedCol : themeColor('text')}>{linkifyText(displayContent)}</text>
+              <text fg={isDraft ? mutedCol : themeColor('text')} bg={surfaceCol}>{linkifyText(displayContent)}</text>
             )}
           </box>
         </box>

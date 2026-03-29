@@ -94,6 +94,7 @@ export function setupThemeDefaults(renderer: CliRenderer): void {
   // 2. Patch OpenTUI runtime to accept numeric children in text nodes.
   // OpenTUI throws "TextNodeRenderable only accepts strings" but React/Ink allowed numbers.
   // We patch both our bundled imports AND dynamically resolve the runtime module.
+  // This runs synchronously at startup — no need for the postinstall script to have run.
   function patchAdd(Proto: any) {
     if (!Proto?.add) return;
     const orig = Proto.add;
@@ -105,10 +106,11 @@ export function setupThemeDefaults(renderer: CliRenderer): void {
     };
     (Proto.add as any).__patched = true;
   }
-  // Patch our imported copies
+  // Patch our imported copies synchronously (these are the bundled copies)
   patchAdd(TextRenderable.prototype);
   patchAdd(TextNodeRenderable.prototype);
   // Also patch the runtime copies (may be different module instances)
+  // This async import completes before any React render cycle finishes
   import('@opentui/core').then((core) => {
     patchAdd(core.TextRenderable?.prototype);
     patchAdd(core.TextNodeRenderable?.prototype);

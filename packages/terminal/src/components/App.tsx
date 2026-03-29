@@ -8,7 +8,7 @@ import type { StreamChunk, Message, ToolCall, ToolResult, TokenUsage, VoiceState
 import { InterviewStore } from '@hasna/assistants-core';
 import { generateId, now } from '@hasna/assistants-shared';
 import { Input, type InputHandle } from './Input';
-import { Messages } from './Messages';
+import { Messages, type FinishInfo } from './Messages';
 import { buildDisplayMessages } from './messageRender';
 import { estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
 import { Status } from './Status';
@@ -21,7 +21,7 @@ import { InterviewPanel } from './InterviewPanel';
 import { Sidebar } from './Sidebar';
 import type { ModifiedFile } from './Sidebar';
 import type { OnboardingResult } from './OnboardingPanel';
-import { getProviderInfo, LLM_PROVIDERS } from '@hasna/assistants-shared';
+import { getProviderInfo, LLM_PROVIDERS, getModelDisplayName } from '@hasna/assistants-shared';
 import type { QueuedMessage } from './appTypes';
 import { takeNextQueuedMessage } from './queueUtils';
 import type { EmailListItem } from '@hasna/assistants-shared';
@@ -3019,6 +3019,19 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     showHeartbeatPanel, showResumePanel, isInitializing,
   };
 
+  // Compute finish info for the last completed turn (OpenCode-style "■ Build · model · duration")
+  // Must be before the panelElement early-return to keep hook ordering stable.
+  const finishInfo = useMemo<FinishInfo | undefined>(() => {
+    if (isProcessing || !lastWorkedFor) return undefined;
+    const currentModelId = activeSession?.client.getModel() ?? undefined;
+    const modelName = currentModelId ? getModelDisplayName(currentModelId) : undefined;
+    return {
+      variant: 'Build',
+      modelName: modelName ?? currentModelId,
+      duration: lastWorkedFor,
+    };
+  }, [isProcessing, lastWorkedFor, activeSession]);
+
   const panelElement = renderActivePanel(panelCtx);
   if (panelElement) {
     return panelElement;
@@ -3096,6 +3109,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
                 activityLog={isProcessing ? activityTrim.entries : []}
                 queuedMessageIds={queuedMessageIds}
                 verboseTools={verboseTools}
+                finishInfo={finishInfo}
               />
             </scrollbox>
 
@@ -3131,12 +3145,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
               isThinking={isThinking}
             />
 
-            {/* Worked-for timer - shows only most recent, sticky above input */}
-            {!isProcessing && lastWorkedFor && (
-              <box marginBottom={0} marginLeft={2}>
-                <text fg={themeColor('muted')}>✻ Worked for {lastWorkedFor}</text>
-              </box>
-            )}
+            {/* Finish line now rendered inside <Messages> as ■ Build · model · duration */}
 
             {/* Exit hint for double Ctrl+C */}
             {showExitHint && (
@@ -3166,6 +3175,9 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
                 modelId={activeSession?.client.getModel() ?? undefined}
                 cwd={activeSession?.cwd || cwd}
                 modifiedFiles={modifiedFiles}
+                tokenUsage={tokenUsage}
+                gitBranch={gitBranch}
+                appVersion={version}
               />
             </box>
           )}

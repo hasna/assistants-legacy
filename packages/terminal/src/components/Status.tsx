@@ -162,7 +162,7 @@ export function Status({
     <text key="model" fg={themeColor('primary')}>{modelName}</text>
   ) : null;
 
-  // Single row, transparent background (no bg set)
+  // Single row — keyboard shortcuts on the right, per OpenCode reference
   return (
     <box flexDirection="row" justifyContent="space-between">
       <box flexDirection="row">
@@ -171,7 +171,12 @@ export function Status({
         {statusMessage}
       </box>
       <box flexDirection="row">
-        {modelDisplay}
+        <text fg={themeColor('muted')}><b>ctrl+t</b></text>
+        <text fg={themeColor('muted')}> variants  </text>
+        <text fg={themeColor('muted')}><b>tab</b></text>
+        <text fg={themeColor('muted')}> agents  </text>
+        <text fg={themeColor('muted')}><b>ctrl+p</b></text>
+        <text fg={themeColor('muted')}> commands</text>
       </box>
     </box>
   );
