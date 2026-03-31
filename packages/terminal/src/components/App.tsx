@@ -420,6 +420,38 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     showHeartbeatPanel ||
     showResumePanel
   );
+
+  // Clear terminal buffer when transitioning to/from a panel.
+  // Ink only re-renders the bottom portion of the terminal — old chat content
+  // stays in the buffer above panels, making them invisible after long sessions.
+  const prevPanelOpenRef = useRef(isPanelOpen);
+  const panelMountedRef = useRef(false);
+  useEffect(() => {
+    // Skip the initial mount — don't clear during recovery/onboarding panels
+    if (!panelMountedRef.current) {
+      panelMountedRef.current = true;
+      prevPanelOpenRef.current = isPanelOpen;
+      return;
+    }
+    if (isPanelOpen !== prevPanelOpenRef.current) {
+      prevPanelOpenRef.current = isPanelOpen;
+      process.stdout.write('\x1b[2J\x1b[3J\x1b[H');
+    }
+  }, [isPanelOpen]);
+
+  // Clear terminal buffer when sidebar visibility changes (e.g. terminal resize
+  // crossing the 100-column threshold, or session activation/deactivation).
+  // Without this, old buffer content from the previous layout interleaves with
+  // the new layout — Ink only re-renders the bottom portion, not the scroll buffer.
+  const showSidebarForClear = Boolean(activeSessionId) && columns >= 100;
+  const prevShowSidebarRef = useRef(showSidebarForClear);
+  useEffect(() => {
+    if (showSidebarForClear !== prevShowSidebarRef.current) {
+      prevShowSidebarRef.current = showSidebarForClear;
+      process.stdout.write('\x1b[2J\x1b[3J\x1b[H');
+    }
+  }, [showSidebarForClear]);
+
   const processingStartTimeRef = useRef<number | undefined>(processingStartTime);
   const pendingSendsRef = useRef<Array<{ id: string; sessionId: string }>>([]);
   const pendingConnectorInstallRef = useRef<Set<string>>(new Set());
@@ -2807,11 +2839,13 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           content: confirmText,
           timestamp: now(),
         } as Message;
-        setMessages([confirmMessage]);
+        // /new → empty messages to show welcome banner; /clear → show confirmation
+        setMessages(trimmedInput === '/clear' ? [confirmMessage] : []);
 
         // Update session UI state cache
+        const cachedMessages = trimmedInput === '/clear' ? [confirmMessage] : [];
         sessionUIStates.current.set(activeSession.id, {
-          messages: [confirmMessage],
+          messages: cachedMessages,
           currentResponse: '',
           activityLog: [],
           toolCalls: [],
@@ -2901,6 +2935,29 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         stopActiveProcessing('interrupted');
         // Small delay to ensure stop propagates before immediate follow-up send
         await new Promise((r) => setTimeout(r, 100));
+      }
+
+      // Warn on unrecognized slash commands — avoid wasting API tokens
+      if (trimmedInput.match(/^\/\w+$/) && !trimmedInput.startsWith('/say ')) {
+        // Known LLM-handled commands that should pass through
+        const llmHandledCommands = new Set([
+          '/about', '/help', '/status', '/tokens', '/cost', '/compact',
+          '/voice', '/context', '/diff', '/feedback', '/verification',
+          '/whoami', '/agents', '/call', '/communication', '/init', '/logs',
+        ]);
+        const cmdBase = trimmedInput.split(/\s+/)[0].toLowerCase();
+        if (!llmHandledCommands.has(cmdBase)) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: 'assistant',
+              content: `Unknown command: \`${trimmedInput}\`. Type \`/help\` to see available commands.`,
+              timestamp: now(),
+            },
+          ]);
+          return;
+        }
       }
 
       // Add user message
@@ -3073,6 +3130,73 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const editorHeight = Math.max(3, Math.floor(splitPaneHeight * 0.1));
   const messagesHeight = splitPaneHeight - editorHeight;
 
+  // --- Welcome / empty state: centered layout like OpenCode ---
+  if (showWelcome) {
+    const welcomeInputWidth = Math.min(80, columns - 4);
+    const tips = [
+      'Set any keybind to none to disable it completely',
+      'Use /help to see all available commands',
+      'Press Ctrl+L to clear the screen',
+      'Use /sessions to switch between conversations',
+      'Skills can automate complex multi-step workflows',
+    ];
+    const tipText = tips[Math.floor(Date.now() / 60000) % tips.length];
+
+    return (
+      <box flexDirection="column" height={rows} width={columns}>
+        {/* Centered content area */}
+        <box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
+          {/* ASCII Logo */}
+          <WelcomeBanner />
+
+          {/* Input box — light gray bg, no borders */}
+          <box flexDirection="column" width={welcomeInputWidth} marginTop={2}>
+            <box flexDirection="row" bg={themeColor('surface')} paddingX={1} paddingY={0}>
+              <Input
+                ref={inputRef}
+                onSubmit={handleSubmit}
+                onStopProcessing={() => { stopActiveProcessing('stopped'); }}
+                isProcessing={isBusy}
+                queueLength={activeQueue.length + inlineCount}
+                commands={commands}
+                skills={skills}
+                isAskingUser={false}
+                onFileSearch={searchFiles}
+                pasteConfig={currentConfig?.input?.paste ? {
+                  enabled: currentConfig.input.paste.enabled,
+                  thresholds: currentConfig.input.paste.thresholds,
+                  mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+                } : undefined}
+              />
+            </box>
+
+            {/* Keyboard shortcuts hint */}
+            <box flexDirection="row" justifyContent="center" marginTop={1}>
+              <text fg={themeColor('muted')}><b>tab</b> agents  <b>ctrl+p</b> commands</text>
+            </box>
+
+            {/* Tip */}
+            <box flexDirection="row" justifyContent="center" marginTop={1}>
+              <text fg={themeColor('warning')}>● </text>
+              <text fg={themeColor('muted')}>Tip  {tipText}</text>
+            </box>
+          </box>
+        </box>
+
+        {/* Status bar at bottom — welcome mode */}
+        <box height={1} width={columns}>
+          <Status
+            isProcessing={false}
+            cwd={cwd}
+            gitBranch={gitBranch}
+            version={version}
+            welcomeMode={true}
+          />
+        </box>
+      </box>
+    );
+  }
+
   return (
     <box flexDirection="column" height={rows} width={columns}>
       {/* Split pane area (everything except status bar) */}
@@ -3081,11 +3205,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         <box flexDirection="row" height={messagesHeight} width={columns}>
           {/* Left panel: Messages — padding: top=1, right=1, bottom=0, left=1 */}
           <box flexDirection="column" width={leftWidth} paddingTop={1} paddingRight={1} paddingBottom={0} paddingLeft={1}>
-            {/* Welcome banner */}
-            {showWelcome && (
-              <WelcomeBanner
-              />
-            )}
+            {/* Welcome banner — not shown here; handled by early return above */}
 
             {/* Background processing indicator */}
             {backgroundProcessingCount > 0 && (
@@ -3167,9 +3287,9 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             )}
           </box>
 
-          {/* Right panel: Sidebar (30%) — only when session active AND terminal >= 100 cols */}
+          {/* Right panel: Sidebar (30%) — gray bg, only when session active AND terminal >= 100 cols */}
           {showSidebar && (
-            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1}>
+            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1} bg={themeColor('surface')}>
               <Sidebar
                 title={sidebarTitle}
                 modelId={activeSession?.client.getModel() ?? undefined}
@@ -3183,8 +3303,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           )}
         </box>
 
-        {/* Bottom panel: Editor/Input — border-top only (single line, borderNormal color) */}
-        <box flexDirection="column" height={editorHeight} width={columns} border={['top']} borderColor={themeColor('border')}>
+        {/* Bottom panel: Editor/Input — no border, bg matches main, never shrinks */}
+        <box flexDirection="column" height={editorHeight} width={columns} flexShrink={0}>
           <Input
             ref={inputRef}
             onSubmit={handleSubmit}
@@ -3221,6 +3341,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           queueLength={activeQueue.length + inlineCount}
           tokenUsage={tokenUsage}
           modelId={activeSession?.client.getModel() ?? undefined}
+          agentName={identityInfo?.assistant?.name || activeSession?.assistantId || undefined}
           voiceState={voiceState}
           heartbeatState={heartbeatState}
           identityInfo={identityInfo}
