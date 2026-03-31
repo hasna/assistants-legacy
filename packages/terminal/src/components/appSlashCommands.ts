@@ -126,8 +126,13 @@ export async function handlePanelSlashCommand(
     return true;
   }
 
-  // /model (no args) → open interactive selector
-  if (cmdName === 'model' && !cmdArgs) {
+  // /model → open read-only model info panel (models are tied to agents)
+  if (cmdName === 'model') {
+    if (cmdArgs) {
+      // /model <id> is no longer supported — models are tied to agents
+      ctx.setError('Models are tied to agents. Use /agents to switch agent (and model).');
+      return true;
+    }
     ctx.setShowModelPanel(true);
     return true;
   }

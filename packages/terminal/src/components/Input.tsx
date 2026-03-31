@@ -62,6 +62,7 @@ const COMMANDS = [
   // Scheduling
   { name: '/schedules', description: 'manage scheduled commands' },
   // Budgets
+  { name: '/budget', description: 'manage budget profiles' },
   { name: '/budgets', description: 'manage budget profiles' },
   // Identity and assistant
   { name: '/assistants', description: 'switch or list assistants' },
@@ -397,6 +398,16 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       filteredCommands.length > 0 &&
       !actualValue.includes(' ')
     ) {
+      // Re-filter using actualValue (fresh from key handler) instead of stale filteredCommands.
+      // When typing quickly, React state may lag, causing wrong autocomplete selection.
+      const freshSearch = actualValue.toLowerCase();
+      const exactMatch = allCommands.find(cmd => cmd.name.toLowerCase() === freshSearch);
+      if (exactMatch) {
+        historyRef.current.add(exactMatch.name);
+        onSubmit(exactMatch.name, isProcessing ? 'inline' : 'normal');
+        setTextareaValue('');
+        return;
+      }
       const selected = filteredCommands[selectedIndex] || filteredCommands[0];
       if (selected) {
         historyRef.current.add(selected.name);
@@ -412,7 +423,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       onSubmit(actualValue, 'normal');
     }
     setTextareaValue('');
-  }, [largePaste, allowBlankAnswer, isAskingUser, autocompleteMode, filteredCommands, selectedIndex, isProcessing, onSubmit, setTextareaValue]);
+  }, [largePaste, allowBlankAnswer, isAskingUser, autocompleteMode, filteredCommands, selectedIndex, isProcessing, onSubmit, setTextareaValue, allCommands]);
 
   // Sync textarea content changes to React state (for autocomplete logic)
   const handleContentChange = useCallback(() => {
@@ -542,17 +553,19 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         onStopRecording();
         return;
       }
-      if ((key.shift || key.ctrl) && value.trim()) {
-        onSubmit(value, 'interrupt');
+      // Read fresh value from textarea DOM to avoid stale React state when typing fast
+      const freshValue = textareaRef.current?.plainText ?? value;
+      if ((key.shift || key.ctrl) && freshValue.trim()) {
+        onSubmit(freshValue, 'interrupt');
         setTextareaValue('');
         return;
       }
-      if (key.meta && value.trim() && input !== '\x1b\r' && input !== '\x1b\n') {
-        onSubmit(value, 'queue');
+      if (key.meta && freshValue.trim() && input !== '\x1b\r' && input !== '\x1b\n') {
+        onSubmit(freshValue, 'queue');
         setTextareaValue('');
         return;
       }
-      handleSubmit(value);
+      handleSubmit(freshValue);
       setTextareaValue('');
       return;
     }
@@ -603,55 +616,45 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
   const lineCount = value.split('\n').length;
 
-  // OpenCode spec colors
-  const bgSecondary = themeColor('surface');    // BackgroundSecondary: #252525 dark / #f0f0f0 light
-  const textColor = themeColor('text');         // Text: #e0e0e0
-  const textMuted = themeColor('muted');        // TextMuted: #6a6a6a
+  // OpenCode spec colors — editor uses BackgroundSecondary for visible contrast
+  const bgColor = themeColor('surface');        // BackgroundSecondary: #252525 dark / #f0f0f0 light
+  const textColor = themeColor('text');         // Text: #e0e0e0 dark / #2a2a2a light
+  const textMuted = themeColor('muted');        // TextMuted: #6a6a6a dark / #8a8a8a light
 
   const secondaryCol = themeColor('secondary');
 
   return (
     <box flexDirection="column" marginTop={0}>
-      {/* Top border provided by parent <box border={['top']}> in App.tsx — no duplicate here */}
-
-      {/* Editor area with backgroundSecondary and left blue accent pipe */}
-      <box
-        flexDirection="row"
-        flexGrow={1}
-        bg={bgSecondary}
-        minHeight={1}
-      >
-        {/* Left blue accent pipe */}
-        <text fg={secondaryCol} bg={bgSecondary}>{'\u2502'} </text>
+      {/* Editor area — OpenCode uses Background color, no borders */}
       <box
         flexDirection="column"
         flexGrow={1}
-        bg={bgSecondary}
-        paddingRight={1}
+        bg={bgColor}
+        paddingX={1}
         minHeight={1}
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
           <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('error')} bg={bgSecondary}><b>Recording... </b></text>
-            <text fg={textMuted} bg={bgSecondary}>[Ctrl+R or Enter to stop]</text>
+            <text fg={themeColor('error')} bg={bgColor}><b>Recording... </b></text>
+            <text fg={textMuted} bg={bgColor}>[Ctrl+R or Enter to stop]</text>
           </box>
         )}
         {recordingStatus === 'transcribing' && (
           <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('warning')} bg={bgSecondary}><b>Transcribing...</b></text>
+            <text fg={themeColor('warning')} bg={bgColor}><b>Transcribing...</b></text>
           </box>
         )}
         {recordingStatus === 'talking' && (
           <box paddingY={0} flexDirection="column">
             <box flexDirection="row">
-              <text fg={themeColor('success')} bg={bgSecondary}><b>Talk mode </b></text>
-              <text fg={textMuted} bg={bgSecondary}>[listening... Ctrl+C to stop]</text>
+              <text fg={themeColor('success')} bg={bgColor}><b>Talk mode </b></text>
+              <text fg={textMuted} bg={bgColor}>[listening... Ctrl+C to stop]</text>
             </box>
             {partialTranscript ? (
               <box flexDirection="row">
-                <text fg={textMuted} bg={bgSecondary}>{'> '}</text>
-                <text bg={bgSecondary}><i>{partialTranscript}</i></text>
+                <text fg={textMuted} bg={bgColor}>{'> '}</text>
+                <text bg={bgColor}><i>{partialTranscript}</i></text>
               </box>
             ) : null}
           </box>
@@ -663,8 +666,8 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           /* Large paste placeholder view */
           <box flexDirection="row">
             <box flexDirection="row" flexGrow={1}>
-              <text fg={themeColor('warning')} bg={bgSecondary}>{largePaste.placeholder}</text>
-              <text fg={textMuted} bg={bgSecondary}> [Enter to send, Esc to cancel]</text>
+              <text fg={themeColor('warning')} bg={bgColor}>{largePaste.placeholder}</text>
+              <text fg={textMuted} bg={bgColor}> [Enter to send, Esc to cancel]</text>
             </box>
           </box>
         ) : (
@@ -677,8 +680,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
               focused
               flexGrow={1}
               height={Math.max(1, lineCount)}
+              textColor={textColor}
+              focusedTextColor={textColor}
+              backgroundColor="transparent"
+              focusedBackgroundColor="transparent"
               fg={textColor}
-              bg={bgSecondary}
               onContentChange={handleContentChange}
               onSubmit={() => handleSubmit(value)}
             />
@@ -688,34 +694,33 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         {/* Show line count if multiline */}
         {lineCount > 1 && (
           <box>
-            <text fg={textMuted} bg={bgSecondary}>({lineCount} lines)</text>
+            <text fg={textMuted} bg={bgColor}>({lineCount} lines)</text>
           </box>
         )}
 
         {/* Model variants bar: "Build MiMo V2 Omni Free ... · low" */}
         {modelVariants.length > 0 && (
-          <box flexDirection="row" bg={bgSecondary}>
+          <box flexDirection="row" bg={bgColor}>
             {modelVariants.map((variant, i) => (
               <text
                 key={variant}
                 fg={i === activeVariant ? secondaryCol : textMuted}
-                bg={bgSecondary}
+                bg={bgColor}
               >
                 {i === activeVariant ? variant : variant}
                 {i < modelVariants.length - 1 ? ' ' : ''}
               </text>
             ))}
             {reasoningEffort && (
-              <text fg={themeColor('warning')} bg={bgSecondary}> {'\u00B7'} {reasoningEffort}</text>
+              <text fg={themeColor('warning')} bg={bgColor}> {'\u00B7'} {reasoningEffort}</text>
             )}
           </box>
         )}
       </box>
-      </box>
 
       {/* Skills autocomplete dropdown - below input */}
       {autocompleteMode === 'skill' && filteredSkills.length > 0 && (
-        <box flexDirection="column">
+        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleSkills.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleSkills.startIndex} more above</text>
@@ -723,13 +728,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           {visibleSkills.items.map((skill, i) => {
             const actualIndex = visibleSkills.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={skill.name} bg={isSelected ? themeColor('primary') : undefined}>
-                <text fg={isSelected ? themeColor('text') : themeColor('info')} bg={isSelected ? themeColor('primary') : undefined}>
+              <box flexDirection="row" key={skill.name} bg={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{skill.name.padEnd(18)}</b>
                 </text>
-                <text fg={isSelected ? themeColor('text') : themeColor('muted')} bg={isSelected ? themeColor('primary') : undefined}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
                   {truncateDescription(skill.description)}
                 </text>
               </box>
@@ -744,7 +750,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
       {/* Commands autocomplete dropdown - below input */}
       {autocompleteMode === 'command' && filteredCommands.length > 0 && (
-        <box flexDirection="column">
+        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleCommands.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleCommands.startIndex} more above</text>
@@ -752,13 +758,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           {visibleCommands.items.map((cmd, i) => {
             const actualIndex = visibleCommands.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={cmd.name} bg={isSelected ? themeColor('primary') : undefined}>
-                <text fg={isSelected ? themeColor('bg') : themeColor('primary')} bg={isSelected ? themeColor('primary') : undefined}>
+              <box flexDirection="row" key={cmd.name} bg={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{cmd.name.padEnd(18)}</b>
                 </text>
-                <text fg={isSelected ? themeColor('bg') : mutedColor} bg={isSelected ? themeColor('primary') : undefined}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
                   {cmd.description}
                 </text>
               </box>
@@ -773,7 +780,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
       {/* File autocomplete dropdown - below input */}
       {autocompleteMode === 'file' && filteredFiles.length > 0 && (
-        <box flexDirection="column">
+        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleFiles.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleFiles.startIndex} more above</text>
@@ -781,9 +788,10 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           {visibleFiles.items.map((file, i) => {
             const actualIndex = visibleFiles.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={file.name} bg={isSelected ? themeColor('primary') : undefined}>
-                <text fg={isSelected ? themeColor('text') : themeColor('info')} bg={isSelected ? themeColor('primary') : undefined}>
+              <box flexDirection="row" key={file.name} bg={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   {file.name}
                 </text>
