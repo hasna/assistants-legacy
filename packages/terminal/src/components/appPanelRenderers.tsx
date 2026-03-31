@@ -76,7 +76,7 @@ import {
   deleteBudgetProfile,
 } from '../lib/budgets';
 import { generateId, now } from '@hasna/assistants-shared';
-import { getProviderInfo, LLM_PROVIDERS, getModelDisplayName, type LLMProvider } from '@hasna/assistants-shared';
+import { getProviderInfo, LLM_PROVIDERS, type LLMProvider } from '@hasna/assistants-shared';
 import { parseMentions, resolveNameToKnown, type ChannelMember } from '@hasna/assistants-core';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 
@@ -1696,41 +1696,24 @@ function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactElement {
 
 function renderModelPanel(ctx: PanelRenderContext): React.ReactElement {
   const currentModelId = ctx.activeSession?.client.getModel() || null;
-  const assistantName = ctx.activeSession?.client.getIdentityInfo?.()?.assistant?.name
+  const identityInfo = ctx.activeSession?.client.getIdentityInfo?.();
+  const agentName = identityInfo?.assistant?.name
     || ctx.activeSession?.assistantId
-    || 'Assistant';
+    || 'Default';
+  const agentDescription = identityInfo?.assistant?.description;
 
-  const handleSelectModel = async (modelId: string) => {
-    if (!ctx.activeSession) {
-      throw new Error('No active session.');
-    }
-
-    const loop = ctx.activeSession.client.getAssistantLoop?.();
-    if (loop && typeof loop.switchModel === 'function') {
-      await loop.switchModel(modelId);
-    } else {
-      await ctx.activeSession.client.send(`/model ${modelId}`);
-    }
-
-    const displayName = getModelDisplayName(modelId);
+  const handleOpenAgents = () => {
     ctx.setShowModelPanel(false);
-    ctx.setMessages((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        role: 'assistant',
-        content: `Switched model to **${displayName}** (\`${modelId}\`).`,
-        timestamp: now(),
-      },
-    ]);
+    ctx.setShowAssistantsPanel(true);
   };
 
   return (
     <box flexDirection="column" padding={1}>
       <ModelPanel
         currentModelId={currentModelId}
-        assistantName={assistantName}
-        onSelectModel={handleSelectModel}
+        agentName={agentName}
+        agentDescription={agentDescription}
+        onOpenAgents={handleOpenAgents}
         onCancel={() => ctx.setShowModelPanel(false)}
       />
     </box>

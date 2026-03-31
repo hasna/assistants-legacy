@@ -17,7 +17,7 @@ This document describes the features available in the Assistants terminal packag
 | **Plans** | Yes | None | None | Task planning within projects |
 | **Scheduling** | Yes | None | None | Cron-like scheduled tasks |
 | **Session Management** | Yes | None | None | Local session persistence |
-| **Connectors** | Optional | connect-* CLIs | Varies per connector | Third-party integrations |
+| **Connectors** | Optional | `connectors` CLI | Varies per connector | Third-party integrations |
 | **Voice TTS** | Optional | ElevenLabs API | `ELEVENLABS_API_KEY` | Text-to-speech output |
 | **Voice STT** | Optional | OpenAI Whisper API | `OPENAI_API_KEY` | Speech-to-text input |
 | **System TTS** | Optional | macOS `say` command | None | Built-in macOS TTS |
@@ -122,12 +122,12 @@ Pause execution for specified durations.
 ### Connectors
 Connectors allow integration with external services like Notion, Google Drive, Gmail, etc.
 
-Each connector is a separate CLI tool (`connect-notion`, `connect-googledrive`, etc.) that must be installed separately. The ConnectorBridge automatically discovers installed connectors.
+Connectors are managed via the `connectors` CLI. Install any connector with a single command:
 
 **Installation:**
 ```bash
 # Example: Install Notion connector
-npm install -g @hasna/connect-notion
+connectors install notion
 ```
 
 ### Voice Features
@@ -170,7 +170,7 @@ Missing optional features are silently skipped - the terminal will work with wha
 Set your API key: `export ANTHROPIC_API_KEY="sk-ant-..."`
 
 ### Connector not found
-Install the specific connector CLI, e.g., `npm install -g @hasna/connect-notion`
+Install the connector via `connectors install <name>`, e.g., `connectors install notion`
 
 ### Voice not working
 - **ElevenLabs**: Check `ELEVENLABS_API_KEY` is set correctly

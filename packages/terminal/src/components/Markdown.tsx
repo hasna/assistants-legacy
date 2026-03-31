@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColor } from '../theme/colors';
 
 interface MarkdownProps {
   content: string;
@@ -17,7 +18,7 @@ interface MarkdownProps {
  */
 export function Markdown({ content }: MarkdownProps) {
   if (!content) return null;
-  return <markdown content={content} conceal />;
+  return <markdown content={content} conceal fg={themeColor('text')} />;
 }
 
 /**

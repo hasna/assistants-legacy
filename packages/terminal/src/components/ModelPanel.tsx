@@ -1,32 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
-  ALL_MODELS,
-  LLM_PROVIDER_IDS,
+  getModelById,
   getModelDisplayName,
-  getProviderLabel,
-  type ModelDefinition,
 } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
-
-const MAX_VISIBLE_ROWS = 12;
-const NAME_WIDTH = 28;
-const CTX_WIDTH = 6;
-const OUT_WIDTH = 6;
-const COST_WIDTH = 10;
-
-interface ModelPanelProps {
-  currentModelId: string | null;
-  assistantName?: string;
-  onSelectModel: (modelId: string) => Promise<void>;
-  onCancel: () => void;
-}
-
-type DisplayRow =
-  | { type: 'provider'; label: string }
-  | { type: 'model'; model: ModelDefinition };
-
-// --- Format helpers ---
 
 function fmtTokens(n?: number): string {
   if (n == null) return '—';
@@ -35,305 +13,127 @@ function fmtTokens(n?: number): string {
   return String(n);
 }
 
-function fmtCost(model: ModelDefinition): string {
-  if (model.inputCostPer1M == null || model.outputCostPer1M == null) return '—';
+function fmtCost(inputCost?: number, outputCost?: number): string {
+  if (inputCost == null || outputCost == null) return '—';
   const fmtNum = (n: number) => (n >= 1 ? `$${n % 1 === 0 ? n : n.toFixed(1)}` : `$${n}`);
-  return `${fmtNum(model.inputCostPer1M)}/${fmtNum(model.outputCostPer1M)}`;
+  return `${fmtNum(inputCost)} / ${fmtNum(outputCost)}`;
 }
 
-function padRight(s: string, w: number): string {
-  return s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length);
+interface ModelPanelProps {
+  currentModelId: string | null;
+  agentName?: string;
+  agentDescription?: string;
+  onOpenAgents: () => void;
+  onCancel: () => void;
 }
 
-function padLeft(s: string, w: number): string {
-  return s.length >= w ? s.slice(0, w) : ' '.repeat(w - s.length) + s;
-}
-
-// --- Scrolling ---
-
-function getVisibleRange(
-  selectedIndex: number,
-  totalItems: number,
-  maxVisible: number = MAX_VISIBLE_ROWS,
-): { start: number; end: number; hasMore: { above: number; below: number } } {
-  if (totalItems <= maxVisible) {
-    return { start: 0, end: totalItems, hasMore: { above: 0, below: 0 } };
-  }
-  const halfWindow = Math.floor(maxVisible / 2);
-  let start = selectedIndex - halfWindow;
-  let end = selectedIndex + (maxVisible - halfWindow);
-  if (start < 0) {
-    start = 0;
-    end = maxVisible;
-  }
-  if (end > totalItems) {
-    end = totalItems;
-    start = Math.max(0, totalItems - maxVisible);
-  }
-  return { start, end, hasMore: { above: start, below: totalItems - end } };
-}
-
-// --- Build display rows ---
-
-function buildRows(models: ModelDefinition[]): DisplayRow[] {
-  const rows: DisplayRow[] = [];
-  for (const provider of LLM_PROVIDER_IDS) {
-    const providerModels = models.filter((m) => m.provider === provider);
-    if (providerModels.length === 0) continue;
-    rows.push({ type: 'provider', label: getProviderLabel(provider) });
-    for (const model of providerModels) {
-      rows.push({ type: 'model', model });
-    }
-  }
-  return rows;
-}
-
-// --- Get selectable (model) indices from rows ---
-
-function getSelectableIndices(rows: DisplayRow[]): number[] {
-  return rows.reduce<number[]>((acc, row, i) => {
-    if (row.type === 'model') acc.push(i);
-    return acc;
-  }, []);
-}
-
+/**
+ * Read-only model info panel.
+ * Models are tied to agents — to change the model, switch agent.
+ */
 export function ModelPanel({
   currentModelId,
-  assistantName,
-  onSelectModel,
+  agentName,
+  agentDescription,
+  onOpenAgents,
   onCancel,
 }: ModelPanelProps) {
-  const [selectedRowIndex, setSelectedRowIndex] = useState(0);
-  const [isSwitching, setIsSwitching] = useState(false);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Filter models by search
-  const filteredModels = useMemo(() => {
-    if (!searchQuery.trim()) return [...ALL_MODELS];
-    const q = searchQuery.toLowerCase();
-    return ALL_MODELS.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    );
-  }, [searchQuery]);
-
-  const rows = useMemo(() => buildRows(filteredModels), [filteredModels]);
-  const selectableIndices = useMemo(() => getSelectableIndices(rows), [rows]);
-
-  // Initialize selection to current model
-  useEffect(() => {
-    if (!currentModelId) return;
-    const idx = rows.findIndex(
-      (r) => r.type === 'model' && r.model.id === currentModelId,
-    );
-    if (idx >= 0) setSelectedRowIndex(idx);
-  }, [currentModelId, rows]);
-
-  // Clamp selection when rows change (e.g. after search)
-  useEffect(() => {
-    if (selectableIndices.length === 0) return;
-    if (!selectableIndices.includes(selectedRowIndex)) {
-      setSelectedRowIndex(selectableIndices[0]!);
-    }
-  }, [selectableIndices, selectedRowIndex]);
-
-  // Navigation helpers
-  const moveSelection = (direction: 1 | -1) => {
-    if (selectableIndices.length === 0) return;
-    const currentPos = selectableIndices.indexOf(selectedRowIndex);
-    let nextPos: number;
-    if (currentPos === -1) {
-      nextPos = direction === 1 ? 0 : selectableIndices.length - 1;
-    } else {
-      nextPos = currentPos + direction;
-      if (nextPos < 0) nextPos = selectableIndices.length - 1;
-      if (nextPos >= selectableIndices.length) nextPos = 0;
-    }
-    setSelectedRowIndex(selectableIndices[nextPos]!);
-  };
-
-  const handleSelect = () => {
-    const row = rows[selectedRowIndex];
-    if (!row || row.type !== 'model') return;
-    if (row.model.id === currentModelId) {
-      setStatus({ type: 'info', text: `${row.model.name} is already active.` });
-      return;
-    }
-    setIsSwitching(true);
-    void onSelectModel(row.model.id)
-      .then(() => {
-        onCancel();
-      })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : String(err);
-        setStatus({ type: 'error', text: message });
-      })
-      .finally(() => {
-        setIsSwitching(false);
-      });
-  };
+  const model = currentModelId ? getModelById(currentModelId) : null;
+  const displayName = currentModelId ? getModelDisplayName(currentModelId) : 'Unknown';
 
   useInput(
     (input, key) => {
-      if (isSwitching) return;
-
-      // Search mode: Escape clears search
-      if (isSearching) {
-        if (key.escape) {
-          setIsSearching(false);
-          setSearchQuery('');
-          return;
-        }
-        // Let TextInput handle all other keys
-        return;
-      }
-
-      // Normal mode
       if (key.escape || input === 'q' || input === 'Q') {
         onCancel();
         return;
       }
-
-      if (input === '/') {
-        setIsSearching(true);
-        setSearchQuery('');
+      // 'a' opens agents panel to switch agent (and thus model)
+      if (input === 'a' || input === 'A' || key.tab) {
+        onOpenAgents();
         return;
-      }
-
-      if (key.upArrow || input === 'k') {
-        moveSelection(-1);
-        return;
-      }
-
-      if (key.downArrow || input === 'j') {
-        moveSelection(1);
-        return;
-      }
-
-      if (key.return || input === 's' || input === 'S') {
-        handleSelect();
       }
     },
     { isActive: true },
   );
 
-  // Scrolling
-  const visibleRange = useMemo(
-    () => getVisibleRange(selectedRowIndex, rows.length),
-    [selectedRowIndex, rows.length],
-  );
-  const visibleRows = rows.slice(visibleRange.start, visibleRange.end);
-
   return (
     <box flexDirection="column" paddingY={1}>
       {/* Header */}
       <box marginBottom={1}>
-        <text><b>Model Selector</b>{' — '}<span fg={themeColor('muted')}>{assistantName || 'Active assistant'}</span></text>
+        <text><b>Model Info</b></text>
       </box>
 
-      <box marginBottom={1}>
-        <text fg={themeColor('muted')}>
-          Current: {getModelDisplayName(currentModelId || 'unknown')} ({currentModelId || 'unknown'})
+      {/* Agent info */}
+      <box flexDirection="column" marginBottom={1}>
+        <box>
+          <text fg={themeColor('muted')}>Agent:   </text>
+          <text fg={themeColor('primary')}><b>{agentName || 'Default'}</b></text>
+        </box>
+        {agentDescription && (
+          <box>
+            <text fg={themeColor('muted')}>         {agentDescription}</text>
+          </box>
+        )}
+      </box>
+
+      {/* Model info */}
+      <box flexDirection="column" marginBottom={1}>
+        <box>
+          <text fg={themeColor('muted')}>Model:   </text>
+          <text><b>{displayName}</b></text>
+          {currentModelId && currentModelId !== displayName && (
+            <text fg={themeColor('muted')}> ({currentModelId})</text>
+          )}
+        </box>
+        {model?.provider && (
+          <box>
+            <text fg={themeColor('muted')}>Provider: </text>
+            <text>{model.provider}</text>
+          </box>
+        )}
+        {model?.contextWindow && (
+          <box>
+            <text fg={themeColor('muted')}>Context:  </text>
+            <text>{fmtTokens(model.contextWindow)} tokens</text>
+          </box>
+        )}
+        {model?.maxOutputTokens && (
+          <box>
+            <text fg={themeColor('muted')}>Output:   </text>
+            <text>{fmtTokens(model.maxOutputTokens)} tokens</text>
+          </box>
+        )}
+        {(model?.inputCostPer1M != null || model?.outputCostPer1M != null) && (
+          <box>
+            <text fg={themeColor('muted')}>Cost/1M:  </text>
+            <text>{fmtCost(model?.inputCostPer1M, model?.outputCostPer1M)} (in/out)</text>
+          </box>
+        )}
+        {model?.description && (
+          <box>
+            <text fg={themeColor('muted')}>Info:     </text>
+            <text fg={themeColor('muted')}>{model.description}</text>
+          </box>
+        )}
+        {model?.notes && (
+          <box>
+            <text fg={themeColor('muted')}>Notes:    </text>
+            <text fg={themeColor('muted')}>{model.notes}</text>
+          </box>
+        )}
+      </box>
+
+      {/* Hint to switch via agents */}
+      <box marginTop={1} marginBottom={1}>
+        <text fg={themeColor('warning')}>
+          Models are tied to agents. To change the model, switch to a different agent.
         </text>
       </box>
-
-      {/* Status message */}
-      {status && (
-        <box marginBottom={1}>
-          <text fg={status.type === 'error' ? 'red' : status.type === 'success' ? themeColor('success') : 'yellow'}>
-            {status.text}
-          </text>
-        </box>
-      )}
-
-      {/* Search bar */}
-      {isSearching && (
-        <box marginBottom={1}>
-          <text fg={themeColor('secondary')}><b>/ </b></text>
-          <input
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search models..."
-          />
-        </box>
-      )}
-
-      {/* Scroll indicator: above */}
-      {visibleRange.hasMore.above > 0 && (
-        <box paddingLeft={2}>
-          <text fg={themeColor('muted')}>{`↑ ${visibleRange.hasMore.above} more`}</text>
-        </box>
-      )}
-
-      {/* Column header */}
-      <box paddingLeft={2}>
-        <text fg={themeColor('muted')}>
-          {padRight('Model', NAME_WIDTH)}
-          {padLeft('Ctx', CTX_WIDTH)}
-          {padLeft('Out', OUT_WIDTH)}
-          {padLeft('Cost/1M', COST_WIDTH)}
-        </text>
-      </box>
-
-      {/* Model rows */}
-      <box flexDirection="column">
-        {visibleRows.map((row, i) => {
-          const globalIndex = visibleRange.start + i;
-
-          if (row.type === 'provider') {
-            return (
-              <box key={`p-${row.label}`} paddingLeft={1}>
-                <text fg={themeColor('info')}><b> {row.label}</b></text>
-              </box>
-            );
-          }
-
-          const isSelected = globalIndex === selectedRowIndex;
-          const isCurrent = row.model.id === currentModelId;
-          const prefix = isSelected ? '▸ ' : '  ';
-          const name = padRight(row.model.name, NAME_WIDTH);
-          const ctx = padLeft(fmtTokens(row.model.contextWindow), CTX_WIDTH);
-          const out = padLeft(fmtTokens(row.model.maxOutputTokens), OUT_WIDTH);
-          const cost = padLeft(fmtCost(row.model), COST_WIDTH);
-
-          return (
-            <box key={row.model.id}>
-              <text fg={isSelected ? 'blue' : undefined}>{prefix}</text>
-              <text attributes={isSelected ? 1 : undefined} fg={isSelected ? 'blue' : undefined}><b>
-                {name}
-              </b></text>
-              <text fg={isSelected ? 'blue' : themeColor('muted')}>
-                {ctx}{out}{cost}
-              </text>
-              {isCurrent && <text fg={themeColor('success')}> ← current</text>}
-            </box>
-          );
-        })}
-      </box>
-
-      {/* Scroll indicator: below */}
-      {visibleRange.hasMore.below > 0 && (
-        <box paddingLeft={2}>
-          <text fg={themeColor('muted')}>{`↓ ${visibleRange.hasMore.below} more`}</text>
-        </box>
-      )}
-
-      {/* No results */}
-      {selectableIndices.length === 0 && isSearching && (
-        <box paddingLeft={2} marginY={1}>
-          <text fg={themeColor('muted')}>No models match "{searchQuery}"</text>
-        </box>
-      )}
 
       {/* Footer */}
-      <box marginTop={1}>
+      <box>
         <text fg={themeColor('muted')}>
-          {isSwitching
-            ? 'Switching model...'
-            : isSearching
-              ? 'Type to filter | Esc clear search'
-              : 'Enter select | ↑↓ navigate | / search | q quit'}
+          <b>a</b>/<b>tab</b> switch agent  |  <b>q</b>/<b>esc</b> close
         </text>
       </box>
     </box>

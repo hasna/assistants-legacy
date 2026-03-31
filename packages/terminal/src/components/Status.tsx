@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared'; // kept for StatusProps interface
+import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
 import { getModelById } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
 
@@ -22,21 +22,14 @@ export interface RecentToolInfo {
   startedAt?: number;
 }
 
-/**
- * Model variant (preset) displayed in the status bar left side.
- * Each variant maps a short label to a model ID.
- */
-export interface ModelVariant {
-  label: string;
-  modelId: string;
-}
-
 interface StatusProps {
   isProcessing: boolean;
   cwd: string;
   queueLength?: number;
   tokenUsage?: TokenUsage;
   modelId?: string;
+  /** Agent/assistant name for the current session */
+  agentName?: string;
 
   voiceState?: VoiceState;
   heartbeatState?: HeartbeatState;
@@ -49,17 +42,22 @@ interface StatusProps {
   recentTools?: RecentToolInfo[];
   gitBranch?: string;
 
-  /** Model variants shown as clickable labels on the left. Auto-generated if omitted. */
-  variants?: ModelVariant[];
-  /** Callback when a variant label is selected */
-  onVariantSelect?: (variant: ModelVariant) => void;
+  /** App version string (e.g. "1.1.113") shown on the right in welcome mode */
+  version?: string;
+  /** When true, show simplified welcome-mode status: cwd on left, version on right */
+  welcomeMode?: boolean;
 }
 
 export function Status({
   isProcessing,
   tokenUsage,
   modelId,
+  agentName,
   processingStartTime,
+  cwd,
+  gitBranch,
+  version,
+  welcomeMode,
 }: StatusProps) {
   const [elapsed, setElapsed] = useState(0);
 
@@ -102,6 +100,17 @@ export function Status({
     const total = inputCost + outputCost + cacheReadCost + cacheWriteCost;
     return total < 0.01 ? `$${total.toFixed(3)}` : `$${total.toFixed(2)}`;
   }, [tokenUsage, modelId]);
+
+  // --- Welcome mode: cwd:branch on left, version on right ---
+  if (welcomeMode) {
+    const cwdDisplay = gitBranch ? `${cwd}:${gitBranch}` : cwd;
+    return (
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={themeColor('muted')}>{cwdDisplay}</text>
+        {version ? <text fg={themeColor('muted')}>v{version}</text> : null}
+      </box>
+    );
+  }
 
   // Context usage
   let contextPercent = 0;
@@ -156,13 +165,12 @@ export function Status({
     );
   }
 
-  // --- RIGHT: Model name in primary color ---
-  const modelName = modelId ? (getModelById(modelId)?.name || modelId) : '';
-  const modelDisplay = modelName ? (
-    <text key="model" fg={themeColor('primary')}>{modelName}</text>
-  ) : null;
+  // --- RIGHT: Agent name + model (read-only) ---
+  const model = modelId ? getModelById(modelId) : null;
+  const modelName = model?.name || modelId || '';
+  const displayAgent = agentName || 'Assistant';
 
-  // Single row — keyboard shortcuts on the right, per OpenCode reference
+  // Single row — agent info on the right, keyboard shortcuts centered
   return (
     <box flexDirection="row" justifyContent="space-between">
       <box flexDirection="row">
@@ -171,8 +179,11 @@ export function Status({
         {statusMessage}
       </box>
       <box flexDirection="row">
-        <text fg={themeColor('muted')}><b>ctrl+t</b></text>
-        <text fg={themeColor('muted')}> variants  </text>
+        {modelName ? (
+          <text fg={themeColor('muted')}>{displayAgent} · {modelName}  </text>
+        ) : (
+          <text fg={themeColor('muted')}>{displayAgent}  </text>
+        )}
         <text fg={themeColor('muted')}><b>tab</b></text>
         <text fg={themeColor('muted')}> agents  </text>
         <text fg={themeColor('muted')}><b>ctrl+p</b></text>

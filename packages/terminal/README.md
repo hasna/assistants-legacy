@@ -481,15 +481,14 @@ console.log(getFeatureStatusMessage());
 
 ## Connectors
 
-Connectors integrate external services. Install separately:
+Connectors integrate external services. Install via the `connectors` CLI:
 
 ```bash
 # Example: Notion connector
-bun add -g @hasna/connect-notion
+connectors install notion
 
 # List available connectors
-assistants
-/connectors
+connectors list
 ```
 
 ## Troubleshooting

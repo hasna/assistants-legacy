@@ -40,12 +40,12 @@ type Step = 'welcome' | 'intro' | 'provider-select' | 'model-select' | 'api-key'
 const STEPS: Step[] = ['welcome', 'intro', 'provider-select', 'model-select', 'api-key', 'connectors', 'skills', 'connector-keys', 'summary'];
 
 const POPULAR_CONNECTORS: Record<string, { desc: string; install: string }> = {
-  notion: { desc: 'Notion workspace', install: 'bun add -g connect-notion' },
-  gmail: { desc: 'Gmail email', install: 'bun add -g connect-gmail' },
-  googledrive: { desc: 'Google Drive files', install: 'bun add -g connect-googledrive' },
-  slack: { desc: 'Slack messaging', install: 'bun add -g connect-slack' },
-  github: { desc: 'GitHub repos & issues', install: 'bun add -g connect-github' },
-  calendar: { desc: 'Google Calendar', install: 'bun add -g connect-calendar' },
+  notion: { desc: 'Notion workspace', install: 'connectors install notion' },
+  gmail: { desc: 'Gmail email', install: 'connectors install gmail' },
+  googledrive: { desc: 'Google Drive files', install: 'connectors install googledrive' },
+  slack: { desc: 'Slack messaging', install: 'connectors install slack' },
+  github: { desc: 'GitHub repos & issues', install: 'connectors install github' },
+  calendar: { desc: 'Google Calendar', install: 'connectors install calendar' },
 };
 
 const COMPACT_LOGO = 'Hasna Assistants';
