@@ -13,25 +13,25 @@ Manage notes in Notion based on the command: $ARGUMENTS
 
 **List recent notes:**
 ```bash
-connect-notion pages list --max 10
+connectors run notion pages list --max 10
 ```
 
 **Create a note:**
 Parse the title and optional content from arguments:
 ```bash
-connect-notion pages create "PARENT_PAGE_ID" "Note Title" --content "Note content here"
+connectors run notion pages create "PARENT_PAGE_ID" "Note Title" --content "Note content here"
 ```
 
 Note: You'll need to know the parent page ID. List pages first to find it.
 
 **Search notes:**
 ```bash
-connect-notion search "query" --pages
+connectors run notion search "query" --pages
 ```
 
 **Get note content:**
 ```bash
-connect-notion blocks children "PAGE_ID"
+connectors run notion blocks children "PAGE_ID"
 ```
 
 ### Output Format

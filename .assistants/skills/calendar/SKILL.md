@@ -13,23 +13,23 @@ Manage calendar events based on the command: $ARGUMENTS
 
 **View today's events:**
 ```bash
-connect-googlecalendar events list --today
+connectors run googlecalendar events list --today
 ```
 
 **View tomorrow's events:**
 ```bash
-connect-googlecalendar events list --tomorrow
+connectors run googlecalendar events list --tomorrow
 ```
 
 **View this week's events:**
 ```bash
-connect-googlecalendar events list --week
+connectors run googlecalendar events list --week
 ```
 
 **Add an event:**
 Parse the event details from the arguments and create the event:
 ```bash
-connect-googlecalendar events create "Event Title" --start "2025-01-31T10:00:00" --end "2025-01-31T11:00:00"
+connectors run googlecalendar events create "Event Title" --start "2025-01-31T10:00:00" --end "2025-01-31T11:00:00"
 ```
 
 ### Output Format

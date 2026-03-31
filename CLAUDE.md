@@ -97,7 +97,7 @@ User Input → Terminal (Ink UI) → Core (Agent Loop) → LLM (Claude API)
 - **Workspace packages use `workspace:*`** in devDependencies — the build inlines them.
 - **Skills** follow the `SKILL.md` format with YAML frontmatter.
 - **Hooks** are JSON-configured lifecycle interceptors (PreToolUse, PostToolUse, etc.).
-- **Connectors** are external CLIs (`connect-notion`, `connect-gmail`) discovered at runtime.
+- **Connectors** are managed via the `connectors` CLI (`connectors install <name>`, `connectors run <name> <command>`).
 
 ## Testing
 

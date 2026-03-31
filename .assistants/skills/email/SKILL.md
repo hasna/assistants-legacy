@@ -13,23 +13,23 @@ Manage email based on the command: $ARGUMENTS
 
 **View inbox:**
 ```bash
-connect-gmail messages list --max 10
+connectors run gmail messages list --max 10
 ```
 
 **View unread:**
 ```bash
-connect-gmail messages list --unread --max 10
+connectors run gmail messages list --unread --max 10
 ```
 
 **Send email:**
 Parse the recipient, subject, and body from arguments:
 ```bash
-connect-gmail messages send --to "recipient@example.com" --subject "Subject" --body "Body text"
+connectors run gmail messages send --to "recipient@example.com" --subject "Subject" --body "Body text"
 ```
 
 **Search emails:**
 ```bash
-connect-gmail messages search "query" --max 10
+connectors run gmail messages search "query" --max 10
 ```
 
 ### Output Format

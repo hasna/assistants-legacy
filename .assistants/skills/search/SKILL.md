@@ -9,10 +9,10 @@ allowed-tools: bash, exa
 
 Search the web for information about: $ARGUMENTS
 
-Use the `connect-exa` CLI to perform the search:
+Use the `connectors` CLI to perform the search:
 
 ```bash
-connect-exa search "$ARGUMENTS" --max 5
+connectors run exa search "$ARGUMENTS" --max 5
 ```
 
 Summarize the results in a clear, concise format with:
