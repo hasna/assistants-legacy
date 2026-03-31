@@ -22,37 +22,30 @@ function statusBadgeClass(status: string): string {
     case "active":
     case "running":
     case "in_progress":
-      return "bg-blue-100 text-blue-800"
+      return "rounded-full bg-blue-50 text-blue-700 border-blue-200"
     case "completed":
     case "done":
     case "success":
     case "pass":
-      return "bg-green-100 text-green-800"
+      return "rounded-full bg-green-50 text-green-700 border-green-200"
     case "enabled":
-      return "bg-green-100 text-green-800"
+      return "rounded-full bg-green-50 text-green-700 border-green-200"
     case "disabled":
-      return "bg-gray-100 text-gray-800"
+      return "rounded-full bg-gray-50 text-gray-600 border-gray-200"
     case "failed":
     case "error":
     case "blocked":
     case "block":
-      return "bg-red-100 text-red-800"
+      return "rounded-full bg-red-50 text-red-700 border-red-200"
     case "pending":
     case "queued":
-      return "bg-yellow-100 text-yellow-800"
+      return "rounded-full bg-yellow-50 text-yellow-700 border-yellow-200"
     default:
-      return ""
+      return "rounded-full"
   }
 }
 
 const columns: ColumnDef<WebhookRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
   {
     accessorKey: "name",
     header: "Name",
@@ -93,30 +86,19 @@ const columns: ColumnDef<WebhookRow>[] = [
       </Badge>
     ),
   },
-  {
-    accessorKey: "delivery_count",
-    header: "Deliveries",
-  },
-  {
-    accessorKey: "last_delivery_at",
-    header: "Last Delivery",
-    cell: ({ row }) => formatDate(row.original.last_delivery_at),
-  },
-  {
-    accessorKey: "created_at",
-    header: "Created",
-    cell: ({ row }) => formatDate(row.original.created_at),
-  },
 ]
 
 export function WebhooksClient({ data }: { data: WebhookRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Webhooks</h1>
-        <p className="text-muted-foreground text-sm">
-          Registered webhook endpoints and delivery status.
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Webhooks</h1>
+          <p className="text-muted-foreground text-sm">
+            Registered webhook endpoints and delivery status.
+          </p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ Add Webhook</button>
       </div>
       <DataTable
         columns={columns}

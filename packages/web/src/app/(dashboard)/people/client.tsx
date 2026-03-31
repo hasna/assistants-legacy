@@ -18,13 +18,6 @@ function formatDate(date: string | number | null): string {
 
 const columns: ColumnDef<PersonRow>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
-  {
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
@@ -56,38 +49,23 @@ const columns: ColumnDef<PersonRow>[] = [
       ),
   },
   {
-    accessorKey: "notes",
-    header: "Notes",
-    cell: ({ row }) => {
-      const text = row.original.notes
-      if (!text) return <span className="text-muted-foreground">{"\u2014"}</span>
-      return (
-        <span className="max-w-xs truncate" title={text}>
-          {text.length > 60 ? text.slice(0, 60) + "\u2026" : text}
-        </span>
-      )
-    },
-  },
-  {
     accessorKey: "created_at",
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
-  },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
   },
 ]
 
 export function PeopleClient({ data }: { data: PersonRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">People</h1>
-        <p className="text-muted-foreground text-sm">
-          People directory with contact information.
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">People</h1>
+          <p className="text-muted-foreground text-sm">
+            People directory with contact information.
+          </p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ Add Person</button>
       </div>
       <DataTable
         columns={columns}

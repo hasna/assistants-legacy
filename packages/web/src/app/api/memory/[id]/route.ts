@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const body = await req.json() as { value?: string; importance?: number; category?: string; summary?: string }
+    const body = await req.json() as { value?: string; importance?: number; scope?: string; category?: string; summary?: string; tags?: string[] }
     const db = getDb()
     const now = new Date().toISOString()
     const fields: string[] = []
@@ -15,8 +15,10 @@ export async function PATCH(
 
     if (body.value !== undefined) { fields.push('value = ?'); values.push(body.value) }
     if (body.importance !== undefined) { fields.push('importance = ?'); values.push(body.importance) }
+    if (body.scope !== undefined) { fields.push('scope = ?'); values.push(body.scope) }
     if (body.category !== undefined) { fields.push('category = ?'); values.push(body.category) }
     if (body.summary !== undefined) { fields.push('summary = ?'); values.push(body.summary) }
+    if (body.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(body.tags)) }
     fields.push('updated_at = ?'); values.push(now)
     values.push(id)
 

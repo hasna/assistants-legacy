@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog"
 import { toast } from "@/lib/toast"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
@@ -34,28 +35,21 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{status}</Badge>
+    return <Badge className="rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">{status}</Badge>
+    return <Badge className="rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">{status}</Badge>
+    return <Badge className="rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">{status}</Badge>
+    return <Badge className="rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">{status}</Badge>
   }
   return <Badge>{status}</Badge>
 }
 
 const columns: ColumnDef<SessionRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
   {
     accessorKey: "cwd",
     header: "Project",
@@ -87,11 +81,6 @@ const columns: ColumnDef<SessionRow>[] = [
     cell: ({ row }) => formatDate(row.original.started_at),
   },
   {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
-  {
     accessorKey: "message_count",
     header: "Msgs",
     cell: ({ row }) => {
@@ -106,10 +95,10 @@ const columns: ColumnDef<SessionRow>[] = [
     cell: ({ row }) => (
       <Link
         href={`/chat?resume=${row.original.id}`}
-        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent transition-colors"
+        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150"
         title="Resume this session in Chat"
       >
-        ↩ Resume
+        Resume
       </Link>
     ),
   },
@@ -128,7 +117,7 @@ function SessionDetail({ session, onClose }: { session: SessionRow; onClose: () 
             <div className="flex items-center gap-2">
               <span className="font-semibold">{session.label || projectName}</span>
               {session.status && (
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${session.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${session.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
                   {session.status}
                 </span>
               )}
@@ -142,8 +131,8 @@ function SessionDetail({ session, onClose }: { session: SessionRow; onClose: () 
             <div><span className="text-muted-foreground">Updated:</span> <span className="ml-1">{new Date(session.updated_at < 1e12 ? session.updated_at * 1000 : session.updated_at).toLocaleString()}</span></div>
           </div>
           <div className="flex gap-2 mt-1">
-            <Link href={`/chat?resume=${session.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90">
-              ↩ Resume in Chat
+            <Link href={`/chat?resume=${session.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 shadow-xs transition-colors">
+              Resume in Chat
             </Link>
           </div>
         </div>
@@ -169,10 +158,19 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
   useAutoRefresh()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [groupBy, setGroupBy] = useState(true)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState<SessionRow[] | null>(null)
   const router = useRouter()
 
-  const bulkDelete = async (rows: SessionRow[]) => {
-    if (!confirm(`Delete ${rows.length} session${rows.length > 1 ? 's' : ''}?`)) return
+  const requestBulkDelete = (rows: SessionRow[]) => {
+    setConfirmTarget(rows)
+    setConfirmOpen(true)
+  }
+
+  const bulkDelete = async () => {
+    const rows = confirmTarget
+    if (!rows) return
+    setConfirmOpen(false)
     const res = await fetch('/api/sessions', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -180,6 +178,7 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
     })
     if (res.ok) { toast.success(`Deleted ${rows.length} session${rows.length > 1 ? 's' : ''}`); router.refresh() }
     else toast.error('Failed to delete')
+    setConfirmTarget(null)
   }
 
   const bulkExport = (rows: SessionRow[]) => {
@@ -205,9 +204,9 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
   }
 
   const bulkActions = [
-    { label: '🗑 Delete selected', onClick: bulkDelete, variant: 'destructive' as const },
-    { label: '⬇ Export selected', onClick: bulkExport },
-    { label: '📦 Archive selected', onClick: bulkArchive },
+    { label: 'Delete selected', onClick: requestBulkDelete, variant: 'destructive' as const },
+    { label: 'Export selected', onClick: bulkExport },
+    { label: 'Archive selected', onClick: bulkArchive },
   ]
 
   // Group sessions by date
@@ -223,14 +222,14 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
   })() : null
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
         <button
           onClick={() => setGroupBy(!groupBy)}
-          className={`text-xs border rounded-lg px-2.5 py-1.5 ${groupBy ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+          className={`text-xs border rounded-xl px-2.5 py-1.5 transition-colors ${groupBy ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
         >
-          {groupBy ? '⊟ Grouped' : '⊞ Group by date'}
+          {groupBy ? 'Grouped' : 'Group by date'}
         </button>
       </div>
       {groupBy && groups ? (
@@ -263,6 +262,15 @@ export function SessionsClient({ data }: { data: SessionRow[] }) {
           renderExpanded={(row) => <SessionDetail session={row as SessionRow} onClose={() => setExpanded(null)} />}
         />
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Delete ${confirmTarget?.length ?? 0} session${(confirmTarget?.length ?? 0) > 1 ? 's' : ''}?`}
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={bulkDelete}
+      />
     </div>
   )
 }

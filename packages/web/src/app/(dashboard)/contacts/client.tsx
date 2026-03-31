@@ -5,6 +5,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import type { ContactRow, CompanyRow } from "./page"
 
 function formatDate(date: string | number | null): string {
@@ -89,7 +90,7 @@ const companyColumns: ColumnDef<CompanyRow>[] = [
 ]
 
 const emptyState = (label: string, cmd: string) => (
-  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
     <p className="text-muted-foreground text-sm">
       No {label} yet. Use the <code className="bg-muted rounded px-1 py-0.5 text-xs">{cmd}</code> tool or @hasna/contacts CLI.
     </p>
@@ -97,13 +98,17 @@ const emptyState = (label: string, cmd: string) => (
 )
 
 export function ContactsClient({ contacts, companies }: { contacts: ContactRow[]; companies: CompanyRow[] }) {
+  useAutoRefresh()
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
-        <p className="text-muted-foreground text-sm">
-          Stored in <code className="bg-muted rounded px-1 py-0.5 text-xs">~/.contacts/contacts.db</code> via @hasna/contacts
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
+          <p className="text-muted-foreground text-sm">
+            Stored in <code className="bg-muted rounded px-1 py-0.5 text-xs">~/.contacts/contacts.db</code> via @hasna/contacts
+          </p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ Add Contact</button>
       </div>
       <Tabs defaultValue="contacts">
         <TabsList>

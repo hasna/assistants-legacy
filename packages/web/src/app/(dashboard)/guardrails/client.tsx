@@ -18,13 +18,6 @@ function formatDate(date: string | number | null): string {
 
 const columns: ColumnDef<GuardrailRow>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
-  {
     accessorKey: "name",
     header: "Name",
   },
@@ -52,17 +45,15 @@ const columns: ColumnDef<GuardrailRow>[] = [
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
   },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
 ]
 
 export function GuardrailsClient({ data }: { data: GuardrailRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Guardrails</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight">Guardrails</h1>
+        <p className="text-muted-foreground text-sm">Security rules and content filtering configuration.</p>
+      </div>
       <DataTable
         columns={columns}
         data={data}

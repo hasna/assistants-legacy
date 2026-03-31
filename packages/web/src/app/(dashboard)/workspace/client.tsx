@@ -20,44 +20,24 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800">{status}</Badge>
+    return <Badge className="rounded-full bg-blue-50 text-blue-700">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+    return <Badge className="rounded-full bg-green-50 text-green-700">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800">{status}</Badge>
+    return <Badge className="rounded-full bg-red-50 text-red-700">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{status}</Badge>
+    return <Badge className="rounded-full bg-yellow-50 text-yellow-700">{status}</Badge>
   }
-  return <Badge>{status}</Badge>
+  return <Badge className="rounded-full">{status}</Badge>
 }
 
 const columns: ColumnDef<WorkspaceRow>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
-  {
     accessorKey: "name",
     header: "Name",
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) => {
-      const val = row.original.description
-      if (!val) return "\u2014"
-      return (
-        <span className="text-sm" title={val}>
-          {val.length > 80 ? val.slice(0, 80) + "\u2026" : val}
-        </span>
-      )
-    },
   },
   {
     accessorKey: "creator_name",
@@ -78,17 +58,15 @@ const columns: ColumnDef<WorkspaceRow>[] = [
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
   },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
 ]
 
 export function WorkspaceClient({ data }: { data: WorkspaceRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Workspaces</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight">Workspaces</h1>
+        <p className="text-muted-foreground text-sm">Collaborative workspaces and their participants.</p>
+      </div>
       <DataTable
         columns={columns}
         data={data}

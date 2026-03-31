@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import type { ChannelRow } from "./page"
 
 function formatDate(date: string | number | null): string {
@@ -22,51 +23,32 @@ function statusBadgeClass(status: string): string {
     case "active":
     case "running":
     case "in_progress":
-      return "bg-blue-100 text-blue-800"
+      return "rounded-full bg-blue-50 text-blue-700 border-blue-200"
     case "completed":
     case "done":
     case "success":
     case "pass":
-      return "bg-green-100 text-green-800"
+      return "rounded-full bg-green-50 text-green-700 border-green-200"
     case "failed":
     case "error":
     case "blocked":
     case "block":
-      return "bg-red-100 text-red-800"
+      return "rounded-full bg-red-50 text-red-700 border-red-200"
     case "pending":
     case "queued":
-      return "bg-yellow-100 text-yellow-800"
+      return "rounded-full bg-yellow-50 text-yellow-700 border-yellow-200"
     default:
-      return ""
+      return "rounded-full"
   }
 }
 
 const columns: ColumnDef<ChannelRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
   {
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
       <span className="font-medium">{row.original.name}</span>
     ),
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) =>
-      row.original.description || (
-        <span className="text-muted-foreground">{"\u2014"}</span>
-      ),
-  },
-  {
-    accessorKey: "created_by_name",
-    header: "Created By",
   },
   {
     accessorKey: "status",
@@ -85,21 +67,20 @@ const columns: ColumnDef<ChannelRow>[] = [
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
   },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
 ]
 
 export function ChannelsClient({ data }: { data: ChannelRow[] }) {
+  useAutoRefresh()
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Channels</h1>
-        <p className="text-muted-foreground text-sm">
-          Communication channels for assistant collaboration.
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Channels</h1>
+          <p className="text-muted-foreground text-sm">
+            Communication channels for assistant collaboration.
+          </p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ New Channel</button>
       </div>
       <DataTable
         columns={columns}

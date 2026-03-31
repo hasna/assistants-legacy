@@ -51,15 +51,15 @@ const columns: ColumnDef<IdentityRow>[] = [
 
 export function IdentityClient({ data }: { data: IdentityRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Identity</h1>
         <p className="text-muted-foreground text-sm">
           Assistant identity configuration — name, persona, and scope settings.
         </p>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">
             No identity records found. Configure your assistant in{" "}
             <code className="bg-muted rounded px-1 py-0.5 text-xs">

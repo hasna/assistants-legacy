@@ -13,7 +13,8 @@
  * Run with: bun test packages/web/tests/dashboard-pages.test.ts
  */
 
-import { describe, test, expect, mock, beforeAll } from "bun:test"
+import { describe, test, expect, vi, beforeAll } from "vitest"
+const mock = vi.fn
 import { existsSync } from "fs"
 import { join } from "path"
 

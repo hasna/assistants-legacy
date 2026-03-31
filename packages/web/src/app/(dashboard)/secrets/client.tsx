@@ -13,11 +13,11 @@ function formatDate(date: string | number | null): string {
 
 function typeBadge(type: string) {
   const colors: Record<string, string> = {
-    api_key: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-    password: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-    token: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-    credential: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-    other: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+    api_key: "rounded-full bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+    password: "rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    token: "rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    credential: "rounded-full bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+    other: "rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
   }
   return <Badge className={colors[type] ?? colors.other}>{type}</Badge>
 }
@@ -67,15 +67,15 @@ const columns: ColumnDef<SecretRow>[] = [
 
 export function SecretsClient({ data }: { data: SecretRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Secrets</h1>
         <p className="text-muted-foreground text-sm">
           Stored in <code className="bg-muted rounded px-1 py-0.5 text-xs">~/.open-secrets/vault.db</code> via @hasna/secrets
         </p>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">
             No secrets stored. Use <code className="bg-muted rounded px-1 py-0.5 text-xs">secrets set &lt;key&gt; &lt;value&gt;</code> or the <code className="bg-muted rounded px-1 py-0.5 text-xs">secrets_set</code> tool.
           </p>

@@ -23,32 +23,25 @@ function statusBadgeClass(status: string): string {
     case "done":
     case "success":
     case "pass":
-      return "bg-green-100 text-green-800"
+      return "rounded-full bg-green-50 text-green-700 border-green-200"
     case "failed":
     case "error":
     case "blocked":
     case "block":
-      return "bg-red-100 text-red-800"
+      return "rounded-full bg-red-50 text-red-700 border-red-200"
     case "pending":
     case "queued":
-      return "bg-yellow-100 text-yellow-800"
+      return "rounded-full bg-yellow-50 text-yellow-700 border-yellow-200"
     case "active":
     case "running":
     case "in_progress":
-      return "bg-blue-100 text-blue-800"
+      return "rounded-full bg-blue-50 text-blue-700 border-blue-200"
     default:
-      return ""
+      return "rounded-full"
   }
 }
 
 const columns: ColumnDef<AssistantMessageRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
   {
     accessorKey: "from_assistant_name",
     header: "From",
@@ -67,18 +60,6 @@ const columns: ColumnDef<AssistantMessageRow>[] = [
         )}
       </span>
     ),
-  },
-  {
-    accessorKey: "body",
-    header: "Body",
-    cell: ({ row }) => {
-      const text = row.original.body
-      return (
-        <span className="max-w-xs truncate" title={text}>
-          {text.length > 80 ? text.slice(0, 80) + "\u2026" : text}
-        </span>
-      )
-    },
   },
   {
     accessorKey: "priority",
@@ -100,17 +81,12 @@ const columns: ColumnDef<AssistantMessageRow>[] = [
       </Badge>
     ),
   },
-  {
-    accessorKey: "created_at",
-    header: "Created",
-    cell: ({ row }) => formatDate(row.original.created_at),
-  },
 ]
 
 export function MessagesClient({ data }: { data: AssistantMessageRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
         <p className="text-muted-foreground text-sm">
           Inter-assistant messages and communication.

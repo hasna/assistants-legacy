@@ -23,44 +23,25 @@ function resultBadgeClass(result: string): string {
     case "success":
     case "completed":
     case "done":
-      return "bg-green-100 text-green-800"
+      return "rounded-full bg-green-50 text-green-700 border-green-200"
     case "block":
     case "blocked":
     case "failed":
     case "error":
-      return "bg-red-100 text-red-800"
+      return "rounded-full bg-red-50 text-red-700 border-red-200"
     case "pending":
     case "queued":
-      return "bg-yellow-100 text-yellow-800"
+      return "rounded-full bg-yellow-50 text-yellow-700 border-yellow-200"
     case "active":
     case "running":
     case "in_progress":
-      return "bg-blue-100 text-blue-800"
+      return "rounded-full bg-blue-50 text-blue-700 border-blue-200"
     default:
-      return ""
+      return "rounded-full"
   }
 }
 
 const columns: ColumnDef<LogRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span>
-    ),
-  },
-  {
-    accessorKey: "session_id",
-    header: "Session",
-    cell: ({ row }) =>
-      row.original.session_id ? (
-        <span className="font-mono text-xs">
-          {row.original.session_id.slice(0, 8)}
-        </span>
-      ) : (
-        <span className="text-muted-foreground">{"\u2014"}</span>
-      ),
-  },
   {
     accessorKey: "rule_name",
     header: "Rule",
@@ -91,18 +72,6 @@ const columns: ColumnDef<LogRow>[] = [
       ),
   },
   {
-    accessorKey: "input_text",
-    header: "Input",
-    cell: ({ row }) => {
-      const text = row.original.input_text
-      return (
-        <span className="max-w-xs truncate" title={text}>
-          {text.length > 60 ? text.slice(0, 60) + "\u2026" : text}
-        </span>
-      )
-    },
-  },
-  {
     accessorKey: "created_at",
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
@@ -111,15 +80,15 @@ const columns: ColumnDef<LogRow>[] = [
 
 export function LogsClient({ data }: { data: LogRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Guardrail Logs</h1>
         <p className="text-muted-foreground text-sm">
           Guardrail evaluations and security audit trail.
         </p>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">No guardrail evaluations yet.</p>
           <p className="text-muted-foreground text-xs mt-1">These appear when guardrail rules are triggered during a session.</p>
         </div>

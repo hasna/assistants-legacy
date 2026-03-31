@@ -32,28 +32,21 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800">{status}</Badge>
+    return <Badge className="rounded-full bg-blue-50 text-blue-700">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+    return <Badge className="rounded-full bg-green-50 text-green-700">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800">{status}</Badge>
+    return <Badge className="rounded-full bg-red-50 text-red-700">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{status}</Badge>
+    return <Badge className="rounded-full bg-yellow-50 text-yellow-700">{status}</Badge>
   }
-  return <Badge>{status}</Badge>
+  return <Badge className="rounded-full">{status}</Badge>
 }
 
 const columns: ColumnDef<OrderRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
   {
     accessorKey: "store_name",
     header: "Store",
@@ -61,11 +54,6 @@ const columns: ColumnDef<OrderRow>[] = [
   {
     accessorKey: "order_number",
     header: "Order #",
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) => row.original.description ?? "\u2014",
   },
   {
     accessorKey: "status",
@@ -92,17 +80,18 @@ const columns: ColumnDef<OrderRow>[] = [
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
   },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
 ]
 
 export function OrdersClient({ data }: { data: OrderRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Orders</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+          <p className="text-muted-foreground text-sm">Order tracking across stores and marketplaces.</p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ New Order</button>
+      </div>
       <DataTable
         columns={columns}
         data={data}

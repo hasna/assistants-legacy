@@ -53,15 +53,15 @@ const columns: ColumnDef<ModelConfigRow>[] = [
 
 export function ModelClient({ data }: { data: ModelConfigRow[] }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Model Configuration</h1>
         <p className="text-muted-foreground text-sm">
           LLM model settings stored across global and project scopes.
         </p>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">
             No model configuration found. Set your model in{" "}
             <code className="bg-muted rounded px-1 py-0.5 text-xs">

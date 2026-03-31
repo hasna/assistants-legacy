@@ -2,6 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 export interface ProjectRow {
   id: string
@@ -27,13 +28,6 @@ function formatDate(date: string | number | null): string {
 
 const columns: ColumnDef<ProjectRow>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
-  {
     accessorKey: "name",
     header: "Name",
   },
@@ -42,33 +36,27 @@ const columns: ColumnDef<ProjectRow>[] = [
     header: "Project Path",
   },
   {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) => row.original.description ?? "\u2014",
-  },
-  {
     accessorKey: "created_at",
     header: "Created",
     cell: ({ row }) => formatDate(row.original.created_at),
   },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }) => formatDate(row.original.updated_at),
-  },
 ]
 
 export function ProjectsClient({ data }: { data: ProjectRow[] }) {
+  useAutoRefresh()
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-        <p className="text-muted-foreground text-sm">
-          Registered projects with their paths and context configurations.
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground text-sm">
+            Registered projects with their paths and context configurations.
+          </p>
+        </div>
+        <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Coming soon">+ Add Project</button>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">
             No projects registered yet. Projects are created automatically when
             you start a session in a directory.

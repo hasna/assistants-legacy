@@ -220,7 +220,7 @@ function Block({ block }: { block: BlockType }) {
 
 function InlineContent({ text }: { text: string }) {
   // Process inline markdown
-  const parts: Array<{ type: 'text' | 'bold' | 'italic' | 'code' | 'link'; content: string; href?: string }> = [];
+  const parts: Array<{ type: 'text' | 'bold' | 'italic' | 'code' | 'link' | 'image'; content: string; href?: string }> = [];
   let remaining = text;
 
   while (remaining.length > 0) {
@@ -248,6 +248,14 @@ function InlineContent({ text }: { text: string }) {
       continue;
     }
 
+    // Image ![alt](url)
+    const imageMatch = remaining.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (imageMatch) {
+      parts.push({ type: 'image', content: imageMatch[1], href: imageMatch[2] });
+      remaining = remaining.slice(imageMatch[0].length);
+      continue;
+    }
+
     // Link
     const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
@@ -257,7 +265,7 @@ function InlineContent({ text }: { text: string }) {
     }
 
     // Regular text (up to next special character)
-    const nextSpecial = remaining.search(/[`*\[]/);
+    const nextSpecial = remaining.search(/[`*\[!]/);
     if (nextSpecial > 0) {
       parts.push({ type: 'text', content: remaining.slice(0, nextSpecial) });
       remaining = remaining.slice(nextSpecial);
@@ -280,6 +288,17 @@ function InlineContent({ text }: { text: string }) {
               <code key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]">
                 {part.content}
               </code>
+            );
+          case 'image':
+            return (
+              <img
+                key={i}
+                src={part.href}
+                alt={part.content}
+                className="max-w-full rounded-lg border border-border shadow-sm my-2 cursor-pointer hover:shadow-md transition-shadow"
+                style={{ maxHeight: '400px' }}
+                onClick={() => window.open(part.href, '_blank')}
+              />
             );
           case 'link':
             return (
@@ -307,12 +326,24 @@ function InlineContent({ text }: { text: string }) {
 
 function CodeBlock({ language, content }: { language: string; content: string }) {
   const [copied, setCopied] = useState(false);
+  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [content]);
+
+  // Lazy-load shiki and highlight
+  useState(() => {
+    if (!language || content.length > 50000) return; // Skip very large blocks
+    import('shiki').then(({ codeToHtml }) => {
+      codeToHtml(content, {
+        lang: language as any,
+        theme: 'github-dark',
+      }).then(setHighlightedHtml).catch(() => {});
+    }).catch(() => {});
+  });
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-border bg-muted/50">
@@ -335,9 +366,16 @@ function CodeBlock({ language, content }: { language: string; content: string })
           </button>
         </div>
       )}
-      <pre className="overflow-x-auto p-4 text-sm">
-        <code className="font-mono">{content}</code>
-      </pre>
+      {highlightedHtml ? (
+        <div
+          className="overflow-x-auto p-4 text-sm [&_pre]:!bg-transparent [&_pre]:!p-0 [&_code]:font-mono"
+          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+        />
+      ) : (
+        <pre className="overflow-x-auto p-4 text-sm">
+          <code className="font-mono">{content}</code>
+        </pre>
+      )}
       {!language && (
         <button
           onClick={handleCopy}

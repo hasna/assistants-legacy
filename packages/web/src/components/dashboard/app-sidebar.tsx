@@ -49,16 +49,15 @@ const navGroups = [
     icon: MessageSquare,
     items: [
       { title: "Chat", url: "/chat" },
-      { title: "Sessions", url: "/sessions" },
+      { title: "Sessions", url: "/sessions", countKey: "sessions" },
     ],
   },
   {
     title: "Management",
     icon: ListTodo,
     items: [
-      { title: "Tasks", url: "/tasks" },
-      { title: "Schedules", url: "/schedules" },
-      { title: "Jobs", url: "/jobs" },
+      { title: "Tasks", url: "/tasks", countKey: "tasks" },
+      { title: "Schedules", url: "/schedules", countKey: "schedules" },
       { title: "Projects", url: "/projects" },
       { title: "Plans", url: "/plans" },
       { title: "Orders", url: "/orders" },
@@ -81,8 +80,10 @@ const navGroups = [
     title: "Data & Memory",
     icon: Brain,
     items: [
-      { title: "Memory", url: "/memory" },
+      { title: "Memory", url: "/memory", countKey: "memory" },
       { title: "Logs", url: "/logs" },
+      { title: "Recordings", url: "/recordings" },
+      { title: "Economy", url: "/economy" },
     ],
   },
   {
@@ -90,6 +91,7 @@ const navGroups = [
     icon: Mail,
     items: [
       { title: "Messages", url: "/messages" },
+      { title: "Emails", url: "/emails" },
       { title: "Channels", url: "/channels" },
       { title: "Webhooks", url: "/webhooks" },
       { title: "Contacts", url: "/contacts" },
@@ -118,6 +120,7 @@ const navGroups = [
     icon: Activity,
     items: [
       { title: "Heartbeat", url: "/heartbeat" },
+      { title: "Status", url: "/status" },
     ],
   },
 ]

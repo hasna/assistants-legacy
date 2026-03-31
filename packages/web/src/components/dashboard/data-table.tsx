@@ -74,6 +74,8 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   expandedRow?: string | null
   renderExpanded?: (row: TData) => React.ReactNode
+  /** Custom empty state rendered when the table has no rows */
+  emptyState?: React.ReactNode
 }
 
 // Checkbox column prepended automatically when row selection is enabled
@@ -166,6 +168,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   expandedRow,
   renderExpanded,
+  emptyState,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -235,7 +238,7 @@ export function DataTable<TData, TValue>({
   const actions = bulkActions ?? getDefaultBulkActions<TData>()
 
   return (
-    <div className="relative flex flex-col gap-4">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -293,8 +296,8 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
+      <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border shadow-xs">
+        <Table className="min-w-[600px]">
           <TableHeader className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -360,7 +363,7 @@ export function DataTable<TData, TValue>({
                   colSpan={allColumns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  {emptyState ?? "No results."}
                 </TableCell>
               </TableRow>
             )}
@@ -446,7 +449,7 @@ export function DataTable<TData, TValue>({
       {/* Bulk Actions Bar - Bottom Center Popover */}
       {selectedCount > 0 && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <div className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2.5 shadow-lg">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-xl">
             <span className="text-sm font-medium">
               {selectedCount} selected
             </span>

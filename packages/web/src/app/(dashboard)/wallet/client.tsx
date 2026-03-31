@@ -59,8 +59,11 @@ const columns: ColumnDef<WalletCardRow>[] = [
 
 export function WalletClient({ data }: { data: WalletCardRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Wallet</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
+        <p className="text-muted-foreground text-sm">Payment cards and billing information.</p>
+      </div>
       <DataTable
         columns={columns}
         data={data}

@@ -7,10 +7,26 @@ import { MessageList } from '@/components/chat/MessageList';
 import { ModelSelector } from '@/components/chat/ModelSelector';
 import { SessionSidebar } from '@/components/chat/SessionSidebar';
 import { SessionSearch } from '@/components/chat/SessionSearch';
+import { SetupWizard } from '@/components/chat/SetupWizard';
 import { useChat } from '@/hooks/use-chat';
 import { useSessions } from '@/hooks/use-sessions';
 import { useRouter } from 'next/navigation';
 import { DEFAULT_MODEL } from '@/lib/models';
+
+function ThinkingIndicator() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const interval = setInterval(() => setElapsed((Date.now() - start) / 1000), 100);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground shrink-0">
+      <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+      <span>Thinking{elapsed > 1 ? `... ${elapsed.toFixed(1)}s` : '...'}</span>
+    </div>
+  );
+}
 
 const SUGGESTIONS = [
   'Summarize my recent sessions',
@@ -30,6 +46,21 @@ export default function NewChatPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const [resumedSessionId, setResumedSessionId] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState('You are a helpful AI assistant.');
+
+  // Check if API keys are configured
+  useEffect(() => {
+    fetch('/api/setup')
+      .then((r) => r.json())
+      .then((data) => {
+        setNeedsSetup(!data.hasAnthropicKey);
+        setSetupChecked(true);
+      })
+      .catch(() => setSetupChecked(true));
+  }, []);
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages, loadMessages } = useChat(resumedSessionId ?? undefined);
   const { grouped } = useSessions();
 
@@ -53,6 +84,15 @@ export default function NewChatPage() {
     }
   }
 
+  // Show setup wizard if API key is missing
+  if (setupChecked && needsSetup) {
+    return (
+      <div className="flex h-full overflow-hidden">
+        <SetupWizard onComplete={() => setNeedsSetup(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Session search overlay */}
@@ -69,7 +109,7 @@ export default function NewChatPage() {
 
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-border px-4 py-2 shrink-0">
+        <header className="flex items-center justify-between border-b border-border/60 px-4 py-2 shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -82,15 +122,37 @@ export default function NewChatPage() {
               {resumedSessionId ? `Session ${resumedSessionId.slice(0, 8)}…` : 'New Chat'}
             </h1>
           </div>
-          <ModelSelector value={model} onChange={setModel} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSystemPrompt(!showSystemPrompt)}
+              className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              title="System prompt"
+            >
+              📝 Prompt
+            </button>
+            <ModelSelector value={model} onChange={setModel} />
+          </div>
         </header>
 
-        {/* Streaming progress bar */}
-        {isStreaming && (
-          <div className="h-0.5 w-full bg-muted overflow-hidden shrink-0">
-            <div className="h-full bg-primary animate-[stream_1.5s_ease-in-out_infinite]" style={{ width: '30%' }} />
+        {/* System prompt editor */}
+        {showSystemPrompt && (
+          <div className="border-b border-border bg-muted/30 p-3 shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground">System Prompt</span>
+              <button onClick={() => setShowSystemPrompt(false)} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
+            </div>
+            <textarea
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-ring resize-none"
+              rows={4}
+              placeholder="You are a helpful AI assistant..."
+            />
           </div>
         )}
+
+        {/* Streaming indicator */}
+        {isStreaming && <ThinkingIndicator />}
 
         {/* Messages or empty state with suggestions */}
         {messages.length === 0 ? (
@@ -104,7 +166,7 @@ export default function NewChatPage() {
                 <button
                   key={s}
                   onClick={() => sendMessage(s, model)}
-                  className="rounded-xl border px-4 py-3 text-left text-sm hover:bg-accent/60 transition-colors"
+                  className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
                 >
                   {s}
                 </button>
@@ -118,8 +180,7 @@ export default function NewChatPage() {
         {/* Error */}
         {error && (
           <div className="mx-auto w-full max-w-3xl px-4 shrink-0">
-            <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
-              <span className="shrink-0">⚠️</span>
+            <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
               <div>
                 <span className="font-medium">Error: </span>
                 {/* Parse and simplify JSON error messages */}

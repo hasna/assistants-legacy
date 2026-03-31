@@ -9,7 +9,7 @@
  * Requires: dev server running on port 3001
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test"
+import { describe, test, expect, beforeAll, afterAll } from "vitest"
 
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3000"
 

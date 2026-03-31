@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/dashboard/data-table"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog"
 import { toast } from "@/lib/toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 /**
  * Parse raw schedule JSON string into a human-readable description.
@@ -68,12 +71,12 @@ function parseSchedule(raw: string): { label: string; type: string } {
 
 function scheduleTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    interval: "bg-blue-100 text-blue-800",
-    cron: "bg-purple-100 text-purple-800",
-    once: "bg-gray-100 text-gray-700",
-    random: "bg-orange-100 text-orange-800",
+    interval: "rounded-full bg-blue-50 text-blue-700",
+    cron: "rounded-full bg-purple-50 text-purple-700",
+    once: "rounded-full bg-gray-50 text-gray-600",
+    random: "rounded-full bg-orange-50 text-orange-700",
   }
-  const cls = colors[type] ?? "bg-gray-100 text-gray-600"
+  const cls = colors[type] ?? "rounded-full bg-gray-50 text-gray-600"
   return <Badge className={cls}>{type}</Badge>
 }
 
@@ -106,28 +109,21 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800">{status}</Badge>
+    return <Badge className="rounded-full bg-blue-50 text-blue-700">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+    return <Badge className="rounded-full bg-green-50 text-green-700">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800">{status}</Badge>
+    return <Badge className="rounded-full bg-red-50 text-red-700">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{status}</Badge>
+    return <Badge className="rounded-full bg-yellow-50 text-yellow-700">{status}</Badge>
   }
-  return <Badge>{status}</Badge>
+  return <Badge className="rounded-full">{status}</Badge>
 }
 
 const columns: ColumnDef<ScheduleRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.id.slice(0, 8)}</code>
-    ),
-  },
   {
     accessorKey: "command",
     header: "Command",
@@ -185,29 +181,13 @@ const columns: ColumnDef<ScheduleRow>[] = [
     },
   },
   {
-    accessorKey: "run_count",
-    header: "Runs",
-    cell: ({ row }) => (
-      <span className="text-sm tabular-nums">{row.original.run_count ?? 0}</span>
-    ),
-  },
-  {
-    accessorKey: "project_path",
-    header: "Project",
-    cell: ({ row }) => {
-      const p = row.original.project_path
-      if (!p) return <span className="text-muted-foreground">—</span>
-      const parts = p.replace(/\\/g, "/").split("/")
-      const name = parts[parts.length - 1] || p
-      return <span className="text-xs" title={p}>{name}</span>
-    },
-  },
-  {
     id: "actions",
     header: "",
     cell: function ActionsCell({ row }) {
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const router = useRouter()
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [confirmOpen, setConfirmOpen] = useState(false)
       const isActive = row.original.status === "active"
 
       const handle = async (action: "pause" | "resume" | "delete") => {
@@ -227,18 +207,27 @@ const columns: ColumnDef<ScheduleRow>[] = [
       return (
         <div className="flex items-center gap-1">
           {isActive ? (
-            <button onClick={() => handle("pause")} className="rounded px-2 py-1 text-xs border hover:bg-accent" title="Pause">⏸</button>
+            <button onClick={() => handle("pause")} className="rounded-lg px-2 py-1 text-xs border border-border hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Pause">Pause</button>
           ) : (
-            <button onClick={() => handle("resume")} className="rounded px-2 py-1 text-xs border hover:bg-accent" title="Resume">▶</button>
+            <button onClick={() => handle("resume")} className="rounded-lg px-2 py-1 text-xs border border-border hover:bg-accent hover:-translate-y-px transition-all duration-150" title="Resume">Resume</button>
           )}
-          <button onClick={() => { if (confirm("Delete this schedule?")) handle("delete") }} className="rounded px-2 py-1 text-xs border hover:bg-red-50 hover:text-red-600" title="Delete">🗑</button>
+          <button onClick={() => setConfirmOpen(true)} className="rounded-lg px-2 py-1 text-xs border border-border hover:bg-red-50 hover:text-red-600 hover:-translate-y-px transition-all duration-150" title="Delete">Delete</button>
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title="Delete this schedule?"
+            description="This action cannot be undone."
+            confirmLabel="Delete"
+            variant="destructive"
+            onConfirm={() => { setConfirmOpen(false); handle("delete") }}
+          />
         </div>
       )
     },
   },
 ]
 
-function NewScheduleForm({ onClose }: { onClose: () => void }) {
+function NewScheduleDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [command, setCommand] = useState("")
   const [scheduleType, setScheduleType] = useState<'interval' | 'cron' | 'once'>('interval')
   const [intervalValue, setIntervalValue] = useState("60")
@@ -256,77 +245,79 @@ function NewScheduleForm({ onClose }: { onClose: () => void }) {
       body: JSON.stringify({ command: command.trim(), scheduleType, intervalValue: parseInt(intervalValue), intervalUnit, cronExpression }),
     })
     setSaving(false)
-    if (res.ok) { toast.success("Schedule created"); onClose(); router.refresh() }
+    if (res.ok) { toast.success("Schedule created"); onOpenChange(false); router.refresh(); setCommand("") }
     else toast.error("Failed to create schedule")
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">New Schedule</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="text-xs text-muted-foreground">Command *</label>
-          <input className="w-full rounded border px-2 py-1.5 text-sm mt-0.5" placeholder="/my-skill or /command" value={command} onChange={e => setCommand(e.target.value)} />
-        </div>
-        <div className="col-span-2">
-          <label className="text-xs text-muted-foreground">Schedule Type</label>
-          <div className="flex rounded-lg border overflow-hidden text-xs mt-0.5">
-            {(['interval', 'cron', 'once'] as const).map(t => (
-              <button key={t} onClick={() => setScheduleType(t)} className={`px-3 py-1.5 flex-1 ${scheduleType === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}>{t}</button>
-            ))}
-          </div>
-        </div>
-        {scheduleType === 'interval' && (
-          <>
-            <div>
-              <label className="text-xs text-muted-foreground">Every</label>
-              <input type="number" min={1} className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalValue} onChange={e => setIntervalValue(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Unit</label>
-              <select className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value)}>
-                <option value="seconds">seconds</option>
-                <option value="minutes">minutes</option>
-                <option value="hours">hours</option>
-              </select>
-            </div>
-          </>
-        )}
-        {scheduleType === 'cron' && (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New Schedule</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="text-xs text-muted-foreground">Cron Expression</label>
-            <input className="w-full rounded border px-2 py-1 text-sm mt-0.5 font-mono" placeholder="*/5 * * * *" value={cronExpression} onChange={e => setCronExpression(e.target.value)} />
-            <p className="text-xs text-muted-foreground mt-0.5">Format: minute hour day month weekday</p>
+            <label className="text-xs text-muted-foreground">Command *</label>
+            <input className="w-full rounded border px-2 py-1.5 text-sm mt-0.5" placeholder="/my-skill or /command" value={command} onChange={e => setCommand(e.target.value)} />
           </div>
-        )}
-        {scheduleType === 'once' && (
           <div className="col-span-2">
-            <label className="text-xs text-muted-foreground">Runs immediately (once)</label>
+            <label className="text-xs text-muted-foreground">Schedule Type</label>
+            <div className="flex rounded-lg border overflow-hidden text-xs mt-0.5">
+              {(['interval', 'cron', 'once'] as const).map(t => (
+                <button key={t} onClick={() => setScheduleType(t)} className={`px-3 py-1.5 flex-1 ${scheduleType === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}>{t}</button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <button onClick={save} disabled={saving} className="rounded bg-primary text-primary-foreground px-4 py-1.5 text-sm hover:bg-primary/90 disabled:opacity-50">{saving ? "Creating…" : "Create Schedule"}</button>
-        <button onClick={onClose} className="rounded border px-4 py-1.5 text-sm hover:bg-accent">Cancel</button>
-      </div>
-    </div>
+          {scheduleType === 'interval' && (
+            <>
+              <div>
+                <label className="text-xs text-muted-foreground">Every</label>
+                <input type="number" min={1} className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalValue} onChange={e => setIntervalValue(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Unit</label>
+                <select className="w-full rounded border px-2 py-1 text-sm mt-0.5" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value)}>
+                  <option value="seconds">seconds</option>
+                  <option value="minutes">minutes</option>
+                  <option value="hours">hours</option>
+                </select>
+              </div>
+            </>
+          )}
+          {scheduleType === 'cron' && (
+            <div className="col-span-2">
+              <label className="text-xs text-muted-foreground">Cron Expression</label>
+              <input className="w-full rounded border px-2 py-1 text-sm mt-0.5 font-mono" placeholder="*/5 * * * *" value={cronExpression} onChange={e => setCronExpression(e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-0.5">Format: minute hour day month weekday</p>
+            </div>
+          )}
+          {scheduleType === 'once' && (
+            <div className="col-span-2">
+              <label className="text-xs text-muted-foreground">Runs immediately (once)</label>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => onOpenChange(false)} className="rounded border px-4 py-1.5 text-sm hover:bg-accent">Cancel</button>
+          <button onClick={save} disabled={saving} className="rounded bg-primary text-primary-foreground px-4 py-1.5 text-sm hover:bg-primary/90 disabled:opacity-50">{saving ? "Creating..." : "Create"}</button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 export function SchedulesClient({ data }: { data: ScheduleRow[] }) {
+  useAutoRefresh()
   const [showNew, setShowNew] = useState(false)
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Schedules</h1>
-        <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90">
+        <button onClick={() => setShowNew(true)} className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-sm font-medium hover:bg-primary/90 hover:-translate-y-px transition-all duration-150 shadow-xs hover:shadow-sm">
           + New Schedule
         </button>
       </div>
-      {showNew && <NewScheduleForm onClose={() => setShowNew(false)} />}
+      <NewScheduleDialog open={showNew} onOpenChange={setShowNew} />
       <DataTable
         columns={columns}
         data={data}

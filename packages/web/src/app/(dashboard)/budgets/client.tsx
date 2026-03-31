@@ -64,8 +64,11 @@ const columns: ColumnDef<BudgetRow>[] = [
 
 export function BudgetsClient({ data }: { data: BudgetRow[] }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Budgets</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight">Budgets</h1>
+        <p className="text-muted-foreground text-sm">Token usage and cost tracking across scopes.</p>
+      </div>
       <DataTable
         columns={columns}
         data={data}

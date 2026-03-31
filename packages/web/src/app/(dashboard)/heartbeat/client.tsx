@@ -21,32 +21,21 @@ function formatDate(date: string | number | null): string {
 function statusBadge(status: string) {
   const s = status.toLowerCase()
   if (["active", "running", "in_progress"].includes(s)) {
-    return <Badge className="bg-blue-100 text-blue-800">{status}</Badge>
+    return <Badge className="rounded-full bg-blue-50 text-blue-700">{status}</Badge>
   }
   if (["completed", "done", "success"].includes(s)) {
-    return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+    return <Badge className="rounded-full bg-green-50 text-green-700">{status}</Badge>
   }
   if (["failed", "error"].includes(s)) {
-    return <Badge className="bg-red-100 text-red-800">{status}</Badge>
+    return <Badge className="rounded-full bg-red-50 text-red-700">{status}</Badge>
   }
   if (["pending", "queued"].includes(s)) {
-    return <Badge className="bg-yellow-100 text-yellow-800">{status}</Badge>
+    return <Badge className="rounded-full bg-yellow-50 text-yellow-700">{status}</Badge>
   }
-  return <Badge>{status}</Badge>
+  return <Badge className="rounded-full">{status}</Badge>
 }
 
 const columns: ColumnDef<HeartbeatRow>[] = [
-  {
-    accessorKey: "id",
-    header: "ID",
-  },
-  {
-    accessorKey: "session_id",
-    header: "Session ID",
-    cell: ({ row }) => (
-      <code className="text-xs">{row.original.session_id.slice(0, 8)}</code>
-    ),
-  },
   {
     accessorKey: "status",
     header: "Status",
@@ -134,15 +123,15 @@ const columns: ColumnDef<HeartbeatRow>[] = [
 export function HeartbeatClient({ data }: { data: HeartbeatRow[] }) {
   useAutoRefresh()
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Heartbeat</h1>
         <p className="text-muted-foreground text-sm">
           Session heartbeat history — state, context usage, and activity log.
         </p>
       </div>
       {data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 p-12 text-center">
           <p className="text-muted-foreground text-sm">
             No heartbeat history yet. Heartbeats are recorded while the assistant is active.
           </p>
