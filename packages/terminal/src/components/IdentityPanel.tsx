@@ -797,10 +797,12 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Create Identity</b></text>
-          {totalCreateOptions > MAX_VISIBLE_ITEMS && (
-            <text fg={themeColor('muted')}> ({templateIndex + 1}/{totalCreateOptions})</text>
-          )}
+          <text>
+            <text fg={themeColor('info')}><b>Create Identity</b></text>
+            {totalCreateOptions > MAX_VISIBLE_ITEMS && (
+              <text fg={themeColor('muted')}> ({templateIndex + 1}/{totalCreateOptions})</text>
+            )}
+          </text>
         </box>
 
         <box
@@ -856,8 +858,10 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
-          <text fg={themeColor('muted')}> - {stepLabel}</text>
+          <text>
+            <text fg={themeColor('info')}><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
+            <text fg={themeColor('muted')}> - {stepLabel}</text>
+          </text>
         </box>
 
         {renderFormSummary()}
@@ -1158,9 +1162,11 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{currentIdentity.name}</b></text>
-          {currentIdentity.isDefault && <text fg={themeColor('warning')}> (default)</text>}
-          {isActive && <text fg={themeColor('success')}> (active)</text>}
+          <text>
+            <text fg={themeColor('info')}><b>{currentIdentity.name}</b></text>
+            {currentIdentity.isDefault && <text fg={themeColor('warning')}> (default)</text>}
+            {isActive && <text fg={themeColor('success')}> (active)</text>}
+          </text>
         </box>
 
         <box
@@ -1174,40 +1180,33 @@ export function IdentityPanel({
             <text><b>Profile</b></text>
           </box>
           <box marginLeft={2}>
-            <text fg={themeColor('muted')}>Display Name: </text>
-            <text>{currentIdentity.profile.displayName}</text>
+            <text><text fg={themeColor('muted')}>Display Name: </text>{currentIdentity.profile.displayName}</text>
           </box>
           {currentIdentity.profile.title && (
             <box marginLeft={2}>
-              <text fg={themeColor('muted')}>Role: </text>
-              <text>{currentIdentity.profile.title}</text>
+              <text><text fg={themeColor('muted')}>Role: </text>{currentIdentity.profile.title}</text>
             </box>
           )}
           {currentIdentity.profile.company && (
             <box marginLeft={2}>
-              <text fg={themeColor('muted')}>Company: </text>
-              <text>{currentIdentity.profile.company}</text>
+              <text><text fg={themeColor('muted')}>Company: </text>{currentIdentity.profile.company}</text>
             </box>
           )}
           <box marginLeft={2}>
-            <text fg={themeColor('muted')}>Timezone: </text>
-            <text>{currentIdentity.profile.timezone}</text>
+            <text><text fg={themeColor('muted')}>Timezone: </text>{currentIdentity.profile.timezone}</text>
           </box>
 
           <box marginTop={1} marginBottom={1}>
             <text><b>Preferences</b></text>
           </box>
           <box marginLeft={2}>
-            <text fg={themeColor('muted')}>Language: </text>
-            <text>{currentIdentity.preferences.language}</text>
+            <text><text fg={themeColor('muted')}>Language: </text>{currentIdentity.preferences.language}</text>
           </box>
           <box marginLeft={2}>
-            <text fg={themeColor('muted')}>Style: </text>
-            <text>{currentIdentity.preferences.communicationStyle}</text>
+            <text><text fg={themeColor('muted')}>Style: </text>{currentIdentity.preferences.communicationStyle}</text>
           </box>
           <box marginLeft={2}>
-            <text fg={themeColor('muted')}>Response: </text>
-            <text>{currentIdentity.preferences.responseLength}</text>
+            <text><text fg={themeColor('muted')}>Response: </text>{currentIdentity.preferences.responseLength}</text>
           </box>
 
           {(currentIdentity.contacts.emails.length > 0 ||
@@ -1220,20 +1219,18 @@ export function IdentityPanel({
               </box>
               {currentIdentity.contacts.emails.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg={themeColor('muted')}>Email: </text>
-                  <text>{currentIdentity.contacts.emails[0].value}</text>
+                  <text><text fg={themeColor('muted')}>Email: </text>{currentIdentity.contacts.emails[0].value}</text>
                 </box>
               )}
               {currentIdentity.contacts.phones.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg={themeColor('muted')}>Phone: </text>
-                  <text>{currentIdentity.contacts.phones[0].value}</text>
+                  <text><text fg={themeColor('muted')}>Phone: </text>{currentIdentity.contacts.phones[0].value}</text>
                 </box>
               )}
               {currentIdentity.contacts.addresses.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg={themeColor('muted')}>Address: </text>
                   <text>
+                    <text fg={themeColor('muted')}>Address: </text>
                     {[
                       currentIdentity.contacts.addresses[0].street,
                       currentIdentity.contacts.addresses[0].city,
@@ -1246,8 +1243,7 @@ export function IdentityPanel({
               )}
               {currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0 && (
                 <box marginLeft={2}>
-                  <text fg={themeColor('muted')}>Virtual: </text>
-                  <text>{currentIdentity.contacts.virtualAddresses[0].value}</text>
+                  <text><text fg={themeColor('muted')}>Virtual: </text>{currentIdentity.contacts.virtualAddresses[0].value}</text>
                 </box>
               )}
             </>
@@ -1289,10 +1285,12 @@ export function IdentityPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text fg={themeColor('info')}><b>Identities</b></text>
-        {identities.length > MAX_VISIBLE_ITEMS && (
-          <text fg={themeColor('muted')}> ({identityIndex + 1}/{identities.length})</text>
-        )}
+        <text>
+          <text fg={themeColor('info')}><b>Identities</b></text>
+          {identities.length > MAX_VISIBLE_ITEMS && (
+            <text fg={themeColor('muted')}> ({identityIndex + 1}/{identities.length})</text>
+          )}
+        </text>
       </box>
 
       <box
@@ -1320,14 +1318,10 @@ export function IdentityPanel({
             <box key={identity.id} paddingY={0}>
               <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : statusColor}>
-                {statusIcon}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+                <text fg={isSelected ? themeColor('text') : statusColor}>
+                  {statusIcon}
+                </text>
                 {' '}{nameDisplay}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{identity.profile.displayName}
               </text>
             </box>
@@ -1342,13 +1336,13 @@ export function IdentityPanel({
       </box>
 
       <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: </text>
-        <text fg={themeColor('warning')}>★</text>
-        <text fg={themeColor('muted')}> default | </text>
-        <text fg={themeColor('success')}>●</text>
-        <text fg={themeColor('muted')}> active | </text>
-        <text fg={themeColor('muted')}>○</text>
-        <text fg={themeColor('muted')}> inactive</text>
+        <text fg={themeColor('muted')}>
+          {'Legend: '}
+          <text fg={themeColor('warning')}>★</text>
+          {' default | '}
+          <text fg={themeColor('success')}>●</text>
+          {' active | ○ inactive'}
+        </text>
       </box>
 
       <box marginTop={1}>

@@ -289,7 +289,7 @@ export function HooksPanel({
           <text fg={themeColor('info')}><b>Create Hook from Prompt</b></text>
         </box>
         <text fg={themeColor('muted')}>Describe the behavior you want (event, matcher, action).</text>
-        <box marginTop={1}>
+        <box flexDirection="row" marginTop={1}>
           <text>Prompt: </text>
           <input
             value={promptValue}
@@ -363,9 +363,8 @@ export function HooksPanel({
         {/* Native Hooks Section */}
         {nativeHooks.length > 0 && (
           <box flexDirection="column" marginBottom={1}>
-            <box flexDirection="row">
-              <text fg={themeColor('info')}><b>Native</b></text>
-              <text fg={themeColor('muted')}> ({nativeHooks.length})</text>
+            <box>
+              <text><text fg={themeColor('info')}><b>Native</b></text><text fg={themeColor('muted')}> ({nativeHooks.length})</text></text>
             </box>
             {nativeHooks.map((item, index) => {
               const isSelected = index === selectedIndex && selectedIndex < nativeHooks.length;
@@ -394,16 +393,14 @@ export function HooksPanel({
           </box>
         ) : flattenedHooks.length > 0 ? (
           <>
-            <box flexDirection="row">
-              <text fg={themeColor('muted')}><b>User Hooks</b></text>
-              <text fg={themeColor('muted')}> ({flattenedHooks.length})</text>
+            <box>
+              <text fg={themeColor('muted')}><b>User Hooks</b> ({flattenedHooks.length})</text>
             </box>
             {/* Render grouped by event */}
             {Array.from(groupedHooks.entries()).map(([event, eventHooks]) => (
               <box key={event} flexDirection="column">
-                <box flexDirection="row" paddingLeft={1}>
-                  <text fg={themeColor('muted')}><b>{event}</b></text>
-                  <text fg={themeColor('muted')}> ({eventHooks.length})</text>
+                <box paddingLeft={1}>
+                  <text fg={themeColor('muted')}><b>{event}</b> ({eventHooks.length})</text>
                 </box>
                 {eventHooks.map((item) => {
                   const globalIndex = flattenedHooks.indexOf(item) + nativeHooks.length;
@@ -435,21 +432,17 @@ export function HooksPanel({
       {selectedNativeHook && (
         <box marginTop={1} flexDirection="column">
           <box>
-            <text fg={themeColor('muted')}>Type: </text>
-            <text fg={themeColor('info')}>native</text>
+            <text><text fg={themeColor('muted')}>Type: </text><text fg={themeColor('info')}>native</text></text>
           </box>
           <box>
-            <text fg={themeColor('muted')}>Event: </text>
-            <text>{selectedNativeHook.event}</text>
+            <text><text fg={themeColor('muted')}>Event: </text>{selectedNativeHook.event}</text>
           </box>
           <box>
-            <text fg={themeColor('muted')}>ID: </text>
-            <text>{selectedNativeHook.hook.id}</text>
+            <text><text fg={themeColor('muted')}>ID: </text>{selectedNativeHook.hook.id}</text>
           </box>
           {selectedNativeHook.hook.description && (
             <box>
-              <text fg={themeColor('muted')}>Description: </text>
-              <text>{selectedNativeHook.hook.description}</text>
+              <text><text fg={themeColor('muted')}>Description: </text>{selectedNativeHook.hook.description}</text>
             </box>
           )}
         </box>
@@ -459,32 +452,30 @@ export function HooksPanel({
       {selectedHook && (
         <box marginTop={1} flexDirection="column">
           <box>
-            <text fg={themeColor('muted')}>Type: </text>
-            <text>{selectedHook.hook.type}</text>
-            {selectedHook.hook.async && <text fg={themeColor('warning')}> (async)</text>}
+            <text>
+              <text fg={themeColor('muted')}>Type: </text>
+              {selectedHook.hook.type}
+              {selectedHook.hook.async && <text fg={themeColor('warning')}> (async)</text>}
+            </text>
           </box>
           {selectedHook.matcher && (
             <box>
-              <text fg={themeColor('muted')}>Matcher: </text>
-              <text>{selectedHook.matcher}</text>
+              <text><text fg={themeColor('muted')}>Matcher: </text>{selectedHook.matcher}</text>
             </box>
           )}
           {selectedHook.hook.description && (
             <box>
-              <text fg={themeColor('muted')}>Description: </text>
-              <text>{selectedHook.hook.description}</text>
+              <text><text fg={themeColor('muted')}>Description: </text>{selectedHook.hook.description}</text>
             </box>
           )}
           {selectedHook.hook.command && (
             <box>
-              <text fg={themeColor('muted')}>Command: </text>
-              <text>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</text>
+              <text><text fg={themeColor('muted')}>Command: </text>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</text>
             </box>
           )}
           {selectedHook.hook.timeout && (
             <box>
-              <text fg={themeColor('muted')}>Timeout: </text>
-              <text>{selectedHook.hook.timeout}ms</text>
+              <text><text fg={themeColor('muted')}>Timeout: </text>{selectedHook.hook.timeout}ms</text>
             </box>
           )}
         </box>
