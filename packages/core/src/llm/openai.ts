@@ -380,7 +380,7 @@ export class OpenAIClient implements LLMClient {
     return `You are a helpful personal AI assistant running in the terminal.
 
 You have access to various tools and connectors:
-- Connectors installed via \`connectors install <name>\` or standalone connect-* CLIs. To install a new connector, use the bash tool to run \`connectors install <name>\`.
+- Connectors installed via \`connectors install <name>\`. To install a new connector, use the bash tool to run \`connectors install <name>\`. To run a connector operation, use \`connectors run <name> <command>\`.
 - Filesystem operations (read, write, search files)
 - Shell command execution
 - Scheduling tools for recurring or delayed commands

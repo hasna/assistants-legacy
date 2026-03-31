@@ -71,3 +71,96 @@ export function isFirstGreetingShown(): boolean {
 export function markFirstGreetingShown(): void {
   setConfigValue('firstGreetingShown', 'true');
 }
+
+/**
+ * Get a config value parsed as JSON.
+ */
+export function getConfigJson<T = unknown>(key: string, scope: string = 'global', scopeId: string = ''): T | null {
+  const raw = getConfigValue(key, scope, scopeId);
+  if (raw == null) return null;
+  try { return JSON.parse(raw) as T; } catch { return null; }
+}
+
+/**
+ * Set a config value as JSON.
+ */
+export function setConfigJson(key: string, value: unknown, scope: string = 'global', scopeId: string = ''): void {
+  setConfigValue(key, JSON.stringify(value), scope, scopeId);
+}
+
+/**
+ * Delete a config key.
+ */
+export function deleteConfigValue(key: string, scope: string = 'global', scopeId: string = ''): boolean {
+  try {
+    const db = getDatabase();
+    db.prepare('DELETE FROM config WHERE scope = ? AND scope_id = ? AND key = ?').run(scope, scopeId, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * List all config entries, optionally filtered by scope.
+ */
+export function listConfigEntries(scope?: string, scopeId?: string): Array<{ scope: string; scopeId: string; key: string; value: string; updatedAt: string }> {
+  try {
+    const db = getDatabase();
+    let sql = 'SELECT scope, scope_id, key, value, updated_at FROM config';
+    const params: string[] = [];
+    if (scope) { sql += ' WHERE scope = ?'; params.push(scope); }
+    if (scope && scopeId !== undefined) { sql += ' AND scope_id = ?'; params.push(scopeId); }
+    sql += ' ORDER BY scope, key';
+    const rows = db.prepare(sql).all(...params) as Array<{ scope: string; scope_id: string; key: string; value: string; updated_at: string }>;
+    return rows.map((r) => ({ scope: r.scope, scopeId: r.scope_id, key: r.key, value: r.value, updatedAt: r.updated_at }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Migrate a JSON config object into the SQLite config table.
+ * Flattens nested keys with dot notation (e.g., "llm.model", "voice.provider").
+ */
+export function migrateJsonToConfig(config: Record<string, unknown>, scope: string = 'global', scopeId: string = '', prefix: string = ''): number {
+  let count = 0;
+  for (const [key, value] of Object.entries(config)) {
+    if (value === undefined || value === null) continue;
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      count += migrateJsonToConfig(value as Record<string, unknown>, scope, scopeId, fullKey);
+    } else {
+      const strValue = typeof value === 'string' ? value : JSON.stringify(value);
+      setConfigValue(fullKey, strValue, scope, scopeId);
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Build a nested config object from flat dot-notation keys in SQLite.
+ */
+export function buildConfigFromDb(scope: string = 'global', scopeId: string = ''): Record<string, unknown> {
+  const entries = listConfigEntries(scope, scopeId);
+  const result: Record<string, unknown> = {};
+  for (const entry of entries) {
+    const parts = entry.key.split('.');
+    let current = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!(parts[i] in current) || typeof current[parts[i]] !== 'object') {
+        current[parts[i]] = {};
+      }
+      current = current[parts[i]] as Record<string, unknown>;
+    }
+    const lastKey = parts[parts.length - 1];
+    // Try to parse JSON values back
+    try {
+      current[lastKey] = JSON.parse(entry.value);
+    } catch {
+      current[lastKey] = entry.value;
+    }
+  }
+  return result;
+}

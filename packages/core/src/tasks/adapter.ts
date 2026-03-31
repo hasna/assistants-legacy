@@ -11,11 +11,14 @@
 import {
   createTask as sdkCreateTask,
   getTask as sdkGetTask,
+  getTaskWithRelations as sdkGetTaskWithRelations,
   listTasks as sdkListTasks,
   updateTask as sdkUpdateTask,
   deleteTask as sdkDeleteTask,
   startTask as sdkStartTask,
   completeTask as sdkCompleteTask,
+  addDependency as sdkAddDependency,
+  removeDependency as sdkRemoveDependency,
   ensureProject,
   getDatabase,
   type Task as SdkTask,
@@ -77,6 +80,23 @@ function fromSdkTask(t: SdkTask): Task {
   };
 }
 
+/** Get a task with its dependency relations populated. */
+function fromSdkTaskWithRelations(id: string): Task | null {
+  try {
+    const db = getDatabase();
+    const full = sdkGetTaskWithRelations(id, db);
+    if (!full) return null;
+    const task = fromSdkTask(full as SdkTask);
+    // dependencies = tasks this task depends on (blockedBy)
+    task.blockedBy = (full.dependencies || []).map((d: SdkTask) => d.id);
+    // blocked_by = tasks that depend on this task (blocks)
+    task.blocks = (full.blocked_by || []).map((d: SdkTask) => d.id);
+    return task;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Queue Pause State (local, since SDK doesn't have queue pause) ────────────
 
 const pauseState = new Map<string, boolean>();
@@ -96,10 +116,8 @@ export async function getTasks(cwd: string): Promise<Task[]> {
 }
 
 export async function getTask(cwd: string, id: string): Promise<Task | null> {
-  const db = getDatabase();
-  const task = sdkGetTask(id, db);
-  if (!task) return null;
-  return fromSdkTask(task);
+  // Use relations version to populate blockedBy/blocks
+  return fromSdkTaskWithRelations(id);
 }
 
 export async function addTask(
@@ -153,7 +171,28 @@ export async function updateTask(
   }
 
   const updated = sdkUpdateTask(id, input, db);
-  return fromSdkTask(updated);
+
+  // Wire up dependency changes
+  if (updates.blockedBy !== undefined) {
+    // Get current dependencies to compute diff
+    const full = sdkGetTaskWithRelations(id, db);
+    const currentDeps = (full?.dependencies || []).map((d: SdkTask) => d.id);
+    const newDeps = updates.blockedBy;
+    // Remove old deps
+    for (const depId of currentDeps) {
+      if (!newDeps.includes(depId)) {
+        try { sdkRemoveDependency(id, depId, db); } catch { /**/ }
+      }
+    }
+    // Add new deps
+    for (const depId of newDeps) {
+      if (!currentDeps.includes(depId)) {
+        try { sdkAddDependency(id, depId, db); } catch { /**/ }
+      }
+    }
+  }
+
+  return fromSdkTaskWithRelations(id) ?? fromSdkTask(updated);
 }
 
 export async function deleteTask(cwd: string, id: string): Promise<boolean> {

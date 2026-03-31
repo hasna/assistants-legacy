@@ -356,7 +356,7 @@ export type { ModelDefinition } from './llm/models';
 
 // Config
 export { loadConfig, getConfigPath, getConfigDir, getProjectConfigDir, getProjectDataDir, getActiveProfile, getTempFolder, loadSystemPrompt, loadHooksConfig, ensureConfigDir } from './config';
-export { getConfigValue, setConfigValue, isOnboardingCompleted, markOnboardingCompleted, isFirstGreetingShown, markFirstGreetingShown } from './config-store';
+export { getConfigValue, setConfigValue, getConfigJson, setConfigJson, deleteConfigValue, listConfigEntries, migrateJsonToConfig, buildConfigFromDb, isOnboardingCompleted, markOnboardingCompleted, isFirstGreetingShown, markFirstGreetingShown } from './config-store';
 
 // Inbox
 export * from './inbox';

@@ -154,6 +154,27 @@ function hooksRegistryTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
       executor: async () => { const a = await import('../hooks-sdk/sdk-adapter') as any; const r = await a.listAvailableHooks(); return r?.length ? JSON.stringify(r, null, 2) : 'No hooks available.'; } },
     { tool: mkTool('hooks_registry_install', 'Install a hook from the registry.', { name: str('Hook name'), scope: str('global or project') }, ['name']),
       executor: async (i) => { const a = await import('../hooks-sdk/sdk-adapter') as any; const r = await a.installHook(String(i.name), (String(i.scope || 'project')) as 'global' | 'project'); return r ? `Hook installed: ${i.name}` : 'Install failed.'; } },
+    { tool: mkTool('hooks_remove', 'Remove/uninstall a hook by name.', { name: str('Hook name') }, ['name']),
+      executor: async (i) => { const a = await import('../hooks-sdk/sdk-adapter') as any; const r = await a.removeHook(String(i.name)); return r ? `Hook removed: ${i.name}` : 'Remove failed.'; } },
+    { tool: mkTool('hooks_info', 'Get details about a specific hook.', { name: str('Hook name') }, ['name']),
+      executor: async (i) => { const a = await import('../hooks-sdk/sdk-adapter') as any; const r = await a.getHookInfo(String(i.name)); return r ? JSON.stringify(r, null, 2) : 'Hook not found.'; } },
+  ];
+}
+
+// ─── Secrets ─────────────────────────────────────────────────────────────────
+
+function secretsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
+  return [
+    { tool: mkTool('secrets_list', 'List all stored secrets.', { scope: str('Filter by scope: global, assistant, or all') }),
+      executor: async (i) => { const a = await import('../secrets/sdk-adapter') as any; const r = a.listSecrets(String(i.scope || 'all')); return r?.length ? JSON.stringify(r, null, 2) : 'No secrets found.'; } },
+    { tool: mkTool('secrets_get', 'Get a secret by name.', { name: str('Secret name'), scope: str('Scope: global or assistant') }, ['name']),
+      executor: async (i) => { const a = await import('../secrets/sdk-adapter') as any; const r = a.getSecret(String(i.name), String(i.scope || 'assistant') as any); return r ? JSON.stringify(r, null, 2) : 'Secret not found.'; } },
+    { tool: mkTool('secrets_set', 'Set or update a secret value.', { name: str('Secret name'), value: str('Secret value'), scope: str('Scope: global or assistant') }, ['name', 'value']),
+      executor: async (i) => { const a = await import('../secrets/sdk-adapter') as any; a.setSecret(String(i.name), String(i.value), String(i.scope || 'assistant') as any); return `Secret "${i.name}" saved.`; } },
+    { tool: mkTool('secrets_delete', 'Delete a secret by name.', { name: str('Secret name'), scope: str('Scope: global or assistant') }, ['name']),
+      executor: async (i) => { const a = await import('../secrets/sdk-adapter') as any; const ok = a.deleteSecret(String(i.name), String(i.scope || 'assistant') as any); return ok ? `Secret "${i.name}" deleted.` : 'Secret not found.'; } },
+    { tool: mkTool('secrets_search', 'Search secrets by keyword.', { query: str('Search query') }, ['query']),
+      executor: async (i) => { const a = await import('../secrets/sdk-adapter') as any; const r = a.searchSecrets(String(i.query)); return r?.length ? JSON.stringify(r, null, 2) : 'No secrets matched.'; } },
   ];
 }
 
@@ -226,20 +247,19 @@ function testersTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 // ─── Wallets ──────────────────────────────────────────────────────────────────
 
 function walletsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
-  const sdk = () => import('@hasna/wallets' as any) as Promise<any>;
   return [
     { tool: mkTool('wallets_balance', 'Get wallet balance.', {}),
-      executor: async () => { const r = await (await sdk()).getBalance(); return r ? JSON.stringify(r, null, 2) : 'No balance info.'; } },
+      executor: async () => { const a = await import('../wallet/sdk-adapter'); const r = await a.getBalance(); return r ? JSON.stringify(r, null, 2) : 'No balance info.'; } },
     { tool: mkTool('wallets_cards', 'List payment cards.', {}),
-      executor: async () => { const r = await (await sdk()).listCards(); return r?.length ? JSON.stringify(r, null, 2) : 'No cards.'; } },
+      executor: async () => { const a = await import('../wallet/sdk-adapter'); const r = await a.listCards(); return r?.length ? JSON.stringify(r, null, 2) : 'No cards.'; } },
     { tool: mkTool('wallets_transactions', 'List recent transactions.', { limit: num('Max results') }),
-      executor: async (i) => { const r = await (await sdk()).listTransactions(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No transactions.'; } },
+      executor: async (i) => { const a = await import('../wallet/sdk-adapter'); const r = await a.listTransactions(Number(i.limit || 20)); return r?.length ? JSON.stringify(r, null, 2) : 'No transactions.'; } },
     { tool: mkTool('wallets_create_card', 'Create a new virtual payment card.', { label: str('Card label or purpose (optional)') }),
-      executor: async (i) => { const r = await (await sdk()).createCard(i.label ? { label: String(i.label) } : undefined); return r ? JSON.stringify(r, null, 2) : 'Card creation failed.'; } },
+      executor: async (i) => { const a = await import('../wallet/sdk-adapter'); const r = await a.createCard(i.label ? { label: String(i.label) } : undefined); return r ? JSON.stringify(r, null, 2) : 'Card creation failed.'; } },
     { tool: mkTool('wallets_card_details', 'Get details of a specific payment card.', { card_id: str('Card ID') }, ['card_id']),
-      executor: async (i) => { const r = await (await sdk()).getCardDetails(String(i.card_id)); return r ? JSON.stringify(r, null, 2) : 'Card not found.'; } },
+      executor: async (i) => { const a = await import('../wallet/sdk-adapter'); const r = await a.getCardDetails(String(i.card_id)); return r ? JSON.stringify(r, null, 2) : 'Card not found.'; } },
     { tool: mkTool('wallets_close_card', 'Close/deactivate a payment card.', { card_id: str('Card ID') }, ['card_id']),
-      executor: async (i) => { const r = await (await sdk()).closeCard(String(i.card_id)); return r ? 'Card closed.' : 'Close failed.'; } },
+      executor: async (i) => { const a = await import('../wallet/sdk-adapter'); const r = await a.closeCard(String(i.card_id)); return r ? 'Card closed.' : 'Close failed.'; } },
   ];
 }
 
@@ -319,7 +339,15 @@ function implementationsTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
 function terminalTools(): Array<{ tool: Tool; executor: ToolExecutor }> {
   return [
     { tool: mkTool('terminal_exec', 'Execute a command via the smart terminal wrapper (structured output, token-efficient).', { command: str('Shell command to execute') }, ['command']),
-      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter') as any; const r = await a.execCommand(String(i.command)); return r ?? 'Execution failed.'; } },
+      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter'); const r = await a.execCommand(String(i.command)); return r ? JSON.stringify(r) : 'Execution failed.'; } },
+    { tool: mkTool('terminal_count_tokens', 'Count tokens in text using the terminal token counter.', { text: str('Text to count tokens for') }, ['text']),
+      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter'); const r = await a.countTokens(String(i.text)); return r != null ? `${r} tokens` : 'Token counting not available.'; } },
+    { tool: mkTool('terminal_context_hints', 'Get context hints for a working directory (git status, project type, etc.).', { cwd: str('Working directory path') }, ['cwd']),
+      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter'); const r = await a.getContextHints(String(i.cwd)); return r ? JSON.stringify(r, null, 2) : 'No context hints.'; } },
+    { tool: mkTool('terminal_search_files', 'Search files by name or content in a directory.', { query: str('Search query'), cwd: str('Working directory (optional)') }, ['query']),
+      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter'); const r = await a.searchFiles(String(i.query), i.cwd ? String(i.cwd) : undefined); return r?.length ? JSON.stringify(r, null, 2) : 'No files found.'; } },
+    { tool: mkTool('terminal_tree', 'Get file tree structure for a directory.', { cwd: str('Directory path'), depth: num('Max depth (optional)') }, ['cwd']),
+      executor: async (i) => { const a = await import('../terminal-sdk/sdk-adapter'); const r = await a.getTree(String(i.cwd), i.depth ? Number(i.depth) : undefined); return r ? (typeof r === 'string' ? r : JSON.stringify(r, null, 2)) : 'Tree not available.'; } },
   ];
 }
 
@@ -401,4 +429,5 @@ export function registerAllSdkTools(registry: ToolRegistry): void {
   reg(registry, mcpsTools());
   reg(registry, configsTools());
   reg(registry, telephonySdkTools());
+  reg(registry, secretsTools());
 }

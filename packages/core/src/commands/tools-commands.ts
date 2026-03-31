@@ -369,8 +369,8 @@ export function connectorsCommand(): Command {
         message += 'No connectors found.\n\n';
         message += 'Install connectors using the `connectors` CLI:\n';
         message += '  `connectors install <name>` (e.g. `connectors install gmail`)\n\n';
-        message += 'Or install standalone `connect-*` CLIs:\n';
-        message += '  `bun add -g connect-<name>`\n\n';
+        message += 'Browse available connectors:\n';
+        message += '  `connectors list` or `connectors search <query>`\n\n';
         message += 'Then run `/connectors` again to verify it is detected.\n';
       } else {
         // Check auth status for each
@@ -434,7 +434,7 @@ export function connectorsCommand(): Command {
         message += '**Commands:**\n';
         message += '  `/connectors` - Open interactive browser\n';
         message += '  `/connectors <name>` - Open browser at specific connector\n';
-        message += '  `connect-<name> auth login` - Authenticate a connector\n';
+        message += '  `connectors auth <name>` - Authenticate a connector\n';
       }
 
       context.emit('text', message);

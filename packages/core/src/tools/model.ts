@@ -72,13 +72,13 @@ export const modelCurrentTool: Tool = {
 
 export const modelSwitchTool: Tool = {
   name: 'model_switch',
-  description: 'Switch to a different LLM model. Changes take effect immediately for subsequent requests.',
+  description: 'DEPRECATED: Models are tied to agents. To change the model, switch to a different agent using the /agents command or the agents panel.',
   parameters: {
     type: 'object',
     properties: {
       id: {
         type: 'string',
-        description: 'The model ID to switch to (e.g., "claude-opus-4-5-20251101", "gpt-5.2")',
+        description: 'The model ID (not supported — switch agent instead)',
       },
     },
     required: ['id'],
@@ -238,45 +238,11 @@ export function createModelToolExecutors(
       });
     },
 
-    model_switch: async (input: Record<string, unknown>): Promise<string> => {
-      const id = input.id as string;
-      if (!id) {
-        return JSON.stringify({
-          success: false,
-          error: 'Model ID is required',
-        });
-      }
-
-      const model = getModelById(id);
-      if (!model) {
-        return JSON.stringify({
-          success: false,
-          error: `Model "${id}" not found. Use model_list to see available models.`,
-        });
-      }
-
-      const previousModel = context.getModel();
-
-      try {
-        await context.switchModel(id);
-
-        return JSON.stringify({
-          success: true,
-          message: `Switched from "${previousModel}" to "${model.name}"`,
-          previousModel,
-          newModel: {
-            id: model.id,
-            name: model.name,
-            provider: model.provider,
-            contextWindow: model.contextWindow,
-          },
-        });
-      } catch (error) {
-        return JSON.stringify({
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to switch model',
-        });
-      }
+    model_switch: async (_input: Record<string, unknown>): Promise<string> => {
+      return JSON.stringify({
+        success: false,
+        error: 'Models are tied to agents. To change the model, switch to a different agent using /agents or the agents panel (tab key). Each agent has a fixed model configured in its settings.',
+      });
     },
   };
 }

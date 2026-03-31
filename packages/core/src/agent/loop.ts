@@ -2,6 +2,8 @@ import type { Message, Tool, StreamChunk, ToolCall, ToolResult, AssistantsConfig
 import { generateId } from '@hasna/assistants-shared';
 import { join } from 'path';
 import { AssistantContext } from './context';
+import { PendingContext } from './pending-context';
+import { ManagerContainer } from './manager-container';
 import {
   ContextManager,
   ContextInjector,
@@ -218,36 +220,14 @@ export class AssistantLoop {
   private scheduledQueue: ScheduledCommand[] = [];
   private drainingScheduled = false;
   private errorAggregator = new ErrorAggregator();
-  private voiceManager: VoiceManager | null = null;
-  private assistantManager: AssistantManager | null = null;
-  private identityManager: IdentityManager | null = null;
-  private inboxManager: InboxManager | null = null;
-  private walletManager: WalletManager | null = null;
-  private secretsManager: SecretsManager | null = null;
-  private jobManager: JobManager | null = null;
-  private messagesManager: MessagesManager | null = null;
-  private webhooksManager: WebhooksManager | null = null;
-  private channelsManager: ChannelsManager | null = null;
+  private mgr = new ManagerContainer();
   private channelAgentPool: ChannelAgentPool | null = null;
-  private peopleManager: PeopleManager | null = null;
-  private telephonyManager: TelephonyManager | null = null;
-  private ordersManager: OrdersManager | null = null;
-  // [seneca] ContactsManager removed — contacts tools use @hasna/contacts SDK directly
-  private memoryManager: GlobalMemoryManager | null = null;
   private memoryInjector: MemoryInjector | null = null;
   private contextInjector: ContextInjector | null = null;
-  private pendingContextInjection: string | null = null;
+  private pendingCtx = new PendingContext();
   private subassistantManager: SubassistantManager | null = null;
   private depth: number = 0;
   private static readonly MAX_CUMULATIVE_TURNS = 100;
-  private pendingMessagesContext: string | null = null;
-  private pendingWebhooksContext: string | null = null;
-  private pendingChannelsContext: string | null = null;
-  private pendingTelephonyContext: string | null = null;
-  private pendingOrdersContext: string | null = null;
-  private pendingMemoryContext: string | null = null;
-  private pendingTasksContext: string | null = null;
-  private pendingSessionsContext: string | null = null;
   private identityContext: string | null = null;
   private projectContext: string | null = null;
   private activeProjectId: string | null = null;
@@ -340,7 +320,7 @@ export class AssistantLoop {
    * Get the active assistant's identity info for subsystem initialization.
    */
   private getAssistantIdentity(): { id: string; name: string } {
-    const assistant = this.assistantManager?.getActive();
+    const assistant = this.mgr.assistant?.getActive();
     return {
       id: assistant?.id || this.sessionId,
       name: assistant?.name || 'assistant',
@@ -412,7 +392,7 @@ export class AssistantLoop {
           voiceId: process.env.OPENAI_API_KEY ? 'nova' : undefined,
         },
       };
-      this.voiceManager = new VoiceManager(voiceConfig);
+      this.mgr.voice = new VoiceManager(voiceConfig);
     }
     // Initialize budget tracker from config if not already set via options
     if (!this.budgetTracker && this.config.budget) {
@@ -580,19 +560,19 @@ export class AssistantLoop {
     // Initialize inbox — prefer native config, then try @hasna/emails SDK adapter
     if (this.config?.inbox?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
-      this.inboxManager = createInboxManager(
+      this.mgr.inbox = createInboxManager(
         assistantId,
         assistantName,
         this.config.inbox,
         this.storageDir
       );
-      registerInboxTools(this.toolRegistry, () => this.inboxManager);
+      registerInboxTools(this.toolRegistry, () => this.mgr.inbox);
     } else {
       // [nero] Try SDK-backed inbox when native inbox config is not enabled
       const { id: assistantId } = this.getAssistantIdentity();
       createSdkInboxAdapter(assistantId).then((adapter) => {
         if (adapter) {
-          this.inboxManager = adapter as any; // SdkInboxAdapter implements same public API
+          this.mgr.inbox = adapter as any; // SdkInboxAdapter implements same public API
         }
       }).catch(() => { /* SDK not available — inbox stays null */ });
     }
@@ -600,8 +580,8 @@ export class AssistantLoop {
     // Initialize wallet if enabled
     if (this.config?.wallet?.enabled) {
       const { id: assistantId } = this.getAssistantIdentity();
-      this.walletManager = createWalletManager(assistantId, this.config.wallet, this.storageDir);
-      registerWalletTools(this.toolRegistry, () => this.walletManager);
+      this.mgr.wallet = createWalletManager(assistantId, this.config.wallet, this.storageDir);
+      registerWalletTools(this.toolRegistry, () => this.mgr.wallet);
     }
 
     // Initialize secrets if enabled — SDK adapter manages its own DB state
@@ -616,20 +596,20 @@ export class AssistantLoop {
       const provider = (this.config.messages as any).provider;
       if (provider === 'conversations') {
         const { createConversationsAdapter } = await import('../messages/conversations-adapter');
-        this.messagesManager = createConversationsAdapter(assistantId, assistantName, this.config.messages) as any;
+        this.mgr.messages = createConversationsAdapter(assistantId, assistantName, this.config.messages) as any;
       } else {
-        this.messagesManager = createMessagesManager(assistantId, assistantName, this.config.messages);
+        this.mgr.messages = createMessagesManager(assistantId, assistantName, this.config.messages);
       }
-      await this.messagesManager!.initialize();
-      registerMessagesTools(this.toolRegistry, () => this.messagesManager);
+      await this.mgr.messages!.initialize();
+      registerMessagesTools(this.toolRegistry, () => this.mgr.messages);
 
       // Start watching for real-time message notifications (native)
-      this.messagesManager!.startWatching();
-      this.messagesManager!.onMessage((message) => {
+      this.mgr.messages!.startWatching();
+      this.mgr.messages!.onMessage((message) => {
         if (message.priority === 'urgent' || message.priority === 'high') {
-          const context = this.messagesManager!.buildInjectionContext([message]);
+          const context = this.mgr.messages!.buildInjectionContext([message]);
           if (context) {
-            this.pendingMessagesContext = context;
+            this.pendingCtx.messages = context;
           }
         }
       });
@@ -641,17 +621,17 @@ export class AssistantLoop {
     // Initialize webhooks if enabled
     if (this.config?.webhooks?.enabled) {
       const { id: assistantId } = this.getAssistantIdentity();
-      this.webhooksManager = createWebhooksManager(assistantId, this.config.webhooks);
-      await this.webhooksManager.initialize();
-      registerWebhookTools(this.toolRegistry, () => this.webhooksManager);
+      this.mgr.webhooks = createWebhooksManager(assistantId, this.config.webhooks);
+      await this.mgr.webhooks.initialize();
+      registerWebhookTools(this.toolRegistry, () => this.mgr.webhooks);
 
       // Start watching for real-time webhook event notifications
-      this.webhooksManager.startWatching();
-      this.webhooksManager.onEvent((event) => {
+      this.mgr.webhooks.startWatching();
+      this.mgr.webhooks.onEvent((event) => {
         // When a new event arrives, prepare it for injection at the next turn
-        const context = this.webhooksManager!.buildInjectionContext([event]);
+        const context = this.mgr.webhooks!.buildInjectionContext([event]);
         if (context) {
-          this.pendingWebhooksContext = context;
+          this.pendingCtx.webhooks = context;
         }
       });
     }
@@ -659,34 +639,34 @@ export class AssistantLoop {
     // Initialize channels if enabled
     if (this.config?.channels?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
-      this.channelsManager = createChannelsManager(
+      this.mgr.channels = createChannelsManager(
         assistantId,
         assistantName,
         this.config.channels,
         { basePath: this.storageDir }
       );
-      registerChannelTools(this.toolRegistry, () => this.channelsManager);
-      this.channelAgentPool = new ChannelAgentPool(this.cwd, () => this.channelsManager);
+      registerChannelTools(this.toolRegistry, () => this.mgr.channels);
+      this.channelAgentPool = new ChannelAgentPool(this.cwd, () => this.mgr.channels);
     }
 
     // Initialize people manager (always available)
     try {
-      this.peopleManager = await createPeopleManager();
+      this.mgr.people = await createPeopleManager();
     } catch {
       // People manager is non-critical
     }
-    registerPeopleTools(this.toolRegistry, () => this.peopleManager);
+    registerPeopleTools(this.toolRegistry, () => this.mgr.people);
 
     // Initialize telephony if enabled
     if (this.config?.telephony?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
-      this.telephonyManager = createTelephonyManager(assistantId, assistantName, this.config.telephony);
-      registerTelephonyTools(this.toolRegistry, () => this.telephonyManager);
+      this.mgr.telephony = createTelephonyManager(assistantId, assistantName, this.config.telephony);
+      registerTelephonyTools(this.toolRegistry, () => this.mgr.telephony);
 
       // Start WebSocket stream server for Twilio media streams if voice bridge is available
-      if (this.telephonyManager.getVoiceBridge()) {
+      if (this.mgr.telephony.getVoiceBridge()) {
         try {
-          const { port } = this.telephonyManager.startStreamServer();
+          const { port } = this.mgr.telephony.startStreamServer();
           console.log(`[Telephony] Stream server started on port ${port}`);
         } catch {
           // Stream server is non-critical — calls still work via external stream server
@@ -697,8 +677,8 @@ export class AssistantLoop {
     // Initialize orders if enabled
     if (this.config?.orders?.enabled) {
       const { id: assistantId, name: assistantName } = this.getAssistantIdentity();
-      this.ordersManager = createOrdersManager(assistantId, assistantName, this.config.orders);
-      registerOrderTools(this.toolRegistry, () => this.ordersManager);
+      this.mgr.orders = createOrdersManager(assistantId, assistantName, this.config.orders);
+      registerOrderTools(this.toolRegistry, () => this.mgr.orders);
     }
 
     // Initialize contacts tools — backed by @hasna/contacts SDK (no local manager)
@@ -710,7 +690,7 @@ export class AssistantLoop {
       const { id: assistantScopeId } = this.getAssistantIdentity();
       const scopePrefix = this.workspaceId ? `${this.workspaceId}:` : '';
       const scopedScopeId = `${scopePrefix}${assistantScopeId}`;
-      this.memoryManager = new GlobalMemoryManager({
+      this.mgr.memory = new GlobalMemoryManager({
         defaultScope: 'private',
         scopeId: scopedScopeId,
         sessionId: this.sessionId,
@@ -734,14 +714,14 @@ export class AssistantLoop {
           },
         },
       });
-      this.memoryInjector = new MemoryInjector(this.memoryManager, {
+      this.memoryInjector = new MemoryInjector(this.mgr.memory, {
         enabled: memoryConfig?.injection?.enabled ?? true,
         maxTokens: memoryConfig?.injection?.maxTokens ?? 500,
         minImportance: memoryConfig?.injection?.minImportance ?? 5,
         categories: memoryConfig?.injection?.categories ?? ['preference', 'fact'],
         refreshInterval: memoryConfig?.injection?.refreshInterval ?? 5,
       });
-      registerMemoryTools(this.toolRegistry, () => this.memoryManager);
+      registerMemoryTools(this.toolRegistry, () => this.mgr.memory);
     }
 
     // Register bookmark tools (always available — uses its own MemoryStore instance)
@@ -783,9 +763,9 @@ export class AssistantLoop {
     registerSelfAwarenessTools(this.toolRegistry, {
       getContextManager: () => this.contextManager,
       getContextInfo: () => this.getContextInfo(),
-      getAssistantManager: () => this.assistantManager,
-      getIdentityManager: () => this.identityManager,
-      getWalletManager: () => this.walletManager,
+      getAssistantManager: () => this.mgr.assistant,
+      getIdentityManager: () => this.mgr.identity,
+      getWalletManager: () => this.mgr.wallet,
       getStatsTracker: () => this.statsTracker,
       sessionId: this.sessionId,
       model: this.config?.llm?.model,
@@ -815,12 +795,12 @@ export class AssistantLoop {
 
     // Register assistant management tools
     registerAssistantTools(this.toolRegistry, {
-      getAssistantManager: () => this.assistantManager,
+      getAssistantManager: () => this.mgr.assistant,
     });
 
     // Register identity management tools
     registerIdentityTools(this.toolRegistry, {
-      getIdentityManager: () => this.identityManager,
+      getIdentityManager: () => this.mgr.identity,
     });
 
     // Register model management tools
@@ -876,7 +856,7 @@ export class AssistantLoop {
     this.initializeSubassistantManager();
     registerAssistantSpawnTools(this.toolRegistry, {
       getSubassistantManager: () => this.subassistantManager,
-      getAssistantManager: () => this.assistantManager,
+      getAssistantManager: () => this.mgr.assistant,
       getDepth: () => this.depth,
       getCwd: () => this.cwd,
       getSessionId: () => this.sessionId,
@@ -905,7 +885,7 @@ export class AssistantLoop {
 
     // Register voice tools (available when voice manager is configured)
     registerVoiceTools(this.toolRegistry, {
-      getVoiceManager: () => this.voiceManager,
+      getVoiceManager: () => this.mgr.voice,
       processForTalk: (text: string) => this.processForTalk(text),
       emit: (event) => this.emit(event as any),
     });
@@ -921,10 +901,10 @@ export class AssistantLoop {
 
     // Initialize jobs system if enabled
     if (this.config?.jobs?.enabled !== false) {
-      this.jobManager = new JobManager(this.config?.jobs || {}, this.sessionId);
+      this.mgr.job = new JobManager(this.config?.jobs || {}, this.sessionId);
 
       // Set up job completion notifications
-      this.jobManager.onJobComplete((event) => {
+      this.mgr.job.onJobComplete((event) => {
         // Notify via stream chunk with hook support
         const statusEmoji = event.status === 'completed' ? '✓' : event.status === 'failed' ? '✗' : '⚠';
         void this.emitNotification({
@@ -936,16 +916,16 @@ export class AssistantLoop {
       });
 
       // Register job tools
-      const jobTools = createJobTools(() => this.jobManager);
+      const jobTools = createJobTools(() => this.mgr.job);
       for (const { tool, executor } of jobTools) {
         this.toolRegistry.register(tool, executor);
       }
 
       // Connect job manager to connector bridge
-      this.connectorBridge.setJobManagerGetter(() => this.jobManager);
+      this.connectorBridge.setJobManagerGetter(() => this.mgr.job);
 
       // Clean up old jobs on startup
-      this.jobManager.cleanup().catch(() => {});
+      this.mgr.job.cleanup().catch(() => {});
     }
 
     // Register connector tools
@@ -1219,8 +1199,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       const explicitToolResult = await this.handleExplicitToolCommand(userMessage);
       if (explicitToolResult) {
         // Clear pending context - explicit tool commands bypass the LLM
-        this.pendingMemoryContext = null;
-        this.pendingContextInjection = null;
+        this.pendingCtx.memory = null;
+        this.pendingCtx.injection = null;
         this.ensureTerminalChunk();
         return explicitToolResult;
       }
@@ -1234,8 +1214,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           const commandResult = await this.handleCommand(userMessage);
           if (commandResult.handled) {
             // Clear pending context - commands bypass the LLM
-            this.pendingMemoryContext = null;
-            this.pendingContextInjection = null;
+            this.pendingCtx.memory = null;
+            this.pendingCtx.injection = null;
             if (commandResult.clearConversation) {
               this.resetContext();
             }
@@ -1273,8 +1253,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           const handled = await this.handleSkillInvocation(userMessage);
           if (handled) {
             // Clear pending context - skills handle their own context
-            this.pendingMemoryContext = null;
-            this.pendingContextInjection = null;
+            this.pendingCtx.memory = null;
+            this.pendingCtx.injection = null;
             this.ensureTerminalChunk();
             return { ok: true, summary: `Executed ${userMessage}` };
           }
@@ -1282,8 +1262,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           const commandResult = await this.handleCommand(userMessage);
           if (commandResult.handled) {
             // Clear pending context - commands bypass the LLM
-            this.pendingMemoryContext = null;
-            this.pendingContextInjection = null;
+            this.pendingCtx.memory = null;
+            this.pendingCtx.injection = null;
             if (commandResult.showPanel) {
               this.emit({
                 type: 'show_panel',
@@ -2236,23 +2216,23 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         }
         return result;
       },
-      getAssistantManager: () => this.assistantManager,
-      getIdentityManager: () => this.identityManager,
-      getInboxManager: () => this.inboxManager,
-      getWalletManager: () => this.walletManager,
-      getSecretsManager: () => this.secretsManager,
-      getMessagesManager: () => this.messagesManager,
-      getWebhooksManager: () => this.webhooksManager,
-      getChannelsManager: () => this.channelsManager,
+      getAssistantManager: () => this.mgr.assistant,
+      getIdentityManager: () => this.mgr.identity,
+      getInboxManager: () => this.mgr.inbox,
+      getWalletManager: () => this.mgr.wallet,
+      getSecretsManager: () => this.mgr.secrets,
+      getMessagesManager: () => this.mgr.messages,
+      getWebhooksManager: () => this.mgr.webhooks,
+      getChannelsManager: () => this.mgr.channels,
       getChannelAgentPool: () => this.channelAgentPool,
-      getPeopleManager: () => this.peopleManager,
-      getTelephonyManager: () => this.telephonyManager,
-      getOrdersManager: () => this.ordersManager,
-      getMemoryManager: () => this.memoryManager,
-      getJobManager: () => this.jobManager ?? null,
+      getPeopleManager: () => this.mgr.people,
+      getTelephonyManager: () => this.mgr.telephony,
+      getOrdersManager: () => this.mgr.orders,
+      getMemoryManager: () => this.mgr.memory,
+      getJobManager: () => this.mgr.job ?? null,
       refreshIdentityContext: async () => {
-        if (this.identityManager) {
-          this.identityContext = await this.identityManager.buildSystemPromptContext();
+        if (this.mgr.identity) {
+          this.identityContext = await this.mgr.identity.buildSystemPromptContext();
         }
       },
       refreshSkills: async () => {
@@ -2289,52 +2269,52 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       getHeartbeatState: () => this.getHeartbeatState(),
       getHeartbeatConfig: () => this.heartbeatRuntimeConfig,
       enableVoice: () => {
-        if (!this.voiceManager) {
+        if (!this.mgr.voice) {
           throw new Error('Voice support is not available.');
         }
-        this.voiceManager.enable();
+        this.mgr.voice.enable();
       },
       disableVoice: () => {
-        if (!this.voiceManager) {
+        if (!this.mgr.voice) {
           throw new Error('Voice support is not available.');
         }
-        this.voiceManager.disable();
+        this.mgr.voice.disable();
       },
       speak: async (text: string) => {
-        if (!this.voiceManager) {
+        if (!this.mgr.voice) {
           throw new Error('Voice support is not available.');
         }
-        await this.voiceManager.speak(text);
+        await this.mgr.voice.speak(text);
       },
       listen: async (options) => {
-        if (!this.voiceManager) {
+        if (!this.mgr.voice) {
           throw new Error('Voice support is not available.');
         }
-        return this.voiceManager.listen(options);
+        return this.mgr.voice.listen(options);
       },
       stopSpeaking: () => {
-        this.voiceManager?.stopSpeaking();
+        this.mgr.voice?.stopSpeaking();
       },
       stopListening: () => {
-        this.voiceManager?.stopListening();
+        this.mgr.voice?.stopListening();
       },
       talk: async (options) => {
-        if (!this.voiceManager) {
+        if (!this.mgr.voice) {
           throw new Error('Voice support is not available.');
         }
-        await this.voiceManager.talk(options);
+        await this.mgr.voice.talk(options);
       },
       stopTalking: () => {
-        this.voiceManager?.stopTalking();
+        this.mgr.voice?.stopTalking();
       },
       processForTalk: async (text: string) => {
         return this.processForTalk(text);
       },
       getAutoSend: () => {
-        return this.voiceManager?.getAutoSend() ?? true;
+        return this.mgr.voice?.getAutoSend() ?? true;
       },
       setAutoSend: (enabled: boolean) => {
-        this.voiceManager?.setAutoSend(enabled);
+        this.mgr.voice?.setAutoSend(enabled);
       },
       refreshConnectors: async () => {
         const connectors = await this.connectorBridge.refresh();
@@ -2593,7 +2573,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       this.toolAbortController.abort();
       this.toolAbortController = null;
     }
-    this.voiceManager?.stopTalking();
+    this.mgr.voice?.stopTalking();
     this.setHeartbeatState('stopped');
     // Emit stopped chunk so clients can drain queues
     this.emit({ type: 'stopped' });
@@ -2614,25 +2594,25 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     this.heartbeatManager?.stop();
     // Deregister from registry
     this.deregisterFromRegistry();
-    this.voiceManager?.stopTalking();
+    this.mgr.voice?.stopTalking();
     // Stop message watching
-    this.messagesManager?.stopWatching();
+    this.mgr.messages?.stopWatching();
     // Stop webhook watching
-    this.webhooksManager?.stopWatching();
+    this.mgr.webhooks?.stopWatching();
     // Close channels database connection and agent pool
     this.channelAgentPool?.shutdown();
     this.channelAgentPool = null;
-    this.channelsManager?.close();
-    this.channelsManager = null;
+    this.mgr.channels?.close();
+    this.mgr.channels = null;
     // Close telephony connections
-    this.telephonyManager?.close();
-    this.telephonyManager = null;
+    this.mgr.telephony?.close();
+    this.mgr.telephony = null;
     // Close orders database connection
-    this.ordersManager?.close();
-    this.ordersManager = null;
+    this.mgr.orders?.close();
+    this.mgr.orders = null;
     // Close memory database connection
-    this.memoryManager?.close();
-    this.memoryManager = null;
+    this.mgr.memory?.close();
+    this.mgr.memory = null;
     this.memoryInjector = null;
     // Close the unified database connection
     closeDatabase();
@@ -2732,7 +2712,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Get current voice state
    */
   getVoiceState(): VoiceState | null {
-    return this.voiceManager?.getState() ?? null;
+    return this.mgr.voice?.getState() ?? null;
   }
 
   /**
@@ -2762,27 +2742,27 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
   }
 
   getAssistantManager(): AssistantManager | null {
-    return this.assistantManager;
+    return this.mgr.assistant;
   }
 
   getIdentityManager(): IdentityManager | null {
-    return this.identityManager;
+    return this.mgr.identity;
   }
 
   getMemoryManager(): GlobalMemoryManager | null {
-    return this.memoryManager;
+    return this.mgr.memory;
   }
 
   getMessagesManager(): MessagesManager | null {
-    return this.messagesManager;
+    return this.mgr.messages;
   }
 
   getWebhooksManager(): WebhooksManager | null {
-    return this.webhooksManager;
+    return this.mgr.webhooks;
   }
 
   getChannelsManager(): ChannelsManager | null {
-    return this.channelsManager;
+    return this.mgr.channels;
   }
 
   getChannelAgentPool(): ChannelAgentPool | null {
@@ -2790,7 +2770,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
   }
 
   getPeopleManager(): PeopleManager | null {
-    return this.peopleManager;
+    return this.mgr.people;
   }
 
   /** @deprecated Contacts now use @hasna/contacts SDK directly — no local manager */
@@ -2799,71 +2779,71 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
   }
 
   getTelephonyManager(): TelephonyManager | null {
-    return this.telephonyManager;
+    return this.mgr.telephony;
   }
 
   getOrdersManager(): OrdersManager | null {
-    return this.ordersManager;
+    return this.mgr.orders;
   }
 
   getJobManager(): JobManager | null {
-    return this.jobManager;
+    return this.mgr.job;
   }
 
   getWalletManager(): WalletManager | null {
-    return this.walletManager;
+    return this.mgr.wallet;
   }
 
   getSecretsManager(): SecretsManager | null {
-    return this.secretsManager;
+    return this.mgr.secrets;
   }
 
   getInboxManager(): InboxManager | null {
-    return this.inboxManager;
+    return this.mgr.inbox;
   }
 
   async refreshIdentityContext(): Promise<void> {
-    if (this.identityManager) {
-      this.identityContext = await this.identityManager.buildSystemPromptContext();
+    if (this.mgr.identity) {
+      this.identityContext = await this.mgr.identity.buildSystemPromptContext();
     }
   }
 
   getAssistantId(): string | null {
-    return this.assistantManager?.getActiveId() ?? null;
+    return this.mgr.assistant?.getActiveId() ?? null;
   }
 
   getIdentityInfo(): ActiveIdentityInfo {
     return {
-      assistant: this.assistantManager?.getActive() ?? null,
-      identity: this.identityManager?.getActive() ?? null,
+      assistant: this.mgr.assistant?.getActive() ?? null,
+      identity: this.mgr.identity?.getActive() ?? null,
     };
   }
 
   private async switchAssistant(assistantId: string): Promise<void> {
-    if (!this.assistantManager) {
+    if (!this.mgr.assistant) {
       throw new Error('Assistant manager not initialized');
     }
-    await this.assistantManager.switchAssistant(assistantId);
-    const active = this.assistantManager.getActive();
+    await this.mgr.assistant.switchAssistant(assistantId);
+    const active = this.mgr.assistant.getActive();
     if (!active) {
-      this.identityManager = null;
+      this.mgr.identity = null;
       this.identityContext = null;
       return;
     }
-    this.identityManager = this.assistantManager.getIdentityManager(active.id);
-    await this.identityManager.initialize();
-    if (this.identityManager.listIdentities().length === 0) {
-      await this.identityManager.createIdentity({ name: 'Default' });
+    this.mgr.identity = this.mgr.assistant.getIdentityManager(active.id);
+    await this.mgr.identity.initialize();
+    if (this.mgr.identity.listIdentities().length === 0) {
+      await this.mgr.identity.createIdentity({ name: 'Default' });
     }
-    this.identityContext = await this.identityManager.buildSystemPromptContext();
+    this.identityContext = await this.mgr.identity.buildSystemPromptContext();
   }
 
   private async switchIdentity(identityId: string): Promise<void> {
-    if (!this.identityManager) {
+    if (!this.mgr.identity) {
       throw new Error('Identity manager not initialized');
     }
-    await this.identityManager.switchIdentity(identityId);
-    this.identityContext = await this.identityManager.buildSystemPromptContext();
+    await this.mgr.identity.switchIdentity(identityId);
+    this.identityContext = await this.mgr.identity.buildSystemPromptContext();
   }
 
   /**
@@ -3241,8 +3221,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       const skills = this.skillLoader.getSkills().map((s) => s.name);
 
       // Register the assistant
-      const assistantName = this.assistantManager?.getActive()?.name ||
-        this.identityManager?.getActive()?.profile?.displayName ||
+      const assistantName = this.mgr.assistant?.getActive()?.name ||
+        this.mgr.identity?.getActive()?.profile?.displayName ||
         `Assistant ${this.sessionId.slice(0, 8)}`;
       const registered = this.registryService.register({
         id: `assistant_${this.sessionId}`,
@@ -3363,34 +3343,34 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Inject pending messages into context at turn start
    */
   private async injectPendingMessages(): Promise<void> {
-    if (!this.messagesManager) return;
+    if (!this.mgr.messages) return;
 
     try {
-      if (this.pendingMessagesContext) {
-        const previous = this.pendingMessagesContext.trim();
+      if (this.pendingCtx.messages) {
+        const previous = this.pendingCtx.messages.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingMessagesContext = null;
+        this.pendingCtx.messages = null;
       }
 
-      const pending = await this.messagesManager.getUnreadForInjection();
+      const pending = await this.mgr.messages.getUnreadForInjection();
       if (pending.length === 0) {
         return;
       }
 
       // Build and store context string
-      this.pendingMessagesContext = this.messagesManager.buildInjectionContext(pending);
+      this.pendingCtx.messages = this.mgr.messages.buildInjectionContext(pending);
 
       // Add as system message so it appears in context
-      if (this.pendingMessagesContext) {
-        this.context.addSystemMessage(this.pendingMessagesContext);
+      if (this.pendingCtx.messages) {
+        this.context.addSystemMessage(this.pendingCtx.messages);
       }
 
       // Mark messages as injected
-      await this.messagesManager.markInjected(pending.map((m) => m.id));
+      await this.mgr.messages.markInjected(pending.map((m) => m.id));
     } catch (error) {
       // Log but don't fail - messages are non-critical
       console.error('Failed to inject pending messages:', error);
-      this.pendingMessagesContext = null;
+      this.pendingCtx.messages = null;
     }
   }
 
@@ -3398,36 +3378,36 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Inject pending webhook events into context at turn start
    */
   private async injectPendingWebhookEvents(): Promise<void> {
-    if (!this.webhooksManager) return;
+    if (!this.mgr.webhooks) return;
 
     try {
-      if (this.pendingWebhooksContext) {
-        const previous = this.pendingWebhooksContext.trim();
+      if (this.pendingCtx.webhooks) {
+        const previous = this.pendingCtx.webhooks.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingWebhooksContext = null;
+        this.pendingCtx.webhooks = null;
       }
 
-      const pending = await this.webhooksManager.getPendingForInjection();
+      const pending = await this.mgr.webhooks.getPendingForInjection();
       if (pending.length === 0) {
         return;
       }
 
       // Build and store context string
-      this.pendingWebhooksContext = this.webhooksManager.buildInjectionContext(pending);
+      this.pendingCtx.webhooks = this.mgr.webhooks.buildInjectionContext(pending);
 
       // Add as system message so it appears in context
-      if (this.pendingWebhooksContext) {
-        this.context.addSystemMessage(this.pendingWebhooksContext);
+      if (this.pendingCtx.webhooks) {
+        this.context.addSystemMessage(this.pendingCtx.webhooks);
       }
 
       // Mark events as injected
-      await this.webhooksManager.markInjected(
+      await this.mgr.webhooks.markInjected(
         pending.map((e) => ({ webhookId: e.webhookId, eventId: e.id }))
       );
     } catch (error) {
       // Log but don't fail - webhooks are non-critical
       console.error('Failed to inject pending webhook events:', error);
-      this.pendingWebhooksContext = null;
+      this.pendingCtx.webhooks = null;
     }
   }
 
@@ -3435,34 +3415,34 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Inject pending channel messages into context at turn start
    */
   private async injectPendingChannelMessages(): Promise<void> {
-    if (!this.channelsManager) return;
+    if (!this.mgr.channels) return;
 
     try {
-      if (this.pendingChannelsContext) {
-        const previous = this.pendingChannelsContext.trim();
+      if (this.pendingCtx.channels) {
+        const previous = this.pendingCtx.channels.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingChannelsContext = null;
+        this.pendingCtx.channels = null;
       }
 
-      const pending = this.channelsManager.getUnreadForInjection();
+      const pending = this.mgr.channels.getUnreadForInjection();
       if (pending.length === 0) {
         return;
       }
 
       // Build and store context string
-      this.pendingChannelsContext = this.channelsManager.buildInjectionContext(pending);
+      this.pendingCtx.channels = this.mgr.channels.buildInjectionContext(pending);
 
       // Add as system message so it appears in context
-      if (this.pendingChannelsContext) {
-        this.context.addSystemMessage(this.pendingChannelsContext);
+      if (this.pendingCtx.channels) {
+        this.context.addSystemMessage(this.pendingCtx.channels);
       }
 
       // Mark messages as read
-      this.channelsManager.markInjected(pending);
+      this.mgr.channels.markInjected(pending);
     } catch (error) {
       // Log but don't fail - channels are non-critical
       console.error('Failed to inject pending channel messages:', error);
-      this.pendingChannelsContext = null;
+      this.pendingCtx.channels = null;
     }
   }
 
@@ -3470,30 +3450,30 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Inject pending telephony messages into context at turn start
    */
   private async injectPendingTelephonyMessages(): Promise<void> {
-    if (!this.telephonyManager) return;
+    if (!this.mgr.telephony) return;
 
     try {
-      if (this.pendingTelephonyContext) {
-        const previous = this.pendingTelephonyContext.trim();
+      if (this.pendingCtx.telephony) {
+        const previous = this.pendingCtx.telephony.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingTelephonyContext = null;
+        this.pendingCtx.telephony = null;
       }
 
-      const pending = this.telephonyManager.getUnreadForInjection();
+      const pending = this.mgr.telephony.getUnreadForInjection();
       if (pending.length === 0) {
         return;
       }
 
-      this.pendingTelephonyContext = this.telephonyManager.buildInjectionContext(pending);
+      this.pendingCtx.telephony = this.mgr.telephony.buildInjectionContext(pending);
 
-      if (this.pendingTelephonyContext) {
-        this.context.addSystemMessage(this.pendingTelephonyContext);
+      if (this.pendingCtx.telephony) {
+        this.context.addSystemMessage(this.pendingCtx.telephony);
       }
 
-      this.telephonyManager.markInjected(pending);
+      this.mgr.telephony.markInjected(pending);
     } catch (error) {
       console.error('Failed to inject pending telephony messages:', error);
-      this.pendingTelephonyContext = null;
+      this.pendingCtx.telephony = null;
     }
   }
 
@@ -3501,30 +3481,30 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
    * Inject pending order updates into context at turn start
    */
   private async injectPendingOrderUpdates(): Promise<void> {
-    if (!this.ordersManager) return;
+    if (!this.mgr.orders) return;
 
     try {
-      if (this.pendingOrdersContext) {
-        const previous = this.pendingOrdersContext.trim();
+      if (this.pendingCtx.orders) {
+        const previous = this.pendingCtx.orders.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingOrdersContext = null;
+        this.pendingCtx.orders = null;
       }
 
-      const pending = this.ordersManager.getUnreadForInjection();
+      const pending = this.mgr.orders.getUnreadForInjection();
       if (pending.length === 0) {
         return;
       }
 
-      this.pendingOrdersContext = this.ordersManager.buildInjectionContext(pending);
+      this.pendingCtx.orders = this.mgr.orders.buildInjectionContext(pending);
 
-      if (this.pendingOrdersContext) {
-        this.context.addSystemMessage(this.pendingOrdersContext);
+      if (this.pendingCtx.orders) {
+        this.context.addSystemMessage(this.pendingCtx.orders);
       }
 
-      this.ordersManager.markInjected(pending);
+      this.mgr.orders.markInjected(pending);
     } catch (error) {
       console.error('Failed to inject pending order updates:', error);
-      this.pendingOrdersContext = null;
+      this.pendingCtx.orders = null;
     }
   }
 
@@ -3536,22 +3516,22 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
     try {
       // Remove previous memory context if it exists
-      if (this.pendingMemoryContext) {
-        const previous = this.pendingMemoryContext.trim();
+      if (this.pendingCtx.memory) {
+        const previous = this.pendingCtx.memory.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingMemoryContext = null;
+        this.pendingCtx.memory = null;
       }
 
       // Prepare new memory injection based on user's message
       const result = await this.memoryInjector.prepareInjection(userMessage);
       if (result.content) {
-        this.pendingMemoryContext = result.content;
+        this.pendingCtx.memory = result.content;
         // Memory context will be added via buildSystemPrompt
       }
     } catch (error) {
       // Log but don't fail - memory injection is non-critical
       console.error('Failed to inject memory context:', error);
-      this.pendingMemoryContext = null;
+      this.pendingCtx.memory = null;
     }
   }
 
@@ -3563,22 +3543,22 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
     try {
       // Remove previous context injection if it exists
-      if (this.pendingContextInjection) {
-        const previous = this.pendingContextInjection.trim();
+      if (this.pendingCtx.injection) {
+        const previous = this.pendingCtx.injection.trim();
         this.context.removeSystemMessages((content) => content.trim() === previous);
-        this.pendingContextInjection = null;
+        this.pendingCtx.injection = null;
       }
 
       // Prepare new context injection
       const result = await this.contextInjector.prepareInjection();
       if (result.content) {
-        this.pendingContextInjection = result.content;
+        this.pendingCtx.injection = result.content;
         // Context injection will be added via buildSystemPrompt
       }
     } catch (error) {
       // Log but don't fail - context injection is non-critical
       console.error('Failed to inject context info:', error);
-      this.pendingContextInjection = null;
+      this.pendingCtx.injection = null;
     }
   }
 
@@ -3591,12 +3571,12 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
     try {
       // Only update tasks context on first turn (they don't change per message)
-      if (this.pendingTasksContext !== null) return;
+      if (this.pendingCtx.tasks !== null) return;
 
       const { buildTasksContextPrompt } = await import('../tasks/context-builder');
       const content = await buildTasksContextPrompt();
       if (content) {
-        this.pendingTasksContext = content;
+        this.pendingCtx.tasks = content;
       }
     } catch {
       // Non-critical — silently skip if todos is unavailable
@@ -3612,12 +3592,12 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
     try {
       // Only update sessions context on first turn
-      if (this.pendingSessionsContext !== null) return;
+      if (this.pendingCtx.sessions !== null) return;
 
       const { buildSessionsContextPrompt } = await import('../sessions/context-builder');
       const content = await buildSessionsContextPrompt();
       if (content) {
-        this.pendingSessionsContext = content;
+        this.pendingCtx.sessions = content;
       }
     } catch {
       // Non-critical — silently skip if sessions is unavailable
@@ -3742,8 +3722,8 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     this.context = new AssistantContext(maxMessages);
 
     // Clear pending injections to prevent stale context
-    this.pendingContextInjection = null;
-    this.pendingMemoryContext = null;
+    this.pendingCtx.injection = null;
+    this.pendingCtx.memory = null;
 
     if (this.systemPrompt) {
       this.context.addSystemMessage(this.systemPrompt);
@@ -3781,7 +3761,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     }
 
     // Add assistant-specific system prompt addition
-    const assistant = this.assistantManager?.getActive();
+    const assistant = this.mgr.assistant?.getActive();
     if (assistant?.settings?.systemPromptAddition) {
       parts.push(`## Assistant Instructions\n${assistant.settings.systemPromptAddition}`);
     }
@@ -3797,29 +3777,29 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     }
 
     // Add voice capabilities context when voice is configured
-    if (this.voiceManager) {
-      const voiceState = this.voiceManager.getState();
+    if (this.mgr.voice) {
+      const voiceState = this.mgr.voice.getState();
       parts.push(`## Voice Capabilities\nYou have voice tools available. You can start a live voice conversation using the \`voice_talk\` tool. When the user asks to talk, have a conversation, or seems like they want voice interaction, use \`voice_talk\` to start talk mode. You can also use \`voice_say\` to speak text aloud and \`voice_listen\` to listen for speech input.\nCurrent state: ${voiceState.enabled ? 'enabled' : 'disabled'}, STT: ${voiceState.sttProvider || 'none'}, TTS: ${voiceState.ttsProvider || 'none'}`);
     }
 
     // Add context injection if available (datetime, cwd, project, etc.)
-    if (this.pendingContextInjection) {
-      parts.push(this.pendingContextInjection);
+    if (this.pendingCtx.injection) {
+      parts.push(this.pendingCtx.injection);
     }
 
     // Add memory injection if available
-    if (this.pendingMemoryContext) {
-      parts.push(this.pendingMemoryContext);
+    if (this.pendingCtx.memory) {
+      parts.push(this.pendingCtx.memory);
     }
 
     // Add tasks context if TODOS_URL is configured
-    if (this.pendingTasksContext) {
-      parts.push(this.pendingTasksContext);
+    if (this.pendingCtx.tasks) {
+      parts.push(this.pendingCtx.tasks);
     }
 
     // Add sessions context if SESSIONS_URL is configured
-    if (this.pendingSessionsContext) {
-      parts.push(this.pendingSessionsContext);
+    if (this.pendingCtx.sessions) {
+      parts.push(this.pendingCtx.sessions);
     }
 
     for (const msg of messages) {
@@ -3835,11 +3815,11 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
   private async initializeIdentitySystem(): Promise<void> {
     const basePath = this.storageDir;
-    this.assistantManager = new AssistantManager(basePath);
-    await this.assistantManager.initialize();
+    this.mgr.assistant = new AssistantManager(basePath);
+    await this.mgr.assistant.initialize();
 
-    if (this.assistantManager.listAssistants().length === 0) {
-      const created = await this.assistantManager.createAssistant({
+    if (this.mgr.assistant.listAssistants().length === 0) {
+      const created = await this.mgr.assistant.createAssistant({
         name: 'Default Assistant',
         settings: { model: this.config?.llm?.model || 'claude-opus-4-5' },
       });
@@ -3848,20 +3828,20 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
     if (this.assistantId) {
       try {
-        await this.assistantManager.switchAssistant(this.assistantId);
+        await this.mgr.assistant.switchAssistant(this.assistantId);
       } catch {
         this.assistantId = null;
       }
     }
 
-    const active = this.assistantManager.getActive();
+    const active = this.mgr.assistant.getActive();
     if (active) {
-      this.identityManager = this.assistantManager.getIdentityManager(active.id);
-      await this.identityManager.initialize();
-      if (this.identityManager.listIdentities().length === 0) {
-        await this.identityManager.createIdentity({ name: 'Default' });
+      this.mgr.identity = this.mgr.assistant.getIdentityManager(active.id);
+      await this.mgr.identity.initialize();
+      if (this.mgr.identity.listIdentities().length === 0) {
+        await this.mgr.identity.createIdentity({ name: 'Default' });
       }
-      this.identityContext = await this.identityManager.buildSystemPromptContext();
+      this.identityContext = await this.mgr.identity.buildSystemPromptContext();
     }
   }
 

@@ -655,7 +655,7 @@ export class BashTool {
         const modeLabel = bashPermission === 'readwrite' ? 'readwrite' : 'readonly';
         throw toolPermissionDenied(
           'bash',
-          `Blocked: command is not allowed in ${modeLabel} mode. ${bashPermission === 'readonly' ? 'Permitted commands: cat, head, tail, ls, find, grep, wc, file, stat, pwd, which, echo, curl, git status/log/diff/branch/show, connect-*' : 'The command is not in the readwrite allowlist. Destructive system operations remain blocked.'}`,
+          `Blocked: command is not allowed in ${modeLabel} mode. ${bashPermission === 'readonly' ? 'Permitted commands: cat, head, tail, ls, find, grep, wc, file, stat, pwd, which, echo, curl, git status/log/diff/branch/show, connectors' : 'The command is not in the readwrite allowlist. Destructive system operations remain blocked.'}`,
           input as Record<string, unknown>,
         );
       }

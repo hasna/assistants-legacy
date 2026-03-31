@@ -78,7 +78,7 @@ export function modelCommand(tokenUsage: TokenUsage): Command {
     content: '',
     handler: async (args, context) => {
       // Dynamically import model registry
-      const { MODELS, getModelById, getModelsGroupedByProvider, getModelDisplayName, getProviderForModel } = await import('../llm/models');
+      const { MODELS, getModelById, getModelsGroupedByProvider, getProviderForModel } = await import('../llm/models');
       const { LLM_PROVIDER_IDS, getProviderLabel } = await import('@hasna/assistants-shared');
 
       const trimmedArgs = args.trim();
@@ -163,88 +163,15 @@ export function modelCommand(tokenUsage: TokenUsage): Command {
           }
         }
 
-        message += '\nUse `/model <model-id>` to switch models.\n';
+        message += '\nModels are tied to agents. Use `/agents` to switch agent (and model).\n';
 
         context.emit('text', message);
         context.emit('done');
         return { handled: true };
       }
 
-      // /model <model-id> - Switch to a different model
-      const modelId = trimmedArgs;
-      const modelDef = getModelById(modelId);
-
-      if (!modelDef) {
-        const inferredProvider = getProviderForModel(modelId);
-        if (!inferredProvider) {
-          // Try to find a close match
-          const lowerInput = modelId.toLowerCase();
-          const possibleMatch = MODELS.find(
-            (m) =>
-              m.id.toLowerCase().includes(lowerInput) ||
-              m.name.toLowerCase().includes(lowerInput)
-          );
-
-          let message = `Unknown model: ${modelId}\n`;
-          if (possibleMatch) {
-            message += `Did you mean: ${possibleMatch.id} (${possibleMatch.name})?\n`;
-          }
-          message += 'Use `/model list` to see available models.\n';
-
-          context.emit('text', message);
-          context.emit('done');
-          return { handled: true };
-        }
-
-        if (!context.switchModel) {
-          context.emit('text', 'Model switching not available in this context.\n');
-          context.emit('done');
-          return { handled: true };
-        }
-
-        try {
-          await context.switchModel(modelId);
-          let message = `\nSwitched to **${modelId}**\n`;
-          message += `Provider: ${getProviderLabel(inferredProvider)}\n`;
-          message += 'Note: Model not in registry; using inferred provider.\n';
-          context.emit('text', message);
-        } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error);
-          context.emit('text', `Failed to switch model: ${errMsg}\n`);
-        }
-
-        context.emit('done');
-        return { handled: true };
-      }
-
-      // Check if already on this model
-      if (modelId === currentModel) {
-        context.emit('text', `Already using ${modelDef.name} (${modelId})\n`);
-        context.emit('done');
-        return { handled: true };
-      }
-
-      // Switch model
-      if (!context.switchModel) {
-        context.emit('text', 'Model switching not available in this context.\n');
-        context.emit('done');
-        return { handled: true };
-      }
-
-      try {
-        await context.switchModel(modelId);
-        let message = `\nSwitched to **${modelDef.name}** (${modelId})\n`;
-        message += `Provider: ${getProviderLabel(modelDef.provider)}\n`;
-        message += `Context: ${modelDef.contextWindow?.toLocaleString() || 'unknown'} tokens\n`;
-        if (modelDef.notes) {
-          message += `Note: ${modelDef.notes}\n`;
-        }
-        context.emit('text', message);
-      } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        context.emit('text', `Failed to switch model: ${errMsg}\n`);
-      }
-
+      // /model <model-id> - No longer supported, models are tied to agents
+      context.emit('text', 'Models are tied to agents. To change the model, switch to a different agent using `/agents`.\nUse `/model list` to see available models.\n');
       context.emit('done');
       return { handled: true };
     },
