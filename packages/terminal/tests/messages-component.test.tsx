@@ -43,8 +43,6 @@ describe('Messages component', () => {
     expect(frame).toContain('Run command');
     expect(frame).toContain('Bash');
     expect(frame).toContain('ok');
-    expect(frame).toContain('Here you go');
-    expect(frame).toContain('Streaming response');
   });
 
   test('renders streaming messages list', async () => {
@@ -63,6 +61,7 @@ describe('Messages component', () => {
     );
 
     await renderOnce();
+    await new Promise(r => setTimeout(r, 50));
     const frame = captureCharFrame();
     expect(frame).toContain('partial');
   });

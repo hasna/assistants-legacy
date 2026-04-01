@@ -43,7 +43,8 @@ function formatSessionTime(timestamp: number): string {
 /**
  * Format path for display (abbreviate home directory)
  */
-function formatPath(cwd: string): string {
+function formatPath(cwd: string | undefined | null): string {
+  if (!cwd) return '';
   const home = process.env.HOME || '';
   if (home && cwd.startsWith(home)) {
     return '~' + cwd.slice(home.length);

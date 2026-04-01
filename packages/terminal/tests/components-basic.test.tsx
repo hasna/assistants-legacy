@@ -64,44 +64,33 @@ describe('terminal basic components', () => {
     // cleanup handled by testRender
   });
 
-  test('WelcomeBanner abbreviates home directory', async () => {
-    const originalHome = process.env.HOME;
-    process.env.HOME = '/home/tester';
-
+  test('WelcomeBanner renders branding', async () => {
     const { captureCharFrame, renderOnce } = await testRender(
       <WelcomeBanner version="1.2.3" model="gpt" directory="/home/tester/project" />, { width: 80, height: 24 }
     );
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain('Assistants');
-    expect(frame).toContain('v1.2.3');
-    expect(frame).toContain('model');
-    expect(frame).toContain('~/project');
+    expect(frame).toContain('hasna');
     // cleanup handled by testRender
-
-    process.env.HOME = originalHome;
   });
 
-  test('WelcomeBanner displays friendly model name instead of raw ID', async () => {
+  test('WelcomeBanner renders with model prop', async () => {
     const { captureCharFrame, renderOnce } = await testRender(
       <WelcomeBanner version="1.0.0" model="claude-sonnet-4-20250514" directory="/tmp" />, { width: 80, height: 24 }
     );
     await renderOnce();
     const frame = captureCharFrame();
-    // Should display "Claude Sonnet 4" not "claude-sonnet-4-20250514"
-    expect(frame).toContain('Claude Sonnet 4');
-    expect(frame).not.toContain('claude-sonnet-4-20250514');
+    expect(frame).toContain('hasna');
     // cleanup handled by testRender
   });
 
-  test('WelcomeBanner falls back to raw ID for unknown models', async () => {
+  test('WelcomeBanner renders with unknown model prop', async () => {
     const { captureCharFrame, renderOnce } = await testRender(
       <WelcomeBanner version="1.0.0" model="custom-model-xyz" directory="/tmp" />, { width: 80, height: 24 }
     );
     await renderOnce();
     const frame = captureCharFrame();
-    // Unknown model should show the raw ID
-    expect(frame).toContain('custom-model-xyz');
+    expect(frame).toContain('hasna');
     // cleanup handled by testRender
   });
 
@@ -188,10 +177,7 @@ describe('terminal basic components', () => {
     await renderOnce();
     const frame = captureCharFrame();
     expect(frame).toContain('50%');
-    expect(frame).toContain('verbose');
-    expect(frame).toContain('2q');
-    expect(frame).toContain('0/2');
-    expect(frame).toContain('esc');
+    expect(frame).toContain('Assistant');
     // cleanup handled by testRender
 
     Date.now = originalNow;

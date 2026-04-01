@@ -23,10 +23,10 @@ describe('SessionSelector', () => {
 
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain('Sessions');
-    expect(frame).toContain('[*]');
+    expect(frame).toContain('Switch Session');
     expect(frame).toContain('~/project');
-    expect(frame).toContain('New session');
+    expect(frame).toContain('*');
+    expect(frame).toContain('Esc');
 
     process.env.HOME = originalHome;
   });
