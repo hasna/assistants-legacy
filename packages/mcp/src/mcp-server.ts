@@ -1,13 +1,18 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { join, dirname } from 'path';
+import { homedir } from 'os';
+import { existsSync, readFileSync } from 'fs';
+import { registerCloudTools } from '@hasna/cloud';
 import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
 import {
   MCP_VERSION, isAdminAuthorized, createRateLimiter, loadHooksFile, runLifecycleHooks,
   createAuditLog, loadDynamicTools, saveDynamicTools, loadCommandsDir, validateToolSchema,
-  TOOL_DOCS, PROFILE_TOOLS, type ServerOptions, type HooksFile, type DynamicToolDef, type CommandDef,
+  TOOL_DOCS, PROFILE_TOOLS, DYNAMIC_TOOLS_FILE, loadSkillsWithSdk,
+  type ServerOptions, type HooksFile, type DynamicToolDef, type CommandDef,
 } from './mcp-utils';
 
 export async function createServer(opts: ServerOptions = {}): Promise<McpServer> {

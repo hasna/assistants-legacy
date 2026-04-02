@@ -209,7 +209,7 @@ export function validateToolSchema(name: string, schema: Record<string, unknown>
 // ─── Skills loader helper (uses @hasna/skills SDK agent dirs) ────────────────
 // Loads skills from both legacy .skill/ dirs and SDK-installed ~/.claude/skills/.
 
-async function loadSkillsWithSdk(loader: any, cwd: string): Promise<void> {
+export async function loadSkillsWithSdk(loader: any, cwd: string): Promise<void> {
   await loader.loadAll(cwd);
   try {
     // Also load from SDK-installed dirs: ~/.claude/skills/ and .claude/skills/
