@@ -89,7 +89,7 @@ export function parseCSV(text: string, delimiter: string = ','): string[][] {
 // XLSX Parser (minimal, using fflate for unzip)
 // ============================================
 
-async function parseXLSX(buffer: ArrayBuffer, sheetName?: string): Promise<{ sheets: string[]; data: string[][] }> {
+export async function parseXLSX(buffer: ArrayBuffer, sheetName?: string): Promise<{ sheets: string[]; data: string[][] }> {
   // Dynamically import fflate for decompression
   let fflate: { unzipSync: (data: Uint8Array) => Record<string, Uint8Array> };
   try {

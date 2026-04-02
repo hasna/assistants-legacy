@@ -16,7 +16,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 // Shared helper functions
 import {
-  resolveInputPath, parseCSV, decodeXML, detectColumnType,
+  resolveInputPath, parseCSV, parseXLSX, decodeXML, detectColumnType,
   parseRange, colLetterToIndex, computeStats, type ColumnType,
 } from './spreadsheet-helpers';
 
