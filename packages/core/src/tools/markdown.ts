@@ -30,6 +30,7 @@ import type { Node } from 'unist';
 import {
   resolveInputPath, parseMarkdown, stringifyMarkdown, getHeadingText,
   getHeadingTree, extractSection, formatHeadingTree, getNodeText,
+  resolveAndValidate, readMarkdownFile, type HeadingNode,
 } from './markdown-helpers';
 
 export class MarkdownTools {

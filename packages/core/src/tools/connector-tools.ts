@@ -1,6 +1,7 @@
 import type { Tool, Connector } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { ConnectorBridge, resolveTimeout } from './connector-bridge';
+import { ConnectorAutoRefreshManager } from '../connectors/auto-refresh';
 
 export const __test__ = {
   resolveTimeout,

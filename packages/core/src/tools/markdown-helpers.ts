@@ -140,7 +140,7 @@ export function stringifyMarkdown(tree: Root): string {
   return processor.stringify(tree);
 }
 
-interface HeadingNode {
+export interface HeadingNode {
   depth: number;
   text: string;
   line: number;
