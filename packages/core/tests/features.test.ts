@@ -162,7 +162,12 @@ describe('getFeatureAvailability', () => {
   });
 
   test('coreChat true when ANTHROPIC_API_KEY set', () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+    process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+    expect(getFeatureAvailability().coreChat).toBe(true);
+  });
+
+  test('coreChat true when GEMINI_API_KEY set', () => {
+    process.env.GEMINI_API_KEY = 'gemini-test';
     expect(getFeatureAvailability().coreChat).toBe(true);
   });
 
@@ -215,13 +220,13 @@ describe('getFeatureStatusMessage', () => {
     expect(msg.length).toBeGreaterThan(0);
   });
 
-  test('warns when ANTHROPIC_API_KEY not set', () => {
+  test('warns when no LLM provider key is set', () => {
     const msg = getFeatureStatusMessage();
-    expect(msg).toContain('not set');
+    expect(msg).toContain('No LLM provider API key set');
   });
 
-  test('shows enabled when ANTHROPIC_API_KEY set', () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+  test('shows enabled when any LLM provider key is set', () => {
+    process.env.MISTRAL_API_KEY = 'mistral-test';
     const msg = getFeatureStatusMessage();
     expect(msg).toContain('enabled');
   });

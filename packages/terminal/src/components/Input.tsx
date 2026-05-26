@@ -3,6 +3,15 @@ import { useTerminalDimensions } from '@opentui/react';
 import type { TextareaRenderable } from '@opentui/core';
 import { CommandHistory, getCommandHistory } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import {
+  normalizeLineEndings,
+  countWords,
+  countLines,
+  formatPastePlaceholder,
+  isLargePaste,
+  DEFAULT_PASTE_THRESHOLDS,
+  type PasteThresholds,
+} from './prompt-input/helpers';
 import { themeColor } from '../theme/colors';
 
 // Deterministic color palette for assistant badges (white text on colored bg)
@@ -99,47 +108,8 @@ interface SkillInfo {
 }
 
 // Default paste threshold configuration (can be overridden via props)
-const DEFAULT_PASTE_THRESHOLDS = {
-  chars: 500,
-  words: 100,
-  lines: 20,
-};
 
-function normalizeLineEndings(text: string): string {
-  return text.replace(/\r\n?/g, '\n');
-}
-
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
-
-function countLines(text: string): number {
-  return text.split('\n').length;
-}
-
-function formatPastePlaceholder(text: string): string {
-  const chars = text.length;
-  const words = countWords(text);
-  return `📋 Pasted ${words.toLocaleString()} words / ${chars.toLocaleString()} chars`;
-}
-
-interface PasteThresholds {
-  chars?: number;
-  words?: number;
-  lines?: number;
-}
-
-function isLargePaste(text: string, thresholds: PasteThresholds = DEFAULT_PASTE_THRESHOLDS): boolean {
-  const charThreshold = thresholds.chars ?? DEFAULT_PASTE_THRESHOLDS.chars;
-  const wordThreshold = thresholds.words ?? DEFAULT_PASTE_THRESHOLDS.words;
-  const lineThreshold = thresholds.lines ?? DEFAULT_PASTE_THRESHOLDS.lines;
-
-  return (
-    text.length > charThreshold ||
-    countWords(text) > wordThreshold ||
-    countLines(text) > lineThreshold
-  );
-}
+// Paste/text helpers live in the prompt-input suite (plan P5.1).
 
 interface PasteConfig {
   /** Whether large paste handling is enabled (default: true) */
@@ -629,7 +599,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       <box
         flexDirection="column"
         flexGrow={1}
-        bg={bgColor}
+        backgroundColor={bgColor}
         paddingX={1}
         minHeight={1}
       >
@@ -684,7 +654,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
               focusedTextColor={textColor}
               backgroundColor="transparent"
               focusedBackgroundColor="transparent"
-              fg={textColor}
               onContentChange={handleContentChange}
               onSubmit={() => handleSubmit(value)}
             />
@@ -700,7 +669,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
         {/* Model variants bar: "Build MiMo V2 Omni Free ... · low" */}
         {modelVariants.length > 0 && (
-          <box flexDirection="row" bg={bgColor}>
+          <box flexDirection="row" backgroundColor={bgColor}>
             {modelVariants.map((variant, i) => (
               <text
                 key={variant}
@@ -720,7 +689,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
       {/* Skills autocomplete dropdown - below input */}
       {autocompleteMode === 'skill' && filteredSkills.length > 0 && (
-        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
+        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleSkills.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleSkills.startIndex} more above</text>
@@ -730,7 +699,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={skill.name} bg={rowBg}>
+              <box flexDirection="row" key={skill.name} backgroundColor={rowBg}>
                 <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{skill.name.padEnd(18)}</b>
@@ -750,7 +719,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
       {/* Commands autocomplete dropdown - below input */}
       {autocompleteMode === 'command' && filteredCommands.length > 0 && (
-        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
+        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleCommands.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleCommands.startIndex} more above</text>
@@ -760,7 +729,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={cmd.name} bg={rowBg}>
+              <box flexDirection="row" key={cmd.name} backgroundColor={rowBg}>
                 <text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   <b>{cmd.name.padEnd(18)}</b>
@@ -780,7 +749,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
       {/* File autocomplete dropdown - below input */}
       {autocompleteMode === 'file' && filteredFiles.length > 0 && (
-        <box flexDirection="column" bg={themeColor('surface')} paddingX={1} paddingY={0}>
+        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
           {/* Scroll indicator - top */}
           {visibleFiles.startIndex > 0 && (
             <text fg={mutedColor}>  ↑ {visibleFiles.startIndex} more above</text>
@@ -790,7 +759,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
             return (
-              <box flexDirection="row" key={file.name} bg={rowBg}>
+              <box flexDirection="row" key={file.name} backgroundColor={rowBg}>
                 <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   {file.name}

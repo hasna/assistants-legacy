@@ -173,6 +173,36 @@ export function formatShellResult(command: string, result: ShellResult): string 
   return sections.join('\n\n');
 }
 
+/**
+ * Bare slash commands (`/foo`) that the assistant/LLM layer handles directly and
+ * should always pass through without a local "unknown command" warning.
+ */
+export const LLM_HANDLED_COMMANDS = new Set([
+  '/about', '/help', '/status', '/tokens', '/cost', '/compact',
+  '/voice', '/context', '/diff', '/feedback', '/verification',
+  '/whoami', '/agents', '/call', '/communication', '/init', '/logs',
+]);
+
+/**
+ * Decide whether a submitted input is an unrecognized bare slash command that
+ * should be rejected locally (to avoid wasting an LLM turn).
+ *
+ * A bare `/word` is recognized if it is LLM-handled OR present in the loaded
+ * command registry (panel commands like /webhooks, /channels, /people are
+ * registered there and handled by the agent). Anything with arguments or non
+ * bare-slash input is never treated as unknown here.
+ */
+export function isUnrecognizedSlashCommand(
+  trimmedInput: string,
+  registeredCommandNames: string[],
+): boolean {
+  if (!/^\/\w+$/.test(trimmedInput) || trimmedInput.startsWith('/say ')) return false;
+  const cmdBase = trimmedInput.split(/\s+/)[0].toLowerCase();
+  if (LLM_HANDLED_COMMANDS.has(cmdBase)) return false;
+  const registered = new Set(registeredCommandNames.map((n) => n.toLowerCase()));
+  return !registered.has(cmdBase);
+}
+
 export function formatElapsedDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   // Show "<1s" for very quick responses (sub-second)

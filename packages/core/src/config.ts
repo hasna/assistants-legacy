@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { homedir } from 'os';
 import { existsSync, mkdirSync, readdirSync, copyFileSync } from 'fs';
-import type { AssistantsConfig, HookConfig, ConnectorsConfigShared } from '@hasna/assistants-shared';
+import { getProviderInfo, type AssistantsConfig, type HookConfig, type ConnectorsConfigShared } from '@hasna/assistants-shared';
 import { getRuntime, hasRuntime } from './runtime';
 import { deepMerge } from './utils/deep-merge';
 
@@ -68,9 +68,8 @@ const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant by Hasna, running 
 
 const DEFAULT_CONFIG: AssistantsConfig = {
   llm: {
-    provider: 'anthropic',
-    model: 'claude-opus-4-5-20251101',
-    maxTokens: 8192,
+    model: 'anthropic:claude-opus-4-5-20251101',
+    maxOutputTokens: 8192,
     effortLevel: 'medium',
   },
   voice: {
@@ -300,7 +299,7 @@ const DEFAULT_CONFIG: AssistantsConfig = {
     bash: 'readonly',
     mode: 'normal',
   },
-  backgroundModel: 'claude-haiku-4-5-20251001',
+  backgroundModel: 'anthropic:claude-haiku-4-5-20251001',
 };
 
 function mergeConfig(base: AssistantsConfig, override?: Partial<AssistantsConfig>): AssistantsConfig {
@@ -457,25 +456,27 @@ export async function loadConfig(
 }
 
 /**
- * Validate config at load time. Logs warnings for invalid values
- * and clamps them to safe defaults. Never throws — returns a valid config.
+ * Validate config at load time. LLM model ids are intentionally strict after
+ * the AI SDK migration; unprefixed legacy ids must fail instead of falling back.
  */
 function validateConfig(config: AssistantsConfig): AssistantsConfig {
   const warn = (msg: string) => process.stderr.write(`[assistants-config] ${msg}\n`);
 
-  // llm.provider must be a known value
-  const validProviders = ['anthropic', 'openai', 'xai', 'mistral', 'gemini', 'codex'];
-  if (config.llm?.provider && !validProviders.includes(config.llm.provider)) {
-    warn(`Unknown LLM provider "${config.llm.provider}", falling back to "anthropic"`);
-    config.llm.provider = 'anthropic';
+  // llm.model must be an AI SDK provider-prefixed id.
+  const modelId = config.llm?.model;
+  const separator = typeof modelId === 'string' ? modelId.indexOf(':') : -1;
+  const modelProvider = separator > 0 ? modelId.slice(0, separator) : null;
+  if (!modelProvider || separator === modelId.length - 1 || !getProviderInfo(modelProvider as never)) {
+    throw new Error(
+      `Invalid llm.model "${modelId}". Use an AI SDK provider-prefixed id like "anthropic:claude-sonnet-4-6".`
+    );
   }
 
-  // llm.maxTokens must be positive
-  if (config.llm?.maxTokens !== undefined && (typeof config.llm.maxTokens !== 'number' || config.llm.maxTokens <= 0)) {
-    warn(`Invalid llm.maxTokens "${config.llm.maxTokens}", falling back to 8192`);
-    config.llm.maxTokens = 8192;
+  // llm.maxOutputTokens must be positive
+  if (config.llm?.maxOutputTokens !== undefined && (typeof config.llm.maxOutputTokens !== 'number' || config.llm.maxOutputTokens <= 0)) {
+    warn(`Invalid llm.maxOutputTokens "${config.llm.maxOutputTokens}", falling back to 8192`);
+    config.llm.maxOutputTokens = 8192;
   }
-
   // permissions.bash must be a valid level
   const validBashPerms = ['none', 'readonly', 'readwrite'];
   if (config.permissions?.bash && !validBashPerms.includes(config.permissions.bash)) {

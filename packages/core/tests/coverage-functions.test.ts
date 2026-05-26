@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { __test__ as bashTest } from '../src/tools/bash';
 import { __test__ as hookTest } from '../src/hooks/executor';
-import { __test__ as connectorTest } from '../src/tools/connector';
 import { __test__ as builtinTest } from '../src/commands/builtin';
 import { __test__ as fsTest } from '../src/tools/filesystem';
 import { __test__ as imageTest } from '../src/tools/image';
@@ -20,19 +19,6 @@ describe('Function coverage helpers', () => {
     let called = false;
     hookTest.killSpawnedProcess({ kill: () => { called = true; } });
     expect(called).toBe(true);
-  });
-
-  test('connector resolveTimeout resolves with exitCode 1', async () => {
-    let resolved: { exitCode: number } | null = null;
-    const p = new Promise<{ exitCode: number }>((resolve) => {
-      connectorTest.resolveTimeout((value) => {
-        resolved = value;
-        resolve(value);
-      });
-    });
-    const result = await p;
-    expect(result.exitCode).toBe(1);
-    expect(resolved?.exitCode).toBe(1);
   });
 
   test('builtin resolveAuthTimeout resolves with default stdout', async () => {

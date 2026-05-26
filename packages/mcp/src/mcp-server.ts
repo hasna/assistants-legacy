@@ -64,13 +64,13 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
 
   // ─── describe_tools ─────────────────────────────────────────────────────────
 
-  server.tool(
+  (server.tool as any)(
     'describe_tools',
     'Get full docs for tools. No args = all tools.',
     { names: z.array(z.string()).optional() },
-    async ({ names }) => {
+    async ({ names }: { names?: string[] }) => {
       const keys = names?.length ? names : Object.keys(TOOL_DOCS);
-      const lines = keys.flatMap((k) => {
+      const lines = keys.flatMap((k: string) => {
         const doc = TOOL_DOCS[k];
         if (!doc) return [`**${k}**: not found`];
         return [`## ${k} (v${doc.version})\n${doc.description}\n\n**Params:**\n${doc.params}`];
@@ -81,11 +81,11 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
 
   // ─── search_tools ───────────────────────────────────────────────────────────
 
-  server.tool(
+  (server.tool as any)(
     'search_tools',
     'Search tools by keyword.',
     { query: z.string() },
-    async ({ query }) => {
+    async ({ query }: { query: string }) => {
       const q = query.toLowerCase();
       const matches = Object.entries(TOOL_DOCS).filter(([name, doc]) =>
         name.includes(q) || doc.description.toLowerCase().includes(q) || doc.params.toLowerCase().includes(q)
@@ -537,11 +537,11 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
   await loadSkillsWithSdk(startupLoader, process.cwd());
 
   for (const skill of startupLoader.getSkills()) {
-    server.prompt(
+    (server.prompt as any)(
       `skill/${skill.name}`,
       skill.description || `Execute the "${skill.name}" skill`,
       { arguments: z.string().optional().describe(skill.argumentHint ? `Arguments: ${skill.argumentHint}` : 'Optional arguments') },
-      async ({ arguments: args }) => {
+      async ({ arguments: args }: { arguments?: string }) => {
         const executor = new SE();
         const expanded = await executor.prepare(skill, args ? args.split(/\s+/) : []);
         return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: expanded || skill.content || '' } }] };
@@ -693,21 +693,19 @@ registerTool(
 
 registerTool(
   'set_agent_model',
-  'Set provider, model ID, and reasoning level for an assistant.',
+  'Set an AI SDK provider-prefixed model ID and reasoning level for an assistant.',
   {
     type: 'object',
     properties: {
       agent_name: { type: 'string', description: 'Assistant/agent name' },
-      provider: { type: 'string', description: 'LLM provider: anthropic, openai, google, etc.' },
-      model: { type: 'string', description: 'Model ID e.g. claude-opus-4-6, gpt-5.2' },
+      model: { type: 'string', description: 'AI SDK model ID e.g. anthropic:claude-opus-4-6, openai:gpt-5.2' },
       reasoning_level: { type: 'string', enum: ['max', 'high', 'medium', 'low'], description: 'Reasoning level for extended thinking' },
     },
     required: ['agent_name'],
   },
-  async (args: { agent_name: string; provider?: string; model?: string; reasoning_level?: string }) => {
+  async (args: { agent_name: string; model?: string; reasoning_level?: string }) => {
     const cwd = process.cwd();
     const filePath = setAgentModelConfig(args.agent_name, {
-      provider: args.provider,
       model: args.model,
       reasoningLevel: args.reasoning_level as 'max' | 'high' | 'medium' | 'low' | undefined,
     }, cwd);
@@ -736,7 +734,7 @@ registerTool(
   }
 );
 
-server.tool(
+registerTool(
   'sync_from_claude_agents',
   'Reverse sync: import agent definitions from .claude/agents/*.md files back into assistants MCP. Conflict resolution: last-write-wins by file mtime. Pull direction: .claude/agents → assistants MCP.',
   {

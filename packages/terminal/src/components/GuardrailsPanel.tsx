@@ -53,7 +53,7 @@ const ACTIONS: PolicyAction[] = ['allow', 'deny', 'warn', 'require_approval'];
 
 export function GuardrailsPanel({
   config,
-  policies,
+  policies = [],
   onToggleEnabled,
   onTogglePolicy,
   onSetPreset,
@@ -466,7 +466,7 @@ export function GuardrailsPanel({
         <box flexDirection="row" marginBottom={1} justifyContent="space-between">
           <box flexDirection="row">
             <text><b>{detailPolicy.name || detailPolicy.id}</b></text>
-            <text fg={detailPolicy.enabled ? themeColor('success') : 'red'}> [{detailPolicy.enabled ? 'on' : 'off'}]</text>
+            <text fg={detailPolicy.enabled ? themeColor('success') : themeColor('red')}> [{detailPolicy.enabled ? 'on' : 'off'}]</text>
           </box>
           <text fg={SCOPE_COLORS[detailPolicy.scope]}>{detailPolicy.scope}</text>
         </box>
@@ -498,9 +498,9 @@ export function GuardrailsPanel({
                 <box key={`${rule.pattern}-${idx}`}>
                   <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <text fg={ACTION_COLORS[rule.action]}>[{rule.action.slice(0, 4).padEnd(4)}]</text>{' '}
-                    <text attributes={isSelected ? 1 : undefined}><b>{rule.pattern.slice(0, 30).padEnd(30)}</b></text>
-                    {rule.reason && <text fg={themeColor('muted')}> {rule.reason.slice(0, 20)}</text>}
+                    <span fg={ACTION_COLORS[rule.action]}>[{rule.action.slice(0, 4).padEnd(4)}]</span>{' '}
+                    <span attributes={isSelected ? 1 : undefined}><b>{rule.pattern.slice(0, 30).padEnd(30)}</b></span>
+                    {rule.reason && <span fg={themeColor('muted')}> {rule.reason.slice(0, 20)}</span>}
                   </text>
                 </box>
               );
@@ -560,10 +560,10 @@ export function GuardrailsPanel({
                 <box key={policy.id}>
                   <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <text fg={policy.enabled ? themeColor('success') : 'red'}>[{policy.enabled ? 'on ' : 'off'}]</text>{' '}
-                    <text attributes={isSelected ? 1 : undefined}><b>{(policy.name || policy.id).slice(0, 20).padEnd(20)}</b></text>{' '}
-                    <text fg={scopeColor}>{policy.scope.padEnd(10)}</text>{' '}
-                    <text fg={themeColor('muted')}>{policy.location}</text>
+                    <span fg={policy.enabled ? themeColor('success') : themeColor('red')}>[{policy.enabled ? 'on ' : 'off'}]</span>{' '}
+                    <span attributes={isSelected ? 1 : undefined}><b>{(policy.name || policy.id).slice(0, 20).padEnd(20)}</b></span>{' '}
+                    <span fg={scopeColor}>{policy.scope.padEnd(10)}</span>{' '}
+                    <span fg={themeColor('muted')}>{policy.location}</span>
                   </text>
                 </box>
               );
@@ -607,9 +607,9 @@ export function GuardrailsPanel({
                 <box key={`${item.policyId}-${item.rule.pattern}-${index}`}>
                   <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <text fg={actionColor}>[{item.rule.action.slice(0, 4).padEnd(4)}]</text>{' '}
-                    <text attributes={isSelected ? 1 : undefined}><b>{item.rule.pattern.slice(0, 25).padEnd(25)}</b></text>{' '}
-                    <text fg={themeColor('muted')}>{item.policyName.slice(0, 15)}</text>
+                    <span fg={actionColor}>[{item.rule.action.slice(0, 4).padEnd(4)}]</span>{' '}
+                    <span attributes={isSelected ? 1 : undefined}><b>{item.rule.pattern.slice(0, 25).padEnd(25)}</b></span>{' '}
+                    <span fg={themeColor('muted')}>{item.policyName.slice(0, 15)}</span>
                   </text>
                 </box>
               );
@@ -641,12 +641,12 @@ export function GuardrailsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Guardrails</b></text>
-        <text fg={config.enabled ? themeColor('success') : 'red'}>{config.enabled ? 'Enabled' : 'Disabled'}</text>
+        <text fg={config.enabled ? themeColor('success') : themeColor('red')}>{config.enabled ? 'Enabled' : 'Disabled'}</text>
       </box>
       <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         <box marginBottom={1}>
           <text><b>Status: </b></text>
-          <text fg={config.enabled ? themeColor('success') : 'red'}>
+          <text fg={config.enabled ? themeColor('success') : themeColor('red')}>
             {config.enabled ? 'Enforcing policies' : 'Not enforcing (all tools allowed)'}
           </text>
         </box>
@@ -655,9 +655,9 @@ export function GuardrailsPanel({
           <box>
             <text fg={themeColor('muted')}>Tool Rules: </text><text>{totalRules} total</text>
             {denyRules > 0 && (
-              <text> (<text fg={themeColor('error')}>{denyRules} deny</text>
-                {approvalRules > 0 && <text>, </text>}
-                {approvalRules > 0 && <text fg={themeColor('warning')}>{approvalRules} approval</text>})
+              <text> (<span fg={themeColor('error')}>{denyRules} deny</span>
+                {approvalRules > 0 && <span>, </span>}
+                {approvalRules > 0 && <span fg={themeColor('warning')}>{approvalRules} approval</span>})
               </text>
             )}
           </box>

@@ -76,7 +76,7 @@ describe('terminal basic components', () => {
 
   test('WelcomeBanner renders with model prop', async () => {
     const { captureCharFrame, renderOnce } = await testRender(
-      <WelcomeBanner version="1.0.0" model="claude-sonnet-4-20250514" directory="/tmp" />, { width: 80, height: 24 }
+      <WelcomeBanner version="1.0.0" model="anthropic:claude-sonnet-4-20250514" directory="/tmp" />, { width: 80, height: 24 }
     );
     await renderOnce();
     const frame = captureCharFrame();

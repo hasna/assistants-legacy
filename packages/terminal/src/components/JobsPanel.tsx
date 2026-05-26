@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Job, JobManager, JobStatus } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -126,6 +127,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<ViewMode>('list');
+  useClearOnChange(mode);
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [filterIndex, setFilterIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -352,7 +354,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
     <box marginBottom={1}>
       <text>{FILTER_TABS.map((tab, index) => {
         const label = `${index + 1}:${tab}`;
-        return <span key={tab} fg={index === filterIndex ? 'cyan' : themeColor('muted')}>{label}{'  '}</span>;
+        return <span key={tab} fg={index === filterIndex ? themeColor('cyan') : themeColor('muted')}>{label}{'  '}</span>;
       })}<span fg={themeColor('muted')}>{`(${jobs.length} total, ${jobs.filter((job) => isActiveStatus(job.status)).length} active)`}</span></text>
     </box>
   );
@@ -427,7 +429,7 @@ export function JobsPanel({ manager, onClose }: JobsPanelProps) {
         const selected = absolute === selectedIndex;
         return (
           <box key={job.id}>
-            <text><span fg={selected ? 'cyan' : themeColor('muted')}>{selected ? '>' : ' '}</span>{' '}<span fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</span>{' '}{fit(job.id, 16)}{' '}{fit(job.connectorName, 14)}{' '}{fit(formatRelativeTime(job.createdAt), 6, 'right')}{' '}{fit(formatDuration(job), 6, 'right')}{' '}{truncateText(job.command, 28)}</text>
+            <text><span fg={selected ? themeColor('cyan') : themeColor('muted')}>{selected ? '>' : ' '}</span>{' '}<span fg={statusColor(job.status)}>{fit(statusBadge(job.status), 10)}</span>{' '}{fit(job.id, 16)}{' '}{fit(job.connectorName, 14)}{' '}{fit(formatRelativeTime(job.createdAt), 6, 'right')}{' '}{fit(formatDuration(job), 6, 'right')}{' '}{truncateText(job.command, 28)}</text>
           </box>
         );
       })}

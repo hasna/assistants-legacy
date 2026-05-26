@@ -18,7 +18,7 @@ describe('Input component', () => {
     expect(frame).toContain('Enter=inline | Tab=queue | Shift+Enter=interrupt');
   });
 
-  test('esc stops processing when callback is provided', async () => {
+  test('ctrl-c stops processing when callback is provided', async () => {
     let stopped = 0;
     const { renderOnce, mockInput } = await testRender(
       <Input
@@ -30,7 +30,7 @@ describe('Input component', () => {
       />, { width: 80, height: 24 }
     );
     await renderOnce();
-    mockInput.pressEscape();
+    mockInput.pressCtrlC();
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(stopped).toBe(1);
   });

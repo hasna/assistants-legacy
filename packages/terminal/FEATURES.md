@@ -6,7 +6,7 @@ This document describes the features available in the Assistants terminal packag
 
 | Feature | Required | Dependencies | Environment Variables | Notes |
 |---------|----------|--------------|----------------------|-------|
-| **Core Chat** | Yes | None | `ANTHROPIC_API_KEY` | Basic AI chat functionality |
+| **Core Chat** | Yes | None | One AI SDK provider key | Basic AI chat functionality |
 | **Bash Tool** | Yes | None | None | Execute shell commands |
 | **Filesystem Tools** | Yes | None | None | Read/write/edit files |
 | **Web Fetch** | Yes | None | None | Fetch web content |
@@ -31,14 +31,15 @@ This document describes the features available in the Assistants terminal packag
 
 ### Minimum Configuration (Basic Chat)
 
-The only required configuration to run the terminal:
+The only required configuration to run the terminal is one supported provider key:
 
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
+export ANTHROPIC_API_KEY="<anthropic-api-key>"
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 ```
 
 This enables:
-- AI chat with Claude
+- AI chat through the AI SDK
 - Bash command execution
 - File reading/writing/editing
 - Web content fetching
@@ -50,8 +51,9 @@ This enables:
 For most users, we recommend:
 
 ```bash
-# Required
-export ANTHROPIC_API_KEY="sk-ant-..."
+# Required: one supported provider key
+export ANTHROPIC_API_KEY="<anthropic-api-key>"
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 
 # Optional but useful
 export EXA_API_KEY="..."  # Enhanced web search
@@ -65,8 +67,9 @@ This adds:
 For all features:
 
 ```bash
-# Required
-export ANTHROPIC_API_KEY="sk-ant-..."
+# Required: one supported provider key
+export ANTHROPIC_API_KEY="<anthropic-api-key>"
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 
 # Voice features
 export ELEVENLABS_API_KEY="..."  # Premium TTS
@@ -85,9 +88,12 @@ export EXA_API_KEY="..."  # Web search
 
 | Variable | Required | Feature | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Core | Claude API access |
+| `ANTHROPIC_API_KEY` | One LLM key required | Core | Anthropic models |
+| `OPENAI_API_KEY` | One LLM key required | Core / Voice STT | OpenAI models and Whisper speech-to-text |
+| `GEMINI_API_KEY` | One LLM key required | Core | Google Gemini models |
+| `XAI_API_KEY` | One LLM key required | Core | xAI models |
+| `MISTRAL_API_KEY` | One LLM key required | Core | Mistral models |
 | `ELEVENLABS_API_KEY` | No | Voice TTS | ElevenLabs text-to-speech |
-| `OPENAI_API_KEY` | No | Voice STT | OpenAI Whisper speech-to-text |
 | `EXA_API_KEY` | No | Web Search | Enhanced semantic search |
 | `AWS_ACCESS_KEY_ID` | No | AWS Features | AWS authentication |
 | `AWS_SECRET_ACCESS_KEY` | No | AWS Features | AWS authentication |
@@ -166,8 +172,8 @@ Missing optional features are silently skipped - the terminal will work with wha
 
 ## Troubleshooting
 
-### "ANTHROPIC_API_KEY not set"
-Set your API key: `export ANTHROPIC_API_KEY="sk-ant-..."`
+### "No LLM provider API key set"
+Set one provider key: `export ANTHROPIC_API_KEY="<anthropic-api-key>"` or `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, or `MISTRAL_API_KEY`.
 
 ### Connector not found
 Install the connector via `connectors install <name>`, e.g., `connectors install notion`

@@ -41,6 +41,7 @@ export interface StreamChunk {
   toolResult?: ToolResult;
   error?: string;
   usage?: TokenUsage;
+  finishReason?: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other' | string;
   /** Panel to show (for 'show_panel' type) */
   panel?: 'connectors' | 'projects' | 'plans' | 'tasks' | 'assistants' | 'hooks' | 'config' | 'messages' | 'guardrails' | 'budget' | 'model' | 'schedules' | 'wallet' | 'secrets' | 'identity' | 'memory' | 'inbox' | 'swarm' | 'workspace' | 'logs' | 'skills' | 'heartbeat' | 'resume' | 'webhooks' | 'channels' | 'telephony' | 'orders' | 'contacts' | 'setup' | 'people';
   /** Initial value for the panel */

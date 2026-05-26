@@ -278,7 +278,7 @@ describe('terminal panels', () => {
     expect(frame).toContain('+15550001111');
   });
 
-  test.todo('TelephonyPanel highlights default number in numbers tab', async () => {
+  test('TelephonyPanel highlights default number in numbers tab', async () => {
     const manager = createTelephonyManagerStub({
       defaultNumber: '+15550002222',
       defaultSource: 'local',
@@ -312,7 +312,7 @@ describe('terminal panels', () => {
     expect(frame).toContain('default');
   });
 
-  test.todo('TelephonyPanel sets default number with d key', async () => {
+  test('TelephonyPanel sets default number with d key', async () => {
     const manager = createTelephonyManagerStub({
       numbers: [
         {

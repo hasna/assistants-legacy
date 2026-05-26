@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { RegisteredAssistant, RegistryStats, RegistryAssistantState, AssistantType } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -52,6 +53,7 @@ export function AssistantsRegistryPanel({
   onCancel,
 }: AssistantsPanelProps) {
   const [mode, setMode] = useState<Mode>('overview');
+  useClearOnChange(mode);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Sort assistants by registration time (most recent first)
@@ -254,7 +256,7 @@ export function AssistantsRegistryPanel({
             </box>
             <box paddingLeft={1}>
               <text fg={themeColor('muted')}>Errors: </text>
-              <text fg={assistant.status.errorsCount > 0 ? 'red' : 'white'}>{assistant.status.errorsCount}</text>
+              <text fg={assistant.status.errorsCount > 0 ? themeColor('red') : themeColor('white')}>{assistant.status.errorsCount}</text>
             </box>
           </box>
 
@@ -309,10 +311,10 @@ export function AssistantsRegistryPanel({
                 <box key={item.id}>
                   <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <text fg={stateColor}>[{item.status.state.slice(0, 4).padEnd(4)}]</text>{' '}
-                    <text attributes={isSelected ? 1 : undefined}><b>{item.name.slice(0, 18).padEnd(18)}</b></text>{' '}
-                    <text fg={typeColor}>{item.type.slice(0, 8).padEnd(8)}</text>{' '}
-                    <text fg={themeColor('muted')}>{formatTimestamp(item.registeredAt)}</text>
+                    <span fg={stateColor}>[{item.status.state.slice(0, 4).padEnd(4)}]</span>{' '}
+                    <span attributes={isSelected ? 1 : undefined}><b>{item.name.slice(0, 18).padEnd(18)}</b></span>{' '}
+                    <span fg={typeColor}>{item.type.slice(0, 8).padEnd(8)}</span>{' '}
+                    <span fg={themeColor('muted')}>{formatTimestamp(item.registeredAt)}</span>
                   </text>
                 </box>
               );
@@ -403,7 +405,7 @@ export function AssistantsRegistryPanel({
         <box flexDirection="column">
           <box>
             <text fg={themeColor('muted')}>Average Load: </text>
-            <text fg={stats.averageLoad > 0.8 ? 'red' : stats.averageLoad > 0.5 ? 'yellow' : themeColor('success')}>
+            <text fg={stats.averageLoad > 0.8 ? themeColor('red') : stats.averageLoad > 0.5 ? themeColor('yellow') : themeColor('success')}>
               {(stats.averageLoad * 100).toFixed(0)}%
             </text>
           </box>

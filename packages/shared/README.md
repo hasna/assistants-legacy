@@ -63,9 +63,8 @@ import type { AssistantsConfig, LLMConfig, VoiceConfig } from '@hasna/assistants
 
 const config: AssistantsConfig = {
   llm: {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514',
-    maxTokens: 8192,
+    model: 'anthropic:claude-sonnet-4-20250514',
+    maxOutputTokens: 8192,
   },
 };
 ```

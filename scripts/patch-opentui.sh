@@ -1,101 +1,71 @@
 #!/bin/bash
 # Patch @opentui/core for Ink compatibility:
-# 1. TextNodeRenderable.add() — skip non-string/non-renderable children (Ink accepted numbers)
+# 1. TextNodeRenderable.add() — coerce numbers/bigints to string (Ink accepted numbers)
 # 2. TextNodeRenderable.remove() — don't throw if child not found (silently skipped adds)
 # 3. TextNodeRenderable.insertBefore() — don't throw on non-text anchors/children
 #
-# Works in both:
-# - Local dev: node_modules/.pnpm or node_modules/@opentui/core
-# - Global install: ~/.bun/install/global/node_modules/@opentui/core
+# Patches EVERY @opentui/core copy found under node_modules, including bun's isolated
+# `.bun` store, pnpm's `.pnpm` store, flat installs, and global installs. The bundler
+# may resolve a different core version than the one hoisted, so we patch them all.
+# The patch is idempotent — running it repeatedly is safe.
 
-CORE_JS=""
-
-# Determine the base directory to search from
-# If INIT_CWD is set (npm/bun postinstall), use it; otherwise use script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Strategy 1: pnpm virtual store (local dev with pnpm)
-if [ -z "$CORE_JS" ]; then
-  CORE_JS=$(find "${PACKAGE_DIR}/node_modules/.pnpm" -path '*@opentui/core/index-*.js' 2>/dev/null | head -1)
-fi
+# Collect every @opentui/core index-*.js across all candidate roots. -L follows the
+# symlinks bun creates from node_modules/@opentui/core into the .bun store.
+declare -A SEEN
+CORE_FILES=()
+for ROOT in \
+  "${PACKAGE_DIR}/node_modules" \
+  "node_modules" \
+  "$(dirname "$(dirname "$PACKAGE_DIR")")"; do
+  [ -d "$ROOT" ] || continue
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
+    if [ -z "${SEEN[$real]:-}" ]; then
+      SEEN[$real]=1
+      CORE_FILES+=("$real")
+    fi
+  done < <(find -L "$ROOT" -path '*@opentui/core/index-*.js' -type f 2>/dev/null)
+done
 
-# Strategy 2: flat node_modules/@opentui/core (local dev with bun/npm/yarn)
-if [ -z "$CORE_JS" ]; then
-  CORE_JS=$(find "${PACKAGE_DIR}/node_modules/@opentui/core" -name 'index-*.js' 2>/dev/null | head -1)
-fi
-
-# Strategy 3: sibling in parent node_modules (global install — @hasna/assistants is inside node_modules)
-# e.g., ~/.bun/install/global/node_modules/@hasna/assistants/ → ../../@opentui/core/
-if [ -z "$CORE_JS" ]; then
-  PARENT_NM="$(dirname "$(dirname "$PACKAGE_DIR")")"
-  if [ -d "$PARENT_NM/@opentui/core" ]; then
-    CORE_JS=$(find "$PARENT_NM/@opentui/core" -name 'index-*.js' 2>/dev/null | head -1)
-  fi
-fi
-
-# Strategy 4: CWD-based (fallback for running from project root)
-if [ -z "$CORE_JS" ]; then
-  CORE_JS=$(find node_modules/.pnpm -path '*@opentui/core/index-*.js' 2>/dev/null | head -1)
-fi
-if [ -z "$CORE_JS" ]; then
-  CORE_JS=$(find node_modules/@opentui/core -name 'index-*.js' 2>/dev/null | head -1)
-fi
-
-if [ -z "$CORE_JS" ]; then
+if [ ${#CORE_FILES[@]} -eq 0 ]; then
   echo "No @opentui/core JS file found — skipping patch"
   exit 0
 fi
 
-echo "Patching: $CORE_JS"
-
-python3 -c "
-import sys
-
-with open('$CORE_JS', 'r') as f:
+for CORE_JS in "${CORE_FILES[@]}"; do
+  echo "Patching: $CORE_JS"
+  CORE_JS="$CORE_JS" python3 -c "
+import os
+core = os.environ['CORE_JS']
+with open(core, 'r') as f:
     content = f.read()
 
 changed = False
-
-# 1. Replace throw in add() with silent return
-old = 'throw new Error(\"TextNodeRenderable only accepts strings, TextNodeRenderable instances, or StyledText instances\")'
-new = 'if(typeof obj===\"number\"||typeof obj===\"bigint\"){obj=String(obj);if(index!==undefined){this._children.splice(index,0,obj);this.requestRender();return index}const ii=this._children.length;this._children.push(obj);this.requestRender();return ii}return-1'
-if old in content:
-    content = content.replace(old, new)
-    changed = True
-
-# 2. Replace throw in remove() with silent return
-old2 = 'throw new Error(\"Child not found in children\")'
-new2 = 'return this'
-if old2 in content:
-    content = content.replace(old2, new2)
-    changed = True
-
-# 3. Replace throw in insertBefore() for non-text anchors
-old3 = 'throw new Error(\"Anchor must be a TextNodeRenderable\")'
-new3 = 'return this'
-if old3 in content:
-    content = content.replace(old3, new3)
-    changed = True
-
-# 4. Replace throw in insertBefore() for non-text children
-old4 = 'throw new Error(\"Child must be a string, TextNodeRenderable, or StyledText instance\")'
-new4 = 'return this'
-if old4 in content:
-    content = content.replace(old4, new4)
-    changed = True
-
-# 5. Replace throw for anchor not found
-old5 = 'throw new Error(\"Anchor node not found in children\")'
-new5 = 'return this'
-if old5 in content:
-    content = content.replace(old5, new5)
-    changed = True
+replacements = [
+    # add(): coerce numbers/bigints to string instead of throwing
+    ('throw new Error(\"TextNodeRenderable only accepts strings, TextNodeRenderable instances, or StyledText instances\")',
+     'if(typeof obj===\"number\"||typeof obj===\"bigint\"){obj=String(obj);if(index!==undefined){this._children.splice(index,0,obj);this.requestRender();return index}const ii=this._children.length;this._children.push(obj);this.requestRender();return ii}return-1'),
+    # remove(): silently ignore missing child
+    ('throw new Error(\"Child not found in children\")', 'return this'),
+    # insertBefore(): tolerate non-text anchors/children
+    ('throw new Error(\"Anchor must be a TextNodeRenderable\")', 'return this'),
+    ('throw new Error(\"Child must be a string, TextNodeRenderable, or StyledText instance\")', 'return this'),
+    ('throw new Error(\"Anchor node not found in children\")', 'return this'),
+]
+for old, new in replacements:
+    if old in content:
+        content = content.replace(old, new)
+        changed = True
 
 if changed:
-    with open('$CORE_JS', 'w') as f:
+    with open(core, 'w') as f:
         f.write(content)
-    print('Patched @opentui/core: silenced text node errors for Ink compatibility')
+    print('  patched')
 else:
-    print('@opentui/core already patched or no matching patterns found')
+    print('  already patched / no matching patterns')
 "
+done

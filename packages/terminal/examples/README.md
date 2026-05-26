@@ -4,10 +4,11 @@ These examples demonstrate how to use `@hasna/assistants` programmatically.
 
 ## Prerequisites
 
-Set your Anthropic API key:
+Set at least one supported LLM provider API key:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 ```
 
 ## Running Examples

@@ -26,10 +26,9 @@ type ConfigScope = 'project' | 'global';
 // Safe paths that can be read/written via tools
 // Excluded: secrets, wallet, inbox storage credentials, API keys
 const SAFE_READ_PATHS = [
-  'llm.provider',
   'llm.model',
   'llm.baseUrl',
-  'llm.maxTokens',
+  'llm.maxOutputTokens',
   'voice.enabled',
   'voice.stt.provider',
   'voice.stt.model',
@@ -97,7 +96,7 @@ const SAFE_READ_PATHS = [
 const SAFE_WRITE_PATHS = [
   'llm.model',
   'llm.baseUrl',
-  'llm.maxTokens',
+  'llm.maxOutputTokens',
   'voice.enabled',
   'voice.stt.language',
   'voice.tts.stability',

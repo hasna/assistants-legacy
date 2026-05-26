@@ -239,7 +239,7 @@ describe('BuiltinCommands', () => {
         ...mockContext,
         getAssistantManager: () => assistantManager as any,
         getIdentityManager: () => null,
-        getModel: () => 'claude-opus-4-5',
+        getModel: () => 'anthropic:claude-opus-4-5-20251101',
       };
 
       if (cmd?.handler) {
@@ -248,7 +248,7 @@ describe('BuiltinCommands', () => {
         const output = emittedContent.join('\n');
         expect(output).toContain('Assistant: Assistant One');
         expect(output).toContain('Identity: (not configured)');
-        expect(output).toContain('Model: claude-opus-4-5');
+        expect(output).toContain('Model: anthropic:claude-opus-4-5-20251101');
       }
     });
   });
@@ -296,7 +296,7 @@ describe('BuiltinCommands', () => {
       name,
       description: undefined,
       avatar: undefined,
-      settings: { model: 'claude-opus-4-5' },
+      settings: { model: 'anthropic:claude-opus-4-5-20251101' },
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString(),
     });

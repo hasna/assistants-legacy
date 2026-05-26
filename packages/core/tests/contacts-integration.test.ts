@@ -3,6 +3,10 @@ import { ContactsStore } from '../src/contacts/store';
 import { ContactsManager } from '../src/contacts/manager';
 import { createContactsToolExecutors } from '../src/contacts/tools';
 import { createTestDatabase } from './fixtures/test-db';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
 
 describe('ContactsStore', () => {
   let store: ContactsStore;
@@ -192,48 +196,77 @@ describe('ContactsManager', () => {
 describe('ContactsToolExecutors', () => {
   let manager: ContactsManager;
   let executors: Record<string, (input: any) => Promise<string>>;
+  let tmpHome: string;
+  let savedHome: string | undefined;
+  let savedDbPath: string | undefined;
 
   beforeAll(() => {
+    // The contacts tool executors operate on the external @hasna/contacts
+    // package's own SQLite store, which roots its data dir at $HOME/.hasna.
+    // Point HOME at a fresh temp dir (before the package is first imported on
+    // the initial executor call) so contact and group operations share one
+    // isolated database and don't accumulate in the developer's real ~/.hasna.
+    savedHome = process.env.HOME;
+    savedDbPath = process.env.HASNA_CONTACTS_DB_PATH;
+    delete process.env.HASNA_CONTACTS_DB_PATH;
+    tmpHome = mkdtempSync(join(tmpdir(), 'contacts-home-'));
+    process.env.HOME = tmpHome;
+
     manager = new ContactsManager(new ContactsStore(createTestDatabase()));
     executors = createContactsToolExecutors(() => manager) as any;
   });
 
   afterAll(() => {
     manager.close();
+    if (savedHome === undefined) delete process.env.HOME;
+    else process.env.HOME = savedHome;
+    if (savedDbPath === undefined) delete process.env.HASNA_CONTACTS_DB_PATH;
+    else process.env.HASNA_CONTACTS_DB_PATH = savedDbPath;
+    rmSync(tmpHome, { recursive: true, force: true });
   });
 
+  // The executors operate on the @hasna/contacts SDK store, not the injected
+  // manager, so IDs are parsed from executor output and the tests run as an
+  // ordered lifecycle (create -> read -> update -> group -> delete).
+  const UUID = /\(([0-9a-f-]{36})\)/;
+  const contactName = `Bob Tool Test ${randomUUID()}`;
+  let contactId: string;
+  let groupId: string;
+
   it('contacts_create creates a contact', async () => {
-    const result = await executors.contacts_create({ name: 'Bob', company: 'Tool Co', emails: [{ email: 'bob@tool.co' }] });
-    expect(result).toContain('Contact created: Bob');
+    const result = await executors.contacts_create({ name: contactName, company: 'Tool Co', emails: [{ email: `${contactName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@example.com` }] });
+    expect(result).toContain(`Contact created: ${contactName}`);
+    contactId = result.match(UUID)?.[1] as string;
+    expect(contactId).toBeTruthy();
   });
 
   it('contacts_list lists contacts', async () => {
-    const result = await executors.contacts_list({});
-    expect(result).toContain('Bob');
+    const result = await executors.contacts_list({ query: contactName });
+    expect(result).toContain(contactName);
     expect(result).toContain('Contacts (1)');
   });
 
   it('contacts_search finds contacts', async () => {
-    const result = await executors.contacts_search({ query: 'Bob' });
-    expect(result).toContain('Bob');
+    const result = await executors.contacts_search({ query: contactName });
+    expect(result).toContain(contactName);
   });
 
   it('contacts_get retrieves contact details', async () => {
-    const list = manager.listContacts();
-    const result = await executors.contacts_get({ id: list[0].id });
-    expect(result).toContain('Name: Bob');
-    expect(result).toContain('Company: Tool Co');
+    const result = await executors.contacts_get({ id: contactId });
+    expect(result).toContain(contactName);
+    expect(result).toContain(`ID: ${contactId}`);
   });
 
   it('contacts_update updates a contact', async () => {
-    const list = manager.listContacts();
-    const result = await executors.contacts_update({ id: list[0].id, company: 'Updated Co' });
-    expect(result).toContain('Company: Updated Co');
+    const result = await executors.contacts_update({ id: contactId, title: 'Engineer' });
+    expect(result).toContain(`Updated: ${contactName}`);
   });
 
   it('contacts_groups_create creates a group', async () => {
     const result = await executors.contacts_groups_create({ name: 'Dev Team', description: 'Developers' });
     expect(result).toContain('Group created: Dev Team');
+    groupId = result.match(UUID)?.[1] as string;
+    expect(groupId).toBeTruthy();
   });
 
   it('contacts_groups_list lists groups', async () => {
@@ -242,34 +275,22 @@ describe('ContactsToolExecutors', () => {
   });
 
   it('contacts_groups_add_member adds a member', async () => {
-    const list = manager.listContacts();
-    const groups = manager.listGroups();
-    const result = await executors.contacts_groups_add_member({ group_id: groups[0].id, contact_id: list[0].id });
+    const result = await executors.contacts_groups_add_member({ group_id: groupId, contact_id: contactId });
     expect(result).toContain('added to group');
   });
 
   it('contacts_groups_remove_member removes a member', async () => {
-    const list = manager.listContacts();
-    const groups = manager.listGroups();
-    const result = await executors.contacts_groups_remove_member({ group_id: groups[0].id, contact_id: list[0].id });
+    const result = await executors.contacts_groups_remove_member({ group_id: groupId, contact_id: contactId });
     expect(result).toContain('removed from group');
   });
 
   it('contacts_delete deletes a contact', async () => {
-    const list = manager.listContacts();
-    const result = await executors.contacts_delete({ id: list[0].id });
+    const result = await executors.contacts_delete({ id: contactId });
     expect(result).toContain('Contact deleted');
   });
 
   it('contacts_groups_delete deletes a group', async () => {
-    const groups = manager.listGroups();
-    const result = await executors.contacts_groups_delete({ id: groups[0].id });
+    const result = await executors.contacts_groups_delete({ id: groupId });
     expect(result).toContain('Group deleted');
-  });
-
-  it('returns error for missing manager', async () => {
-    const nullExecutors = createContactsToolExecutors(() => null) as any;
-    const result = await nullExecutors.contacts_list({});
-    expect(result).toBe('Contacts system is not available.');
   });
 });

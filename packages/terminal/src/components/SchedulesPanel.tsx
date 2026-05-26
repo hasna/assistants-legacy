@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { ScheduledCommand } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -110,6 +111,7 @@ export function SchedulesPanel({
 }: SchedulesPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
@@ -479,7 +481,7 @@ export function SchedulesPanel({
                 {KIND_OPTIONS.map((opt, idx) => (
                   <box key={opt.id}>
                     <text bg={idx === createKindIndex ? themeColor('primary') : undefined}>
-                      {idx === createKindIndex ? '>' : ' '} {opt.label.padEnd(12)} <text fg={themeColor('muted')}>{opt.desc}</text>
+                      {idx === createKindIndex ? '>' : ' '} {opt.label.padEnd(12)} <span fg={themeColor('muted')}>{opt.desc}</span>
                     </text>
                   </box>
                 ))}
@@ -602,18 +604,18 @@ export function SchedulesPanel({
             <box flexDirection="column">
               <text><b>Confirm new schedule:</b></text>
               <box flexDirection="column" marginTop={1} marginLeft={1}>
-                <text>Type: <text fg={themeColor('info')}>{KIND_OPTIONS[createKindIndex].label}</text></text>
+                <text>Type: <span fg={themeColor('info')}>{KIND_OPTIONS[createKindIndex].label}</span></text>
                 {KIND_OPTIONS[createKindIndex].id === 'cron' && (
-                  <text>Cron: <text fg={themeColor('info')}>{createCron}</text></text>
+                  <text>Cron: <span fg={themeColor('info')}>{createCron}</span></text>
                 )}
                 {KIND_OPTIONS[createKindIndex].id === 'once' && (
-                  <text>Time: <text fg={themeColor('info')}>{createTime}</text></text>
+                  <text>Time: <span fg={themeColor('info')}>{createTime}</span></text>
                 )}
                 {KIND_OPTIONS[createKindIndex].id === 'interval' && (
-                  <text>Interval: <text fg={themeColor('info')}>Every {createInterval} {INTERVAL_UNITS[createIntervalUnitIndex]}</text></text>
+                  <text>Interval: <span fg={themeColor('info')}>Every {createInterval} {INTERVAL_UNITS[createIntervalUnitIndex]}</span></text>
                 )}
-                <text>Command: <text fg={themeColor('info')}>{createCommand}</text></text>
-                {createDescription && <text>Description: <text fg={themeColor('muted')}>{createDescription}</text></text>}
+                <text>Command: <span fg={themeColor('info')}>{createCommand}</span></text>
+                {createDescription && <text>Description: <span fg={themeColor('muted')}>{createDescription}</span></text>}
               </box>
               <box marginTop={1}>
                 <text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</text>
@@ -654,8 +656,8 @@ export function SchedulesPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>
@@ -701,7 +703,7 @@ export function SchedulesPanel({
 
           {s.lastResult && (
             <box><text><b>Last Result: </b></text>
-              <text fg={s.lastResult.ok ? themeColor('success') : 'red'}>
+              <text fg={s.lastResult.ok ? themeColor('success') : themeColor('red')}>
                 {s.lastResult.ok ? 'Success' : `Error: ${s.lastResult.error}`}
               </text>
             </box>
@@ -733,7 +735,7 @@ export function SchedulesPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Schedules {showAll ? '(all sessions)' : '(this session)'}</b></text>
-        <text fg={themeColor('muted')}>[n]ew [p]ause [r]esume [d]elete [f]refresh [g]toggle scope</text>
+        <text fg={themeColor('muted')}>[n]ew [p]ause [r]esume [d]elete re[f]resh to[g]gle scope</text>
       </box>
 
       <box marginBottom={1}>
@@ -761,7 +763,7 @@ export function SchedulesPanel({
             return (
               <box key={schedule.id} paddingY={0}>
                 <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : schedule.status === 'completed' ? "gray" : undefined}>
-                  <text fg={statusColor}>{statusIcon}</text>
+                  <span fg={statusColor}>{statusIcon}</span>
                   {' '}
                   {actionIcon} {index + 1}. {content.padEnd(32)} {kindLabel.padEnd(10)} {nextRun}
                 </text>

@@ -119,6 +119,8 @@ export function useChat(sessionId?: string) {
                       const idx = calls.findIndex((c) => (c as { id?: string }).id === data.id);
                       if (idx >= 0) {
                         calls[idx] = { ...calls[idx] as Record<string, unknown>, input: data.input };
+                      } else {
+                        calls.push({ id: data.id, name: data.tool, input: data.input });
                       }
                     }
                     updated[updated.length - 1] = { ...last, toolCalls: calls };

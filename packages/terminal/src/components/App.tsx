@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { usePanelVisibility } from '../state/usePanelVisibility';
+import { loadUserKeymap, resolveAction, generateHelp } from '../keybindings';
 import { useAppContext, useTerminalDimensions } from '@opentui/react';
 import { useDetectTheme, ThemeProvider } from '../hooks/useThemeColor';
 import { join } from 'path';
@@ -85,8 +87,17 @@ import {
   formatShellResult,
   formatElapsedDuration,
   deepMerge,
+  isUnrecognizedSlashCommand,
 } from './appHelpers';
 import { themeColor } from '../theme/colors';
+import { applyThemeSetting, getThemeMode, type ThemeSetting } from '../theme/setup';
+import {
+  applyThemeName,
+  getActiveTheme,
+  THEME_SETTINGS,
+  themeSettingLabel,
+  type ThemeSettingName,
+} from '../theme/colors';
 
 export function App({ cwd, version, permissionMode: initialPermissionMode }: AppProps) {
   const appCtx = useAppContext();
@@ -116,63 +127,92 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   // Active session state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [showSessionSelector, setShowSessionSelector] = useState(false);
+  // Panel visibility (plan 8d98da29 P0.3) — centralized single-source-of-truth store.
+  // One panel visible at a time; exposes the legacy showXxx/setShowXxx interface.
+  const {
+    activePanel: __activePanel,
+    showSessionSelector, setShowSessionSelector,
+    showRecoveryPanel, setShowRecoveryPanel,
+    showConnectorsPanel, setShowConnectorsPanel,
+    showTasksPanel, setShowTasksPanel,
+    showSchedulesPanel, setShowSchedulesPanel,
+    showSkillsPanel, setShowSkillsPanel,
+    showAssistantsPanel, setShowAssistantsPanel,
+    showIdentityPanel, setShowIdentityPanel,
+    showMemoryPanel, setShowMemoryPanel,
+    showHooksPanel, setShowHooksPanel,
+    showGuardrailsPanel, setShowGuardrailsPanel,
+    showBudgetPanel, setShowBudgetPanel,
+    showModelPanel, setShowModelPanel,
+    showAssistantsRegistryPanel, setShowAssistantsRegistryPanel,
+    showConfigPanel, setShowConfigPanel,
+    showWebhooksPanel, setShowWebhooksPanel,
+    showChannelsPanel, setShowChannelsPanel,
+    showPeoplePanel, setShowPeoplePanel,
+    showContactsPanel, setShowContactsPanel,
+    showTelephonyPanel, setShowTelephonyPanel,
+    showOrdersPanel, setShowOrdersPanel,
+    showJobsPanel, setShowJobsPanel,
+    showDocsPanel, setShowDocsPanel,
+    showOnboardingPanel, setShowOnboardingPanel,
+    showMessagesPanel, setShowMessagesPanel,
+    showProjectsPanel, setShowProjectsPanel,
+    showPlansPanel, setShowPlansPanel,
+    showWalletPanel, setShowWalletPanel,
+    showSecretsPanel, setShowSecretsPanel,
+    showAssistantsDashboard, setShowAssistantsDashboard,
+    showSwarmPanel, setShowSwarmPanel,
+    showWorkspacePanel, setShowWorkspacePanel,
+    showLogsPanel, setShowLogsPanel,
+    showHeartbeatPanel, setShowHeartbeatPanel,
+    showResumePanel, setShowResumePanel,
+  } = usePanelVisibility();
+  void __activePanel;
   // Incremented to force re-render when session labels change (rename, auto-name)
   const [sessionVersion, setSessionVersion] = useState(0);
 
   // Recovery state for crashed sessions
   const [recoverableSessions, setRecoverableSessions] = useState<RecoverableSession[]>([]);
-  const [showRecoveryPanel, setShowRecoveryPanel] = useState(false);
 
   // Connectors panel state
-  const [showConnectorsPanel, setShowConnectorsPanel] = useState(false);
   const [connectorsPanelInitial, setConnectorsPanelInitial] = useState<string | undefined>();
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const connectorBridgeRef = useRef<ConnectorBridge | null>(null);
 
   // Tasks panel state
-  const [showTasksPanel, setShowTasksPanel] = useState(false);
   const [tasksList, setTasksList] = useState<Task[]>([]);
   const [tasksPaused, setTasksPaused] = useState(false);
 
   // Schedules panel state
-  const [showSchedulesPanel, setShowSchedulesPanel] = useState(false);
   const [schedulesList, setSchedulesList] = useState<ScheduledCommand[]>([]);
 
   // Skills panel state
-  const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [skillsList, setSkillsList] = useState<Skill[]>([]);
 
   // Assistants panel state
-  const [showAssistantsPanel, setShowAssistantsPanel] = useState(false);
   const [assistantsRefreshKey, setAssistantsRefreshKey] = useState(0);
   const [assistantError, setAssistantError] = useState<string | null>(null);
 
   // Identity panel state
-  const [showIdentityPanel, setShowIdentityPanel] = useState(false);
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [identityPanelIntent, setIdentityPanelIntent] = useState<IdentityPanelIntent | null>(null);
   const [identitiesList, setIdentitiesList] = useState<Identity[]>([]);
 
   // Memory panel state
-  const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const [memoryList, setMemoryList] = useState<Memory[]>([]);
   const [memoryStats, setMemoryStats] = useState<MemoryStats | null>(null);
   const [memoryError, setMemoryError] = useState<string | null>(null);
 
   // Hooks panel state
-  const [showHooksPanel, setShowHooksPanel] = useState(false);
   const [hooksConfig, setHooksConfig] = useState<HookConfig>({});
   const hookStoreRef = useRef<HookStore | null>(null);
 
   // Guardrails panel state
-  const [showGuardrailsPanel, setShowGuardrailsPanel] = useState(false);
   const [guardrailsConfig, setGuardrailsConfig] = useState<GuardrailsConfig | null>(null);
   const [guardrailsPolicies, setGuardrailsPolicies] = useState<PolicyInfo[]>([]);
   const guardrailsStoreRef = useRef<GuardrailsStore | null>(null);
 
   // Budget panel state
-  const [showBudgetPanel, setShowBudgetPanel] = useState(false);
   const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null);
   const [sessionBudgetStatus, setSessionBudgetStatus] = useState<BudgetStatus | null>(null);
   const [swarmBudgetStatus, setSwarmBudgetStatus] = useState<BudgetStatus | null>(null);
@@ -181,45 +221,32 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const budgetSessionMapRef = useRef<Record<string, string>>({});
 
   // Model panel state
-  const [showModelPanel, setShowModelPanel] = useState(false);
 
   // Assistants panel state
-  const [showAssistantsRegistryPanel, setShowAssistantsRegistryPanel] = useState(false);
   const [assistantsList, setAssistantsList] = useState<RegisteredAssistant[]>([]);
   const [registryStats, setRegistryStats] = useState<RegistryStats | null>(null);
 
   // Config panel state
-  const [showConfigPanel, setShowConfigPanel] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<AssistantsConfig | null>(null);
   const [userConfig, setUserConfig] = useState<Partial<AssistantsConfig> | null>(null);
   const [projectConfig, setProjectConfig] = useState<Partial<AssistantsConfig> | null>(null);
   const [localConfig, setLocalConfig] = useState<Partial<AssistantsConfig> | null>(null);
 
   // Webhooks panel state
-  const [showWebhooksPanel, setShowWebhooksPanel] = useState(false);
 
   // Channels panel state
-  const [showChannelsPanel, setShowChannelsPanel] = useState(false);
 
   // People panel state
-  const [showPeoplePanel, setShowPeoplePanel] = useState(false);
 
   // Contacts panel state
-  const [showContactsPanel, setShowContactsPanel] = useState(false);
 
   // Telephony panel state
-  const [showTelephonyPanel, setShowTelephonyPanel] = useState(false);
 
   // Orders panel state
-  const [showOrdersPanel, setShowOrdersPanel] = useState(false);
-  const [showJobsPanel, setShowJobsPanel] = useState(false);
-  const [showDocsPanel, setShowDocsPanel] = useState(false);
 
   // Onboarding panel state
-  const [showOnboardingPanel, setShowOnboardingPanel] = useState(false);
 
   // Messages panel state
-  const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [messagesPanelError, setMessagesPanelError] = useState<string | null>(null);
   const [messagesList, setMessagesList] = useState<Array<{
     id: string;
@@ -236,22 +263,18 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   }>>([]);
 
   // Projects panel state
-  const [showProjectsPanel, setShowProjectsPanel] = useState(false);
   const [projectsList, setProjectsList] = useState<ProjectRecord[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
 
   // Plans panel state (shown for a specific project)
-  const [showPlansPanel, setShowPlansPanel] = useState(false);
   const [plansProject, setPlansProject] = useState<ProjectRecord | null>(null);
 
   // Wallet panel state
-  const [showWalletPanel, setShowWalletPanel] = useState(false);
   const [walletCards, setWalletCards] = useState<WalletCardEntry[]>([]);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [walletPanelInitialMode, setWalletPanelInitialMode] = useState<'list' | 'add'>('list');
 
   // Secrets panel state
-  const [showSecretsPanel, setShowSecretsPanel] = useState(false);
   const [secretsList, setSecretsList] = useState<Array<{ name: string; scope: 'global' | 'assistant'; createdAt?: string; updatedAt?: string }>>([]);
   const [secretsError, setSecretsError] = useState<string | null>(null);
   const [secretsPanelInitialMode, setSecretsPanelInitialMode] = useState<'list' | 'add'>('list');
@@ -262,20 +285,14 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   const [inboxEnabled, setInboxEnabled] = useState(false);
 
   // Assistants dashboard panel state
-  const [showAssistantsDashboard, setShowAssistantsDashboard] = useState(false);
 
   // Swarm panel state
-  const [showSwarmPanel, setShowSwarmPanel] = useState(false);
 
   // Workspace panel state
-  const [showWorkspacePanel, setShowWorkspacePanel] = useState(false);
   const [workspacesList, setWorkspacesList] = useState<Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt: number; createdBy: string; participants: string[]; status: 'active' | 'archived' }>>([]);
 
   // Logs panel state
-  const [showLogsPanel, setShowLogsPanel] = useState(false);
-  const [showHeartbeatPanel, setShowHeartbeatPanel] = useState(false);
   const [heartbeatRuns, setHeartbeatRuns] = useState<Heartbeat[]>([]);
-  const [showResumePanel, setShowResumePanel] = useState(false);
   const [resumeSessions, setResumeSessions] = useState<SavedSessionInfo[]>([]);
   const [resumeFilter, setResumeFilter] = useState<'cwd' | 'all'>('cwd');
   // [cato] Removed staticResetKey and staticMessages — dead code from Ink <Static> removal
@@ -628,6 +645,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   // Terminal resize is handled natively
   const turnIdRef = useRef(0);
   const initStateRef = useRef<'idle' | 'pending' | 'done'>('idle');
+  // Set when the user skips onboarding (Esc) so the init effect doesn't re-show it this session.
+  const onboardingDismissedRef = useRef(false);
+  // Bumped by /theme to force a re-render so themeColor() re-resolves to the new palette.
+  const [, setThemeVersion] = useState(0);
   const isMountedRef = useRef(true);
   const handlersRegisteredRef = useRef(false);
 
@@ -713,10 +734,17 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         description: s.description || '',
         argumentHint: s.argumentHint,
       })));
-      setCommands(loadedCommands.map((cmd) => ({
+      const loaded = loadedCommands.map((cmd) => ({
         name: cmd.name.startsWith('/') ? cmd.name : `/${cmd.name}`,
         description: cmd.description || '',
-      })));
+      }));
+      // Built-in commands handled inline in handleSubmit (not from the loader).
+      const builtins = [
+        { name: '/theme', description: 'Switch color theme (auto/dark/light, +daltonized/+ansi)' },
+        { name: '/keys', description: 'Show keybindings (remap via config.json)' },
+      ];
+      const seen = new Set(loaded.map((c) => c.name));
+      setCommands([...loaded, ...builtins.filter((b) => !seen.has(b.name))]);
     } catch (err) {
       if (pendingMetadataSessionIdRef.current !== session.id) {
         return;
@@ -2023,8 +2051,12 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   }, [loadConfigFiles, workspaceBaseDir]);
 
   const handleOnboardingCancel = useCallback(() => {
+    // Remember the skip for this session so the init effect doesn't immediately
+    // re-trigger onboarding (it re-runs when showOnboardingPanel flips to false,
+    // and onboarding is still not marked completed) — otherwise skip loops forever.
+    onboardingDismissedRef.current = true;
+    initStateRef.current = 'idle'; // allow the init effect to re-run and proceed
     setShowOnboardingPanel(false);
-    // Let the init effect proceed without onboarding
   }, []);
 
   // Initialize first session
@@ -2080,7 +2112,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
               }
             }
           }
-          if (needsOnboarding) {
+          if (needsOnboarding && !onboardingDismissedRef.current) {
             setShowOnboardingPanel(true);
             initStateRef.current = 'idle';
             setIsInitializing(false);
@@ -2438,98 +2470,108 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   }, [tokenUsage, messages.length]);
 
   // Handle keyboard shortcuts (inactive when session selector is shown)
+  // Global keybindings resolve through the configurable engine (plan P3.2).
+  // Bindings come from the defaults merged with any `keybindings` overrides in
+  // config.json, so they're remappable; the handler bodies are unchanged.
+  const globalKeymap = useMemo(
+    () => loadUserKeymap(currentConfig as { keybindings?: Record<string, unknown> } | null),
+    [currentConfig],
+  );
+
   useInput((input, key) => {
-    // Ctrl+R: push-to-talk recording toggle
-    if (key.ctrl && input === 'r') {
-      togglePushToTalk();
-      return;
-    }
-    // Ctrl+]: show session selector (avoiding Ctrl+S which conflicts with terminal XOFF)
-    if (key.ctrl && input === ']') {
-      if (sessions.length > 0) {
-        setShowSessionSelector(true);
-      }
-      return;
-    }
+    const action = resolveAction(globalKeymap, input, key);
 
-    // Ctrl+C: stop processing, or double-tap to exit
-    if (key.ctrl && input === 'c') {
-      const hasAsk = activeSessionId ? askUserStateRef.current.has(activeSessionId) : false;
-      const hasInterview = activeSessionId ? interviewStateRef.current.has(activeSessionId) : false;
-      if (hasAsk) {
-        cancelAskUser('Cancelled by user', activeSessionId);
-      }
-      if (hasInterview) {
-        cancelInterview('Cancelled by user', activeSessionId);
-      }
-      if (stopActiveProcessing('stopped')) {
-        // Reset exit hint state when stopping processing
-        lastCtrlCRef.current = 0;
-        setShowExitHint(false);
+    switch (action) {
+      case 'app:pushToTalk':
+        togglePushToTalk();
+        return;
+
+      case 'session:cycle':
+        if (sessions.length > 0) {
+          setShowSessionSelector(true);
+        }
+        return;
+
+      case 'app:interrupt': {
+        const hasAsk = activeSessionId ? askUserStateRef.current.has(activeSessionId) : false;
+        const hasInterview = activeSessionId ? interviewStateRef.current.has(activeSessionId) : false;
+        if (hasAsk) {
+          cancelAskUser('Cancelled by user', activeSessionId);
+        }
+        if (hasInterview) {
+          cancelInterview('Cancelled by user', activeSessionId);
+        }
+        if (stopActiveProcessing('stopped')) {
+          // Reset exit hint state when stopping processing
+          lastCtrlCRef.current = 0;
+          setShowExitHint(false);
+          return;
+        }
+        if (hasAsk || hasInterview) {
+          return;
+        }
+
+        // Double Ctrl+C to exit (when not processing)
+        const now = Date.now();
+        const timeSinceLastCtrlC = now - lastCtrlCRef.current;
+        if (timeSinceLastCtrlC < 1500 && lastCtrlCRef.current > 0) {
+          // Double Ctrl+C - exit the app
+          gatherAndSetExitStats();
+          registry.closeAll();
+          exit();
+          return;
+        }
+        // First Ctrl+C - show hint and record timestamp
+        lastCtrlCRef.current = now;
+        setShowExitHint(true);
+        // Hide hint after 2 seconds
+        setTimeout(() => {
+          setShowExitHint(false);
+        }, 2000);
         return;
       }
-      if (hasAsk || hasInterview) {
+
+      case 'app:toggleVerbose':
+        setVerboseTools((prev) => !prev);
+        return;
+
+      case 'app:cancel': {
+        // Escape: stop processing (falls through to no-op when nothing is active).
+        if (activeSessionId && askUserStateRef.current.has(activeSessionId)) {
+          cancelAskUser('Cancelled by user', activeSessionId);
+        }
+        if (activeSessionId && interviewStateRef.current.has(activeSessionId)) {
+          cancelInterview('Cancelled by user', activeSessionId);
+        }
+        if (stopActiveProcessing('stopped')) {
+          return;
+        }
         return;
       }
 
-      // Double Ctrl+C to exit (when not processing)
-      const now = Date.now();
-      const timeSinceLastCtrlC = now - lastCtrlCRef.current;
-      if (timeSinceLastCtrlC < 1500 && lastCtrlCRef.current > 0) {
-        // Double Ctrl+C - exit the app
-        gatherAndSetExitStats();
-        registry.closeAll();
-        exit();
+      case 'panel:assistantsDashboard':
+        setShowAssistantsDashboard(true);
         return;
-      }
-      // First Ctrl+C - show hint and record timestamp
-      lastCtrlCRef.current = now;
-      setShowExitHint(true);
-      // Hide hint after 2 seconds
-      setTimeout(() => {
-        setShowExitHint(false);
-      }, 2000);
-    }
-    // Ctrl+O: toggle full tool output
-    if (key.ctrl && input === 'o') {
-      setVerboseTools((prev) => !prev);
-      return;
-    }
-    // Escape: stop processing or close session selector
-    if (key.escape) {
-      if (activeSessionId && askUserStateRef.current.has(activeSessionId)) {
-        cancelAskUser('Cancelled by user', activeSessionId);
-      }
-      if (activeSessionId && interviewStateRef.current.has(activeSessionId)) {
-        cancelInterview('Cancelled by user', activeSessionId);
-      }
-      if (stopActiveProcessing('stopped')) {
+
+      case 'panel:budget':
+        void openBudgetsPanel();
         return;
-      }
-    }
 
-    // Ctrl+A: show assistants dashboard
-    if (key.ctrl && input === 'a') {
-      setShowAssistantsDashboard(true);
-      return;
-    }
-    // Ctrl+B: show budget panel
-    if (key.ctrl && input === 'b') {
-      void openBudgetsPanel();
-      return;
-    }
-    // Ctrl+M: show messages panel
-    if (key.ctrl && input === 'm' && !key.return) {
-      loadMessagesAndInboxData({
-        cwd, registry: registry as any, activeSessionId, workspaceBaseDir, currentConfig,
-        setMessagesList, setMessagesPanelError, setInboxEnabled, setInboxEmails, setInboxError,
-        setShowMessagesPanel,
-      } as any);
-      setShowMessagesPanel(true);
-      return;
-    }
+      case 'panel:messages':
+        // Ctrl+M can arrive as Enter on some terminals; guard against that.
+        if (key.return) return;
+        loadMessagesAndInboxData({
+          cwd, registry: registry as any, activeSessionId, workspaceBaseDir, currentConfig,
+          setMessagesList, setMessagesPanelError, setInboxEnabled, setInboxEmails, setInboxError,
+          setShowMessagesPanel,
+        } as any);
+        setShowMessagesPanel(true);
+        return;
 
-    // Scrolling is handled by the <scrollbox> component via mouse wheel and arrow keys
+      default:
+        // Scrolling is handled by the <scrollbox> component via mouse wheel and arrow keys
+        return;
+    }
   }, { isActive: !showSessionSelector && !isPanelOpen });
 
 
@@ -2639,6 +2681,82 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           await switchWorkspace(null);
           return;
         }
+      }
+
+      // Check for /theme command — switch and persist the color theme
+      if (trimmedInput === '/keys' || trimmedInput === '/keybindings') {
+        // Auto-generated keybinding help from the active (possibly remapped) keymap.
+        const rows = generateHelp(globalKeymap);
+        const body = rows.length
+          ? rows.map((r) => `  \`${r.keys.padEnd(10)}\` ${r.action}`).join('\n')
+          : '  (no keybindings configured)';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: 'assistant',
+            content: `**Keybindings**\n\n${body}\n\nRemap any action via the \`keybindings\` map in config.json (set to \`none\` to disable).`,
+            timestamp: now(),
+          },
+        ]);
+        return;
+      }
+
+      if (trimmedInput === '/theme' || trimmedInput.startsWith('/theme ')) {
+        const arg = trimmedInput.slice('/theme'.length).trim().toLowerCase();
+        let setting: ThemeSettingName;
+        if (arg === '' || arg === 'toggle') {
+          // No arg (or "toggle"): flip between the two concrete modes, keeping
+          // the current accessibility variant (e.g. dark-ansi → light-ansi).
+          const current = getActiveTheme();
+          const variant = current.endsWith('-daltonized')
+            ? '-daltonized'
+            : current.endsWith('-ansi')
+              ? '-ansi'
+              : '';
+          setting = `${getThemeMode() === 'dark' ? 'light' : 'dark'}${variant}` as ThemeSettingName;
+        } else if ((THEME_SETTINGS as readonly string[]).includes(arg)) {
+          setting = arg as ThemeSettingName;
+        } else {
+          setError(
+            `Usage: /theme <${THEME_SETTINGS.join('|')}|toggle> (current: ${getActiveTheme()})`,
+          );
+          return;
+        }
+
+        const resolved = applyThemeName(setting);
+
+        // Persist to the global config.json (read-modify-write; non-fatal on error).
+        try {
+          const { join: joinPath } = await import('path');
+          const { existsSync, readFileSync, writeFileSync, mkdirSync } = await import('fs');
+          const dir = workspaceBaseDir || getConfigDir();
+          const configPath = joinPath(dir, 'config.json');
+          let cfg: Record<string, unknown> = {};
+          if (existsSync(configPath)) {
+            try { cfg = JSON.parse(readFileSync(configPath, 'utf-8')); } catch { cfg = {}; }
+          } else {
+            mkdirSync(dir, { recursive: true });
+          }
+          cfg.theme = setting;
+          writeFileSync(configPath, JSON.stringify(cfg, null, 2));
+        } catch {
+          // Persistence is best-effort — the runtime switch still applies.
+        }
+
+        setThemeVersion((v) => v + 1); // force re-render so colors re-resolve
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: 'assistant',
+            content: setting === 'auto'
+              ? `Theme set to **auto** (resolved to **${resolved}** — ${themeSettingLabel(resolved)}).`
+              : `Theme set to **${setting}** (${themeSettingLabel(setting)}).`,
+            timestamp: now(),
+          },
+        ]);
+        return;
       }
 
       // Check for /session command
@@ -2937,27 +3055,19 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         await new Promise((r) => setTimeout(r, 100));
       }
 
-      // Warn on unrecognized slash commands — avoid wasting API tokens
-      if (trimmedInput.match(/^\/\w+$/) && !trimmedInput.startsWith('/say ')) {
-        // Known LLM-handled commands that should pass through
-        const llmHandledCommands = new Set([
-          '/about', '/help', '/status', '/tokens', '/cost', '/compact',
-          '/voice', '/context', '/diff', '/feedback', '/verification',
-          '/whoami', '/agents', '/call', '/communication', '/init', '/logs',
+      // Warn on unrecognized slash commands — avoid wasting API tokens. Registered
+      // commands (incl. agent-handled panel commands like /webhooks) pass through.
+      if (isUnrecognizedSlashCommand(trimmedInput, commands.map((c) => c.name))) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: 'assistant',
+            content: `Unknown command: \`${trimmedInput}\`. Type \`/help\` to see available commands.`,
+            timestamp: now(),
+          },
         ]);
-        const cmdBase = trimmedInput.split(/\s+/)[0].toLowerCase();
-        if (!llmHandledCommands.has(cmdBase)) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: generateId(),
-              role: 'assistant',
-              content: `Unknown command: \`${trimmedInput}\`. Type \`/help\` to see available commands.`,
-              timestamp: now(),
-            },
-          ]);
-          return;
-        }
+        return;
       }
 
       // Add user message
@@ -3151,7 +3261,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
           {/* Input box — light gray bg, no borders */}
           <box flexDirection="column" width={welcomeInputWidth} marginTop={2}>
-            <box flexDirection="row" bg={themeColor('surface')} paddingX={1} paddingY={0}>
+            <box flexDirection="row" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
               <Input
                 ref={inputRef}
                 onSubmit={handleSubmit}
@@ -3289,7 +3399,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
           {/* Right panel: Sidebar (30%) — gray bg, only when session active AND terminal >= 100 cols */}
           {showSidebar && (
-            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1} bg={themeColor('surface')}>
+            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1} backgroundColor={themeColor('surface')}>
               <Sidebar
                 title={sidebarTitle}
                 modelId={activeSession?.client.getModel() ?? undefined}

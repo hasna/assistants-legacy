@@ -1,5 +1,6 @@
 import React from 'react';
 import { themeColor } from '../theme/colors';
+import { getDefaultSyntaxStyle } from './CodeBlock';
 
 interface MarkdownProps {
   content: string;
@@ -18,7 +19,12 @@ interface MarkdownProps {
  */
 export function Markdown({ content }: MarkdownProps) {
   if (!content) return null;
-  return <markdown content={content} conceal fg={themeColor('text')} />;
+  const syntaxStyle = getDefaultSyntaxStyle();
+  // SyntaxStyle needs native Zig bindings; fall back to plain text when unavailable (e.g. tests).
+  if (!syntaxStyle) {
+    return <text fg={themeColor('text')}>{content}</text>;
+  }
+  return <markdown content={content} syntaxStyle={syntaxStyle} conceal fg={themeColor('text')} />;
 }
 
 /**

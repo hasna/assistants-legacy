@@ -3,6 +3,7 @@
 // Run with: bun run packages/terminal/src/debug-init.ts
 import { setRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { LLM_PROVIDERS } from '@hasna/assistants-shared';
 
 setRuntime(bunRuntime);
 
@@ -16,7 +17,9 @@ async function debugInit() {
   const cwd = process.cwd();
   log('Starting initialization debug...');
   log(`CWD: ${cwd}`);
-  log(`ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? 'SET' : 'NOT SET'}`);
+  for (const provider of LLM_PROVIDERS) {
+    log(`${provider.apiKeyEnv}: ${process.env[provider.apiKeyEnv] ? 'SET' : 'NOT SET'}`);
+  }
 
   const startTotal = Date.now();
 

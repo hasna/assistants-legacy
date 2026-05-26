@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import { useTerminalDimensions } from '@opentui/react';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
+import { ListItem } from './design-system';
 
 interface DocsPanelProps {
   onClose: () => void;
@@ -262,6 +264,7 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
   const contentHeight = Math.max(8, rows - 10);
 
   const [mode, setMode] = useState<Mode>('index');
+  useClearOnChange(mode);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -412,12 +415,13 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
           {DOCS_SECTIONS.slice(sectionWindow.start, sectionWindow.end).map((section, offset) => {
             const absoluteIndex = sectionWindow.start + offset;
             const selected = absoluteIndex === selectedIndex;
+            // Design-system ListItem (plan P2.2) — shared focus-pointer row.
             return (
-              <box key={section.id} marginBottom={0}>
-                <text fg={selected ? 'cyan' : undefined}>
-                  {`${selected ? '>' : ' '} ${absoluteIndex + 1}. ${section.title}`}
-                </text>
-              </box>
+              <ListItem
+                key={section.id}
+                isFocused={selected}
+                label={`${absoluteIndex + 1}. ${section.title}`}
+              />
             );
           })}
 

@@ -2,8 +2,23 @@ import { NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import {
+  jsonSchema,
+  stepCountIs,
+  streamText,
+  tool,
+  type LanguageModel,
+  type ModelMessage,
+  type ToolSet,
+} from 'ai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createMistral } from '@ai-sdk/mistral';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createXai } from '@ai-sdk/xai';
 import { TOOLS, executeTool } from '@/lib/tools';
 import { DEFAULT_MODEL, WEB_MODEL_IDS } from '@/lib/models';
+import { getProviderInfo, type LLMProvider } from '@hasna/assistants-shared';
 
 const UI_BLOCKS_PROMPT = `
 
@@ -164,6 +179,70 @@ async function loadSystemPrompt(sessionId?: string): Promise<string> {
 - Complete tasks with tasks_complete when finished, or tasks_fail if blocked`;
 }
 
+function parseProviderModel(modelId: string): { provider: LLMProvider; model: string } {
+  const separator = modelId.indexOf(':');
+  if (separator <= 0 || separator === modelId.length - 1) {
+    throw new Error(`Invalid AI SDK model id "${modelId}"`);
+  }
+
+  const provider = modelId.slice(0, separator) as LLMProvider;
+  const providerInfo = getProviderInfo(provider);
+  if (!providerInfo) {
+    throw new Error(`Unsupported AI SDK provider "${provider}"`);
+  }
+
+  return { provider, model: modelId.slice(separator + 1) };
+}
+
+function resolveApiKey(provider: LLMProvider): string | undefined {
+  const providerInfo = getProviderInfo(provider);
+  return providerInfo ? process.env[providerInfo.apiKeyEnv] : undefined;
+}
+
+function createModel(modelId: string): LanguageModel {
+  const { provider, model } = parseProviderModel(modelId);
+  const apiKey = resolveApiKey(provider);
+  if (!apiKey) {
+    const providerInfo = getProviderInfo(provider);
+    const envName = providerInfo?.apiKeyEnv ?? `${provider.toUpperCase()}_API_KEY`;
+    throw new Error(`${envName} is not set. Add it to your environment variables.`);
+  }
+
+  switch (provider) {
+    case 'anthropic':
+      return createAnthropic({ apiKey })(model);
+    case 'openai':
+      return createOpenAI({ apiKey })(model);
+    case 'xai':
+      return createXai({ apiKey })(model);
+    case 'mistral':
+      return createMistral({ apiKey })(model);
+    case 'google':
+      return createGoogleGenerativeAI({ apiKey })(model);
+  }
+}
+
+function buildTools(): ToolSet {
+  const tools: ToolSet = {};
+  for (const item of TOOLS) {
+    tools[item.name] = tool({
+      description: item.description,
+      inputSchema: jsonSchema(item.input_schema as Record<string, unknown>),
+      execute: async (input) => executeTool(item.name, input as Record<string, string>),
+    });
+  }
+  return tools;
+}
+
+function buildMessages(messages: Array<{ role: string; content: string }>): ModelMessage[] {
+  return messages
+    .filter((message) => message.role === 'user' || message.role === 'assistant')
+    .map((message) => ({
+      role: message.role as 'user' | 'assistant',
+      content: message.content,
+    }));
+}
+
 export async function POST(request: Request) {
   try {
     const { messages, model, sessionId } = await request.json();
@@ -172,20 +251,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Messages are required' }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY is not set. Add it to your environment variables.' },
-        { status: 503 }
-      );
-    }
-
     const requestedModel = typeof model === 'string' ? model : '';
     const selectedModel = WEB_MODEL_IDS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
     const systemPrompt = `${await loadSystemPrompt(sessionId)}${UI_BLOCKS_PROMPT}`;
-
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const anthropic = new Anthropic({ apiKey });
+    const languageModel = createModel(selectedModel);
 
     // Save user message to shared DB if sessionId provided
     if (sessionId) {
@@ -217,119 +286,32 @@ export async function POST(request: Request) {
         };
 
         try {
-          // Build conversation messages for the API
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const conversationMessages: any[] = messages.map((m: { role: string; content: string }) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          }));
+          const result = streamText({
+            model: languageModel,
+            maxOutputTokens: 8192,
+            system: systemPrompt,
+            messages: buildMessages(messages),
+            tools: buildTools(),
+            stopWhen: stepCountIs(5),
+          });
 
-          const MAX_TOOL_ROUNDS = 5;
-
-          for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-            const response = await anthropic.messages.create({
-              model: selectedModel,
-              max_tokens: 8192,
-              system: systemPrompt,
-              tools: TOOLS,
-              messages: conversationMessages,
-              stream: true,
-            });
-
-            // Collect content blocks from this response for the conversation history
-            const contentBlocks: Array<Record<string, unknown>> = [];
-            let currentToolUse: { id: string; name: string; inputJson: string } | null = null;
-            let stopReason: string | null = null;
-
-            for await (const event of response) {
-              if (event.type === 'content_block_start') {
-                if (event.content_block.type === 'text') {
-                  contentBlocks.push({ type: 'text', text: '' });
-                } else if (event.content_block.type === 'tool_use') {
-                  currentToolUse = {
-                    id: event.content_block.id,
-                    name: event.content_block.name,
-                    inputJson: '',
-                  };
-                  emit({ type: 'tool_use_start', tool: event.content_block.name, id: event.content_block.id });
-                }
-              } else if (event.type === 'content_block_delta') {
-                const delta = event.delta;
-                if ('text' in delta) {
-                  fullResponse += delta.text;
-                  // Update the last text block
-                  const last = contentBlocks[contentBlocks.length - 1];
-                  if (last && last.type === 'text') {
-                    last.text = (last.text as string) + delta.text;
-                  }
-                  emit({ type: 'text', text: delta.text });
-                } else if ('partial_json' in delta && currentToolUse) {
-                  currentToolUse.inputJson += delta.partial_json;
-                }
-              } else if (event.type === 'content_block_stop') {
-                if (currentToolUse) {
-                  let input: unknown = {};
-                  try { input = JSON.parse(currentToolUse.inputJson); } catch {}
-                  contentBlocks.push({
-                    type: 'tool_use',
-                    id: currentToolUse.id,
-                    name: currentToolUse.name,
-                    input,
-                  });
-                  emit({ type: 'tool_use_complete', tool: currentToolUse.name, id: currentToolUse.id, input });
-                  currentToolUse = null;
-                }
-              } else if (event.type === 'message_delta') {
-                if ('stop_reason' in event.delta) {
-                  stopReason = event.delta.stop_reason as string;
-                }
-              }
+          for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+              fullResponse += part.text;
+              emit({ type: 'text', text: part.text });
+            } else if (part.type === 'tool-call') {
+              emit({ type: 'tool_use_start', tool: part.toolName, id: part.toolCallId });
+              emit({ type: 'tool_use_complete', tool: part.toolName, id: part.toolCallId, input: part.input });
+            } else if (part.type === 'tool-result') {
+              const output = typeof part.output === 'string' ? part.output : JSON.stringify(part.output);
+              emit({ type: 'tool_result', id: part.toolCallId, tool: part.toolName, result: output.slice(0, 500) });
+            } else if (part.type === 'tool-error') {
+              const error = part.error instanceof Error ? part.error.message : String(part.error);
+              emit({ type: 'tool_result', id: part.toolCallId, tool: part.toolName, result: `Error: ${error}` });
+            } else if (part.type === 'error') {
+              const error = part.error instanceof Error ? part.error.message : String(part.error);
+              emit({ type: 'error', error });
             }
-
-            // If the model wants to use tools, execute them and loop
-            if (stopReason === 'tool_use') {
-              const toolUseBlocks = contentBlocks.filter(b => b.type === 'tool_use');
-
-              // Add assistant message with all content blocks
-              conversationMessages.push({
-                role: 'assistant',
-                content: contentBlocks,
-              });
-
-              // Execute each tool and build results
-              const toolResults: Array<Record<string, unknown>> = [];
-              for (const block of toolUseBlocks) {
-                const toolName = block.name as string;
-                const toolInput = block.input as Record<string, string>;
-                const toolId = block.id as string;
-                let result: string;
-
-                try {
-                  result = await executeTool(toolName, toolInput);
-                } catch (err) {
-                  result = `Error: ${err instanceof Error ? err.message : 'Tool execution failed'}`;
-                }
-
-                emit({ type: 'tool_result', id: toolId, tool: toolName, result: result.slice(0, 500) });
-                toolResults.push({
-                  type: 'tool_result',
-                  tool_use_id: toolId,
-                  content: result,
-                });
-              }
-
-              // Add tool results as user message
-              conversationMessages.push({
-                role: 'user',
-                content: toolResults,
-              });
-
-              // Continue the loop — Claude will respond to the tool results
-              continue;
-            }
-
-            // No tool use → we're done
-            break;
           }
 
           // Save assistant response to shared DB

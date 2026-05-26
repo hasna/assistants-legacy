@@ -174,7 +174,7 @@ describe('deepMerge', () => {
 
   test('should correctly merge a config-like structure with nested sections', () => {
     const base = {
-      llm: { provider: 'anthropic', model: 'claude-3', maxTokens: 8192 },
+      llm: { model: 'anthropic:claude-3', maxOutputTokens: 8192 },
       voice: {
         enabled: false,
         stt: { provider: 'whisper', model: 'whisper-1', language: 'en' },
@@ -184,16 +184,15 @@ describe('deepMerge', () => {
     };
 
     const override = {
-      llm: { model: 'gpt-4' },
+      llm: { model: 'openai:gpt-4' },
       voice: { enabled: true, tts: { voiceId: 'voice-123' } },
     };
 
     const result = deepMerge(base, override as typeof base);
 
     // llm: model overridden, rest preserved
-    expect(result.llm.provider).toBe('anthropic');
-    expect(result.llm.model).toBe('gpt-4');
-    expect(result.llm.maxTokens).toBe(8192);
+    expect(result.llm.model).toBe('openai:gpt-4');
+    expect(result.llm.maxOutputTokens).toBe(8192);
 
     // voice: enabled overridden, nested stt preserved, tts voiceId overridden
     expect(result.voice.enabled).toBe(true);

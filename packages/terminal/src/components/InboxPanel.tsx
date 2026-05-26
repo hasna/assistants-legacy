@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -100,6 +101,7 @@ export function InboxPanel({
   error,
 }: InboxPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
+  useClearOnChange(mode);
   const [emailIndex, setEmailIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<EmailListItem | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -323,7 +325,7 @@ export function InboxPanel({
         </box>
         {statusMessage && (
           <box marginTop={1}>
-            <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
+            <text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</text>
           </box>
         )}
         <box marginTop={1}>
@@ -432,7 +434,7 @@ export function InboxPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : themeColor('success')}>
+            <text fg={error || statusMessage?.startsWith('Error') ? themeColor('red') : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
@@ -517,7 +519,7 @@ export function InboxPanel({
 
       {statusMessage && (
         <box marginTop={1}>
-          <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
+          <text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</text>
         </box>
       )}
 

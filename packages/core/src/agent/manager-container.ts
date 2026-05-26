@@ -5,20 +5,22 @@
  * These are lazily initialized and may be null if the feature is disabled.
  */
 
-import type { VoiceManager } from '../voice/voice-manager';
+import type { VoiceManager } from '../voice/manager';
 import type { AssistantManager } from '../identity/assistant-manager';
 import type { IdentityManager } from '../identity/identity-manager';
 import type { InboxManager } from '../inbox/inbox-manager';
 import type { WalletManager } from '../wallet/wallet-manager';
-import type { SecretsManager } from '../secrets/secrets-manager';
-import type { JobManager } from '../connectors/job-manager';
+// SecretsManager is a deprecated null stub — the secrets module is backed by the
+// SDK adapter, which manages its own state. Kept for backward compatibility with loop.ts.
+import type { SecretsManager } from '../secrets';
+import type { JobManager } from '../jobs/job-manager';
 import type { MessagesManager } from '../messages/messages-manager';
 import type { WebhooksManager } from '../webhooks/manager';
 import type { ChannelsManager } from '../channels/manager';
 import type { PeopleManager } from '../people/manager';
 import type { TelephonyManager } from '../telephony/manager';
 import type { OrdersManager } from '../orders/manager';
-import type { GlobalMemoryManager } from '../memory/global-manager';
+import type { GlobalMemoryManager } from '../memory/global-memory';
 
 export class ManagerContainer {
   voice: VoiceManager | null = null;

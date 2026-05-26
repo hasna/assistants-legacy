@@ -8,6 +8,7 @@
 import { SessionStorage } from '../logger';
 import { freemem, totalmem } from 'os';
 import { statfs } from 'fs';
+import { LLM_PROVIDERS } from '@hasna/assistants-shared';
 
 export interface MemoryEntry {
   key: string;
@@ -373,8 +374,10 @@ export class LocalAPIServer {
 
     // GET /api/health — detailed health check
     if (path === '/api/health' && req.method === 'GET') {
-      const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
-      const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+      const apiKeys = Object.fromEntries(
+        LLM_PROVIDERS.map((provider) => [provider.id, !!process.env[provider.apiKeyEnv]])
+      );
+      const hasLLMKey = Object.values(apiKeys).some(Boolean);
       const freeMemMb = Math.round(freemem() / 1024 / 1024);
       const totalMemMb = Math.round(totalmem() / 1024 / 1024);
       let freeDiskMb: number | null = null;
@@ -389,8 +392,8 @@ export class LocalAPIServer {
       } catch { /* statfs unavailable */ }
       const sessionsCount = SessionStorage.listAllSessions().length;
       const health = {
-        ok: hasAnthropicKey || hasOpenAIKey,
-        api_keys: { anthropic: hasAnthropicKey, openai: hasOpenAIKey },
+        ok: hasLLMKey,
+        api_keys: apiKeys,
         model: process.env.ASSISTANTS_MODEL ?? null,
         memory_free_mb: freeMemMb,
         memory_total_mb: totalMemMb,

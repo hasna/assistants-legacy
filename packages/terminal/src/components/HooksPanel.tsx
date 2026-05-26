@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { HookEvent, HookMatcher, HookHandler, HookConfig, NativeHook } from '@hasna/assistants-shared';
 import type { HookLocation } from '@hasna/assistants-core';
 import { HookWizard } from './HookWizard';
@@ -70,6 +71,7 @@ export function HooksPanel({
 }: HooksPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [promptValue, setPromptValue] = useState('');
   const [promptError, setPromptError] = useState<string | null>(null);
@@ -259,8 +261,8 @@ export function HooksPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>
@@ -364,7 +366,7 @@ export function HooksPanel({
         {nativeHooks.length > 0 && (
           <box flexDirection="column" marginBottom={1}>
             <box>
-              <text><text fg={themeColor('info')}><b>Native</b></text><text fg={themeColor('muted')}> ({nativeHooks.length})</text></text>
+              <text><span fg={themeColor('info')}><b>Native</b></span><span fg={themeColor('muted')}> ({nativeHooks.length})</span></text>
             </box>
             {nativeHooks.map((item, index) => {
               const isSelected = index === selectedIndex && selectedIndex < nativeHooks.length;
@@ -375,10 +377,10 @@ export function HooksPanel({
                     fg={isSelected ? themeColor('text') : undefined}
                   >
                     {isSelected ? '>' : ' '}{' '}
-                    <text fg={item.enabled ? themeColor('success') : 'red'}>[{item.enabled ? 'on ' : 'off'}]</text>{' '}
-                    <text attributes={isSelected ? 1 : undefined}><b>{(item.hook.name || item.hook.id).padEnd(22)}</b></text>{' '}
-                    <text fg={themeColor('muted')}>nat</text>{' '}
-                    <text fg={themeColor('muted')}>@{item.event}</text>
+                    <span fg={item.enabled ? themeColor('success') : themeColor('red')}>[{item.enabled ? 'on ' : 'off'}]</span>{' '}
+                    <span attributes={isSelected ? 1 : undefined}><b>{(item.hook.name || item.hook.id).padEnd(22)}</b></span>{' '}
+                    <span fg={themeColor('muted')}>nat</span>{' '}
+                    <span fg={themeColor('muted')}>@{item.event}</span>
                   </text>
                 </box>
               );
@@ -414,10 +416,10 @@ export function HooksPanel({
                         fg={isSelected ? themeColor('text') : undefined}
                       >
                         {isSelected ? '>' : ' '}{' '}
-                        <text fg={isEnabled ? themeColor('success') : 'red'}>[{isEnabled ? 'on ' : 'off'}]</text>{' '}
-                        <text attributes={isSelected ? 1 : undefined}><b>{getHookName(item.hook).padEnd(22)}</b></text>{' '}
-                        <text fg={themeColor('muted')}>{getTypeBadge(item.hook.type)}</text>{' '}
-                        {item.matcher && <text fg={themeColor('muted')}>@{item.matcher}</text>}
+                        <span fg={isEnabled ? themeColor('success') : themeColor('red')}>[{isEnabled ? 'on ' : 'off'}]</span>{' '}
+                        <span attributes={isSelected ? 1 : undefined}><b>{getHookName(item.hook).padEnd(22)}</b></span>{' '}
+                        <span fg={themeColor('muted')}>{getTypeBadge(item.hook.type)}</span>{' '}
+                        {item.matcher && <span fg={themeColor('muted')}>@{item.matcher}</span>}
                       </text>
                     </box>
                   );
@@ -432,17 +434,17 @@ export function HooksPanel({
       {selectedNativeHook && (
         <box marginTop={1} flexDirection="column">
           <box>
-            <text><text fg={themeColor('muted')}>Type: </text><text fg={themeColor('info')}>native</text></text>
+            <text><span fg={themeColor('muted')}>Type: </span><span fg={themeColor('info')}>native</span></text>
           </box>
           <box>
-            <text><text fg={themeColor('muted')}>Event: </text>{selectedNativeHook.event}</text>
+            <text><span fg={themeColor('muted')}>Event: </span>{selectedNativeHook.event}</text>
           </box>
           <box>
-            <text><text fg={themeColor('muted')}>ID: </text>{selectedNativeHook.hook.id}</text>
+            <text><span fg={themeColor('muted')}>ID: </span>{selectedNativeHook.hook.id}</text>
           </box>
           {selectedNativeHook.hook.description && (
             <box>
-              <text><text fg={themeColor('muted')}>Description: </text>{selectedNativeHook.hook.description}</text>
+              <text><span fg={themeColor('muted')}>Description: </span>{selectedNativeHook.hook.description}</text>
             </box>
           )}
         </box>
@@ -453,29 +455,29 @@ export function HooksPanel({
         <box marginTop={1} flexDirection="column">
           <box>
             <text>
-              <text fg={themeColor('muted')}>Type: </text>
+              <span fg={themeColor('muted')}>Type: </span>
               {selectedHook.hook.type}
-              {selectedHook.hook.async && <text fg={themeColor('warning')}> (async)</text>}
+              {selectedHook.hook.async && <span fg={themeColor('warning')}> (async)</span>}
             </text>
           </box>
           {selectedHook.matcher && (
             <box>
-              <text><text fg={themeColor('muted')}>Matcher: </text>{selectedHook.matcher}</text>
+              <text><span fg={themeColor('muted')}>Matcher: </span>{selectedHook.matcher}</text>
             </box>
           )}
           {selectedHook.hook.description && (
             <box>
-              <text><text fg={themeColor('muted')}>Description: </text>{selectedHook.hook.description}</text>
+              <text><span fg={themeColor('muted')}>Description: </span>{selectedHook.hook.description}</text>
             </box>
           )}
           {selectedHook.hook.command && (
             <box>
-              <text><text fg={themeColor('muted')}>Command: </text>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</text>
+              <text><span fg={themeColor('muted')}>Command: </span>{selectedHook.hook.command.slice(0, 50)}{selectedHook.hook.command.length > 50 ? '...' : ''}</text>
             </box>
           )}
           {selectedHook.hook.timeout && (
             <box>
-              <text><text fg={themeColor('muted')}>Timeout: </text>{selectedHook.hook.timeout}ms</text>
+              <text><span fg={themeColor('muted')}>Timeout: </span>{selectedHook.hook.timeout}ms</text>
             </box>
           )}
         </box>
@@ -483,7 +485,7 @@ export function HooksPanel({
 
       <box marginTop={1}>
         <text fg={themeColor('muted')}>
-          [a]dd [p]rompt [e]nable [d]isable {!isNativeSelected && '[x]delete '} [q]uit | ↑↓ navigate
+          [a]dd [p]rompt [e]nable [d]isable {!isNativeSelected && '[x] delete '} [q]uit | ↑↓ navigate
         </text>
       </box>
     </box>

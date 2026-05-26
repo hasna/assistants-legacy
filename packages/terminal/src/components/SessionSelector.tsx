@@ -170,7 +170,6 @@ export function SessionSelector({
         descriptionColor={mutedColor}
         selectedDescriptionColor={bgColor}
         flexGrow={1}
-        maxVisible={10}
       />
 
       {/* Footer */}

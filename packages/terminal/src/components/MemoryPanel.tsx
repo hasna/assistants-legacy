@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Memory, MemoryStats } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -37,6 +38,7 @@ function formatValue(value: unknown, maxLen: number = 800): string {
 export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: MemoryPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const sorted = useMemo(
@@ -118,14 +120,14 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
           <text fg={themeColor('info')}><b>Memory Detail</b></text>
         </box>
         <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
-          <text><text fg={themeColor('muted')}>Key:</text> {selected.key}</text>
-          <text><text fg={themeColor('muted')}>Scope:</text> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
-          <text><text fg={themeColor('muted')}>Category:</text> {selected.category}</text>
-          <text><text fg={themeColor('muted')}>Importance:</text> {selected.importance}/10</text>
-          <text><text fg={themeColor('muted')}>Tags:</text> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
-          <text><text fg={themeColor('muted')}>Created:</text> {selected.createdAt}</text>
-          <text><text fg={themeColor('muted')}>Updated:</text> {selected.updatedAt}</text>
-          <text><text fg={themeColor('muted')}>Accessed:</text> {selected.accessCount} times</text>
+          <text><span fg={themeColor('muted')}>Key:</span> {selected.key}</text>
+          <text><span fg={themeColor('muted')}>Scope:</span> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
+          <text><span fg={themeColor('muted')}>Category:</span> {selected.category}</text>
+          <text><span fg={themeColor('muted')}>Importance:</span> {selected.importance}/10</text>
+          <text><span fg={themeColor('muted')}>Tags:</span> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
+          <text><span fg={themeColor('muted')}>Created:</span> {selected.createdAt}</text>
+          <text><span fg={themeColor('muted')}>Updated:</span> {selected.updatedAt}</text>
+          <text><span fg={themeColor('muted')}>Accessed:</span> {selected.accessCount} times</text>
           <box marginTop={1}>
             <text fg={themeColor('muted')}>Value:</text>
           </box>

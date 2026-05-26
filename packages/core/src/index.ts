@@ -35,8 +35,6 @@ export { migrateIfNeeded, isMigrated } from './database/migrate';
 // Assistant
 export { AssistantLoop } from './agent/loop';
 export { AssistantContext } from './agent/context';
-export { ClaudeAgentLoop } from './agent/claude-agent-loop';
-export { CodexAgentLoop } from './agent/codex-loop';
 export { createAgentLoop, type AgentLoop } from './agent/factory';
 export { toolToMcpDescriptor, getAllMcpDescriptors, buildToolsSystemPrompt } from './agent/tool-bridge';
 export type { McpToolDescriptor, ZodDescriptor } from './agent/tool-bridge';
@@ -338,9 +336,7 @@ export * from './migration';
 
 // LLM
 export type { LLMClient } from './llm/client';
-export { createLLMClient, ProviderMismatchError } from './llm/client';
-export { AnthropicClient } from './llm/anthropic';
-export { OpenAIClient } from './llm/openai';
+export { AISDKClient, createLLMClient, convertMessages, convertTools, parseProviderModel } from './llm/client';
 export {
   MODELS,
   getModelById,

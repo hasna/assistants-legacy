@@ -27,7 +27,9 @@ describe('loadConfig', () => {
     await mkdir(projectConfigDir, { recursive: true });
 
     const config = {
-      llm: { model: 'custom-model' },
+      // llm.model must carry a valid provider prefix or it is rejected by
+      // validateConfig and replaced with the default.
+      llm: { model: 'anthropic:custom-model' },
       voice: { enabled: true, tts: { voiceId: 'voice-1' } },
     };
 
@@ -35,9 +37,9 @@ describe('loadConfig', () => {
 
     const loaded = await loadConfig(projectDir);
 
-    expect(loaded.llm.provider).toBe('anthropic');
-    expect(loaded.llm.model).toBe('custom-model');
-    expect(loaded.llm.maxTokens).toBe(8192);
+    expect(loaded.llm.model).toBe('anthropic:custom-model');
+    // maxOutputTokens default is preserved when not overridden.
+    expect(loaded.llm.maxOutputTokens).toBe(8192);
 
     expect(loaded.voice?.enabled).toBe(true);
     expect(loaded.voice?.tts.voiceId).toBe('voice-1');
@@ -53,16 +55,29 @@ describe('loadConfig', () => {
 
     await writeFile(
       join(projectConfigDir, 'config.json'),
-      JSON.stringify({ llm: { model: 'project-model', maxTokens: 4096 } })
+      JSON.stringify({ llm: { model: 'anthropic:project-model', maxOutputTokens: 4096 } })
     );
     await writeFile(
       join(projectConfigDir, 'config.local.json'),
-      JSON.stringify({ llm: { model: 'local-model' } })
+      JSON.stringify({ llm: { model: 'anthropic:local-model' } })
     );
 
     const loaded = await loadConfig(projectDir);
 
-    expect(loaded.llm.model).toBe('local-model');
-    expect(loaded.llm.maxTokens).toBe(4096);
+    expect(loaded.llm.model).toBe('anthropic:local-model');
+    expect(loaded.llm.maxOutputTokens).toBe(4096);
+  });
+
+  test('should reject unprefixed legacy model ids', async () => {
+    const projectDir = join(tempDir, 'project');
+    const projectConfigDir = join(projectDir, '.assistants');
+    await mkdir(projectConfigDir, { recursive: true });
+
+    await writeFile(
+      join(projectConfigDir, 'config.json'),
+      JSON.stringify({ llm: { model: 'claude-sonnet-4-20250514' } })
+    );
+
+    await expect(loadConfig(projectDir)).rejects.toThrow(/provider-prefixed/);
   });
 });

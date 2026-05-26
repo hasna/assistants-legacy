@@ -149,14 +149,14 @@ function TabBar({ activeTab, inboxEnabled }: { activeTab: ActiveTab; inboxEnable
   return (
     <box marginBottom={1}>
       <text
-        fg={activeTab === 'assistant' ? 'cyan' : themeColor('muted')}
+        fg={activeTab === 'assistant' ? themeColor('cyan') : themeColor('muted')}
         attributes={activeTab === 'assistant' ? 33 : undefined}
       ><b>
         {' Assistant Messages '}
       </b></text>
       <text fg={themeColor('muted')}> | </text>
       <text
-        fg={activeTab === 'email' ? 'cyan' : themeColor('muted')}
+        fg={activeTab === 'email' ? themeColor('cyan') : themeColor('muted')}
         attributes={activeTab === 'email' ? 33 : undefined}
       ><b>
         {' Email Inbox '}

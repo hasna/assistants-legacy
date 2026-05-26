@@ -7,7 +7,6 @@ import {
   ALL_MODELS,
   LLM_PROVIDER_IDS,
   getProviderLabel,
-  inferProviderForModelId,
 } from '@hasna/assistants-shared';
 
 export type { ModelDefinition } from '@hasna/assistants-shared';
@@ -17,11 +16,22 @@ export type { ModelDefinition } from '@hasna/assistants-shared';
  */
 export const MODELS: ModelDefinition[] = ALL_MODELS;
 
+function splitProviderModel(id: string): { provider: import('@hasna/assistants-shared').LLMProvider; model: string } | null {
+  const separator = id.indexOf(':');
+  if (separator <= 0 || separator === id.length - 1) return null;
+  return {
+    provider: id.slice(0, separator) as import('@hasna/assistants-shared').LLMProvider,
+    model: id.slice(separator + 1),
+  };
+}
+
 /**
  * Get a model definition by ID
  */
 export function getModelById(id: string): ModelDefinition | undefined {
-  return MODELS.find((m) => m.id === id);
+  const parsed = splitProviderModel(id);
+  if (!parsed) return undefined;
+  return MODELS.find((m) => m.id === parsed.model && m.provider === parsed.provider);
 }
 
 /**
@@ -32,25 +42,26 @@ export function getModelsByProvider(provider: import('@hasna/assistants-shared')
 }
 
 /**
- * Get the provider for a model ID (registry + heuristics)
+ * Get the provider for a provider-prefixed model ID.
  */
 export function getProviderForModel(modelId: string): import('@hasna/assistants-shared').LLMProvider | undefined {
-  const model = getModelById(modelId);
-  return model?.provider ?? inferProviderForModelId(modelId);
+  const parsed = splitProviderModel(modelId);
+  if (parsed) return parsed.provider;
+  return undefined;
 }
 
 /**
  * Check if a model ID is valid
  */
 export function isValidModel(modelId: string): boolean {
-  return MODELS.some((m) => m.id === modelId);
+  return getModelById(modelId) !== undefined;
 }
 
 /**
  * Get all available model IDs
  */
 export function getAllModelIds(): string[] {
-  return MODELS.map((m) => m.id);
+  return MODELS.map((m) => `${m.provider}:${m.id}`);
 }
 
 /**

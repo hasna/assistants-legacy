@@ -263,8 +263,8 @@ export function ProjectsPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>

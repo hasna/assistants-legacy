@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { WebhookListItem, WebhookRegistration, WebhookEventListItem, WebhooksManager } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -46,6 +47,7 @@ function formatRelativeTime(isoDate: string | undefined): string {
 
 export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [webhooks, setWebhooks] = useState<WebhookListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedWebhook, setSelectedWebhook] = useState<WebhookRegistration | null>(null);
@@ -252,7 +254,7 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
           <box flexDirection="column" paddingX={1}>
             {webhooks.map((wh, i) => (
               <box key={wh.id}>
-                <text fg={i === selectedIndex ? 'cyan' : undefined}>
+                <text fg={i === selectedIndex ? themeColor('cyan') : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
                 </text>
                 <text fg={STATUS_COLORS[wh.status]}>
@@ -285,14 +287,14 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
         <box flexDirection="column" paddingX={1}>
           <text><b>{selectedWebhook.name}</b></text>
           <text> </text>
-          <text>ID:          <text fg={themeColor('info')}>{selectedWebhook.id}</text></text>
+          <text>ID:          <span fg={themeColor('info')}>{selectedWebhook.id}</span></text>
           <text>Source:      {selectedWebhook.source}</text>
-          <text>Status:      <text fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</text></text>
+          <text>Status:      <span fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</span></text>
           {selectedWebhook.description && (
             <text>Description: {selectedWebhook.description}</text>
           )}
-          <text>URL:         <text fg={themeColor('success')}>/api/v1/webhooks/receive/{selectedWebhook.id}</text></text>
-          <text>Secret:      <text fg={showSecret ? 'yellow' : themeColor('muted')}>{maskedSecret}</text> <text fg={themeColor('muted')}>(r to {showSecret ? 'hide' : 'reveal'})</text></text>
+          <text>URL:         <span fg={themeColor('success')}>/api/v1/webhooks/receive/{selectedWebhook.id}</span></text>
+          <text>Secret:      <span fg={showSecret ? themeColor('yellow') : themeColor('muted')}>{maskedSecret}</span> <span fg={themeColor('muted')}>(r to {showSecret ? 'hide' : 'reveal'})</span></text>
           <text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</text>
           <text>Deliveries:  {selectedWebhook.deliveryCount}</text>
           <text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</text>

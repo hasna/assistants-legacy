@@ -8,7 +8,8 @@
 
 async function loadModule(name: string): Promise<any> {
   try {
-    return await import(`@hasna/terminal/dist/${name}.js`);
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+    return await dynamicImport(`@hasna/terminal/dist/${name}.js`);
   } catch {
     return null;
   }

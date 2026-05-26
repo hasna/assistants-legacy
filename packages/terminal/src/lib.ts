@@ -85,6 +85,7 @@ export type { SessionData, SavedSessionInfo } from '@hasna/assistants-core';
 // Feature detection
 export {
   isAWSConfigured,
+  isAnyLLMConfigured,
   isElevenLabsConfigured,
   isOpenAIConfigured,
   isExaConfigured,

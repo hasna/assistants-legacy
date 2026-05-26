@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import {
   listContacts as sdkListContacts,
   getContact as sdkGetContact,
@@ -41,6 +42,18 @@ interface ContactListEntry {
   tags: string[];
 }
 
+/**
+ * Favorites are stored in the contact's `custom_fields` bag — the @hasna/contacts
+ * data model has no first-class favorite column.
+ */
+type WithCustomFields = { custom_fields?: Record<string, unknown> | null };
+function isFavorite(c: WithCustomFields): boolean {
+  return c.custom_fields?.is_favorite === true;
+}
+function withFavorite(c: WithCustomFields, fav: boolean): Record<string, unknown> {
+  return { ...(c.custom_fields ?? {}), is_favorite: fav };
+}
+
 function toListEntry(c: ContactWithDetails): ContactListEntry {
   return {
     id: c.id,
@@ -48,13 +61,14 @@ function toListEntry(c: ContactWithDetails): ContactListEntry {
     company: (c as any).company?.name,
     primaryEmail: c.emails?.[0]?.address,
     primaryPhone: c.phones?.[0]?.number,
-    favorite: c.is_favorite ?? false,
+    favorite: isFavorite(c),
     tags: c.tags?.map((t: any) => typeof t === 'string' ? t : t.name) ?? [],
   };
 }
 
 export function ContactsPanel({ onClose }: ContactsPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [contacts, setContacts] = useState<ContactListEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -169,8 +183,8 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
         const c = contacts[selectedIndex];
         sdkGetContact(c.id).then((full) => {
           if (full) {
-            const newFav = !(full.is_favorite ?? false);
-            sdkUpdateContact(c.id, { is_favorite: newFav } as any).then(() => {
+            const newFav = !isFavorite(full);
+            sdkUpdateContact(c.id, { custom_fields: withFavorite(full, newFav) }).then(() => {
               setStatusMessage(newFav ? `Favorited ${c.name}` : `Unfavorited ${c.name}`);
               loadContacts();
             });
@@ -181,8 +195,8 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
       }
     } else if (mode === 'view') {
       if (input === 'f' && viewContact) {
-        const newFav = !(viewContact.is_favorite ?? false);
-        sdkUpdateContact(viewContact.id, { is_favorite: newFav } as any).then(() => {
+        const newFav = !isFavorite(viewContact);
+        sdkUpdateContact(viewContact.id, { custom_fields: withFavorite(viewContact, newFav) }).then(() => {
           sdkGetContact(viewContact.id).then((updated) => {
             if (updated) setViewContact(updated);
           });
@@ -319,7 +333,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
   // View contact detail
   if (mode === 'view' && viewContact) {
     const displayName = viewContact.display_name || `${viewContact.first_name ?? ''} ${viewContact.last_name ?? ''}`.trim() || viewContact.id;
-    const isFav = viewContact.is_favorite ?? false;
+    const isFav = isFavorite(viewContact);
     return (
       <box flexDirection="column">
         {header}
@@ -536,10 +550,10 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
           <box flexDirection="column" paddingX={1}>
             {groups.map((g, i) => (
               <box key={g.id}>
-                <text fg={i === selectedGroupIndex ? 'blue' : undefined}>
+                <text fg={i === selectedGroupIndex ? themeColor('blue') : undefined}>
                   {i === selectedGroupIndex ? '> ' : '  '}
                 </text>
-                <text attributes={i === selectedGroupIndex ? 1 : undefined} fg={i === selectedGroupIndex ? 'blue' : undefined}><b>
+                <text attributes={i === selectedGroupIndex ? 1 : undefined} fg={i === selectedGroupIndex ? themeColor('blue') : undefined}><b>
                   {g.name}
                 </b></text>
                 {g.description && <text fg={themeColor('muted')}> - {g.description}</text>}
@@ -590,10 +604,10 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
         <box flexDirection="column" paddingX={1}>
           {contacts.map((c, i) => (
             <box key={c.id}>
-              <text fg={i === selectedIndex ? 'blue' : undefined}>
+              <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                 {i === selectedIndex ? '> ' : '  '}
               </text>
-              <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? 'blue' : undefined}><b>
+              <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? themeColor('blue') : undefined}><b>
                 {c.favorite ? '* ' : ''}{truncate(c.name, 16).padEnd(16)}
               </b></text>
               <text fg={themeColor('muted')}>

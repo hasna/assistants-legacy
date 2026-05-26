@@ -1,8 +1,7 @@
 {
   "llm": {
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-5-20250929",
-    "maxTokens": 8192
+    "model": "anthropic:claude-sonnet-4-5-20250929",
+    "maxOutputTokens": 8192
   },
   "voice": {
     "enabled": false,

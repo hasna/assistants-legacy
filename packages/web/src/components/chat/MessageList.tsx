@@ -16,7 +16,7 @@ function formatTokenCount(n: number): string {
 
 function TokenBadge({ content, toolCalls }: { content: string; toolCalls?: unknown[] }) {
   const textTokens = estimateTokens(content);
-  const toolTokens = toolCalls ? toolCalls.reduce((acc, tc) => acc + estimateTokens(JSON.stringify(tc)), 0) : 0;
+  const toolTokens = toolCalls ? toolCalls.reduce<number>((acc, tc) => acc + estimateTokens(JSON.stringify(tc)), 0) : 0;
   const total = textTokens + toolTokens;
   if (total === 0) return null;
   return (

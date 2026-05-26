@@ -301,7 +301,7 @@ interface IdentityGetResponse {
     description?: string;
     settings: {
       model: string;
-      maxTokens?: number;
+      maxOutputTokens?: number;
       temperature?: number;
       enabledTools?: string[];
       disabledTools?: string[];
@@ -480,7 +480,7 @@ export function createSelfAwarenessToolExecutors(
           description: assistant.description,
           settings: {
             model: assistant.settings.model,
-            maxTokens: assistant.settings.maxTokens,
+            maxOutputTokens: assistant.settings.maxOutputTokens,
             temperature: assistant.settings.temperature,
             enabledTools: assistant.settings.enabledTools,
             disabledTools: assistant.settings.disabledTools,

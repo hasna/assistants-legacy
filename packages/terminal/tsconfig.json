@@ -4,7 +4,14 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "jsxImportSource": "@opentui/react",
-    "types": ["bun-types"]
+    "types": [
+      "bun-types"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/ink"
+  ]
 }

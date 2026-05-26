@@ -2,13 +2,14 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Assistant, AssistantSettings, CreateAssistantOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
-  ANTHROPIC_MODELS,
+  ALL_MODELS,
   DEFAULT_MODEL,
   DEFAULT_TEMPERATURE,
   MIN_TEMPERATURE,
   MAX_TEMPERATURE,
   TEMPERATURE_STEP,
   getModelDisplayName,
+  getProviderModelId,
 } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
 
@@ -50,13 +51,10 @@ type Mode = 'list' | 'create' | 'edit' | 'delete-confirm';
 type CreateStep = 'name' | 'description' | 'model' | 'temperature' | 'systemPrompt';
 
 function getBackendLabel(backend?: string): string {
-  switch (backend) {
-    case 'claude-agent-sdk': return 'claude-sdk';
-    case 'codex-sdk': return 'codex-sdk';
-    case 'native':
-    default: return 'native';
-  }
+  return backend || 'ai-sdk';
 }
+
+const DEFAULT_MODEL_INDEX = Math.max(0, ALL_MODELS.findIndex((m) => getProviderModelId(m) === DEFAULT_MODEL));
 
 export function AssistantsPanel({
   assistants,
@@ -78,7 +76,7 @@ export function AssistantsPanel({
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [selectedModelIndex, setSelectedModelIndex] = useState(
-    Math.max(0, ANTHROPIC_MODELS.findIndex((m) => m.id === DEFAULT_MODEL))
+    DEFAULT_MODEL_INDEX
   );
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE);
   const [newSystemPrompt, setNewSystemPrompt] = useState('');
@@ -102,7 +100,7 @@ export function AssistantsPanel({
   const resetForm = useCallback(() => {
     setNewName('');
     setNewDescription('');
-    setSelectedModelIndex(Math.max(0, ANTHROPIC_MODELS.findIndex((m) => m.id === DEFAULT_MODEL)));
+    setSelectedModelIndex(DEFAULT_MODEL_INDEX);
     setTemperature(DEFAULT_TEMPERATURE);
     setNewSystemPrompt('');
     setCreateStep('name');
@@ -144,10 +142,8 @@ export function AssistantsPanel({
         setEditingAssistant(assistant);
         setNewName(assistant.name);
         setNewDescription(assistant.description || '');
-        const modelIdx = ANTHROPIC_MODELS.findIndex((m) => m.id === assistant.settings.model);
-        setSelectedModelIndex(
-          modelIdx >= 0 ? modelIdx : Math.max(0, ANTHROPIC_MODELS.findIndex((m) => m.id === DEFAULT_MODEL))
-        );
+        const modelIdx = ALL_MODELS.findIndex((m) => getProviderModelId(m) === assistant.settings.model);
+        setSelectedModelIndex(modelIdx >= 0 ? modelIdx : DEFAULT_MODEL_INDEX);
         setTemperature(assistant.settings.temperature ?? DEFAULT_TEMPERATURE);
         setNewSystemPrompt(assistant.settings.systemPromptAddition || '');
         setEditStep('name');
@@ -273,12 +269,12 @@ export function AssistantsPanel({
     if (!isCreateModelStep && !isEditModelStep) return;
 
     if (key.upArrow) {
-      setSelectedModelIndex((prev) => (prev === 0 ? ANTHROPIC_MODELS.length - 1 : prev - 1));
+      setSelectedModelIndex((prev) => (prev === 0 ? ALL_MODELS.length - 1 : prev - 1));
       return;
     }
 
     if (key.downArrow) {
-      setSelectedModelIndex((prev) => (prev === ANTHROPIC_MODELS.length - 1 ? 0 : prev + 1));
+      setSelectedModelIndex((prev) => (prev === ALL_MODELS.length - 1 ? 0 : prev + 1));
       return;
     }
 
@@ -412,7 +408,7 @@ export function AssistantsPanel({
     setIsSubmitting(true);
     try {
       const settings: Partial<AssistantSettings> = {
-        model: ANTHROPIC_MODELS[selectedModelIndex].id,
+        model: getProviderModelId(ALL_MODELS[selectedModelIndex]),
         temperature,
         systemPromptAddition: newSystemPrompt.trim() || undefined,
       };
@@ -437,7 +433,7 @@ export function AssistantsPanel({
         description: newDescription.trim() || undefined,
         settings: {
           ...editingAssistant.settings,
-          model: ANTHROPIC_MODELS[selectedModelIndex].id,
+          model: getProviderModelId(ALL_MODELS[selectedModelIndex]),
           temperature,
           systemPromptAddition: newSystemPrompt.trim() || undefined,
         } as Record<string, unknown>,
@@ -463,14 +459,14 @@ export function AssistantsPanel({
       </box>
 
       <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
-        {ANTHROPIC_MODELS.map((model, index) => (
-          <box key={model.id} paddingY={0}>
+        {ALL_MODELS.map((model, index) => (
+          <box key={getProviderModelId(model)} paddingY={0}>
             <text
               bg={index === selectedModelIndex ? themeColor('primary') : undefined}
               fg={index === selectedModelIndex ? themeColor('text') : undefined}
             >
               {index === selectedModelIndex ? '>' : ' '} {model.name}
-              <text fg={themeColor('muted')}> - {model.description}</text>
+              <span fg={themeColor('muted')}> - {model.description}</span>
             </text>
           </box>
         ))}
@@ -499,7 +495,7 @@ export function AssistantsPanel({
         <box marginBottom={1} flexDirection="column">
           <text fg={themeColor('muted')}>Name: {newName}</text>
           {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
-          <text fg={themeColor('muted')}>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+          <text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</text>
         </box>
 
         <box>
@@ -557,7 +553,7 @@ export function AssistantsPanel({
           <box marginBottom={1} flexDirection="column">
             <text fg={themeColor('muted')}>Name: {newName}</text>
             {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
-            <text fg={themeColor('muted')}>Model: {ANTHROPIC_MODELS[selectedModelIndex].name}</text>
+            <text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</text>
             <text fg={themeColor('muted')}>Temperature: {temperature.toFixed(1)}</text>
           </box>
 
@@ -657,8 +653,8 @@ export function AssistantsPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
         {isSubmitting && (

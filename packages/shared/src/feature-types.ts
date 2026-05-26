@@ -3,11 +3,11 @@ import type { StreamChunk, Tool, Skill, VoiceState } from './types';
 
 // ============================================
 
-export type AssistantBackend = 'native' | 'claude-agent-sdk' | 'codex-sdk';
+export type AssistantBackend = 'ai-sdk';
 
 export interface AssistantSettings {
   model: string;
-  maxTokens?: number;
+  maxOutputTokens?: number;
   temperature?: number;
   systemPromptAddition?: string;
   enabledTools?: string[];

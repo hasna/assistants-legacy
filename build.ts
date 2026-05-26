@@ -138,6 +138,28 @@ if (!nativeLibSrc) {
   }
 }
 
+// Strategy 4: bun isolated install store (node_modules/.bun/@opentui+core-<platform>-<arch>@<ver>/...)
+// The platform package is an optional dep that bun keeps in its store without hoisting it.
+// Prefer the .so whose version matches the bundled @opentui/core to keep the native ABI in sync.
+if (!nativeLibSrc) {
+  try {
+    let coreVersion = '';
+    try {
+      coreVersion = JSON.parse(
+        await Bun.file('packages/terminal/node_modules/@opentui/core/package.json').text(),
+      ).version ?? '';
+    } catch {}
+    const findResult = await $`find node_modules/.bun -path "*/@opentui/core-${platform}-${arch}/${nativeLibName}" -type f 2>/dev/null`.text();
+    const candidates = findResult.split('\n').map((s) => s.trim()).filter(Boolean);
+    // Pick the version-matched candidate first, else the lexically-highest version.
+    const matched = candidates.find((p) => coreVersion && p.includes(`@${coreVersion}/`));
+    const chosen = matched ?? candidates.sort().at(-1);
+    if (chosen && existsSync(resolve(chosen))) {
+      nativeLibSrc = resolve(chosen);
+    }
+  } catch {}
+}
+
 if (nativeLibSrc && existsSync(nativeLibSrc)) {
   // Copy native binary to dist/native/
   await $`mkdir -p ${outdir}/native`;

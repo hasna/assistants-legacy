@@ -21,12 +21,12 @@ export function DeleteConfirmation({
 }: DeleteConfirmationProps) {
   return (
     <box paddingX={1} flexDirection="column">
-      <text fg={color}><b>{title}</b></text>
+      <text fg={color}>{title}</text>
       <text> </text>
       <text>This will delete "{itemName}"{itemId ? ` (${itemId})` : ''}.</text>
       {message && <text>{message}</text>}
       <text> </text>
-      <text>Press <text><b>'y'</b></text> to confirm, <text><b>'n'</b></text> to cancel.</text>
+      <text>Press 'y' to confirm, 'n' to cancel.</text>
     </box>
   );
 }

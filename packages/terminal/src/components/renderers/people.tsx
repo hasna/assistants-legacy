@@ -19,7 +19,7 @@ import {
 } from '../appHelpers';
 import type { PanelRenderContext } from './context';
 
-export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactNode {
   const assistantManager = ctx.activeSession?.client.getAssistantManager?.();
   const assistantsList = assistantManager?.listAssistants() ?? [];
   const activeAssistantId = assistantManager?.getActiveId() ?? undefined;
@@ -128,7 +128,7 @@ export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactEleme
   );
 }
 
-export function renderIdentityPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderIdentityPanel(ctx: PanelRenderContext): React.ReactNode {
   const identityManager = ctx.activeSession?.client.getIdentityManager?.();
   const activeIdentity = identityManager?.getActive();
   const templates = listTemplates();
@@ -255,7 +255,7 @@ export function renderIdentityPanel(ctx: PanelRenderContext): React.ReactElement
   );
 }
 
-export function renderHooksPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderHooksPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleHookToggle = (event: HookEvent, hookId: string, enabled: boolean) => {
     if (!ctx.hookStoreRef.current) {
       ctx.hookStoreRef.current = new HookStore();

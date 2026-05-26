@@ -449,7 +449,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   // Google Gemini Models
   {
     id: 'gemini-3-pro-preview',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 3 Pro Preview',
     description: 'Most capable preview model',
     contextWindow: 1048576,
@@ -461,7 +461,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-3-pro-image-preview',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 3 Pro Image Preview',
     description: 'Image generation preview model',
     contextWindow: 65536,
@@ -473,7 +473,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-3-flash-preview',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 3 Flash Preview',
     description: 'Fast preview model',
     contextWindow: 1048576,
@@ -485,7 +485,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-2.5-pro',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 2.5 Pro',
     description: 'Most capable Gemini 2.5 model',
     contextWindow: 1048576,
@@ -497,7 +497,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-2.5-flash',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 2.5 Flash',
     description: 'Fast Gemini 2.5 model',
     contextWindow: 1048576,
@@ -509,7 +509,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-2.5-flash-lite',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 2.5 Flash Lite',
     description: 'Lightweight Gemini 2.5 model',
     contextWindow: 1048576,
@@ -521,7 +521,7 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-2.5-flash-image',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini 2.5 Flash Image',
     description: 'Image-capable Gemini 2.5 Flash',
     contextWindow: 65536,
@@ -533,18 +533,13 @@ export const ALL_MODELS: ModelDefinition[] = [
   },
   {
     id: 'gemini-embedding-001',
-    provider: 'gemini',
+    provider: 'google',
     name: 'Gemini Embedding 001',
     description: 'Text embedding model',
   },
 ] as const;
 
-/**
- * @deprecated Use ALL_MODELS instead. Only includes Anthropic models for backward compatibility.
- */
-export const ANTHROPIC_MODELS: ModelDefinition[] = ALL_MODELS.filter(m => m.provider === 'anthropic');
-
-export const DEFAULT_MODEL = 'claude-opus-4-6';
+export const DEFAULT_MODEL = 'anthropic:claude-opus-4-6';
 
 export const DEFAULT_TEMPERATURE = 1.0;
 export const MIN_TEMPERATURE = 0.0;
@@ -554,10 +549,23 @@ export const TEMPERATURE_STEP = 0.1;
 export const DEFAULT_MAX_TOKENS = 8192;
 
 /**
- * Get a model definition by ID
+ * Format a model as an AI SDK provider-prefixed ID.
+ */
+export function getProviderModelId(model: ModelDefinition): string {
+  return `${model.provider}:${model.id}`;
+}
+
+/**
+ * Get a model definition by AI SDK provider-prefixed ID.
  */
 export function getModelById(modelId: string): ModelDefinition | undefined {
-  return ALL_MODELS.find((m) => m.id === modelId);
+  const separator = modelId.indexOf(':');
+  if (separator > 0 && separator < modelId.length - 1) {
+    const provider = modelId.slice(0, separator) as ModelProvider;
+    const id = modelId.slice(separator + 1);
+    return ALL_MODELS.find((m) => m.provider === provider && m.id === id);
+  }
+  return undefined;
 }
 
 /**
@@ -571,25 +579,7 @@ export function getModelsByProvider(provider: ModelProvider): ModelDefinition[] 
  * Get the provider for a model ID
  */
 export function getProviderForModel(modelId: string): ModelProvider | undefined {
-  return getModelById(modelId)?.provider ?? inferProviderForModelId(modelId);
-}
-
-export function inferProviderForModelId(modelId: string): ModelProvider | undefined {
-  const id = modelId.toLowerCase();
-
-  if (id.startsWith('claude-')) return 'anthropic';
-  if (id.startsWith('gemini-')) return 'gemini';
-  if (id.startsWith('grok-')) return 'xai';
-  if (id.startsWith('mistral-') || id.startsWith('codestral') || id.startsWith('ministral') ||
-      id.startsWith('pixtral') || id.startsWith('magistral') || id.startsWith('devstral') ||
-      id.startsWith('voxtral')) {
-    return 'mistral';
-  }
-  if (id.startsWith('gpt-') || id.startsWith('o1') || id.startsWith('o3') || id.startsWith('o4') || id.startsWith('o5')) {
-    return 'openai';
-  }
-
-  return undefined;
+  return getModelById(modelId)?.provider;
 }
 
 /**
@@ -601,12 +591,12 @@ export function getModelDisplayName(modelId: string): string {
 }
 
 /**
- * Clamp maxTokens to the model's maximum output tokens
+ * Clamp maxOutputTokens to the model's maximum output tokens
  */
-export function clampMaxTokens(modelId: string, maxTokens: number): number {
+export function clampMaxOutputTokens(modelId: string, maxOutputTokens: number): number {
   const model = getModelById(modelId);
   const modelMax = model?.maxOutputTokens ?? 8192;
-  return Math.min(maxTokens, modelMax);
+  return Math.min(maxOutputTokens, modelMax);
 }
 
 /**

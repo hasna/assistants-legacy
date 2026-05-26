@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 
 import type { ChannelsManager, ChannelListItem, ChannelMessage, ChannelMember, Channel } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -70,6 +71,7 @@ function formatRelativeTime(isoDate: string | null | undefined): string {
 
 export function ChannelsPanel({ manager, onClose, activePersonId, activePersonName, activeAssistantName, onPersonMessage }: ChannelsPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [channels, setChannels] = useState<ChannelListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -391,10 +393,10 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
             {channels.map((ch, i) => (
               <box key={ch.id} flexDirection="column" marginBottom={1}>
                 <box>
-                  <text fg={i === selectedIndex ? 'blue' : undefined}>
+                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
-                  <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? 'blue' : undefined}><b>
+                  <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? themeColor('blue') : undefined}><b>
                     #{ch.name}
                   </b></text>
                   <text fg={themeColor('muted')}> · {ch.memberCount} members</text>
@@ -511,10 +513,10 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
             <text fg={themeColor('warning')}><b>Members (Tab to select, Esc to dismiss)</b></text>
             {mentionCandidates.slice(0, 8).map((m, i) => (
               <box key={m.assistantId}>
-                <text fg={i === mentionIndex ? 'blue' : undefined}>
+                <text fg={i === mentionIndex ? themeColor('blue') : undefined}>
                   {i === mentionIndex ? '▸ ' : '  '}
                 </text>
-                <text attributes={i === mentionIndex ? 1 : undefined} fg={i === mentionIndex ? 'blue' : undefined}><b>
+                <text attributes={i === mentionIndex ? 1 : undefined} fg={i === mentionIndex ? themeColor('blue') : undefined}><b>
                   {m.assistantName}
                 </b></text>
                 <text fg={themeColor('muted')}>

@@ -1,20 +1,10 @@
-import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
-import { mkdtemp, rm, readFile, access, mkdir, writeFile } from 'fs/promises';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { tmpdir, homedir as realHomedir } from 'os';
+import { tmpdir } from 'os';
 import { closeDatabase, resetDatabaseSingleton } from '../src/database';
 import { setRuntime } from '../src/runtime';
 import { bunRuntime } from '@hasna/runtime-bun';
-
-// Store the fake home directory for the install-skills tests
-let fakeHomeDir: string | null = null;
-
-// Mock os.homedir() to allow overriding in install-skills tests
-import * as osReal from 'os';
-mock.module('os', () => ({
-  ...osReal,
-  homedir: () => fakeHomeDir || realHomedir(),
-}));
 
 // Ensure the Bun runtime is available for database access
 setRuntime(bunRuntime);
@@ -384,26 +374,27 @@ describe('heartbeat/watchdog', () => {
 
 // ── Install skills ──────────────────────────────────────────────────
 
-// Dynamic import after os.homedir() is mocked above
-const { installHeartbeatSkills: installHeartbeatSkillsMocked } = await import('../src/heartbeat/install-skills');
+import { installHeartbeatSkills } from '../src/heartbeat/install-skills';
 
 describe('heartbeat/install-skills', () => {
   let tempDir: string;
   let skillsDir: string;
+  let originalSkillsDir: string | undefined;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'assistants-skills-'));
-    fakeHomeDir = tempDir;
     skillsDir = join(tempDir, '.skill');
+    originalSkillsDir = process.env.ASSISTANTS_SKILLS_DIR;
+    process.env.ASSISTANTS_SKILLS_DIR = skillsDir;
   });
 
   afterEach(async () => {
-    fakeHomeDir = null;
+    process.env.ASSISTANTS_SKILLS_DIR = originalSkillsDir;
     await rm(tempDir, { recursive: true, force: true });
   });
 
   test('installs both skills on first run', async () => {
-    const installed = await installHeartbeatSkillsMocked();
+    const installed = await installHeartbeatSkills();
     expect(installed).toContain('main-loop');
     expect(installed).toContain('watchdog');
 
@@ -439,7 +430,7 @@ allowed-tools: memory_recall, schedule_create, schedules_list
 Use \`schedules_list\` and \`schedule_create\`.
 `, 'utf-8');
 
-    const installed = await installHeartbeatSkillsMocked();
+    const installed = await installHeartbeatSkills();
     expect(installed).toContain('main-loop');
     expect(installed).toContain('watchdog');
 
@@ -456,9 +447,9 @@ Use \`schedules_list\` and \`schedule_create\`.
 
   test('skips already installed skills', async () => {
     // First install
-    await installHeartbeatSkillsMocked();
+    await installHeartbeatSkills();
     // Second install should return empty
-    const installed = await installHeartbeatSkillsMocked();
+    const installed = await installHeartbeatSkills();
     expect(installed).toEqual([]);
   });
 });

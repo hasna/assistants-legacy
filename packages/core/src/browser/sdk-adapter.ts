@@ -8,7 +8,10 @@
 
 let _lib: any | null = null;
 async function lib(): Promise<any> {
-  if (!_lib) _lib = await import('@hasna/browser');
+  if (!_lib) {
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+    _lib = await dynamicImport('@hasna/browser');
+  }
   return _lib;
 }
 
@@ -19,6 +22,7 @@ async function page(): Promise<any> {
     const sdk = await lib();
     _session = await sdk.createSession({ headless: true });
   }
+  if (!_session) throw new Error('browser session failed to initialize');
   return _session.page;
 }
 

@@ -71,15 +71,15 @@ export const assistantCreateTool: Tool = {
       },
       model: {
         type: 'string',
-        description: 'LLM model to use (e.g., "claude-opus-4-5", "claude-sonnet-4-20250514")',
+        description: 'AI SDK provider-prefixed model to use (e.g., "anthropic:claude-opus-4-5-20251101", "openai:gpt-5.2")',
       },
       systemPromptAddition: {
         type: 'string',
         description: 'Optional system prompt addition for this assistant',
       },
-      maxTokens: {
+      maxOutputTokens: {
         type: 'number',
-        description: 'Optional maximum tokens per response',
+        description: 'Optional maximum output tokens per response',
       },
       temperature: {
         type: 'number',
@@ -134,9 +134,9 @@ export const assistantUpdateTool: Tool = {
         type: 'string',
         description: 'New system prompt addition',
       },
-      maxTokens: {
+      maxOutputTokens: {
         type: 'number',
-        description: 'New maximum tokens per response',
+        description: 'New maximum output tokens per response',
       },
       temperature: {
         type: 'number',
@@ -221,7 +221,7 @@ export function createAssistantToolExecutors(
         name: a.name,
         description: a.description || null,
         model: a.settings.model,
-        backend: a.settings.backend || 'native',
+        backend: a.settings.backend || 'ai-sdk',
         isSystem: a.isSystem || false,
         isActive: a.id === activeId,
         createdAt: a.createdAt,
@@ -274,7 +274,7 @@ export function createAssistantToolExecutors(
           avatar: assistant.avatar || null,
           settings: {
             model: assistant.settings.model,
-            maxTokens: assistant.settings.maxTokens,
+            maxOutputTokens: assistant.settings.maxOutputTokens,
             temperature: assistant.settings.temperature,
             systemPromptAddition: assistant.settings.systemPromptAddition,
             enabledTools: assistant.settings.enabledTools,
@@ -307,7 +307,7 @@ export function createAssistantToolExecutors(
       try {
         const settings: Record<string, unknown> = {};
         if (input.model) settings.model = input.model;
-        if (input.maxTokens) settings.maxTokens = input.maxTokens;
+        if (input.maxOutputTokens) settings.maxOutputTokens = input.maxOutputTokens;
         if (input.temperature !== undefined) settings.temperature = input.temperature;
         if (input.systemPromptAddition) settings.systemPromptAddition = input.systemPromptAddition;
         if (input.enabledTools) settings.enabledTools = input.enabledTools;
@@ -366,7 +366,7 @@ export function createAssistantToolExecutors(
 
         const settings: Record<string, unknown> = {};
         if (input.model) settings.model = input.model;
-        if (input.maxTokens !== undefined) settings.maxTokens = input.maxTokens;
+        if (input.maxOutputTokens !== undefined) settings.maxOutputTokens = input.maxOutputTokens;
         if (input.temperature !== undefined) settings.temperature = input.temperature;
         if (input.systemPromptAddition !== undefined) settings.systemPromptAddition = input.systemPromptAddition;
         if (input.enabledTools !== undefined) settings.enabledTools = input.enabledTools;

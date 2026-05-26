@@ -62,3 +62,6 @@ temp/
 
 # Claude Code
 .claude/
+
+# Local Code With state
+.codewith/

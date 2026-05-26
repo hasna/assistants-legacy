@@ -101,13 +101,13 @@ function getVisibleRange(
 // Sub-components
 // ============================================
 
-function ProgressBar({ step, total }: { step: number; total: number }) {
+export function ProgressBar({ step, total }: { step: number; total: number }) {
   const width = 30;
   const filled = Math.round((step / total) * width);
   const empty = width - filled;
   const pct = Math.round((step / total) * 100);
   return (
-    <box marginBottom={1}>
+    <box flexDirection="row" marginBottom={1}>
       <text fg={themeColor('muted')}>Step {step} of {total}  [</text>
       <text fg={themeColor('info')}>{'='.repeat(filled)}</text>
       <text fg={themeColor('muted')}>{' '.repeat(empty)}</text>
@@ -128,20 +128,20 @@ function MaskedInput({ value, onChange, onSubmit, placeholder }: {
     : value;
 
   return (
-    <box>
+    <box flexDirection="row">
       <text fg={themeColor('info')}>&gt; </text>
       {value.length === 0 ? (
         <input
           value={value}
           onChange={onChange}
-          onSubmit={onSubmit}
+          onSubmit={() => onSubmit(value)}
           placeholder={placeholder}
         />
       ) : (
         <input
           value={value}
           onChange={onChange}
-          onSubmit={onSubmit}
+          onSubmit={() => onSubmit(value)}
           placeholder={placeholder}
         />
       )}
@@ -496,7 +496,7 @@ export function OnboardingPanel({
         <box marginTop={1} marginBottom={1}>
           <text fg={logoColor}><b>{COMPACT_LOGO}</b></text>
         </box>
-        <box marginBottom={1}>
+        <box flexDirection="row" marginBottom={1}>
           <text fg={themeColor('info')}>&gt; </text>
           <text>{subtitle}</text>
           {!subtitleDone && <text fg={themeColor('info')}>_</text>}
@@ -517,7 +517,7 @@ export function OnboardingPanel({
         <text><b>What can assistants do?</b></text>
         <box flexDirection="column" marginTop={1} marginBottom={1}>
           {INTRO_FEATURES.slice(0, introRevealCount).map((feature, i) => (
-            <box key={i}>
+            <box flexDirection="row" key={i}>
               <text fg={themeColor('info')}>  &gt; </text>
               <text>{feature}</text>
             </box>
@@ -542,11 +542,11 @@ export function OnboardingPanel({
         <text><b>Choose your provider</b></text>
         <box flexDirection="column" marginTop={1} marginBottom={1}>
           {LLM_PROVIDERS.map((provider, i) => (
-            <box key={provider.id}>
-              <text fg={i === selectedProviderIndex ? 'cyan' : themeColor('muted')}>
+            <box flexDirection="row" key={provider.id}>
+              <text fg={i === selectedProviderIndex ? themeColor('cyan') : themeColor('muted')}>
                 {i === selectedProviderIndex ? '  > ' : '    '}
               </text>
-              <text attributes={i === selectedProviderIndex ? 1 : undefined} fg={i === selectedProviderIndex ? 'white' : undefined}><b>
+              <text attributes={i === selectedProviderIndex ? 1 : undefined} fg={i === selectedProviderIndex ? themeColor('white') : undefined}><b>
                 {provider.label}
               </b></text>
               <text fg={themeColor('muted')}>  {provider.description}</text>
@@ -574,7 +574,10 @@ export function OnboardingPanel({
         <box marginTop={1} marginBottom={1} flexDirection="column">
           <text>assistants uses {providerLabel}. You'll need an API key.</text>
           {providerInfo?.docsUrl ? (
-            <text>Get one at: <text fg={themeColor('info')}><u>{providerInfo.docsUrl}</u></text></text>
+            <box flexDirection="row">
+              <span>Get one at: </span>
+              <span fg={themeColor('info')}><u>{providerInfo.docsUrl}</u></span>
+            </box>
           ) : null}
         </box>
         {existingKey ? (
@@ -588,7 +591,7 @@ export function OnboardingPanel({
         <box marginTop={1}>
           <text>Enter your {providerLabel} API key ({envName}):</text>
         </box>
-        <box>
+        <box flexDirection="row">
           <text fg={themeColor('info')}>&gt; </text>
             <input
               value={apiKey}
@@ -597,7 +600,7 @@ export function OnboardingPanel({
                 setApiKeyError(null);
                 setApiKeyValidated(false);
               }}
-              onSubmit={submitApiKey}
+              onSubmit={() => submitApiKey(apiKey)}
               focused
               placeholder={selectedProvider === 'anthropic' ? 'sk-ant-...' : 'api-key'}
             />
@@ -629,11 +632,11 @@ export function OnboardingPanel({
         <text><b>Choose your default model</b></text>
         <box flexDirection="column" marginTop={1} marginBottom={1}>
           {availableModels.map((model, i) => (
-            <box key={model.id}>
-              <text fg={i === selectedModelIndex ? 'cyan' : themeColor('muted')}>
+            <box flexDirection="row" key={model.id}>
+              <text fg={i === selectedModelIndex ? themeColor('cyan') : themeColor('muted')}>
                 {i === selectedModelIndex ? '  > ' : '    '}
               </text>
-              <text attributes={i === selectedModelIndex ? 1 : undefined} fg={i === selectedModelIndex ? 'white' : undefined}><b>
+              <text attributes={i === selectedModelIndex ? 1 : undefined} fg={i === selectedModelIndex ? themeColor('white') : undefined}><b>
                 {model.name}
               </b></text>
               <text fg={themeColor('muted')}>  {model.description}</text>
@@ -673,8 +676,8 @@ export function OnboardingPanel({
             const descDisplay = desc.length > 32 ? desc.slice(0, 29) + '...' : desc;
             const checkbox = enabled ? 'x' : ' ';
             return (
-              <box key={connector.name}>
-                <text fg={isSelected ? 'cyan' : themeColor('muted')}>
+              <box flexDirection="row" key={connector.name}>
+                <text fg={isSelected ? themeColor('cyan') : themeColor('muted')}>
                   {isSelected ? '> ' : '  '}
                 </text>
                 <text fg={enabled ? themeColor('success') : themeColor('muted')}>
@@ -707,15 +710,18 @@ export function OnboardingPanel({
         <text><b>Skills</b></text>
         <box marginTop={1} marginBottom={1} flexDirection="column">
           <text fg={themeColor('muted')}>Skills teach your assistant specialized workflows.</text>
-          <text fg={themeColor('muted')}>Install skills with: <text fg={themeColor('info')}>bun add -g @hasna/skills</text></text>
+          <box flexDirection="row">
+            <text fg={themeColor('muted')}>Install skills with: </text>
+            <text fg={themeColor('info')}>bun add -g @hasna/skills</text>
+          </box>
         </box>
         {skillsList.length > 0 ? (
           <box flexDirection="column">
             {skillsList.map((skill, i) => {
               const isSelected = i === selectedSkillIndex;
               return (
-                <box key={skill.name}>
-                  <text fg={isSelected ? 'cyan' : themeColor('muted')}>
+                <box flexDirection="row" key={skill.name}>
+                  <text fg={isSelected ? themeColor('cyan') : themeColor('muted')}>
                     {isSelected ? '> ' : '  '}
                   </text>
                   <text fg={themeColor('success')}>[x]</text>
@@ -728,8 +734,10 @@ export function OnboardingPanel({
             })}
           </box>
         ) : (
-          <box marginBottom={1}>
-            <text fg={themeColor('muted')}>  No skills installed. Run <text fg={themeColor('info')}>bun add -g @hasna/skills</text> to get started.</text>
+          <box marginBottom={1} flexDirection="row">
+            <text fg={themeColor('muted')}>  No skills installed. Run </text>
+            <text fg={themeColor('info')}>bun add -g @hasna/skills</text>
+            <text fg={themeColor('muted')}> to get started.</text>
           </box>
         )}
         <box marginTop={1} flexDirection="column">
@@ -758,12 +766,12 @@ export function OnboardingPanel({
         <box marginTop={1}>
           <text>Enter API key for {currentConnector}:</text>
         </box>
-        <box>
+        <box flexDirection="row">
           <text fg={themeColor('info')}>&gt; </text>
           <input
             value={connectorKeyValue}
             onChange={setConnectorKeyValue}
-            onSubmit={submitConnectorKey}
+            onSubmit={() => submitConnectorKey(connectorKeyValue)}
             focused
             placeholder="Enter API key or press Enter to skip"
           />
@@ -794,13 +802,13 @@ export function OnboardingPanel({
         <text fg={themeColor('success')}><b>You're all set!</b></text>
         <box marginTop={1} flexDirection="column">
           <text fg={themeColor('muted')}>{'┌─────────────────────────────────────┐'}</text>
-          <text fg={themeColor('muted')}>{'│'} <text><b>Configuration Summary</b></text>{'              │'}</text>
+          <text fg={themeColor('muted')}>{'│'} Configuration Summary{'              │'}</text>
           <text fg={themeColor('muted')}>{'├─────────────────────────────────────┤'}</text>
-          <text fg={themeColor('muted')}>{'│'} API Key:    <text>{maskedKey.padEnd(24)}</text>{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Model:      <text>{modelDisplay}</text>{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Connectors: <text>{connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}</text>{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Skills:     <text>{skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}</text>{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Config:     <text>{'~/.hasna/assistants/'.padEnd(24)}</text>{'│'}</text>
+          <text fg={themeColor('muted')}>{'│'} API Key:    {maskedKey.padEnd(24)}{'│'}</text>
+          <text fg={themeColor('muted')}>{'│'} Model:      {modelDisplay}{'│'}</text>
+          <text fg={themeColor('muted')}>{'│'} Connectors: {connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}{'│'}</text>
+          <text fg={themeColor('muted')}>{'│'} Skills:     {skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}{'│'}</text>
+          <text fg={themeColor('muted')}>{'│'} Config:     {'~/.hasna/assistants/'.padEnd(24)}{'│'}</text>
           <text fg={themeColor('muted')}>{'└─────────────────────────────────────┘'}</text>
         </box>
         <box marginTop={1}>

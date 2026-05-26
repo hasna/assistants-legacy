@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Task, TaskPriority, TaskStatus, TaskCreateOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -81,6 +82,7 @@ export function TasksPanel({
 }: TasksPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [newDescription, setNewDescription] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('normal');
   const [newBlockedBy, setNewBlockedBy] = useState<string[]>([]);
@@ -537,8 +539,8 @@ export function TasksPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>
@@ -558,13 +560,13 @@ export function TasksPanel({
         </box>
         <box marginTop={1} flexDirection="column">
           <text>
-            <text fg={themeColor('error')}><b>h</b></text> High priority
+            <span fg={themeColor('error')}><b>h</b></span> High priority
           </text>
           <text>
-            <text><b>n</b></text> Normal priority
+            <span><b>n</b></span> Normal priority
           </text>
           <text>
-            <text fg={themeColor('muted')}><b>l</b></text> Low priority
+            <span fg={themeColor('muted')}><b>l</b></span> Low priority
           </text>
         </box>
         <box marginTop={1}>
@@ -586,7 +588,7 @@ export function TasksPanel({
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <box flexDirection="row">
           <text><b>Tasks </b></text>
-          <text fg={paused ? 'yellow' : themeColor('success')}>
+          <text fg={paused ? themeColor('yellow') : themeColor('success')}>
             {paused ? '(Paused)' : '(Active)'}
           </text>
         </box>
@@ -623,9 +625,9 @@ export function TasksPanel({
             return (
               <box key={task.id} paddingY={0}>
                 <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : task.status === 'completed' ? "gray" : undefined}>
-                  <text fg={statusColor}>{statusIcon}</text>
+                  <span fg={statusColor}>{statusIcon}</span>
                   {' '}
-                  <text fg={priorityColor}>[{priorityIcon}]</text>
+                  <span fg={priorityColor}>[{priorityIcon}]</span>
                   {' '}
                   {index + 1}. {desc.padEnd(42)} {time}
                 </text>

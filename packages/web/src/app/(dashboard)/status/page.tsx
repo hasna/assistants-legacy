@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db"
 import { homedir } from "os"
 import { join } from "path"
 import { statSync, existsSync } from "fs"
+import { LLM_PROVIDERS } from "@hasna/assistants-shared"
 
 interface TableCount {
   name: string
@@ -62,8 +63,10 @@ export default function StatusPage() {
 
   // Environment checks
   const envChecks: EnvCheck[] = [
-    { name: "ANTHROPIC_API_KEY", set: !!process.env.ANTHROPIC_API_KEY },
-    { name: "OPENAI_API_KEY", set: !!process.env.OPENAI_API_KEY },
+    ...LLM_PROVIDERS.map((provider) => ({
+      name: provider.apiKeyEnv,
+      set: !!process.env[provider.apiKeyEnv],
+    })),
     { name: "ELEVENLABS_API_KEY", set: !!process.env.ELEVENLABS_API_KEY },
     { name: "EXA_API_KEY", set: !!process.env.EXA_API_KEY },
     { name: "AWS_ACCESS_KEY_ID", set: !!process.env.AWS_ACCESS_KEY_ID },

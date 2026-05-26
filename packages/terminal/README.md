@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A general-purpose AI assistant that runs in your terminal. Built with [Ink](https://github.com/vadimdemedes/ink).
+A general-purpose AI assistant that runs in your terminal. Built on the AI SDK.
 
 **Not just for coding** - while it excels at development workflows, this assistant helps with research, writing, task management, automation, and any task you need assistance with.
 
@@ -26,7 +26,7 @@ A general-purpose AI assistant that runs in your terminal. Built with [Ink](http
 ### Prerequisites
 
 - [Bun](https://bun.sh) runtime (v1.0 or later)
-- [Anthropic API key](https://console.anthropic.com/)
+- At least one supported AI SDK provider key: Anthropic, OpenAI, Google Gemini, xAI, or Mistral
 
 ### Install globally
 
@@ -42,10 +42,11 @@ bunx @hasna/assistants
 
 ## Quick Start
 
-1. Set your Anthropic API key:
+1. Set at least one provider API key:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 ```
 
 2. Start the assistant:
@@ -230,9 +231,9 @@ Create `~/.hasna/assistants/config.json`:
 
 ```json
 {
-  "model": "claude-sonnet-4-20250514",
+  "model": "anthropic:claude-sonnet-4-20250514",
   "temperature": 0.7,
-  "maxTokens": 8192,
+  "maxOutputTokens": 8192,
   "connectors": ["notion", "googledrive"],
   "voice": {
     "tts": "elevenlabs",
@@ -261,9 +262,12 @@ Create `.assistants/config.json` in your project:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Claude API access |
+| `ANTHROPIC_API_KEY` | One LLM key required | Anthropic models |
+| `OPENAI_API_KEY` | One LLM key required | OpenAI models and Whisper STT |
+| `GEMINI_API_KEY` | One LLM key required | Google Gemini models |
+| `XAI_API_KEY` | One LLM key required | xAI models |
+| `MISTRAL_API_KEY` | One LLM key required | Mistral models |
 | `ELEVENLABS_API_KEY` | No | ElevenLabs TTS |
-| `OPENAI_API_KEY` | No | Whisper STT |
 | `EXA_API_KEY` | No | Enhanced web search |
 | `AWS_ACCESS_KEY_ID` | No | AWS features |
 | `AWS_SECRET_ACCESS_KEY` | No | AWS features |
@@ -472,7 +476,7 @@ import { getFeatureAvailability, getFeatureStatusMessage } from '@hasna/assistan
 
 // Check what features are available
 const features = getFeatureAvailability();
-console.log('Core chat:', features.coreChat);     // true if ANTHROPIC_API_KEY set
+console.log('Core chat:', features.coreChat);     // true if any LLM provider key is set
 console.log('AWS features:', features.awsFeatures); // true if AWS configured
 
 // Get human-readable status
@@ -493,11 +497,12 @@ connectors list
 
 ## Troubleshooting
 
-### "ANTHROPIC_API_KEY not set"
+### "No LLM provider API key set"
 
-Set your API key:
+Set one provider API key:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
+# or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY
 ```
 
 ### Terminal rendering issues

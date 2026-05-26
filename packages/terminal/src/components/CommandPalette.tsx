@@ -116,7 +116,6 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
           descriptionColor={mutedColor}
           selectedDescriptionColor={bgColor}
           flexGrow={1}
-          maxVisible={10}
         />
       ) : (
         <box>

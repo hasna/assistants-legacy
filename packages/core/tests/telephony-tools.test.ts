@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { createTelephonyToolExecutors, telephonyTools } from '../src/telephony/tools';
+import { createContact } from '../src/contacts/sdk-adapter';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 describe('telephony tools executors', () => {
   it('telephony_status includes default number source', async () => {
@@ -178,46 +182,51 @@ describe('telephony tools executors', () => {
     expect(names).toContain('telephony_status');
   });
 
-  it('telephony_call resolves contact_name to phone number', async () => {
-    let calledTo: string | null = null;
-    const manager = {
-      makeCall: async (to: string) => {
-        calledTo = to;
-        return { success: true, message: `Calling ${to}...` };
-      },
-    };
-    const contactsManager = {
-      searchContacts: (query: string) => {
-        if (query === 'John Doe') {
-          return [{ id: 'c1', name: 'John Doe', primaryPhone: '+15559990000', favorite: false, tags: [], relationship: 'friend' }];
-        }
-        return [];
-      },
-    };
+  // telephony_call resolves contact names through the global @hasna/contacts
+  // SDK (not the injected contacts manager), so these seed real contacts in an
+  // isolated HOME and verify resolution end-to-end.
+  describe('telephony_call contact resolution', () => {
+    let savedHome: string | undefined;
+    let tmpHome: string;
 
-    const executors = createTelephonyToolExecutors(
-      () => manager as any,
-      () => contactsManager as any
-    );
-    const output = await executors.telephony_call({ contact_name: 'John Doe' });
-    expect(output).toContain('Calling +15559990000');
-    expect(calledTo).toBe('+15559990000');
-  });
+    beforeAll(async () => {
+      savedHome = process.env.HOME;
+      tmpHome = mkdtempSync(join(tmpdir(), 'telephony-contacts-'));
+      process.env.HOME = tmpHome;
+      await createContact({ display_name: 'Johnny Callsworth', phones: [{ number: '+15559990000' }] } as any);
+      await createContact({ display_name: 'Phoneless Pat' } as any);
+    });
 
-  it('telephony_call returns error when contact has no phone', async () => {
-    const manager = {
-      makeCall: async () => ({ success: true, message: 'ok' }),
-    };
-    const contactsManager = {
-      searchContacts: () => [{ id: 'c2', name: 'Jane', primaryPhone: undefined, favorite: false, tags: [], relationship: 'friend' }],
-    };
+    afterAll(() => {
+      if (savedHome === undefined) delete process.env.HOME;
+      else process.env.HOME = savedHome;
+      rmSync(tmpHome, { recursive: true, force: true });
+    });
 
-    const executors = createTelephonyToolExecutors(
-      () => manager as any,
-      () => contactsManager as any
-    );
-    const output = await executors.telephony_call({ contact_name: 'Jane' });
-    expect(output).toContain('no phone number');
+    it('telephony_call resolves contact_name to phone number', async () => {
+      let calledTo: string | null = null;
+      const manager = {
+        makeCall: async (to: string) => {
+          calledTo = to;
+          return { success: true, message: `Calling ${to}...` };
+        },
+      };
+
+      const executors = createTelephonyToolExecutors(() => manager as any);
+      const output = await executors.telephony_call({ contact_name: 'Johnny Callsworth' });
+      expect(output).toContain('Calling +15559990000');
+      expect(calledTo).toBe('+15559990000');
+    });
+
+    it('telephony_call returns error when contact has no phone', async () => {
+      const manager = {
+        makeCall: async () => ({ success: true, message: 'ok' }),
+      };
+
+      const executors = createTelephonyToolExecutors(() => manager as any);
+      const output = await executors.telephony_call({ contact_name: 'Phoneless Pat' });
+      expect(output).toContain('no phone number');
+    });
   });
 
   it('telephony_call returns error when contact not found', async () => {

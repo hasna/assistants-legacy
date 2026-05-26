@@ -247,14 +247,13 @@ describe('Config types', () => {
   test('AssistantsConfig structure', () => {
     const config: AssistantsConfig = {
       llm: {
-        provider: 'anthropic',
-        model: 'claude-3-opus',
-        maxTokens: 4096,
+        model: 'anthropic:claude-3-opus',
+        maxOutputTokens: 4096,
       },
       connectors: ['notion', 'gmail'],
       skills: ['calendar', 'notes'],
     };
-    expect(config.llm.provider).toBe('anthropic');
+    expect(config.llm.model).toBe('anthropic:claude-3-opus');
     expect(config.connectors).toContain('notion');
   });
 

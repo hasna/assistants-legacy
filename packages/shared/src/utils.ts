@@ -21,7 +21,7 @@ export function generateId(): string {
   }
 
   const baseValue = BigInt(`0x${parts[4]}`);
-  const nextValue = (baseValue + BigInt(uuidCounter)) & 0xffffffffffffn;
+  const nextValue = (baseValue + BigInt(uuidCounter)) & BigInt('0xffffffffffff');
   const nextLast = nextValue.toString(16).padStart(12, '0');
   return `${parts[0]}-${parts[1]}-${parts[2]}-${parts[3]}-${nextLast}`;
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import {
   ALL_MODELS,
   LLM_PROVIDER_IDS,
+  getProviderModelId,
   getProviderLabel,
   type ModelDefinition,
 } from '@hasna/assistants-shared';
@@ -32,7 +33,7 @@ export function ModelPicker({ visible, currentModelId, onSelectModel, onClose }:
   const [providerIndex, setProviderIndex] = useState(() => {
     // Start on the provider of the current model, if any
     if (currentModelId) {
-      const model = ALL_MODELS.find(m => m.id === currentModelId);
+      const model = ALL_MODELS.find(m => getProviderModelId(m) === currentModelId);
       if (model) {
         const idx = LLM_PROVIDER_IDS.indexOf(model.provider as any);
         if (idx >= 0) return idx;
@@ -57,13 +58,13 @@ export function ModelPicker({ visible, currentModelId, onSelectModel, onClose }:
     const providerModels = ALL_MODELS.filter(m => m.provider === currentProvider);
 
     for (const model of providerModels) {
-      const isCurrent = model.id === currentModelId;
+      const value = getProviderModelId(model);
       opts.push({
         name: model.name,
         description: getProviderLabel(model.provider),
-        value: model.id,
+        value,
       });
-      map.set(model.id, model);
+      map.set(value, model);
     }
 
     // Find initial selected index (current model or first)
@@ -118,7 +119,6 @@ export function ModelPicker({ visible, currentModelId, onSelectModel, onClose }:
           descriptionColor={mutedColor}
           selectedDescriptionColor={bgColor}
           flexGrow={1}
-          maxVisible={10}
         />
       ) : (
         <box>

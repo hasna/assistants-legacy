@@ -96,7 +96,8 @@ describe('config helpers', () => {
     const invalidPath = join(tempDir, 'config.json');
     writeFileSync(invalidPath, '{ invalid json');
     const loaded = await loadConfig(tempDir);
-    expect(loaded.llm.provider).toBeDefined();
+    // Invalid JSON is ignored and defaults are applied.
+    expect(loaded.llm.model).toBeDefined();
   });
 
   test('loadConfig honors explicit baseDir override', async () => {
@@ -105,16 +106,15 @@ describe('config helpers', () => {
 
     writeFileSync(
       join(workspaceDir, 'config.json'),
-      JSON.stringify({ llm: { provider: 'openai', model: 'gpt-5-mini' } }, null, 2)
+      JSON.stringify({ llm: { model: 'openai:gpt-5-mini' } }, null, 2)
     );
     writeFileSync(
       join(tempDir, 'config.json'),
-      JSON.stringify({ llm: { provider: 'anthropic', model: 'claude-opus-4-1' } }, null, 2)
+      JSON.stringify({ llm: { model: 'anthropic:claude-opus-4-1' } }, null, 2)
     );
 
     const loaded = await loadConfig(tempDir, workspaceDir);
-    expect(loaded.llm.provider).toBe('openai');
-    expect(loaded.llm.model).toBe('gpt-5-mini');
+    expect(loaded.llm.model).toBe('openai:gpt-5-mini');
   });
 
   test('ensureConfigDir and getTempFolder honor explicit baseDir override', async () => {

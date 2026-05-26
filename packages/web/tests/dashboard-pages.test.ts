@@ -14,7 +14,6 @@
  */
 
 import { describe, test, expect, vi, beforeAll } from "vitest"
-const mock = vi.fn
 import { existsSync } from "fs"
 import { join } from "path"
 
@@ -22,7 +21,7 @@ import { join } from "path"
 // Mock better-sqlite3 before any module that imports it gets loaded
 // ---------------------------------------------------------------------------
 
-mock.module("better-sqlite3", () => {
+vi.mock("better-sqlite3", () => {
   const mockStatement = {
     all: (..._args: unknown[]) => [],
     get: (..._args: unknown[]) => null,

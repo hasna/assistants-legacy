@@ -342,11 +342,11 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
                     fg={index === typeIndex ? themeColor('text') : undefined}
                   >
                     {index === typeIndex ? '>' : ' '} {type === 'command' ? 'command  ' : type === 'prompt' ? 'prompt   ' : 'assistant'}
-                    <text fg={themeColor('muted')}>
+                    <span fg={themeColor('muted')}>
                       {type === 'command' && ' - Run a shell command'}
                       {type === 'prompt' && ' - Single-turn LLM decision'}
                       {type === 'assistant' && ' - Multi-turn assistant with tools'}
-                    </text>
+                    </span>
                   </text>
                 </box>
               ))}
@@ -502,7 +502,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
                     fg={index === locationIndex ? themeColor('text') : undefined}
                   >
                     {index === locationIndex ? '>' : ' '} {loc.padEnd(8)}
-                    <text fg={themeColor('muted')}> {getLocationDescription(loc)}</text>
+                    <span fg={themeColor('muted')}> {getLocationDescription(loc)}</span>
                   </text>
                 </box>
               ))}
@@ -542,8 +542,8 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
             ) : (
               <box marginTop={1}>
                 <text>
-                  Press <text fg={themeColor('success')}><b>y</b></text> to save or{' '}
-                  <text fg={themeColor('error')}><b>n</b></text> to cancel
+                  Press <span fg={themeColor('success')}><b>y</b></span> to save or{' '}
+                  <span fg={themeColor('error')}><b>n</b></span> to cancel
                 </text>
               </box>
             )}

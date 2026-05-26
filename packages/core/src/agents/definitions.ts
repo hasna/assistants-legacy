@@ -28,12 +28,8 @@ export interface AgentDefinition {
   /** System prompt / instructions for the agent */
   systemPrompt?: string;
   /**
-   * LLM provider for this assistant (e.g. "anthropic", "openai", "google").
-   * Falls back to the global/default provider if unset.
-   */
-  provider?: string;
-  /**
-   * Model ID override (e.g. "claude-opus-4-6", "gpt-5.2", "gemini-2.5-flash").
+   * AI SDK provider-prefixed model ID override
+   * (e.g. "anthropic:claude-opus-4-6", "openai:gpt-5.2", "google:gemini-2.5-flash").
    * Falls back to the global/default model if unset.
    */
   model?: string;
@@ -267,7 +263,7 @@ export function setProjectRole(
 
 /**
  * Sync agent definitions to `.claude/agents/` as Claude Code markdown files.
- * Format: YAML frontmatter (name, model, provider, etc.) + markdown body (system prompt).
+ * Format: YAML frontmatter (name, model, etc.) + markdown body (system prompt).
  *
  * @param agents - Agent definitions to sync (defaults to all loaded agents)
  * @param targetDir - Target directory (default: `.claude/agents` in cwd)
@@ -292,7 +288,6 @@ export function syncToClaudeAgents(
         description: agent.description,
       };
       if (agent.model) frontmatter.model = agent.model;
-      if (agent.provider) frontmatter.provider = agent.provider;
       if (agent.reasoningLevel) frontmatter.reasoning_level = agent.reasoningLevel;
       if (agent.maxTurns !== undefined) frontmatter.max_turns = agent.maxTurns;
       if (agent.tools?.length) frontmatter.tools = agent.tools.join(', ');
@@ -410,18 +405,18 @@ export function syncFromClaudeAgents(
 }
 
 /**
- * Set provider/model/reasoningLevel on an agent definition file.
+ * Set model/reasoningLevel on an agent definition file.
  */
 export function setAgentModelConfig(
   name: string,
-  config: { provider?: string; model?: string; reasoningLevel?: AgentDefinition['reasoningLevel'] },
+  config: { model?: string; reasoningLevel?: AgentDefinition['reasoningLevel'] },
   cwd: string,
 ): string {
   const def = loadAgentDefinitions(cwd).find(d => d.name === name);
   if (!def || !def.filePath) throw new Error(`Agent definition not found: ${name}`);
 
   const raw = JSON.parse(readFileSync(def.filePath, 'utf-8'));
-  if (config.provider !== undefined) raw.provider = config.provider;
+  delete raw.provider;
   if (config.model !== undefined) raw.model = config.model;
   if (config.reasoningLevel !== undefined) raw.reasoningLevel = config.reasoningLevel;
   writeFileSync(def.filePath, JSON.stringify(raw, null, 2) + '\n', 'utf-8');

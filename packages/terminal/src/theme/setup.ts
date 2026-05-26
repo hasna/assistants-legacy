@@ -10,9 +10,7 @@
  * requiring modifications to any individual component file.
  */
 
-import { TextRenderable, TextNodeRenderable, RGBA, type ThemeMode, CodeRenderable, MarkdownRenderable } from '@opentui/core';
-import type { CliRenderer } from '@opentui/core';
-import { extend } from '@opentui/react';
+import type { CliRenderer, ThemeMode } from '@opentui/core';
 
 /**
  * ============================================================================
@@ -118,7 +116,25 @@ let currentDefaultFg: string = DARK_FG;
  * Detect the initial theme mode from env vars before the renderer is ready.
  * Returns 'light' or 'dark'.
  */
+/**
+ * An explicit, authoritative theme choice from the environment. Wins over all
+ * heuristic detection (and over OpenTUI's own terminal probe, which can guess
+ * wrong on terminals that don't answer the OSC 11 background query — e.g. ttyd,
+ * some CI PTYs). Returns null when the user has not forced a theme.
+ *
+ * Accepted via HASNA_THEME or HASNA_ASSISTANTS_THEME = 'dark' | 'light'
+ * ('auto' or any other value means "no override, detect normally").
+ */
+export function explicitThemeOverride(): ThemeMode | null {
+  const raw = (process.env.HASNA_THEME ?? process.env.HASNA_ASSISTANTS_THEME ?? '').trim().toLowerCase();
+  if (raw === 'dark' || raw === 'light') return raw;
+  return null;
+}
+
 function detectThemeFromEnv(): ThemeMode {
+  // An explicit override always wins.
+  const forced = explicitThemeOverride();
+  if (forced) return forced;
   // COLORFGBG is set by many terminals (xterm, iTerm2, etc.)
   const colorFgBg = process.env.COLORFGBG;
   if (colorFgBg) {
@@ -128,71 +144,13 @@ function detectThemeFromEnv(): ThemeMode {
   }
   // Explicit env var override
   if (process.env.TERMINAL_THEME === 'light') return 'light';
+  if (process.env.TERMINAL_THEME === 'dark') return 'dark';
   // macOS: check for light appearance
   if (process.env.TERM_PROGRAM === 'Apple_Terminal') {
     // Apple Terminal defaults to light; check if dark scheme is set
     if (!process.env.COLORFGBG) return 'light';
   }
   return 'dark';
-}
-
-/**
- * A TextRenderable subclass that uses a theme-aware default fg color.
- *
- * Instead of hardcoding white, it reads the current theme fg from the
- * shared `currentDefaultFg` variable at construction time. When the
- * JSX `<text>` element provides an explicit `fg` prop, that takes
- * precedence (handled by the parent constructor).
- */
-class ThemedTextRenderable extends TextRenderable {
-  constructor(ctx: any, options: any) {
-    // If no explicit fg was provided, inject the themed default
-    if (options.fg === undefined || options.fg === null) {
-      super(ctx, { ...options, fg: currentDefaultFg });
-    } else {
-      super(ctx, options);
-    }
-  }
-
-  // OpenTUI's TextNodeRenderable only accepts strings.
-  // Ink accepted numbers, booleans, etc. as children of <Text>.
-  // This override converts non-string children to strings automatically,
-  // preventing "TextNodeRenderable only accepts strings" crashes.
-  add(obj: any, index?: number): number {
-    if (typeof obj === 'number' || typeof obj === 'bigint') {
-      return super.add(String(obj), index);
-    }
-    if (typeof obj === 'boolean' || obj === null || obj === undefined) {
-      return super.add('', index);
-    }
-    return super.add(obj, index);
-  }
-}
-
-/**
- * Themed CodeRenderable — injects theme-aware fg when no explicit fg is provided.
- */
-class ThemedCodeRenderable extends CodeRenderable {
-  constructor(ctx: any, options: any) {
-    if (options.fg === undefined || options.fg === null) {
-      super(ctx, { ...options, fg: currentDefaultFg });
-    } else {
-      super(ctx, options);
-    }
-  }
-}
-
-/**
- * Themed MarkdownRenderable — injects theme-aware fg when no explicit fg is provided.
- */
-class ThemedMarkdownRenderable extends MarkdownRenderable {
-  constructor(ctx: any, options: any) {
-    if (options.fg === undefined || options.fg === null) {
-      super(ctx, { ...options, fg: currentDefaultFg });
-    } else {
-      super(ctx, options);
-    }
-  }
 }
 
 /**
@@ -203,11 +161,117 @@ class ThemedMarkdownRenderable extends MarkdownRenderable {
  *
  * @param renderer - The CliRenderer instance (used to detect theme and listen for changes)
  */
-export function setupThemeDefaults(renderer: CliRenderer): void {
-  // 1. Detect initial theme and set renderer background for proper contrast
-  const envTheme = detectThemeFromEnv();
+/** A persisted theme preference: a concrete mode, or 'auto' to detect. */
+export type ThemeSetting = 'auto' | ThemeMode;
+
+/**
+ * Resolve a theme setting to a concrete mode and apply it as the default fg.
+ * Precedence: explicit HASNA_THEME env override > the given setting (unless
+ * 'auto') > terminal/env detection. Returns the resolved concrete mode.
+ *
+ * Use at startup (via setupThemeDefaults) and at runtime (the /theme command).
+ */
+export function applyThemeSetting(setting: ThemeSetting | null | undefined): ThemeMode {
+  const forced = explicitThemeOverride();
+  let mode: ThemeMode;
+  if (forced) {
+    mode = forced;
+  } else if (setting && setting !== 'auto') {
+    mode = setting;
+  } else {
+    mode = detectThemeFromEnv();
+  }
+  currentDefaultFg = mode === 'light' ? LIGHT_FG : DARK_FG;
+  return mode;
+}
+
+export async function setupThemeDefaults(renderer: CliRenderer, persistedSetting?: ThemeSetting): Promise<void> {
+  const [
+    core,
+    { extend },
+  ] = await Promise.all([
+    import('@opentui/core'),
+    import('@opentui/react'),
+  ]);
+  const {
+    TextRenderable,
+    TextNodeRenderable,
+    CodeRenderable,
+    MarkdownRenderable,
+    RGBA,
+  } = core;
+
+  /**
+   * A TextRenderable subclass that uses a theme-aware default fg color.
+   *
+   * Instead of hardcoding white, it reads the current theme fg from the
+   * shared `currentDefaultFg` variable at construction time. When the
+   * JSX `<text>` element provides an explicit `fg` prop, that takes
+   * precedence (handled by the parent constructor).
+   */
+  class ThemedTextRenderable extends TextRenderable {
+    constructor(ctx: any, options: any) {
+      // If no explicit fg was provided, inject the themed default
+      if (options.fg === undefined || options.fg === null) {
+        super(ctx, { ...options, fg: currentDefaultFg });
+      } else {
+        super(ctx, options);
+      }
+    }
+
+    // OpenTUI's TextNodeRenderable only accepts strings.
+    // Ink accepted numbers, booleans, etc. as children of <Text>.
+    // This override converts non-string children to strings automatically,
+    // preventing "TextNodeRenderable only accepts strings" crashes.
+    add(obj: any, index?: number): number {
+      if (typeof obj === 'number' || typeof obj === 'bigint') {
+        return super.add(String(obj), index);
+      }
+      if (typeof obj === 'boolean' || obj === null || obj === undefined) {
+        return super.add('', index);
+      }
+      return super.add(obj, index);
+    }
+  }
+
+  /**
+   * Themed CodeRenderable — injects theme-aware fg when no explicit fg is provided.
+   */
+  class ThemedCodeRenderable extends CodeRenderable {
+    constructor(ctx: any, options: any) {
+      if (options.fg === undefined || options.fg === null) {
+        super(ctx, { ...options, fg: currentDefaultFg });
+      } else {
+        super(ctx, options);
+      }
+    }
+  }
+
+  /**
+   * Themed MarkdownRenderable — injects theme-aware fg when no explicit fg is provided.
+   */
+  class ThemedMarkdownRenderable extends MarkdownRenderable {
+    constructor(ctx: any, options: any) {
+      if (options.fg === undefined || options.fg === null) {
+        super(ctx, { ...options, fg: currentDefaultFg });
+      } else {
+        super(ctx, options);
+      }
+    }
+  }
+
+  // 1. Detect initial theme and set renderer background for proper contrast.
+  // An explicit user override (HASNA_THEME) beats the persisted setting and
+  // OpenTUI's terminal probe, which can misreport on terminals that ignore the
+  // OSC 11 background query.
+  const forced = explicitThemeOverride();
   const rendererTheme = renderer.themeMode;
-  const initialMode = rendererTheme ?? envTheme;
+  // Persisted setting (if concrete) wins over the renderer probe; 'auto'/absent
+  // falls through to the probe and then env detection.
+  const initialMode = forced
+    ?? (persistedSetting && persistedSetting !== 'auto' ? persistedSetting : undefined)
+    ?? rendererTheme
+    ?? detectThemeFromEnv();
   currentDefaultFg = initialMode === 'light' ? LIGHT_FG : DARK_FG;
 
   // Note: Do NOT call renderer.setBackgroundColor() — it paints over the
@@ -289,29 +353,14 @@ export function setupThemeDefaults(renderer: CliRenderer): void {
     }
   } catch (_) {}
 
-  // Also patch the runtime copies (may be different module instances)
-  // This async import completes before any React render cycle finishes.
-  // We also patch EditBufferRenderable here since @opentui/core uses top-level
-  // await and cannot be require()'d synchronously.
-  import('@opentui/core').then((core) => {
-    patchAdd(core.TextRenderable?.prototype);
-    patchAdd(core.TextNodeRenderable?.prototype);
-
-    // Patch TextBufferRenderable default fg (runtime copy)
-    try {
-      const tbProto = Object.getPrototypeOf(core.TextRenderable?.prototype);
-      if (tbProto?.constructor) patchConstructorFg(tbProto.constructor, 'fg');
-    } catch (_) {}
-
-    // Patch EditBufferRenderable default textColor
-    try {
-      const TR = (core as any).TextareaRenderable;
-      if (TR) {
-        const ebProto = Object.getPrototypeOf(TR.prototype);
-        if (ebProto?.constructor) patchConstructorFg(ebProto.constructor, 'textColor');
-      }
-    } catch (_) {}
-  }).catch(() => {});
+  // Also patch EditBufferRenderable here.
+  try {
+    const TR = (core as any).TextareaRenderable;
+    if (TR) {
+      const ebProto = Object.getPrototypeOf(TR.prototype);
+      if (ebProto?.constructor) patchConstructorFg(ebProto.constructor, 'textColor');
+    }
+  } catch (_) {}
 
   // 3. Register our themed text renderable, replacing the default
   extend({
@@ -322,6 +371,8 @@ export function setupThemeDefaults(renderer: CliRenderer): void {
 
   // 3. Listen for runtime theme changes (e.g., user switches OS dark/light mode)
   renderer.on('theme_mode', (mode: ThemeMode) => {
+    // A forced theme is authoritative — ignore late terminal probe results.
+    if (explicitThemeOverride()) return;
     currentDefaultFg = mode === 'light' ? LIGHT_FG : DARK_FG;
     // Note: existing TextRenderable instances keep their construction-time fg.
     // New instances created after this point will use the updated default.

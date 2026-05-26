@@ -6,7 +6,7 @@ The core runtime library for building AI assistants. Provides the assistant loop
 
 ## Features
 
-- **Assistant Loop**: Full conversation orchestration with Claude
+- **Assistant Loop**: Full conversation orchestration through the AI SDK
 - **Tool System**: Bash, filesystem, web tools + custom tool support
 - **Skills**: Reusable prompt templates (SKILL.md format)
 - **Hooks**: Pre/post tool execution hooks for validation
@@ -60,9 +60,8 @@ const assistant = new AssistantLoop({
   sessionId: 'optional-session-id',
   config: {
     llm: {
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-20250514',
-      maxTokens: 8192,
+      model: 'anthropic:claude-sonnet-4-20250514',
+      maxOutputTokens: 8192,
     },
   },
 });
@@ -326,8 +325,8 @@ Create `~/.hasna/assistants/config.json` or `.assistants/config.json`:
 {
   "llm": {
     "provider": "anthropic",
-    "model": "claude-sonnet-4-20250514",
-    "maxTokens": 8192
+    "model": "anthropic:claude-sonnet-4-20250514",
+    "maxOutputTokens": 8192
   },
   "context": {
     "maxContextTokens": 180000,
@@ -425,7 +424,7 @@ import { MemoryInjector } from '@hasna/assistants-core';
 
 const injector = new MemoryInjector(manager, {
   enabled: true,
-  maxTokens: 500,
+  maxOutputTokens: 500,
   minImportance: 5,
   categories: ['preference', 'fact'],
   refreshInterval: 5, // Refresh deduped memories every 5 turns
@@ -487,7 +486,7 @@ Assistants can use memory tools programmatically:
     "enabled": true,
     "injection": {
       "enabled": true,
-      "maxTokens": 500,
+      "maxOutputTokens": 500,
       "minImportance": 5,
       "categories": ["preference", "fact"],
       "refreshInterval": 5

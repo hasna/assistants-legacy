@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type {
   OrdersManager,
   OrderListItem,
@@ -99,6 +100,7 @@ function visibleWindow(selectedIndex: number, total: number): { start: number; e
 
 export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  useClearOnChange(viewMode);
   const [tab, setTab] = useState<MainTab>('orders');
   const [statusFilterIndex, setStatusFilterIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -249,7 +251,11 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       return;
     }
 
-    // Tab switching handled by <tab-select> component
+    const tabShortcut = Number(input);
+    if (Number.isInteger(tabShortcut) && tabShortcut >= 1 && tabShortcut <= MAIN_TABS.length) {
+      switchTab(MAIN_TABS[tabShortcut - 1]);
+      return;
+    }
 
     if (tab === 'orders' && (input === '[' || input === ']')) {
       setStatusFilterIndex((prev) => {
@@ -323,6 +329,10 @@ export function OrdersPanel({ manager, onClose }: OrdersPanelProps) {
       textColor="gray"
       showDescription={false}
       wrapSelection
+      keyBindings={[
+        { name: '[', action: 'select-current' },
+        { name: ']', action: 'select-current' },
+      ]}
       focused
       onChange={(index) => {
         const next = MAIN_TABS[index];

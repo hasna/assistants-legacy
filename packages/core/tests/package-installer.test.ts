@@ -58,9 +58,9 @@ describe('parseSource', () => {
 describe('resolvePackagesDir', () => {
   test('global scope uses home directory', () => {
     const dir = resolvePackagesDir('global');
-    expect(dir).toContain('.assistants');
+    expect(dir).toContain('.hasna');
     expect(dir).toContain('packages');
-    expect(dir).toMatch(/\/\.assistants\/packages$/);
+    expect(dir).toMatch(/\/\.hasna\/assistants\/packages$/);
   });
 
   test('local scope uses cwd', () => {

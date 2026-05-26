@@ -46,8 +46,8 @@ export function ThinkingBlock({ content, isActive = false }: ThinkingBlockProps)
       <text fg={accentCol}>{'\u2502'} </text>
       <box flexDirection="column" flexGrow={1} flexShrink={1}>
         <text>
-          <text fg={warningCol}><i>Thinking: </i></text>
-          <text fg={mutedCol}><i>{content}</i></text>
+          <span fg={warningCol}><i>Thinking: </i></span>
+          <span fg={mutedCol}><i>{content}</i></span>
         </text>
       </box>
     </box>

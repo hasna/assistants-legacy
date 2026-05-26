@@ -105,7 +105,7 @@ export class EmbeddedClient implements AssistantClient {
       model?: string;
       startedAt?: string;
       assistantFactory?: (options: ConstructorParameters<typeof AssistantLoop>[0]) => AgentLoop;
-      /** Backend type for the assistant (native, claude-agent-sdk, codex-sdk) */
+      /** Backend type for the assistant. Only the AI SDK runtime is supported. */
       backend?: AssistantBackend;
       /** Optional base path for workspace-scoped storage */
       basePath?: string;

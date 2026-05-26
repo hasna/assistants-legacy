@@ -71,7 +71,7 @@ const EXT_TO_FILETYPE: Record<string, string> = {
 let _cachedSyntaxStyle: SyntaxStyle | null = null;
 let _syntaxStyleFailed = false;
 
-function getDefaultSyntaxStyle(): SyntaxStyle | null {
+export function getDefaultSyntaxStyle(): SyntaxStyle | null {
   if (_syntaxStyleFailed) return null;
   if (_cachedSyntaxStyle) return _cachedSyntaxStyle;
   try {

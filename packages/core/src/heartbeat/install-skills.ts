@@ -117,7 +117,7 @@ async function writeSkillIfNeeded(dir: string, skillName: string, content: strin
  * @returns names of skills that were installed or migrated
  */
 export async function installHeartbeatSkills(): Promise<string[]> {
-  const sharedSkillsDir = join(homedir(), '.skill');
+  const sharedSkillsDir = process.env.ASSISTANTS_SKILLS_DIR || join(homedir(), '.skill');
   const installed: string[] = [];
 
   const results = await Promise.all([

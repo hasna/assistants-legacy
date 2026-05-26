@@ -34,7 +34,7 @@ import { deepMerge } from '../appHelpers';
 import { themeColor } from '../../theme/colors';
 import type { PanelRenderContext } from './context';
 
-export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleToggleEnabled = (enabled: boolean) => {
     if (!ctx.guardrailsStoreRef.current) {
       ctx.guardrailsStoreRef.current = new GuardrailsStore();
@@ -125,7 +125,7 @@ export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactEleme
   );
 }
 
-export function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactNode {
   const session = ctx.registry.getActiveSession();
   const activeProfileId = session
     ? ctx.getSessionBudgetProfileId(session.id, ctx.budgetProfiles)
@@ -219,7 +219,7 @@ export function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactElement 
   );
 }
 
-export function renderModelPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderModelPanel(ctx: PanelRenderContext): React.ReactNode {
   const currentModelId = ctx.activeSession?.client.getModel() || null;
   const identityInfo = ctx.activeSession?.client.getIdentityInfo?.();
   const agentName = identityInfo?.assistant?.name
@@ -245,7 +245,7 @@ export function renderModelPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderAssistantsRegistryPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderAssistantsRegistryPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleAssistantsRefresh = () => {
     const assistantRegistry = getGlobalRegistry();
     const assistants = assistantRegistry.list();
@@ -266,7 +266,7 @@ export function renderAssistantsRegistryPanel(ctx: PanelRenderContext): React.Re
   );
 }
 
-export function renderProjectsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderProjectsPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleProjectSelect = (projectId: string) => {
     const activeSession = ctx.registry.getActiveSession();
     activeSession?.client.setActiveProjectId?.(projectId);
@@ -319,7 +319,7 @@ export function renderProjectsPanel(ctx: PanelRenderContext): React.ReactElement
   );
 }
 
-export function renderPlansPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderPlansPanel(ctx: PanelRenderContext): React.ReactNode {
   const plansProject = ctx.plansProject!;
 
   const handleCreatePlan = async (title: string) => {
@@ -407,7 +407,7 @@ export function renderPlansPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderWalletPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderWalletPanel(ctx: PanelRenderContext): React.ReactNode {
   const walletManager = ctx.activeSession?.client.getWalletManager?.();
 
   const handleWalletGet = async (cardId: string) => {
@@ -450,7 +450,7 @@ export function renderWalletPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderSecretsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderSecretsPanel(ctx: PanelRenderContext): React.ReactNode {
   const secretsManager = ctx.activeSession?.client.getSecretsManager?.();
 
   const handleSecretsGet = async (name: string, scope?: 'global' | 'assistant') => {
@@ -497,7 +497,7 @@ export function renderSecretsPanel(ctx: PanelRenderContext): React.ReactElement 
   );
 }
 
-export function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactElement {
+export function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactNode {
   const sessions = ctx.registry.listSessions();
   const sessionEntries = sessions.map((s, i) => ({
     id: s.id,
@@ -553,7 +553,7 @@ export function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactE
   );
 }
 
-export function renderSwarmPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderSwarmPanel(ctx: PanelRenderContext): React.ReactNode {
   const swarmCoordinator = ctx.activeSession?.client.getSwarmCoordinator?.();
   const swarmState = swarmCoordinator?.getSerializableState?.() || null;
   const swarmConfig = swarmCoordinator?.getConfig?.() || null;
@@ -575,7 +575,7 @@ export function renderSwarmPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactNode {
   const handleWorkspaceArchive = async (id: string) => {
     const { SharedWorkspaceManager } = await import('@hasna/assistants-core');
     const mgr = new SharedWorkspaceManager();
@@ -604,7 +604,7 @@ export function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactElemen
   );
 }
 
-export function renderHeartbeatPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderHeartbeatPanel(ctx: PanelRenderContext): React.ReactNode {
   const sessionId = ctx.activeSessionId || ctx.registry.getActiveSession()?.id;
   const handleRefresh = async () => {
     if (!sessionId) {
@@ -631,7 +631,7 @@ export function renderHeartbeatPanel(ctx: PanelRenderContext): React.ReactElemen
   );
 }
 
-export function renderConfigPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderConfigPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleConfigSave = async (
     location: 'user' | 'project' | 'local',
     updates: Partial<AssistantsConfig>

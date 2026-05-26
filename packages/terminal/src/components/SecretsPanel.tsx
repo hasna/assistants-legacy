@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
 
@@ -117,6 +118,7 @@ export function SecretsPanel({
   error,
 }: SecretsPanelProps) {
   const [mode, setMode] = useState<ViewMode>(initialMode === 'add' ? 'add-form' : 'list');
+  useClearOnChange(mode);
   const [secretIndex, setSecretIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<SecretEntry | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -439,7 +441,7 @@ export function SecretsPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -471,7 +473,7 @@ export function SecretsPanel({
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -503,7 +505,7 @@ export function SecretsPanel({
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -532,7 +534,7 @@ export function SecretsPanel({
         >
           <box>
             <text fg={themeColor('muted')}>Scope: </text>
-            <text fg={currentSecret.scope === 'global' ? 'yellow' : 'blue'}>
+            <text fg={currentSecret.scope === 'global' ? themeColor('yellow') : themeColor('blue')}>
               {currentSecret.scope}
             </text>
           </box>
@@ -563,7 +565,7 @@ export function SecretsPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -639,7 +641,7 @@ export function SecretsPanel({
 
       {(error || statusMessage) && (
         <box marginTop={1}>
-          <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
             {error || statusMessage}
           </text>
         </box>

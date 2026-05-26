@@ -9,8 +9,8 @@ const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' }
 
 export const metadata: Metadata = {
   title: 'Assistants — Your AI assistant, in the terminal',
-  description: 'A personal AI assistant that connects to your tools and extends with skills and hooks. Open source, powered by Claude.',
-  keywords: ['AI assistant', 'terminal', 'CLI', 'Claude', 'Anthropic', 'open source'],
+  description: 'A personal AI assistant that connects to your tools and extends with skills and hooks. Open source, powered by the AI SDK.',
+  keywords: ['AI assistant', 'terminal', 'CLI', 'AI SDK', 'open source'],
   authors: [{ name: 'Hasna' }],
   openGraph: {
     type: 'website',

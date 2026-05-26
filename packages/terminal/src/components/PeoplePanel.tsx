@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { PeopleManager, PersonListItem, Person } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -21,6 +22,7 @@ type Mode =
 
 export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [people, setPeople] = useState<PersonListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);

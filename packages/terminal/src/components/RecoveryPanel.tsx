@@ -158,8 +158,8 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
           return (
             <box key={session.sessionId} flexDirection="column" paddingY={0}>
               <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
-                {isSelected ? '▶' : ' '} {displayName} <text fg={themeColor('muted')}>({timeAgo})</text>
-                {meta ? <text fg={themeColor('muted')}> — {meta}</text> : null}
+                {isSelected ? '▶' : ' '} {displayName} <span fg={themeColor('muted')}>({timeAgo})</span>
+                {meta ? <span fg={themeColor('muted')}> — {meta}</span> : null}
               </text>
               {session.lastMessage && (
                 <text fg={themeColor('muted')}>    {'\u2018'}{session.lastMessage}{'\u2019'}</text>
@@ -188,7 +188,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
         return (
           <box flexDirection="column" marginBottom={1}>
             <text fg={themeColor('muted')}>Selected:</text>
-            <text>  <text fg={themeColor('info')}>{s.cwd}</text></text>
+            <text>  <span fg={themeColor('info')}>{s.cwd}</span></text>
             <text>  {details}</text>
             {s.lastMessage && (
               <text fg={themeColor('muted')}>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</text>

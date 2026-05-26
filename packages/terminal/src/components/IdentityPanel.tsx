@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Identity, CreateIdentityOptions } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
@@ -102,6 +103,7 @@ export function IdentityPanel({
   error,
 }: IdentityPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
+  useClearOnChange(mode);
   const [identityIndex, setIdentityIndex] = useState(0);
   const [templateIndex, setTemplateIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<Identity | null>(null);
@@ -743,7 +745,7 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Identities</b></text>
+          <text fg={themeColor('info')}>Identities</text>
         </box>
         <box
           flexDirection="column"
@@ -767,7 +769,7 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Identity</b></text>
+          <text fg={themeColor('error')}>Delete Identity</text>
         </box>
         <box
           flexDirection="column"
@@ -797,12 +799,7 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text>
-            <text fg={themeColor('info')}><b>Create Identity</b></text>
-            {totalCreateOptions > MAX_VISIBLE_ITEMS && (
-              <text fg={themeColor('muted')}> ({templateIndex + 1}/{totalCreateOptions})</text>
-            )}
-          </text>
+          <text fg={themeColor('info')}>Create Identity{totalCreateOptions > MAX_VISIBLE_ITEMS ? ` (${templateIndex + 1}/${totalCreateOptions})` : ''}</text>
         </box>
 
         <box
@@ -858,10 +855,7 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text>
-            <text fg={themeColor('info')}><b>{isEdit ? 'Edit Identity' : 'Create Custom Identity'}</b></text>
-            <text fg={themeColor('muted')}> - {stepLabel}</text>
-          </text>
+          <text fg={themeColor('info')}>{isEdit ? 'Edit Identity' : 'Create Custom Identity'} - {stepLabel}</text>
         </box>
 
         {renderFormSummary()}
@@ -1162,10 +1156,8 @@ export function IdentityPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text>
-            <text fg={themeColor('info')}><b>{currentIdentity.name}</b></text>
-            {currentIdentity.isDefault && <text fg={themeColor('warning')}> (default)</text>}
-            {isActive && <text fg={themeColor('success')}> (active)</text>}
+          <text fg={themeColor('info')}>
+            {currentIdentity.name}{currentIdentity.isDefault ? ' (default)' : ''}{isActive ? ' (active)' : ''}
           </text>
         </box>
 
@@ -1177,36 +1169,36 @@ export function IdentityPanel({
           paddingY={1}
         >
           <box marginBottom={1}>
-            <text><b>Profile</b></text>
+            <text>Profile</text>
           </box>
           <box marginLeft={2}>
-            <text><text fg={themeColor('muted')}>Display Name: </text>{currentIdentity.profile.displayName}</text>
+            <text>{`Display Name: ${currentIdentity.profile.displayName}`}</text>
           </box>
           {currentIdentity.profile.title && (
             <box marginLeft={2}>
-              <text><text fg={themeColor('muted')}>Role: </text>{currentIdentity.profile.title}</text>
+              <text>{`Role: ${currentIdentity.profile.title}`}</text>
             </box>
           )}
           {currentIdentity.profile.company && (
             <box marginLeft={2}>
-              <text><text fg={themeColor('muted')}>Company: </text>{currentIdentity.profile.company}</text>
+              <text>{`Company: ${currentIdentity.profile.company}`}</text>
             </box>
           )}
           <box marginLeft={2}>
-            <text><text fg={themeColor('muted')}>Timezone: </text>{currentIdentity.profile.timezone}</text>
+            <text>{`Timezone: ${currentIdentity.profile.timezone}`}</text>
           </box>
 
           <box marginTop={1} marginBottom={1}>
-            <text><b>Preferences</b></text>
+            <text>Preferences</text>
           </box>
           <box marginLeft={2}>
-            <text><text fg={themeColor('muted')}>Language: </text>{currentIdentity.preferences.language}</text>
+            <text>{`Language: ${currentIdentity.preferences.language}`}</text>
           </box>
           <box marginLeft={2}>
-            <text><text fg={themeColor('muted')}>Style: </text>{currentIdentity.preferences.communicationStyle}</text>
+            <text>{`Style: ${currentIdentity.preferences.communicationStyle}`}</text>
           </box>
           <box marginLeft={2}>
-            <text><text fg={themeColor('muted')}>Response: </text>{currentIdentity.preferences.responseLength}</text>
+            <text>{`Response: ${currentIdentity.preferences.responseLength}`}</text>
           </box>
 
           {(currentIdentity.contacts.emails.length > 0 ||
@@ -1215,35 +1207,34 @@ export function IdentityPanel({
             (currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0)) && (
             <>
               <box marginTop={1} marginBottom={1}>
-                <text><b>Contacts</b></text>
+                <text>Contacts</text>
               </box>
               {currentIdentity.contacts.emails.length > 0 && (
                 <box marginLeft={2}>
-                  <text><text fg={themeColor('muted')}>Email: </text>{currentIdentity.contacts.emails[0].value}</text>
+                  <text>{`Email: ${currentIdentity.contacts.emails[0].value}`}</text>
                 </box>
               )}
               {currentIdentity.contacts.phones.length > 0 && (
                 <box marginLeft={2}>
-                  <text><text fg={themeColor('muted')}>Phone: </text>{currentIdentity.contacts.phones[0].value}</text>
+                  <text>{`Phone: ${currentIdentity.contacts.phones[0].value}`}</text>
                 </box>
               )}
               {currentIdentity.contacts.addresses.length > 0 && (
                 <box marginLeft={2}>
                   <text>
-                    <text fg={themeColor('muted')}>Address: </text>
-                    {[
+                    {`Address: ${[
                       currentIdentity.contacts.addresses[0].street,
                       currentIdentity.contacts.addresses[0].city,
                       currentIdentity.contacts.addresses[0].state,
                       currentIdentity.contacts.addresses[0].postalCode,
                       currentIdentity.contacts.addresses[0].country,
-                    ].filter(Boolean).join(', ')}
+                    ].filter(Boolean).join(', ')}`}
                   </text>
                 </box>
               )}
               {currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0 && (
                 <box marginLeft={2}>
-                  <text><text fg={themeColor('muted')}>Virtual: </text>{currentIdentity.contacts.virtualAddresses[0].value}</text>
+                  <text>{`Virtual: ${currentIdentity.contacts.virtualAddresses[0].value}`}</text>
                 </box>
               )}
             </>
@@ -1252,7 +1243,7 @@ export function IdentityPanel({
           {currentIdentity.context && (
             <>
               <box marginTop={1} marginBottom={1}>
-                <text><b>Context</b></text>
+                <text>Context</text>
               </box>
               <box marginLeft={2}>
                 <text fg={themeColor('muted')}>{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</text>
@@ -1285,12 +1276,7 @@ export function IdentityPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text>
-          <text fg={themeColor('info')}><b>Identities</b></text>
-          {identities.length > MAX_VISIBLE_ITEMS && (
-            <text fg={themeColor('muted')}> ({identityIndex + 1}/{identities.length})</text>
-          )}
-        </text>
+        <text fg={themeColor('info')}>Identities{identities.length > MAX_VISIBLE_ITEMS ? ` (${identityIndex + 1}/${identities.length})` : ''}</text>
       </box>
 
       <box
@@ -1317,12 +1303,7 @@ export function IdentityPanel({
           return (
             <box key={identity.id} paddingY={0}>
               <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
-                {prefix}
-                <text fg={isSelected ? themeColor('text') : statusColor}>
-                  {statusIcon}
-                </text>
-                {' '}{nameDisplay}
-                {' '}{identity.profile.displayName}
+                {`${prefix}${statusIcon} ${nameDisplay} ${identity.profile.displayName}`}
               </text>
             </box>
           );
@@ -1336,13 +1317,7 @@ export function IdentityPanel({
       </box>
 
       <box marginTop={1}>
-        <text fg={themeColor('muted')}>
-          {'Legend: '}
-          <text fg={themeColor('warning')}>★</text>
-          {' default | '}
-          <text fg={themeColor('success')}>●</text>
-          {' active | ○ inactive'}
-        </text>
+        <text fg={themeColor('muted')}>Legend: ★ default | ● active | ○ inactive</text>
       </box>
 
       <box marginTop={1}>

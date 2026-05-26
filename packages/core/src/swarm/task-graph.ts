@@ -107,7 +107,13 @@ export class TaskGraph {
     };
 
     this.tasks.set(id, task);
-    this.adjacencyList.set(id, new Set());
+    // Preserve any dependent edges already recorded for this id by tasks that
+    // were added earlier and listed it as a dependency (forward references).
+    // Overwriting here would silently drop those edges, breaking cycle
+    // detection and topological ordering for out-of-order task additions.
+    if (!this.adjacencyList.has(id)) {
+      this.adjacencyList.set(id, new Set());
+    }
     this.reverseAdjList.set(id, new Set(task.dependsOn));
 
     // Update adjacency lists for dependencies

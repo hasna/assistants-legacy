@@ -1,4 +1,3 @@
-import type { LLMProvider } from './llm-providers';
 import type { HookConfig, HookEvent, HookHandler } from './types';
 import type { SchedulerConfig, HeartbeatConfig, ContextConfig, ValidationConfig, InboxConfig, WalletConfig, SecretsConfig, JobsConfig, MessagesConfig, WebhooksConfig, ChannelsConfig, TelephonyConfig, OrdersConfig } from './feature-types';
 
@@ -60,6 +59,8 @@ export interface AssistantsConfig {
   permissions?: PermissionsConfig;
   /** Model used for lightweight background tasks (session naming, etc.). Default: claude-haiku-4-5-20251001 */
   backgroundModel?: string;
+  /** Color theme for the terminal UI. 'auto' detects the terminal background. Default: 'auto'. */
+  theme?: 'auto' | 'dark' | 'light';
 }
 
 /**
@@ -324,12 +325,20 @@ export interface MemoryConfigShared {
 export type EffortLevel = 'low' | 'medium' | 'high';
 
 export interface LLMConfig {
-  provider?: LLMProvider;
+  /**
+   * AI SDK provider-prefixed model id, e.g. "anthropic:claude-sonnet-4-6"
+   * or "openai:gpt-5". Unprefixed model ids are not supported.
+   */
   model: string;
+  /** Optional override for tests or embedded deployments. Prefer env/.secrets in normal use. */
   apiKey?: string;
+  /** Optional provider base URL override where supported by the provider package. */
   baseUrl?: string;
-  maxTokens?: number;
-  /** Effort/thinking level — 'high' enables extended thinking, 'low' reduces max tokens */
+  maxOutputTokens?: number;
+  temperature?: number;
+  topP?: number;
+  providerOptions?: Record<string, unknown>;
+  /** Effort/thinking level. Provider-specific options are mapped by the AI SDK runtime. */
   effortLevel?: EffortLevel;
 }
 

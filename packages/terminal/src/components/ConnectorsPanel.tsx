@@ -4,6 +4,7 @@ import { ConnectorAutoRefreshManager } from '@hasna/assistants-core';
 import type { ConnectorAutoRefreshEntry, ConnectorAutoRefreshSchedule } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 
 type ViewMode = 'list' | 'detail' | 'command';
 
@@ -157,6 +158,8 @@ export function ConnectorsPanel({
   onClose,
 }: ConnectorsPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
+  // Clear stale cells when switching between list/detail/command layouts.
+  useClearOnChange(mode);
   const [connectorIndex, setConnectorIndex] = useState(0);
   const [commandIndex, setCommandIndex] = useState(0);
   const [authStatuses, setAuthStatuses] = useState<Map<string, ConnectorStatus>>(new Map());
@@ -513,7 +516,7 @@ export function ConnectorsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Connectors</b></text>
+          <text fg={themeColor('info')}>Connectors</text>
         </box>
         <box
           flexDirection="column"
@@ -544,9 +547,7 @@ export function ConnectorsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>
-            {currentConnector.name} {'>'} {currentCommand.name}
-          </b></text>
+          <text fg={themeColor('info')}>{currentConnector.name} {'>'} {currentCommand.name}</text>
         </box>
 
         <box
@@ -560,10 +561,10 @@ export function ConnectorsPanel({
 
           {hasArgs && (
             <box flexDirection="column" marginTop={1}>
-              <text><b>Arguments:</b></text>
+              <text>Arguments:</text>
               {currentCommand.args.map((arg, idx) => (
                 <box key={idx} marginLeft={2}>
-                  <text fg={arg.required ? 'white' : themeColor('muted')}>
+                  <text fg={arg.required ? themeColor('white') : themeColor('muted')}>
                     {arg.name}
                     {arg.required ? ' (required)' : ' (optional)'}
                     {arg.description ? ` - ${arg.description}` : ''}
@@ -575,7 +576,7 @@ export function ConnectorsPanel({
 
           {hasOptions && (
             <box flexDirection="column" marginTop={1}>
-              <text><b>Options:</b></text>
+              <text>Options:</text>
               {currentCommand.options.map((opt, idx) => (
                 <box key={idx} marginLeft={2}>
                   <text fg={themeColor('muted')}>
@@ -598,7 +599,7 @@ export function ConnectorsPanel({
 
           {commandHelp && !isLoadingHelp && (
             <box flexDirection="column" marginTop={1}>
-              <text><b>Help output:</b></text>
+              <text>Help output:</text>
               <box marginLeft={2} marginTop={1}>
                 <text fg={themeColor('muted')}>{commandHelp}</text>
               </box>
@@ -606,7 +607,7 @@ export function ConnectorsPanel({
           )}
 
           <box flexDirection="column" marginTop={1}>
-            <text><b>Example:</b></text>
+            <text>Example:</text>
             <box marginLeft={2}>
               <text fg={themeColor('info')}>{cli} {currentCommand.name}</text>
             </box>
@@ -637,7 +638,7 @@ export function ConnectorsPanel({
     return (
       <box flexDirection="column" paddingY={1}>
         <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{currentConnector.name}</b></text>
+          <text fg={themeColor('info')}>{currentConnector.name}</text>
         </box>
 
         <box
@@ -648,15 +649,7 @@ export function ConnectorsPanel({
         >
           <box paddingY={1} flexDirection="column">
             <box>
-              <text>
-                {'Status: '}
-                <text fg={status.color}>
-                  {status.icon}{' '}
-                  {currentStatus?.authenticated
-                    ? 'Authenticated'
-                    : currentStatus?.error || 'Not authenticated'}
-                </text>
-              </text>
+              <text>{`Status: ${status.icon} ${currentStatus?.authenticated ? 'Authenticated' : currentStatus?.error || 'Not authenticated'}`}</text>
             </box>
             {currentStatus?.user && (
               <box>
@@ -672,11 +665,7 @@ export function ConnectorsPanel({
               <text fg={themeColor('muted')}>CLI: {cli}</text>
             </box>
             <box>
-              <text fg={themeColor('muted')}>
-                {'Auto-refresh: '}
-                <text fg={autoRefreshColor}>{autoRefreshStatus}</text>
-                {autoRefreshSchedule ? ` (${autoRefreshSchedule})` : ''}
-              </text>
+              <text fg={autoRefreshColor}>Auto-refresh: {autoRefreshStatus}{autoRefreshSchedule ? ` (${autoRefreshSchedule})` : ''}</text>
             </box>
             {autoRefreshEntry?.nextRunAt && (
               <box>
@@ -693,12 +682,7 @@ export function ConnectorsPanel({
           </box>
 
           <box marginTop={1} marginBottom={1}>
-            <text>
-              <b>Commands:</b>
-              {currentCommands.length > MAX_VISIBLE_ITEMS && (
-                <text fg={themeColor('muted')}> ({commandIndex + 1}/{currentCommands.length})</text>
-              )}
-            </text>
+            <text>Commands:{currentCommands.length > MAX_VISIBLE_ITEMS ? ` (${commandIndex + 1}/${currentCommands.length})` : ''}</text>
           </box>
 
           {loadingConnectorName === currentConnector.name ? (
@@ -757,15 +741,8 @@ export function ConnectorsPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text>
-          <text fg={themeColor('info')}><b>Connectors</b></text>
-          {filteredConnectors.length > 0 && (
-            <text fg={themeColor('muted')}>
-              {' '}({safeConnectorIndex + 1}/{filteredConnectors.length}
-              {searchQuery && ` matching "${searchQuery}"`}
-              {connectors.length !== filteredConnectors.length && ` of ${connectors.length} total`})
-            </text>
-          )}
+        <text fg={themeColor('info')}>
+          Connectors{filteredConnectors.length > 0 ? ` (${safeConnectorIndex + 1}/${filteredConnectors.length}${searchQuery ? ` matching "${searchQuery}"` : ''}${connectors.length !== filteredConnectors.length ? ` of ${connectors.length} total` : ''})` : ''}
         </text>
       </box>
 
@@ -785,11 +762,7 @@ export function ConnectorsPanel({
       {/* Search indicator when not in search mode but query exists */}
       {!isSearching && searchQuery && (
         <box marginBottom={1}>
-          <text fg={themeColor('muted')}>
-            {'Filter: '}
-            <text fg={themeColor('warning')}>{searchQuery}</text>
-            {' (Esc to clear)'}
-          </text>
+          <text fg={themeColor('muted')}>Filter: {searchQuery} (Esc to clear)</text>
         </box>
       )}
 
@@ -827,14 +800,7 @@ export function ConnectorsPanel({
                     bg={isSelected ? themeColor('primary') : undefined}
                     fg={isSelected ? themeColor('text') : undefined}
                   >
-                    {prefix}
-                    <text fg={isSelected ? themeColor('text') : status.color}>
-                      {status.icon}
-                    </text>
-                    {' '}{nameDisplay} {cmdCount.toString().padStart(2)} cmd{cmdCount !== 1 ? 's' : ' '}
-                    <text fg={isSelected ? themeColor('text') : "gray"}>
-                      {' '}{connector.description?.slice(0, 30) || ''}
-                    </text>
+                    {`${prefix}${status.icon} ${nameDisplay} ${cmdCount.toString().padStart(2)} cmd${cmdCount !== 1 ? 's' : ' '} ${connector.description?.slice(0, 30) || ''}`}
                   </text>
                 </box>
               );
@@ -850,13 +816,7 @@ export function ConnectorsPanel({
       </box>
 
       <box marginTop={1}>
-        <text fg={themeColor('muted')}>
-          {'Legend: '}
-          <text fg={themeColor('success')}>✓</text>
-          {' authenticated | '}
-          <text fg={themeColor('warning')}>○</text>
-          {' not authenticated | ? unknown'}
-        </text>
+        <text fg={themeColor('muted')}>Legend: ✓ authenticated | ○ not authenticated | ? unknown</text>
       </box>
 
       <box marginTop={1}>

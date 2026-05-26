@@ -20,7 +20,7 @@ beforeEach(() => {
     join(tempDir, 'config.json'),
     JSON.stringify(
       {
-        llm: { provider: 'anthropic', model: 'mock', apiKey: 'test-key' },
+        llm: { model: 'anthropic:mock', apiKey: 'test-key' },
         connectors: [],
       },
       null,

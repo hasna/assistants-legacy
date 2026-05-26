@@ -60,9 +60,15 @@ describe('Messages component', () => {
       />, { width: 80, height: 24 }
     );
 
-    await renderOnce();
-    await new Promise(r => setTimeout(r, 50));
-    const frame = captureCharFrame();
+    // Markdown content renders asynchronously in the opentui harness, so render
+    // across several frames until the streamed text appears rather than relying
+    // on a single fixed delay (which is racy).
+    let frame = '';
+    for (let i = 0; i < 20 && !frame.includes('partial'); i++) {
+      await renderOnce();
+      await new Promise(r => setTimeout(r, 10));
+      frame = captureCharFrame();
+    }
     expect(frame).toContain('partial');
   });
 

@@ -5,6 +5,7 @@ import {
   ALL_MODELS,
   DEFAULT_MODEL,
   getModelDisplayName,
+  getProviderModelId,
   getProviderLabel,
 } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
@@ -52,12 +53,12 @@ export function ConfigPanel({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Model editing state
-  const configModelIndex = ALL_MODELS.findIndex((m) => m.id === config.llm?.model);
-  const defaultModelIndex = Math.max(0, ALL_MODELS.findIndex((m) => m.id === DEFAULT_MODEL));
+  const configModelIndex = ALL_MODELS.findIndex((m) => getProviderModelId(m) === config.llm?.model);
+  const defaultModelIndex = Math.max(0, ALL_MODELS.findIndex((m) => getProviderModelId(m) === DEFAULT_MODEL));
   const [selectedModelIndex, setSelectedModelIndex] = useState(
     configModelIndex >= 0 ? configModelIndex : defaultModelIndex
   );
-  const [maxTokens, setMaxTokens] = useState(config.llm?.maxTokens ?? 8192);
+  const [maxOutputTokens, setMaxOutputTokens] = useState(config.llm?.maxOutputTokens ?? 8192);
 
   // Clear message after 3 seconds
   useEffect(() => {
@@ -114,7 +115,7 @@ export function ConfigPanel({
     if (key.escape) {
       setEditingField(null);
       setSelectedModelIndex(configModelIndex >= 0 ? configModelIndex : defaultModelIndex);
-      setMaxTokens(config.llm?.maxTokens ?? 8192);
+      setMaxOutputTokens(config.llm?.maxOutputTokens ?? 8192);
       setMode('sections');
       return;
     }
@@ -130,11 +131,11 @@ export function ConfigPanel({
         return;
       }
       if (key.leftArrow) {
-        setMaxTokens((prev: number) => Math.max(1024, prev - 1024));
+        setMaxOutputTokens((prev: number) => Math.max(1024, prev - 1024));
         return;
       }
       if (key.rightArrow) {
-        setMaxTokens((prev: number) => Math.min(16384, prev + 1024));
+        setMaxOutputTokens((prev: number) => Math.min(16384, prev + 1024));
         return;
       }
       if (key.return || input === 's' || input === 'S') {
@@ -276,9 +277,8 @@ export function ConfigPanel({
         const selectedModel = ALL_MODELS[selectedModelIndex];
         saveUpdates = {
           llm: {
-            provider: selectedModel?.provider ?? config.llm?.provider ?? 'anthropic',
-            model: selectedModel?.id ?? config.llm?.model ?? DEFAULT_MODEL,
-            maxTokens,
+            model: selectedModel ? getProviderModelId(selectedModel) : config.llm?.model ?? DEFAULT_MODEL,
+            maxOutputTokens,
           },
         };
       }
@@ -336,9 +336,10 @@ export function ConfigPanel({
             <box marginTop={1} flexDirection="column">
               <text fg={themeColor('muted')}>Current effective settings:</text>
               <text>  Model: {getModelDisplayName(config.llm?.model ?? DEFAULT_MODEL)}</text>
-              <text>  Max Tokens: {config.llm?.maxTokens ?? 8192}</text>
+              <text>  Max Output Tokens: {config.llm?.maxOutputTokens ?? 8192}</text>
               <text>  Memory: {config.memory?.enabled ? 'enabled' : 'disabled'}</text>
               <text>  Voice: {config.voice?.enabled ? 'enabled' : 'disabled'}</text>
+              <text>  Theme: {config.theme ?? 'auto'} <span fg={themeColor('muted')}>(/theme to change)</span></text>
             </box>
           </box>
         );
@@ -352,21 +353,21 @@ export function ConfigPanel({
               <box flexDirection="column" marginTop={1} marginBottom={1}>
                 {ALL_MODELS.map((model, index) => (
                   <text
-                    key={model.id}
+                    key={getProviderModelId(model)}
                     bg={index === selectedModelIndex ? themeColor('primary') : undefined}
                     fg={index === selectedModelIndex ? themeColor('text') : undefined}
                   >
                     {index === selectedModelIndex ? '>' : ' '} {model.name}
-                    <text fg={themeColor('muted')}> ({getProviderLabel(model.provider)})</text>
-                    <text fg={themeColor('muted')}> - {model.description}</text>
+                    <span fg={themeColor('muted')}> ({getProviderLabel(model.provider)})</span>
+                    <span fg={themeColor('muted')}> - {model.description}</span>
                   </text>
                 ))}
               </box>
             </box>
             <box marginTop={1} flexDirection="column">
-              <text>Max Tokens: <text fg={themeColor('info')}>{maxTokens}</text> (←/→ to adjust by 1024)</text>
+              <text>Max Output Tokens: <span fg={themeColor('info')}>{maxOutputTokens}</span> (←/→ to adjust by 1024)</text>
               <text fg={themeColor('muted')}>
-                {maxTokens < 4096 ? 'Short responses' : maxTokens > 12000 ? 'Very long responses' : 'Standard length'}
+                {maxOutputTokens < 4096 ? 'Short responses' : maxOutputTokens > 12000 ? 'Very long responses' : 'Standard length'}
               </text>
             </box>
             <box marginTop={1}>
@@ -392,8 +393,8 @@ export function ConfigPanel({
                 </box>
               ) : (
                 <text>
-                  1. Max Context Tokens: <text fg={themeColor('info')}>{config.context?.maxContextTokens ?? 180000}</text>
-                  <text fg={themeColor('muted')}> {getSource('context.maxContextTokens')}</text>
+                  1. Max Context Tokens: <span fg={themeColor('info')}>{config.context?.maxContextTokens ?? 180000}</span>
+                  <span fg={themeColor('muted')}> {getSource('context.maxContextTokens')}</span>
                 </text>
               )}
               {editingField === 'context.keepRecentMessages' ? (
@@ -408,16 +409,16 @@ export function ConfigPanel({
                 </box>
               ) : (
                 <text>
-                  2. Keep Recent Messages: <text fg={themeColor('info')}>{config.context?.keepRecentMessages ?? 10}</text>
-                  <text fg={themeColor('muted')}> {getSource('context.keepRecentMessages')}</text>
+                  2. Keep Recent Messages: <span fg={themeColor('info')}>{config.context?.keepRecentMessages ?? 10}</span>
+                  <span fg={themeColor('muted')}> {getSource('context.keepRecentMessages')}</span>
                 </text>
               )}
               <text>
-                Summary Strategy: <text fg={themeColor('info')}>{config.context?.summaryStrategy ?? 'hybrid'}</text>
-                <text fg={themeColor('muted')}> {getSource('context.summaryStrategy')}</text>
+                Summary Strategy: <span fg={themeColor('info')}>{config.context?.summaryStrategy ?? 'hybrid'}</span>
+                <span fg={themeColor('muted')}> {getSource('context.summaryStrategy')}</span>
               </text>
               <text>
-                Summary Max Tokens: <text fg={themeColor('info')}>{config.context?.summaryMaxTokens ?? 2000}</text>
+                Summary Max Tokens: <span fg={themeColor('info')}>{config.context?.summaryMaxTokens ?? 2000}</span>
               </text>
             </box>
             <box marginTop={1}>
@@ -432,20 +433,20 @@ export function ConfigPanel({
             <text><b>Memory Settings</b></text>
             <box marginTop={1} flexDirection="column">
               <text>
-                Enabled: <text fg={config.memory?.enabled ? themeColor('success') : 'red'}>{config.memory?.enabled ? 'Yes' : 'No'}</text>
-                <text fg={themeColor('muted')}> (t to toggle) {getSource('memory.enabled')}</text>
+                Enabled: <span fg={config.memory?.enabled ? themeColor('success') : themeColor('red')}>{config.memory?.enabled ? 'Yes' : 'No'}</span>
+                <span fg={themeColor('muted')}> (t to toggle) {getSource('memory.enabled')}</span>
               </text>
               <text>
-                Injection: <text fg={config.memory?.injection?.enabled ? themeColor('success') : 'red'}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</text>
+                Injection: <span fg={config.memory?.injection?.enabled ? themeColor('success') : themeColor('red')}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</span>
               </text>
               <text>
-                Max Injection Tokens: <text fg={themeColor('info')}>{config.memory?.injection?.maxTokens ?? 500}</text>
+                Max Injection Tokens: <span fg={themeColor('info')}>{config.memory?.injection?.maxTokens ?? 500}</span>
               </text>
               <text>
-                Min Importance: <text fg={themeColor('info')}>{config.memory?.injection?.minImportance ?? 5}</text>
+                Min Importance: <span fg={themeColor('info')}>{config.memory?.injection?.minImportance ?? 5}</span>
               </text>
               <text>
-                Max Entries: <text fg={themeColor('info')}>{config.memory?.storage?.maxEntries ?? 1000}</text>
+                Max Entries: <span fg={themeColor('info')}>{config.memory?.storage?.maxEntries ?? 1000}</span>
               </text>
             </box>
             <box marginTop={1}>
@@ -477,8 +478,8 @@ export function ConfigPanel({
                 </box>
               ) : (
                 <text>
-                  1. Max Depth: <text fg={themeColor('info')}>{config.subassistants?.maxDepth ?? 3}</text>
-                  <text fg={themeColor('muted')}> {getSource('subassistants.maxDepth')}</text>
+                  1. Max Depth: <span fg={themeColor('info')}>{config.subassistants?.maxDepth ?? 3}</span>
+                  <span fg={themeColor('muted')}> {getSource('subassistants.maxDepth')}</span>
                 </text>
               )}
               {editingField === 'subassistants.maxConcurrent' ? (
@@ -493,8 +494,8 @@ export function ConfigPanel({
                 </box>
               ) : (
                 <text>
-                  2. Max Concurrent: <text fg={themeColor('info')}>{config.subassistants?.maxConcurrent ?? 5}</text>
-                  <text fg={themeColor('muted')}> {getSource('subassistants.maxConcurrent')}</text>
+                  2. Max Concurrent: <span fg={themeColor('info')}>{config.subassistants?.maxConcurrent ?? 5}</span>
+                  <span fg={themeColor('muted')}> {getSource('subassistants.maxConcurrent')}</span>
                 </text>
               )}
               {editingField === 'subassistants.maxTurns' ? (
@@ -509,12 +510,12 @@ export function ConfigPanel({
                 </box>
               ) : (
                 <text>
-                  3. Max Turns: <text fg={themeColor('info')}>{config.subassistants?.maxTurns ?? 10}</text>
-                  <text fg={themeColor('muted')}> {getSource('subassistants.maxTurns')}</text>
+                  3. Max Turns: <span fg={themeColor('info')}>{config.subassistants?.maxTurns ?? 10}</span>
+                  <span fg={themeColor('muted')}> {getSource('subassistants.maxTurns')}</span>
                 </text>
               )}
               <text>
-                Default Timeout: <text fg={themeColor('info')}>{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</text>
+                Default Timeout: <span fg={themeColor('info')}>{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</span>
               </text>
             </box>
             <box marginTop={1}>
@@ -532,17 +533,17 @@ export function ConfigPanel({
             <text><b>Voice Settings</b></text>
             <box marginTop={1} flexDirection="column">
               <text>
-                Enabled: <text fg={config.voice?.enabled ? themeColor('success') : 'red'}>{config.voice?.enabled ? 'Yes' : 'No'}</text>
-                <text fg={themeColor('muted')}> (t to toggle) {getSource('voice.enabled')}</text>
+                Enabled: <span fg={config.voice?.enabled ? themeColor('success') : themeColor('red')}>{config.voice?.enabled ? 'Yes' : 'No'}</span>
+                <span fg={themeColor('muted')}> (t to toggle) {getSource('voice.enabled')}</span>
               </text>
               <text>
-                TTS Provider: <text fg={themeColor('info')}>{config.voice?.tts?.provider ?? 'elevenlabs'}</text>
+                TTS Provider: <span fg={themeColor('info')}>{config.voice?.tts?.provider ?? 'elevenlabs'}</span>
               </text>
               <text>
-                STT Provider: <text fg={themeColor('info')}>{config.voice?.stt?.provider ?? 'whisper'}</text>
+                STT Provider: <span fg={themeColor('info')}>{config.voice?.stt?.provider ?? 'whisper'}</span>
               </text>
               <text>
-                Auto Listen: <text fg={config.voice?.autoListen ? themeColor('success') : 'red'}>{config.voice?.autoListen ? 'Yes' : 'No'}</text>
+                Auto Listen: <span fg={config.voice?.autoListen ? themeColor('success') : themeColor('red')}>{config.voice?.autoListen ? 'Yes' : 'No'}</span>
               </text>
             </box>
             <box marginTop={1}>
@@ -559,13 +560,13 @@ export function ConfigPanel({
           <box flexDirection="column">
             <text><b>Status Line Settings</b></text>
             <box marginTop={1} flexDirection="column">
-              <text>1. Context %:     <text fg={showColor(sl.showContext)}>{showIcon(sl.showContext)}</text></text>
-              <text>2. Session:       <text fg={showColor(sl.showSession)}>{showIcon(sl.showSession)}</text></text>
-              <text>3. Elapsed Time:  <text fg={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</text></text>
-              <text>4. Heartbeat:     <text fg={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</text></text>
-              <text>5. Voice:         <text fg={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</text></text>
-              <text>6. Queue:         <text fg={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</text></text>
-              <text>7. Recent Tools:  <text fg={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</text></text>
+              <text>1. Context %:     <span fg={showColor(sl.showContext)}>{showIcon(sl.showContext)}</span></text>
+              <text>2. Session:       <span fg={showColor(sl.showSession)}>{showIcon(sl.showSession)}</span></text>
+              <text>3. Elapsed Time:  <span fg={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</span></text>
+              <text>4. Heartbeat:     <span fg={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</span></text>
+              <text>5. Voice:         <span fg={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</span></text>
+              <text>6. Queue:         <span fg={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</span></text>
+              <text>7. Recent Tools:  <span fg={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</span></text>
             </box>
             <box marginTop={1}>
               <text fg={themeColor('muted')}>1-7 toggle metric | Esc back</text>
@@ -663,7 +664,7 @@ export function ConfigPanel({
       {/* Message */}
       {message && (
         <box marginTop={1}>
-          <text fg={message.type === 'success' ? themeColor('success') : 'red'}>{message.text}</text>
+          <text fg={message.type === 'success' ? themeColor('success') : themeColor('red')}>{message.text}</text>
         </box>
       )}
 

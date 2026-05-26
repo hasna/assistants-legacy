@@ -8,7 +8,10 @@
 
 let _lib: any | null = null;
 async function lib(): Promise<any> {
-  if (!_lib) _lib = await import('@hasna/testers');
+  if (!_lib) {
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+    _lib = await dynamicImport('@hasna/testers');
+  }
   return _lib;
 }
 

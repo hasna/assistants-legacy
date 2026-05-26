@@ -144,7 +144,20 @@ export async function addTask(
   };
 
   const created = sdkCreateTask(input, db);
-  return fromSdkTask(created);
+
+  // Wire up dependency relations declared at creation time. The SDK rejects
+  // edges to non-existent tasks, so unknown ids are silently skipped (matching
+  // the documented "ignore missing dependencies" behavior).
+  // blockedBy: tasks that must complete before this one (this depends on them).
+  for (const depId of opts.blockedBy || []) {
+    try { sdkAddDependency(created.id, depId, db); } catch { /* skip missing */ }
+  }
+  // blocks: tasks that depend on this one (they are blocked by this task).
+  for (const blockedId of opts.blocks || []) {
+    try { sdkAddDependency(blockedId, created.id, db); } catch { /* skip missing */ }
+  }
+
+  return fromSdkTaskWithRelations(created.id) ?? fromSdkTask(created);
 }
 
 export async function updateTask(

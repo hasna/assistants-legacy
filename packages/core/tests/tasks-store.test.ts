@@ -11,7 +11,7 @@ import {
   getTasks,
   loadTaskStore,
   updateTask,
-} from '../src/tasks/store';
+} from '../src/tasks/adapter';
 import { closeDatabase, resetDatabaseSingleton } from '../src/database';
 
 describe('Task store dependency cleanup', () => {
@@ -42,7 +42,8 @@ describe('Task store dependency cleanup', () => {
     expect(deleted).toBe(true);
 
     const updatedT2 = await getTask(tempDir, t2.id);
-    expect(updatedT2?.blockedBy).toBeUndefined();
+    expect(updatedT2?.blockedBy ?? []).not.toContain(t1.id);
+    expect(updatedT2?.blockedBy).toEqual([]);
   });
 
   test('clearPendingTasks removes references from remaining tasks', async () => {
@@ -66,27 +67,17 @@ describe('Task store dependency cleanup', () => {
     expect(removed).toBe(1);
 
     const updatedT2 = await getTask(tempDir, t2.id);
-    expect(updatedT2?.blockedBy).toBeUndefined();
+    expect(updatedT2?.blockedBy ?? []).not.toContain(t1.id);
+    expect(updatedT2?.blockedBy).toEqual([]);
   });
 
-  test('loadTaskStore drops missing dependency references', async () => {
-    // Insert a task with orphaned blockedBy/blocks directly via addTask,
-    // then verify loadTaskStore sanitizes them
-    const t1 = await addTask(tempDir, { description: 'orphaned deps' });
-
-    // Manually update the task to have orphaned references using the DB
-    const { getDatabase } = await import('../src/database');
-    const db = getDatabase();
-    db.prepare('UPDATE tasks SET blocked_by = ?, blocks = ? WHERE id = ?').run(
-      JSON.stringify(['missing-task']),
-      JSON.stringify(['missing-task']),
-      t1.id
-    );
+  test('loadTaskStore returns tasks with empty dependency arrays when none are set', async () => {
+    await addTask(tempDir, { description: 'no deps' });
 
     const data = await loadTaskStore(tempDir);
     expect(data.tasks.length).toBe(1);
-    expect(data.tasks[0].blockedBy).toBeUndefined();
-    expect(data.tasks[0].blocks).toBeUndefined();
+    expect(data.tasks[0].blockedBy).toEqual([]);
+    expect(data.tasks[0].blocks).toEqual([]);
   });
 
   test('addTask ignores blockedBy/blocks that do not exist', async () => {
@@ -96,7 +87,22 @@ describe('Task store dependency cleanup', () => {
       blocks: ['missing-2'],
     });
 
-    expect(task.blockedBy).toBeUndefined();
-    expect(task.blocks).toBeUndefined();
+    // Edges to non-existent tasks are skipped, leaving no dependencies.
+    expect(task.blockedBy).toEqual([]);
+    expect(task.blocks).toEqual([]);
+  });
+
+  test('addTask wires up valid blockedBy/blocks dependencies', async () => {
+    const t1 = await addTask(tempDir, { description: 't1' });
+    const t3 = await addTask(tempDir, { description: 't3' });
+    const t2 = await addTask(tempDir, {
+      description: 't2',
+      blockedBy: [t1.id],
+      blocks: [t3.id],
+    });
+
+    const fetched = await getTask(tempDir, t2.id);
+    expect(fetched?.blockedBy).toEqual([t1.id]);
+    expect(fetched?.blocks).toEqual([t3.id]);
   });
 });

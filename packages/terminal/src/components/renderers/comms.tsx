@@ -10,7 +10,7 @@ import { themeColor } from '../../theme/colors';
 import { CloseOnAnyKeyPanel } from './utils';
 import type { PanelRenderContext } from './context';
 
-export function renderChannelsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderChannelsPanel(ctx: PanelRenderContext): React.ReactNode {
   const channelsManager = ctx.activeSession?.client.getChannelsManager?.();
   if (!channelsManager) {
     return (
@@ -73,7 +73,7 @@ export function renderChannelsPanel(ctx: PanelRenderContext): React.ReactElement
   );
 }
 
-export function renderMessagesPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderMessagesPanel(ctx: PanelRenderContext): React.ReactNode {
   const messagesManager = ctx.activeSession?.client.getMessagesManager?.();
   const inboxManager = ctx.activeSession?.client.getInboxManager?.();
 

@@ -59,7 +59,7 @@ import {
   registerHooksTools,
 } from '../hooks';
 import { CommandLoader, CommandExecutor, BuiltinCommands, type TokenUsage, type CommandContext, type CommandResult } from '../commands';
-import { createLLMClient, type LLMClient } from '../llm/client';
+import { createLLMClient, type AISDKExecutableTool, type LLMClient } from '../llm/client';
 import { loadConfig, loadSystemPrompt, ensureConfigDir, getConfigDir } from '../config';
 import { getDatabase, getDatabasePath, closeDatabase } from '../database';
 import { backupIfNeeded } from '../database/backup';
@@ -130,6 +130,16 @@ import { PolicyEvaluator, GuardrailsStore, registerGuardrailsTools, type Guardra
 import { getGlobalRegistry, type AssistantRegistryService, type RegisteredAssistant, type AssistantType } from '../registry';
 import { CapabilityEnforcer, type CapabilityEnforcementResult } from '../capabilities';
 import type { BudgetConfig, CapabilitiesConfigShared } from '@hasna/assistants-shared';
+
+function orderToolResults(toolCalls: ToolCall[], results: ToolResult[]): ToolResult[] {
+  const resultsById = new Map<string, ToolResult>();
+  for (const result of results) {
+    resultsById.set(result.toolCallId, result);
+  }
+  return toolCalls
+    .map((call) => resultsById.get(call.id))
+    .filter(Boolean) as ToolResult[];
+}
 
 export interface AssistantLoopOptions {
   config?: AssistantsConfig;
@@ -1429,11 +1439,29 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
 
         const messages = this.context.getMessages();
         const allTools = this.toolRegistry.getTools();
-        const tools = this.filterAllowedTools(allTools);
+        const tools = this.buildExecutableTools(this.filterAllowedTools(allTools));
         const systemPrompt = this.buildSystemPrompt(messages);
 
         let responseText = '';
         let toolCalls: ToolCall[] = [];
+        let streamedToolResults: ToolResult[] = [];
+        let finishReason: string | undefined;
+
+        const allPendingToolCallsResolved = () => {
+          if (toolCalls.length === 0) return false;
+          const streamedResultIds = new Set(streamedToolResults.map((result) => result.toolCallId));
+          return toolCalls.every((call) => streamedResultIds.has(call.id));
+        };
+
+        const flushResolvedAISDKStep = () => {
+          if (!allPendingToolCallsResolved()) return false;
+          this.context.addAssistantMessage(responseText, toolCalls);
+          this.context.addToolResults(orderToolResults(toolCalls, streamedToolResults));
+          responseText = '';
+          toolCalls = [];
+          streamedToolResults = [];
+          return true;
+        };
 
         // Stream response from LLM
         for await (const chunk of this.llmClient!.chat(messages, tools, systemPrompt)) {
@@ -1442,43 +1470,77 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           this.emit(chunk);
 
           if (chunk.type === 'text' && chunk.content) {
+            flushResolvedAISDKStep();
             responseText += chunk.content;
           } else if (chunk.type === 'tool_use' && chunk.toolCall) {
+            flushResolvedAISDKStep();
             toolCalls.push(chunk.toolCall);
+          } else if (chunk.type === 'tool_result' && chunk.toolResult) {
+            streamedToolResults.push(chunk.toolResult);
           } else if (chunk.type === 'usage' && chunk.usage) {
             // Update token usage
             this.updateTokenUsage(chunk.usage);
+          } else if (chunk.type === 'done') {
+            finishReason = chunk.finishReason;
           } else if (chunk.type === 'error') {
             this.recordLLMError(chunk.error);
+            // Surface the error to the UI — otherwise the turn ends silently with
+            // no assistant message and no visible failure (a dead-air chat).
+            this.emit({ type: 'error', error: chunk.error || 'LLM stream error' });
             streamError = new Error(chunk.error || 'LLM stream error');
             break;
           }
         }
 
-        // Add assistant message if any content/tool calls
         const shouldStopNow = this.shouldStop || streamError !== null;
-        if (responseText.trim() || toolCalls.length > 0) {
-          this.context.addAssistantMessage(responseText, toolCalls.length > 0 ? toolCalls : undefined);
-        }
 
-        // If stopped or error mid-stream, don't execute tool calls
         if (shouldStopNow) {
+          // Avoid persisting dangling assistant tool calls when the provider
+          // errors before the corresponding tool results arrive.
+          if (toolCalls.length > 0) {
+            flushResolvedAISDKStep();
+          } else if (responseText.trim()) {
+            this.context.addAssistantMessage(responseText);
+          }
           break;
         }
+
+        const flushedFinalAISDKStep = flushResolvedAISDKStep();
 
         // If no tool calls, we're done
         if (toolCalls.length === 0) {
+          if (responseText.trim()) {
+            this.context.addAssistantMessage(responseText);
+          }
+          if (flushedFinalAISDKStep && finishReason === 'tool-calls') {
+            continue;
+          }
           break;
         }
 
-        const validation = validateToolCalls(toolCalls, allTools, this.config?.validation);
+        const streamedResultIds = new Set(streamedToolResults.map((result) => result.toolCallId));
+        const unresolvedToolCalls = toolCalls.filter((call) => !streamedResultIds.has(call.id));
+
+        if (unresolvedToolCalls.length === 0) {
+          this.context.addToolResults(orderToolResults(toolCalls, streamedToolResults));
+          if (finishReason === 'tool-calls') {
+            continue;
+          }
+          break;
+        }
+
+        if (responseText.trim() || toolCalls.length > 0) {
+          this.context.addAssistantMessage(responseText, toolCalls);
+        }
+
+        const validation = validateToolCalls(unresolvedToolCalls, allTools, this.config?.validation);
         if (validation.errors.length > 0) {
           for (const error of validation.errors) {
             this.errorAggregator.record(error);
           }
         }
         const invalidResults = new Map<string, ToolResult>();
-        for (const call of toolCalls) {
+        for (const call of unresolvedToolCalls) {
           if (validation.validated.has(call.id)) {
             continue;
           }
@@ -1504,7 +1566,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           });
         }
 
-        const validatedCalls = toolCalls
+        const validatedCalls = unresolvedToolCalls
           .map((call) => validation.validated.get(call.id))
           .filter(Boolean) as ToolCall[];
 
@@ -1516,7 +1578,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         }
 
         const orderedResults: ToolResult[] = [];
-        for (const call of toolCalls) {
+        for (const call of unresolvedToolCalls) {
           const result = resultsById.get(call.id) ?? invalidResults.get(call.id);
           if (result) {
             orderedResults.push(result);
@@ -1524,7 +1586,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         }
 
         // Add tool results to context
-        this.context.addToolResults(orderedResults);
+        this.context.addToolResults(orderToolResults(toolCalls, [...streamedToolResults, ...orderedResults]));
       }
     } finally {
       // In talk mode, skip Stop hooks, scope verification, and done emission.
@@ -1785,12 +1847,22 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
   /**
    * Execute tool calls with hooks
    */
-  private async executeToolCalls(toolCalls: ToolCall[]): Promise<ToolResult[]> {
+  private async executeToolCalls(
+    toolCalls: ToolCall[],
+    options: { emitResults?: boolean; includeStoppedResults?: boolean; signal?: AbortSignal } = {}
+  ): Promise<ToolResult[]> {
     const results: ToolResult[] = [];
+    const emitResults = options.emitResults ?? true;
+    const emitToolResult = (toolResult: ToolResult) => {
+      if (emitResults) {
+        this.emit({ type: 'tool_result', toolResult });
+      }
+    };
 
     // Create new abort controller for this batch of tool calls
-    this.toolAbortController = new AbortController();
-    const signal = this.toolAbortController.signal;
+    const localAbortController = options.signal ? null : new AbortController();
+    this.toolAbortController = localAbortController;
+    const signal = options.signal ?? localAbortController!.signal;
 
     for (const toolCall of toolCalls) {
       // Check if stop was requested - break early and return partial results
@@ -1815,7 +1887,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           isError: true,
           toolName: toolCall.name,
         };
-        this.emit({ type: 'tool_result', toolResult: blockedResult });
+        emitToolResult(blockedResult);
         await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
           session_id: this.sessionId,
           hook_event_name: 'PostToolUseFailure',
@@ -1836,7 +1908,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           isError: true,
           toolName: toolCall.name,
         };
-        this.emit({ type: 'tool_result', toolResult: blockedResult });
+        emitToolResult(blockedResult);
         await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
           session_id: this.sessionId,
           hook_event_name: 'PostToolUseFailure',
@@ -1874,7 +1946,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             isError: true,
             toolName: toolCall.name,
           };
-          this.emit({ type: 'tool_result', toolResult: blockedResult });
+          emitToolResult(blockedResult);
           this.onGuardrailsViolation?.(policyResult, toolCall.name);
           await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
             session_id: this.sessionId,
@@ -1897,7 +1969,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             isError: true,
             toolName: toolCall.name,
           };
-          this.emit({ type: 'tool_result', toolResult: approvalResult });
+          emitToolResult(approvalResult);
           this.onGuardrailsViolation?.(policyResult, toolCall.name);
           await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
             session_id: this.sessionId,
@@ -1935,7 +2007,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             isError: true,
             toolName: toolCall.name,
           };
-          this.emit({ type: 'tool_result', toolResult: blockedResult });
+          emitToolResult(blockedResult);
           this.onCapabilityViolation?.(capResult, `tool:${toolCall.name}`);
           await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
             session_id: this.sessionId,
@@ -1957,7 +2029,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             isError: true,
             toolName: toolCall.name,
           };
-          this.emit({ type: 'tool_result', toolResult: approvalResult });
+          emitToolResult(approvalResult);
           this.onCapabilityViolation?.(capResult, `tool:${toolCall.name}`);
           await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
             session_id: this.sessionId,
@@ -2005,7 +2077,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           isError: true,
           toolName: toolCall.name,
         };
-        this.emit({ type: 'tool_result', toolResult: blockedResult });
+        emitToolResult(blockedResult);
         await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
           session_id: this.sessionId,
           hook_event_name: 'PostToolUseFailure',
@@ -2051,7 +2123,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
             isError: true,
             toolName: toolCall.name,
           };
-          this.emit({ type: 'tool_result', toolResult: blockedResult });
+          emitToolResult(blockedResult);
           await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
             session_id: this.sessionId,
             hook_event_name: 'PostToolUseFailure',
@@ -2072,7 +2144,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
           isError: true,
           toolName: toolCall.name,
         };
-        this.emit({ type: 'tool_result', toolResult: askResult });
+        emitToolResult(askResult);
         await this.hookExecutor.execute(this.hookLoader.getHooks('PostToolUseFailure'), {
           session_id: this.sessionId,
           hook_event_name: 'PostToolUseFailure',
@@ -2120,7 +2192,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       }
 
       // Emit result as stream chunk
-      this.emit({ type: 'tool_result', toolResult: result });
+      emitToolResult(result);
 
       // Run PostToolUse or PostToolUseFailure hooks based on result
       const hookEvent = result.isError ? 'PostToolUseFailure' : 'PostToolUse';
@@ -2139,6 +2211,9 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
       this.pendingToolCalls.delete(toolCall.id);
 
       if (stopAfterTool) {
+        if (options.includeStoppedResults) {
+          results.push(result);
+        }
         break;
       }
 
@@ -2855,18 +2930,13 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     }
 
     // Import dynamically to avoid circular dependency
-    const { getModelById, getProviderForModel } = await import('../llm/models');
+    const { getModelById } = await import('../llm/models');
 
     const modelDef = getModelById(modelId);
-    const provider = getProviderForModel(modelId) ?? this.config.llm.provider;
-    if (!provider) {
-      throw new Error(`Cannot determine provider for model: ${modelId}`);
-    }
 
     // Create new LLM client with the new model
     const newConfig = {
       ...this.config.llm,
-      provider,
       model: modelId,
     };
 
@@ -3232,7 +3302,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
         capabilities: {
           tools,
           skills,
-          models: [this.config?.llm?.model || 'claude-sonnet-4-20250514'],
+          models: [this.config?.llm?.model || 'anthropic:claude-sonnet-4-20250514'],
           tags: this.depth > 0 ? ['subassistant'] : ['main'],
           maxConcurrent: 5,
           maxDepth: this.config?.subassistants?.maxDepth ?? 3,
@@ -3821,7 +3891,7 @@ You are running in **autonomous mode**. You manage your own wakeup schedule.
     if (this.mgr.assistant.listAssistants().length === 0) {
       const created = await this.mgr.assistant.createAssistant({
         name: 'Default Assistant',
-        settings: { model: this.config?.llm?.model || 'claude-opus-4-5' },
+        settings: { model: this.config?.llm?.model || 'anthropic:claude-opus-4-5-20251101' },
       });
       this.assistantId = created.id;
     }
@@ -4142,6 +4212,25 @@ Be concise but thorough. Focus only on this task.`,
       if (name === 'ask_user') return true;
       return allowed.has(name);
     });
+  }
+
+  private buildExecutableTools(tools: Tool[]): AISDKExecutableTool[] {
+    return tools.map((tool) => ({
+      ...tool,
+      execute: async (toolCall, signal) => {
+        const results = await this.executeToolCalls([toolCall], {
+          emitResults: false,
+          includeStoppedResults: true,
+          signal,
+        });
+        return results[0] ?? {
+          toolCallId: toolCall.id,
+          toolName: toolCall.name,
+          content: 'Tool execution stopped before a result was produced.',
+          isError: true,
+        };
+      },
+    }));
   }
 
   private isToolAllowed(name: string): boolean {

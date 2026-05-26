@@ -64,7 +64,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     const contextConfig = {
       enabled: true,
@@ -109,7 +109,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).toolRegistry.register(
       { name: 'test_tool', description: 't', parameters: { type: 'object', properties: {} } },
@@ -145,7 +145,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
     (assistant as any).builtinCommands.registerAll((assistant as any).commandLoader);
 
     await assistant.process('/help');
@@ -172,7 +172,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).toolRegistry.register(
       { name: 'bash', description: 'Run commands', parameters: { type: 'object', properties: {} } },
@@ -204,7 +204,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).toolRegistry.register(
       { name: 'bash', description: 'Run commands', parameters: { type: 'object', properties: {} } },
@@ -244,7 +244,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     await assistant.process('hello');
 
@@ -276,7 +276,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     nativeHookRegistry.register({
       id: 'scope-verification',
@@ -312,7 +312,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).toolRegistry.register(
       { name: 'test_tool', description: 't', parameters: { type: 'object', properties: {} } },
@@ -336,7 +336,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
     (assistant as any).builtinCommands.registerAll((assistant as any).commandLoader);
 
     assistant.getContext().addUserMessage('hello');
@@ -360,7 +360,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     const now = Date.now();
     await saveSchedule(cwd, {
@@ -400,7 +400,7 @@ describe('AssistantLoop process', () => {
       },
     };
     (assistant as any).config = {
-      llm: { provider: 'anthropic', model: 'mock' },
+      llm: { model: 'anthropic:mock' },
       scheduler: { enabled: false },
     };
 
@@ -443,7 +443,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
     (assistant as any).builtinCommands.registerAll((assistant as any).commandLoader);
 
     (assistant as any).toolRegistry.register(
@@ -486,7 +486,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).toolRegistry.register(
       { name: 'read', description: 't', parameters: { type: 'object', properties: {} } },
@@ -526,7 +526,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
     (assistant as any).builtinCommands.registerAll((assistant as any).commandLoader);
 
     (assistant as any).skillLoader.skills.set('alpha', {
@@ -562,7 +562,7 @@ describe('AssistantLoop process', () => {
         yield { type: 'done' };
       },
     };
-    (assistant as any).config = { llm: { provider: 'anthropic', model: 'mock' } };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
 
     (assistant as any).commandLoader.register({
       name: 'sysmsg',

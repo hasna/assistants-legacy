@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, mock, spyOn } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -75,6 +75,8 @@ const mockStorageClient = {
 };
 
 describe('Secrets Management', () => {
+  let openSecretsDb: string;
+
   beforeEach(() => {
     // Clear mock data before each test
     mockSecrets.clear();
@@ -84,6 +86,15 @@ describe('Secrets Management', () => {
     mockStorageClient.setSecret.mockClear();
     mockStorageClient.deleteSecret.mockClear();
     mockStorageClient.checkCredentials.mockClear();
+
+    openSecretsDb = join(mkdtempSync(join(tmpdir(), 'assistants-secrets-')), 'vault.db');
+    process.env.OPEN_SECRETS_DB = openSecretsDb;
+  });
+
+  afterEach(() => {
+    const dir = openSecretsDb ? join(openSecretsDb, '..') : '';
+    delete process.env.OPEN_SECRETS_DB;
+    if (dir) rmSync(dir, { recursive: true, force: true });
   });
 
   describe('isValidSecretName', () => {
@@ -190,7 +201,7 @@ describe('Secrets Management', () => {
 
   describe('Secrets Tools', () => {
     test('all tools are defined with correct structure', () => {
-      expect(secretsTools).toHaveLength(4);
+      expect(secretsTools).toHaveLength(6);
 
       expect(secretsListTool.name).toBe('secrets_list');
       expect(secretsListTool.parameters.type).toBe('object');
@@ -206,32 +217,33 @@ describe('Secrets Management', () => {
       expect(secretsDeleteTool.parameters.required).toContain('name');
     });
 
-    test('secrets_list executor handles no manager', async () => {
+    test('secrets_list executor uses SDK storage without manager', async () => {
       const executors = createSecretsToolExecutors(() => null);
       const result = await executors.secrets_list({});
 
-      expect(result).toContain('not enabled or configured');
+      expect(result).toContain('No secrets stored');
     });
 
-    test('secrets_get executor handles no manager', async () => {
+    test('secrets_get executor uses SDK storage without manager', async () => {
       const executors = createSecretsToolExecutors(() => null);
       const result = await executors.secrets_get({ name: 'TEST' });
 
-      expect(result).toContain('not enabled or configured');
+      expect(result).toContain('not found');
     });
 
-    test('secrets_set executor handles no manager', async () => {
+    test('secrets_set executor uses SDK storage without manager', async () => {
       const executors = createSecretsToolExecutors(() => null);
       const result = await executors.secrets_set({ name: 'TEST', value: 'value' });
 
-      expect(result).toContain('not enabled or configured');
+      expect(result).toContain('saved');
     });
 
-    test('secrets_delete executor handles no manager', async () => {
+    test('secrets_delete executor uses SDK storage without manager', async () => {
       const executors = createSecretsToolExecutors(() => null);
+      await executors.secrets_set({ name: 'TEST', value: 'value' });
       const result = await executors.secrets_delete({ name: 'TEST' });
 
-      expect(result).toContain('not enabled or configured');
+      expect(result).toContain('deleted');
     });
 
     test('secrets_get executor requires name parameter', async () => {
@@ -413,17 +425,17 @@ describe('Secrets Management', () => {
 
     test('secrets_get has appropriate description', () => {
       expect(secretsGetTool.description).toContain('Get');
-      expect(secretsGetTool.description).toContain('Rate limited');
+      expect(secretsGetTool.description).toContain('scope');
     });
 
     test('secrets_set has appropriate description', () => {
-      expect(secretsSetTool.description).toContain('Create or update');
+      expect(secretsSetTool.description).toContain('Store or update');
       expect(secretsSetTool.description).toContain('API keys');
     });
 
     test('secrets_delete has appropriate description', () => {
       expect(secretsDeleteTool.description).toContain('Delete');
-      expect(secretsDeleteTool.description).toContain('7-day');
+      expect(secretsDeleteTool.description).toContain('secret');
     });
   });
 
@@ -444,10 +456,10 @@ describe('Secrets Management', () => {
       expect(formatProp.enum).toContain('env');
     });
 
-    test('secrets_set has description parameter', () => {
-      const descProp = secretsSetTool.parameters.properties.description;
-      expect(descProp).toBeDefined();
-      expect(descProp.type).toBe('string');
+    test('secrets_set has label parameter', () => {
+      const labelProp = secretsSetTool.parameters.properties.label;
+      expect(labelProp).toBeDefined();
+      expect(labelProp.type).toBe('string');
     });
   });
 });

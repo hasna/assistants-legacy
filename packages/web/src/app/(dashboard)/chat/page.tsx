@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { MessageList } from '@/components/chat/MessageList';
@@ -37,7 +37,7 @@ const SUGGESTIONS = [
   'Explain this codebase',
 ];
 
-export default function NewChatPage() {
+function NewChatContent() {
   const searchParams = useSearchParams();
   const resumeId = searchParams.get('resume');
 
@@ -56,7 +56,7 @@ export default function NewChatPage() {
     fetch('/api/setup')
       .then((r) => r.json())
       .then((data) => {
-        setNeedsSetup(!data.hasAnthropicKey);
+        setNeedsSetup(!data.hasLLMKey);
         setSetupChecked(true);
       })
       .catch(() => setSetupChecked(true));
@@ -217,5 +217,13 @@ export default function NewChatPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function NewChatPage() {
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading chat...</div>}>
+      <NewChatContent />
+    </Suspense>
   );
 }

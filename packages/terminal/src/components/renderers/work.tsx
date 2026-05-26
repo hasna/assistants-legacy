@@ -20,7 +20,7 @@ import type { SkillDraft } from '../appHelpers';
 import { collectStreamText, extractJsonObject, normalizeAllowedTools } from '../appHelpers';
 import type { PanelRenderContext } from './context';
 
-export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleCheckAuth = async (connector: Connector) => {
     if (!ctx.connectorBridgeRef.current) {
       return { authenticated: false, error: 'Not initialized' };
@@ -67,7 +67,7 @@ export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactEleme
   );
 }
 
-export function renderTasksPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderTasksPanel(ctx: PanelRenderContext): React.ReactNode {
   const handleTasksAdd = async (options: TaskCreateOptions) => {
     try {
       await addTask(ctx.cwd, options);
@@ -158,7 +158,7 @@ export function renderTasksPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderSkillsPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderSkillsPanel(ctx: PanelRenderContext): React.ReactNode {
   const activeClient = ctx.registry.getActiveSession()?.client;
 
   const handleSkillExecute = (name: string) => {
@@ -282,7 +282,7 @@ export function renderSkillsPanel(ctx: PanelRenderContext): React.ReactElement {
   );
 }
 
-export function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactElement {
+export function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactNode {
   const scheduleListOpts = { global: true };
 
   const handleSchedulePause = async (id: string) => {

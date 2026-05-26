@@ -6,6 +6,8 @@ import { setRuntime, hasRuntime } from '../src/runtime';
 import { bunRuntime } from '../../runtime-bun/src';
 import { EmbeddedClient } from '../src/client';
 import { closeDatabase, resetDatabaseSingleton } from '../src/database';
+import type { Command } from '../src/commands';
+import type { Message, Skill, Tool } from '@hasna/assistants-shared';
 
 if (!hasRuntime()) setRuntime(bunRuntime);
 
@@ -27,6 +29,61 @@ afterEach(() => {
   else process.env.ASSISTANTS_DIR = origAssistantsDir;
   rmSync(tempDir, { recursive: true, force: true });
 });
+
+class StubContext {
+  import(_messages: Message[]) {}
+  getMessages(): Message[] {
+    return [];
+  }
+  clear() {}
+}
+
+class IntrospectionAssistantLoop {
+  private context = new StubContext();
+
+  async initialize() {}
+
+  async process(_message: string) {}
+
+  getContext() {
+    return this.context;
+  }
+
+  getTools(): Tool[] {
+    return [
+      {
+        name: 'stub_tool',
+        description: 'Stub tool for client introspection tests',
+        parameters: { type: 'object', properties: {} },
+      },
+    ];
+  }
+
+  getSkills(): Skill[] {
+    return [{ name: 'stub_skill', description: 'Stub skill' }];
+  }
+
+  getCommands(): Command[] {
+    return [{ name: 'stub', description: 'Stub command', content: '', builtin: true }];
+  }
+
+  getTokenUsage() {
+    return { inputTokens: 0, outputTokens: 0, totalTokens: 0, maxContextTokens: 0 };
+  }
+
+  stop() {}
+
+  isProcessing() {
+    return false;
+  }
+}
+
+function createIntrospectionClient() {
+  return new EmbeddedClient(tempDir, {
+    basePath: tempDir,
+    assistantFactory: () => new IntrospectionAssistantLoop() as any,
+  });
+}
 
 // ─── Constructor ──────────────────────────────────────────────────────────────
 
@@ -137,14 +194,14 @@ describe('EmbeddedClient getTokenUsage', () => {
 
 describe('EmbeddedClient tools/skills/commands', () => {
   test('getTools returns array', async () => {
-    const client = new EmbeddedClient(tempDir, { basePath: tempDir });
+    const client = createIntrospectionClient();
     const tools = await client.getTools();
     expect(Array.isArray(tools)).toBe(true);
     expect(tools.length).toBeGreaterThan(0);
   });
 
   test('getTools returns tool objects with name and description', async () => {
-    const client = new EmbeddedClient(tempDir, { basePath: tempDir });
+    const client = createIntrospectionClient();
     const tools = await client.getTools();
     for (const t of tools.slice(0, 5)) {
       expect(typeof t.name).toBe('string');
@@ -152,13 +209,13 @@ describe('EmbeddedClient tools/skills/commands', () => {
   });
 
   test('getSkills returns array', async () => {
-    const client = new EmbeddedClient(tempDir, { basePath: tempDir });
+    const client = createIntrospectionClient();
     const skills = await client.getSkills();
     expect(Array.isArray(skills)).toBe(true);
   });
 
   test('getCommands returns array', async () => {
-    const client = new EmbeddedClient(tempDir, { basePath: tempDir });
+    const client = createIntrospectionClient();
     const commands = await client.getCommands();
     expect(Array.isArray(commands)).toBe(true);
     expect(commands.length).toBeGreaterThan(0);

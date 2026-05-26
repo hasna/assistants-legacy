@@ -7,7 +7,6 @@
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { MODELS, getModelById, getModelsByProvider, getModelsGroupedByProvider } from '../llm/models';
-import { fetchProviderModels, mergeModelLists } from '../llm/model-catalog';
 import { LLM_PROVIDER_IDS, type LLMProvider } from '@hasna/assistants-shared';
 
 // ============================================
@@ -37,8 +36,8 @@ export const modelListTool: Tool = {
       },
       source: {
         type: 'string',
-        enum: ['static', 'live', 'merged'],
-        description: 'Optional: model source (static registry, live provider API, or merged)',
+        enum: ['static'],
+        description: 'Optional: model source. AI SDK migration uses the static registry only.',
       },
     },
     required: [],
@@ -105,30 +104,13 @@ export function createModelToolExecutors(
       const source = (input.source as string | undefined) || 'static';
 
       let models;
-      if (source === 'live' || source === 'merged') {
-        const llmConfig = context.getLLMConfig?.();
-        const provider = providerFilter ?? llmConfig?.provider;
-        if (!llmConfig || !provider) {
-          return JSON.stringify({
-            success: false,
-            error: 'Live model listing requires an active LLM provider and API key.',
-          });
-        }
-        try {
-          const liveModels = await fetchProviderModels(provider, llmConfig);
-          if (source === 'live') {
-            models = liveModels;
-          } else {
-            const staticModels = providerFilter ? getModelsByProvider(provider) : MODELS;
-            models = mergeModelLists(staticModels, liveModels);
-          }
-        } catch (error) {
-          return JSON.stringify({
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to fetch live models',
-          });
-        }
-      } else if (providerFilter) {
+      if (source !== 'static') {
+        return JSON.stringify({
+          success: false,
+          error: 'Live model listing was removed in the AI SDK migration. Use source="static".',
+        });
+      }
+      if (providerFilter) {
         models = getModelsByProvider(providerFilter);
       } else {
         models = MODELS;
@@ -138,7 +120,7 @@ export function createModelToolExecutors(
       const grouped = getModelsGroupedByProvider();
 
       const list = models.map((m) => ({
-        id: m.id,
+        id: `${m.provider}:${m.id}`,
         name: m.name,
         provider: m.provider,
         description: m.description,
@@ -148,7 +130,7 @@ export function createModelToolExecutors(
         outputCostPer1M: m.outputCostPer1M ?? null,
         supportsTools: m.supportsTools ?? true,
         supportsStreaming: m.supportsStreaming ?? true,
-        isCurrent: m.id === currentModel,
+        isCurrent: `${m.provider}:${m.id}` === currentModel,
         notes: m.notes || null,
       }));
 

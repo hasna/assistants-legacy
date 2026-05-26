@@ -5,15 +5,10 @@ import type { WorktreeInfo } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
 setRuntime(bunRuntime);
 
-import React from 'react';
-import { createCliRenderer } from '@opentui/core';
-import { createRoot } from '@opentui/react';
-import { App } from './components/App';
 import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
 import { parseArgs, main } from './cli/main';
 import { printExitSummary, getExitStats } from './exit-summary';
-import { setupThemeDefaults } from './theme/setup';
 
 // --- Graceful shutdown handling ---
 
@@ -53,7 +48,7 @@ process.on('SIGTERM', () => {
 });
 
 process.on('uncaughtException', (error) => {
-  process.stderr.write(`Uncaught exception: ${error}\n`);
+  process.stderr.write(`Uncaught exception: ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
   if (_renderer && !_renderer.isDestroyed) {
     _renderer.destroy();
     return;
@@ -63,7 +58,7 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  process.stderr.write(`Unhandled rejection: ${reason}\n`);
+  process.stderr.write(`Unhandled rejection: ${reason instanceof Error ? reason.stack || reason.message : String(reason)}\n`);
   if (_renderer && !_renderer.isDestroyed) {
     _renderer.destroy();
     return;
@@ -350,18 +345,21 @@ if (subcommand === 'sessions') {
 if (subcommand === 'doctor') {
   const isJson = process.argv.includes('--json');
   const { getConfigDir, getActiveProfile } = await import('@hasna/assistants-core');
+  const { LLM_PROVIDERS } = await import('@hasna/assistants-shared');
   const { existsSync } = await import('fs');
   const { join } = await import('path');
 
   const checks: Array<{ name: string; ok: boolean; detail?: string }> = [];
 
   // API key
-  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
-  const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+  const configuredProvider = LLM_PROVIDERS.find((provider) => !!process.env[provider.apiKeyEnv]);
+  const envNames = LLM_PROVIDERS.map((provider) => provider.apiKeyEnv).join(', ');
   checks.push({
     name: 'LLM API key',
-    ok: hasAnthropicKey || hasOpenAIKey,
-    detail: hasAnthropicKey ? 'ANTHROPIC_API_KEY set' : hasOpenAIKey ? 'OPENAI_API_KEY set' : 'Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set',
+    ok: !!configuredProvider,
+    detail: configuredProvider
+      ? `${configuredProvider.apiKeyEnv} set`
+      : `No AI SDK provider API key is set (expected one of: ${envNames})`,
   });
 
   // Config directory
@@ -879,6 +877,12 @@ if (options.print !== null) {
       process.exit(1);
     });
 } else {
+  const React = await import('react');
+  const { createCliRenderer } = await import('@opentui/core');
+  const { createRoot } = await import('@opentui/react');
+  const { App } = await import('./components/App');
+  const { setupThemeDefaults } = await import('./theme/setup');
+
   // Interactive mode
   // Enable synchronized output for terminals that support DEC 2026 (Ghostty, WezTerm, etc.)
   // This batches all terminal writes and flushes them atomically, preserving scrollback
@@ -886,11 +890,22 @@ if (options.print !== null) {
   const useSyncOutput = process.env.ASSISTANTS_NO_SYNC !== '1';
   const disableSyncOutput = useSyncOutput ? enableSynchronizedOutput() : () => {};
 
-  const appElement = <App cwd={options.cwd} version={VERSION} permissionMode={options.permissionMode ?? undefined} />;
+  const appElement = React.createElement(App, {
+    cwd: options.cwd,
+    version: VERSION,
+    permissionMode: options.permissionMode ?? undefined,
+  });
+
+  // Renderer selection (plan P0.2): TUI_RENDERER=ink will opt into the forked-ink
+  // renderer once it lands; for now it falls back to opentui with a notice.
+  const { selectRenderer } = await import('./renderer-selection');
+  const rendererSelection = selectRenderer();
+  if (rendererSelection.notice) {
+    console.error(rendererSelection.notice);
+  }
 
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
-    useAlternateScreen: false,
     // Disable renderer's built-in signal handling — our process-level handlers
     // (above) delegate to renderer.destroy() which gives us control over the
     // shutdown order: unmount React tree -> restore terminal -> cleanup -> exit.
@@ -902,7 +917,36 @@ if (options.print !== null) {
 
   // [cassius] Patch default text fg color based on terminal theme (light/dark).
   // Must run BEFORE root.render() so all <text> elements get the correct default.
-  setupThemeDefaults(renderer);
+  // Honor the persisted `theme` setting (overridden by HASNA_THEME at runtime).
+  let persistedTheme: string | undefined;
+  try {
+    const { loadConfig } = await import('@hasna/assistants-core');
+    persistedTheme = (await loadConfig(options.cwd || process.cwd()))?.theme;
+  } catch {
+    // Non-fatal — fall back to detection.
+  }
+  // setupThemeDefaults handles the renderer fg + listeners on the dark/light axis,
+  // so feed it the mode the persisted theme is built on (variants share a mode).
+  const modeSetting: 'auto' | 'dark' | 'light' | undefined =
+    persistedTheme === 'auto' || persistedTheme === 'dark' || persistedTheme === 'light'
+      ? persistedTheme
+      : persistedTheme
+        ? persistedTheme.startsWith('light')
+          ? 'light'
+          : 'dark'
+        : undefined;
+  await setupThemeDefaults(renderer, modeSetting);
+  // Activate the full theme variant palette (daltonized/ansi) when persisted.
+  if (persistedTheme) {
+    try {
+      const { applyThemeName, THEME_SETTINGS } = await import('./theme/colors');
+      if ((THEME_SETTINGS as readonly string[]).includes(persistedTheme)) {
+        applyThemeName(persistedTheme as (typeof THEME_SETTINGS)[number]);
+      }
+    } catch {
+      // Non-fatal — the mode-level theme is already applied.
+    }
+  }
 
   const root = createRoot(renderer);
   root.render(appElement);

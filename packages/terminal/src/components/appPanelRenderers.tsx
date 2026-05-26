@@ -49,7 +49,7 @@ export type { PanelRenderContext } from './renderers/context';
  * if no panel is currently shown. The caller (App) should early-return the
  * result when non-null.
  */
-export function renderActivePanel(ctx: import('./renderers/context').PanelRenderContext): React.ReactElement | null {
+export function renderActivePanel(ctx: import('./renderers/context').PanelRenderContext): React.ReactNode {
 
   // Initializing spinner
   if (ctx.isInitializing && !ctx.showRecoveryPanel && !ctx.showOnboardingPanel) {

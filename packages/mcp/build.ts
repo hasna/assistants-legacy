@@ -52,6 +52,7 @@ const external = [
   '@hasna/skills',
   '@hasna/terminal',
   '@hasna/testers',
+  '@hasna/telephony',
   // '@hasna/todos' — has static imports in core, must be bundled
   '@hasna/wallets',
 

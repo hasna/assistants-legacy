@@ -11,11 +11,36 @@
  */
 
 import { $ } from 'bun';
-import { rmSync, existsSync, mkdirSync } from 'fs';
+import { rmSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { join } from 'path';
 
 const ROOT = join(import.meta.dir, '..');
 const DIST = join(ROOT, 'dist');
+const stubUnresolvablePlugin = {
+  name: 'stub-unresolvable',
+  setup(build: any) {
+    build.onResolve({ filter: /^react-devtools-core$/ }, () => ({
+      path: 'react-devtools-core',
+      namespace: 'stub',
+    }));
+    build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs|telephony)$/ }, (args: { path: string }) => ({
+      path: args.path,
+      namespace: 'stub',
+    }));
+    build.onResolve({ filter: /^electron$/ }, () => ({
+      path: 'electron',
+      namespace: 'stub',
+    }));
+    build.onResolve({ filter: /^chromium-bidi/ }, (args: { path: string }) => ({
+      path: args.path,
+      namespace: 'stub',
+    }));
+    build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+      contents: 'export default {}; export const connectToDevTools = () => {};',
+      loader: 'js',
+    }));
+  },
+};
 
 async function build() {
   console.log('Building @hasna/assistants...');
@@ -52,6 +77,7 @@ async function build() {
         process.env.ASSISTANTS_VERSION || 'dev'
       ),
     },
+    plugins: [stubUnresolvablePlugin],
   });
 
   if (!libResult.success) {
@@ -62,7 +88,7 @@ async function build() {
   // Build CLI entry point
   console.log('  Building cli.js...');
   const cliResult = await Bun.build({
-    entrypoints: [join(ROOT, 'src/cli.tsx')],
+    entrypoints: [join(ROOT, 'src/index.tsx')],
     outdir: DIST,
     target: 'bun',
     format: 'esm',
@@ -85,11 +111,18 @@ async function build() {
         process.env.ASSISTANTS_VERSION || 'dev'
       ),
     },
+    plugins: [stubUnresolvablePlugin],
   });
 
   if (!cliResult.success) {
     console.error('Failed to build cli.js:', cliResult.logs);
     process.exit(1);
+  }
+
+  const builtIndexPath = join(DIST, 'index.js');
+  const cliPath = join(DIST, 'cli.js');
+  if (existsSync(builtIndexPath)) {
+    renameSync(builtIndexPath, cliPath);
   }
 
   // Post-process bundles to fix Bun bundler bugs
@@ -118,7 +151,6 @@ async function build() {
   }
 
   // Ensure CLI has shebang (only add if not already present)
-  const cliPath = join(DIST, 'cli.js');
   const cliContent = await Bun.file(cliPath).text();
   if (!cliContent.startsWith('#!')) {
     await Bun.write(cliPath, '#!/usr/bin/env bun\n' + cliContent);
@@ -322,11 +354,10 @@ export interface AssistantsConfig {
 }
 
 export interface LLMConfig {
-  provider?: 'anthropic' | 'openai' | 'xai' | 'mistral' | 'gemini';
   model: string;
   apiKey?: string;
   baseUrl?: string;
-  maxTokens?: number;
+  maxOutputTokens?: number;
 }
 
 export interface VoiceConfig {

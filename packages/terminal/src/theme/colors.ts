@@ -21,7 +21,7 @@
  *               SyntaxNumber, SyntaxType, SyntaxOperator, SyntaxPunctuation
  */
 
-import { getThemeMode } from './setup';
+import { getThemeMode, applyThemeSetting } from './setup';
 
 // ─── OpenCode Dark Mode (spec section 11.4) ────────────────────────────────
 
@@ -175,6 +175,167 @@ const LIGHT_PALETTE = {
   selection: '#e5e5e6',
 };
 
+// ─── Theme variants: six themes via mode × variant (plan 8d98da29 P1.2) ─────
+//
+// The default palettes above are tuned for full-color terminals. Two extra
+// variants make the UI accessible without hand-maintaining four more 70-token
+// tables: each derives from the mode base and overrides only the hue-critical
+// semantic tokens.
+//
+//  • daltonized — colorblind-safe (Okabe-Ito palette). Red/green become
+//    vermillion/bluish-green so deuteranopes/protanopes can still tell
+//    error from success and diff-added from diff-removed.
+//  • ansi — the 16 standard ANSI colors (xterm hex), so the theme reads well
+//    on low-color terminals and respects a user's terminal palette intent.
+
+type Palette = typeof DARK_PALETTE;
+
+/** Okabe-Ito colorblind-safe overrides — valid against both dark and light bases. */
+const DALTONIZED_OVERRIDES: Partial<Palette> = {
+  primary: '#0072B2', // blue
+  secondary: '#56B4E9', // sky blue
+  accent: '#CC79A7', // reddish purple
+  error: '#D55E00', // vermillion — distinct from success even with no red perception
+  warning: '#E69F00', // orange
+  success: '#009E73', // bluish green
+  info: '#56B4E9',
+  emphasized: '#F0E442', // yellow
+  borderFocused: '#0072B2',
+  diffAdded: '#009E73',
+  diffRemoved: '#D55E00',
+  diffHighlightAdded: '#009E73',
+  diffHighlightRemoved: '#D55E00',
+  syntaxKeyword: '#CC79A7',
+  syntaxFunction: '#56B4E9',
+  syntaxString: '#009E73',
+  syntaxNumber: '#E69F00',
+  syntaxType: '#0072B2',
+  markdownHeading: '#0072B2',
+  markdownLink: '#56B4E9',
+  markdownLinkText: '#56B4E9',
+  markdownEmph: '#CC79A7',
+  markdownListItem: '#0072B2',
+  markdownListEnumeration: '#0072B2',
+  prompt: '#56B4E9',
+  highlight: '#CC79A7',
+};
+
+/** Standard ANSI (xterm) overrides — keeps each mode's text/bg, swaps accents to 16-color-safe hexes. */
+const ANSI_OVERRIDES: Partial<Palette> = {
+  primary: '#0000ee', // blue
+  secondary: '#00cdcd', // cyan
+  accent: '#cd00cd', // magenta
+  error: '#cd0000', // red
+  warning: '#cdcd00', // yellow
+  success: '#00cd00', // green
+  info: '#00cdcd', // cyan
+  borderFocused: '#0000ee',
+  diffAdded: '#00cd00',
+  diffRemoved: '#cd0000',
+  diffHighlightAdded: '#00ff00',
+  diffHighlightRemoved: '#ff0000',
+  syntaxComment: '#7f7f7f',
+  syntaxKeyword: '#cd00cd',
+  syntaxFunction: '#0000ee',
+  syntaxString: '#00cd00',
+  syntaxNumber: '#cdcd00',
+  syntaxType: '#00cdcd',
+  markdownHeading: '#0000ee',
+  markdownLink: '#00cdcd',
+  markdownLinkText: '#00cdcd',
+  markdownEmph: '#cd00cd',
+  markdownListItem: '#0000ee',
+  markdownListEnumeration: '#0000ee',
+  prompt: '#00cdcd',
+  highlight: '#cd00cd',
+};
+
+/** The six concrete theme names: mode × variant. */
+export const THEME_NAMES = [
+  'dark',
+  'light',
+  'dark-daltonized',
+  'light-daltonized',
+  'dark-ansi',
+  'light-ansi',
+] as const;
+
+export type ThemeName = (typeof THEME_NAMES)[number];
+
+/** A persisted theme choice: a concrete theme name, or 'auto' to detect mode. */
+export const THEME_SETTINGS = ['auto', ...THEME_NAMES] as const;
+export type ThemeSettingName = (typeof THEME_SETTINGS)[number];
+
+/** Registry of all six palettes, built once from the two bases + variant overrides. */
+export const THEMES: Record<ThemeName, Palette> = {
+  'dark': DARK_PALETTE,
+  'light': LIGHT_PALETTE,
+  'dark-daltonized': { ...DARK_PALETTE, ...DALTONIZED_OVERRIDES },
+  'light-daltonized': { ...LIGHT_PALETTE, ...DALTONIZED_OVERRIDES },
+  'dark-ansi': { ...DARK_PALETTE, ...ANSI_OVERRIDES },
+  'light-ansi': { ...LIGHT_PALETTE, ...ANSI_OVERRIDES },
+};
+
+/** Extract the mode ('dark' | 'light') a theme name is built on. */
+export function themeNameMode(name: ThemeName): 'dark' | 'light' {
+  return name.startsWith('light') ? 'light' : 'dark';
+}
+
+/** Human-readable label for a theme setting, used by the /theme picker. */
+export function themeSettingLabel(setting: ThemeSettingName): string {
+  if (setting === 'auto') return 'Auto (match terminal)';
+  const mode = themeNameMode(setting);
+  const variant = setting.endsWith('-daltonized')
+    ? ' · colorblind-safe'
+    : setting.endsWith('-ansi')
+      ? ' · 16-color'
+      : '';
+  return `${mode[0].toUpperCase()}${mode.slice(1)}${variant}`;
+}
+
+// Active theme name — defaults to the detected mode's plain variant. The /theme
+// command and startup resolution update this via setActiveTheme().
+let activeThemeName: ThemeName | null = null;
+
+/** Set the active theme by name (one of THEME_NAMES). */
+export function setActiveTheme(name: ThemeName): void {
+  activeThemeName = name;
+}
+
+/** The currently active theme name, falling back to the detected mode's plain variant. */
+export function getActiveTheme(): ThemeName {
+  return activeThemeName ?? (getThemeMode() === 'light' ? 'light' : 'dark');
+}
+
+/** The currently active palette (all ~70 resolved tokens). */
+function getActivePalette(): Palette {
+  return THEMES[getActiveTheme()];
+}
+
+/** The variant suffix of a theme setting ('' | '-daltonized' | '-ansi'). */
+function variantSuffix(setting: ThemeSettingName): '' | '-daltonized' | '-ansi' {
+  if (setting.endsWith('-daltonized')) return '-daltonized';
+  if (setting.endsWith('-ansi')) return '-ansi';
+  return '';
+}
+
+/**
+ * Apply a full theme setting (one of THEME_SETTINGS). Resolves the concrete mode
+ * via the existing fg/detection machinery — so an explicit HASNA_THEME override
+ * still wins for the dark/light axis — while preserving the chosen variant, then
+ * activates the matching palette. Returns the concrete theme name applied.
+ *
+ * This is the single entry point the /theme picker and startup should call.
+ */
+export function applyThemeName(setting: ThemeSettingName): ThemeName {
+  const requestedMode = setting === 'auto' ? 'auto' : themeNameMode(setting);
+  const mode = applyThemeSetting(requestedMode);
+  const variant = setting === 'auto' ? '' : variantSuffix(setting);
+  const name = `${mode}${variant}` as ThemeName;
+  setActiveTheme(name);
+  return name;
+}
+
 export type SemanticColor = keyof typeof DARK_PALETTE;
 
 /**
@@ -197,10 +358,10 @@ export function themeColor(name: SemanticColor | string): string {
     purple: 'accent',
   };
   const resolved = LEGACY_ALIASES[name] ?? name;
-  const palette = getThemeMode() === 'light' ? LIGHT_PALETTE : DARK_PALETTE;
+  const palette = getActivePalette();
   return (palette as any)[resolved] ?? resolved;
 }
 
 export function getThemePalette() {
-  return getThemeMode() === 'light' ? { ...LIGHT_PALETTE } : { ...DARK_PALETTE };
+  return { ...getActivePalette() };
 }

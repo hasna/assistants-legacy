@@ -1,6 +1,6 @@
 # @hasna/assistants
 
-Personal AI assistant that runs in your terminal — powered by Claude
+Personal AI assistant that runs in your terminal — powered by the AI SDK
 
 [![npm](https://img.shields.io/npm/v/@hasna/assistants)](https://www.npmjs.com/package/@hasna/assistants)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)

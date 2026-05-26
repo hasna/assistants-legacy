@@ -17,6 +17,7 @@ import {
   getFeatureStatusMessage,
   isAWSConfigured,
   isElevenLabsConfigured,
+  isAnyLLMConfigured,
   isOpenAIConfigured,
   isExaConfigured,
   isSystemVoiceAvailable,
@@ -32,7 +33,7 @@ function main() {
 
   // Individual checks
   const checks = [
-    { name: 'ANTHROPIC_API_KEY', fn: () => !!process.env.ANTHROPIC_API_KEY },
+    { name: 'Any LLM provider API key', fn: isAnyLLMConfigured },
     { name: 'AWS configured', fn: isAWSConfigured },
     { name: 'ElevenLabs TTS', fn: isElevenLabsConfigured },
     { name: 'OpenAI/Whisper STT', fn: isOpenAIConfigured },
@@ -54,8 +55,9 @@ function main() {
   console.log('\n=== Usage Recommendations ===\n');
 
   if (!features.coreChat) {
-    console.log('⚠️  Set ANTHROPIC_API_KEY to use the assistant:');
+    console.log('⚠️  Set one LLM provider API key to use the assistant:');
     console.log('   export ANTHROPIC_API_KEY="sk-ant-..."');
+    console.log('   # or OPENAI_API_KEY / GEMINI_API_KEY / XAI_API_KEY / MISTRAL_API_KEY');
   } else {
     console.log('✓ Ready to use the assistant!');
   }

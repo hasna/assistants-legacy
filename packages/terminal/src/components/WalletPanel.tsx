@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
 
@@ -137,6 +138,7 @@ export function WalletPanel({
   error,
 }: WalletPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
+  useClearOnChange(mode);
   const [cardIndex, setCardIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<CardEntry | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -459,7 +461,7 @@ export function WalletPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : themeColor('success')}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
@@ -536,7 +538,7 @@ export function WalletPanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -572,7 +574,7 @@ export function WalletPanel({
         </box>
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
             </text>
           </box>
@@ -648,7 +650,7 @@ export function WalletPanel({
 
       {(error || statusMessage) && (
         <box marginTop={1}>
-          <text fg={(error || statusMessage || '').startsWith('Error') ? 'red' : 'yellow'}>
+          <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
             {error || statusMessage}
           </text>
         </box>

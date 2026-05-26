@@ -222,7 +222,7 @@ describe('terminal panels', () => {
   test('ConfigPanel renders overview', async () => {
     const { captureCharFrame, renderOnce } = await testRender(
       <ConfigPanel
-        config={{ llm: { model: DEFAULT_MODEL, maxTokens: 8192 } } as any}
+        config={{ llm: { model: DEFAULT_MODEL, maxOutputTokens: 8192 } } as any}
         userConfig={null}
         projectConfig={null}
         localConfig={null}
@@ -631,7 +631,7 @@ describe('terminal panels', () => {
     await waitForText('> ord_second');
   });
 
-  test.todo('OrdersPanel switches tabs with keyboard shortcuts', async () => {
+  test('OrdersPanel switches tabs with keyboard shortcuts', async () => {
     const nowIso = new Date().toISOString();
     const manager = {
       listOrders: () => ([
@@ -681,7 +681,7 @@ describe('terminal panels', () => {
     await waitForText('Summary');
   });
 
-  test.todo('OrdersPanel applies status filter via bracket keys', async () => {
+  test('OrdersPanel applies status filter via bracket keys', async () => {
     const nowIso = new Date().toISOString();
     const manager = {
       listOrders: () => ([
@@ -947,7 +947,7 @@ describe('terminal panels', () => {
 
     await waitForText('Quick Start');
     mockInput.pressKey('j');
-    await waitForText('> 2. Core Workflow');
+    await waitForText('❯ 2. Core Workflow'); // design-system ListItem pointer (plan P2.2)
     mockInput.pressEnter();
     await waitForText('Lines 1-');
     mockInput.pressKey('b');

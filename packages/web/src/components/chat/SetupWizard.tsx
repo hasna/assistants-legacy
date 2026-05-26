@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LLM_PROVIDERS } from '@hasna/assistants-shared';
 import { toast } from '@/lib/toast';
 
 interface SetupWizardProps {
@@ -8,13 +9,13 @@ interface SetupWizardProps {
 }
 
 export function SetupWizard({ onComplete }: SetupWizardProps) {
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [openaiKey, setOpenaiKey] = useState('');
+  const [providerKeys, setProviderKeys] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const hasAnyKey = Object.values(providerKeys).some((value) => value.trim().length > 0);
 
   const handleSave = async () => {
-    if (!anthropicKey.trim()) {
-      toast.error('Anthropic API key is required');
+    if (!hasAnyKey) {
+      toast.error('At least one provider API key is required');
       return;
     }
     setSaving(true);
@@ -22,10 +23,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       const res = await fetch('/api/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          anthropicKey: anthropicKey.trim(),
-          openaiKey: openaiKey.trim() || undefined,
-        }),
+        body: JSON.stringify({ providerKeys }),
       });
       const data = await res.json();
       if (data.success) {
@@ -52,44 +50,33 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-          {/* Anthropic Key */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Anthropic API Key <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              value={anthropicKey}
-              onChange={(e) => setAnthropicKey(e.target.value)}
-              placeholder="sk-ant-..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Get your key at{' '}
-              <span className="text-primary">console.anthropic.com</span>
-            </p>
-          </div>
-
-          {/* OpenAI Key (optional) */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              OpenAI API Key <span className="text-muted-foreground text-xs">(optional)</span>
-            </label>
-            <input
-              type="password"
-              value={openaiKey}
-              onChange={(e) => setOpenaiKey(e.target.value)}
-              placeholder="sk-..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Enables GPT models, Whisper STT, and DALL-E.
-            </p>
-          </div>
+          {LLM_PROVIDERS.map((provider) => (
+            <div key={provider.id}>
+              <label className="block text-sm font-medium mb-1.5">
+                {provider.label} API Key
+              </label>
+              <input
+                type="password"
+                value={providerKeys[provider.id] ?? ''}
+                onChange={(e) => setProviderKeys((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                placeholder={provider.apiKeyEnv}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {provider.description}
+                {provider.docsUrl ? (
+                  <>
+                    {' '}
+                    <span className="text-primary">{provider.docsUrl.replace(/^https?:\/\//, '')}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          ))}
 
           <button
             onClick={handleSave}
-            disabled={saving || !anthropicKey.trim()}
+            disabled={saving || !hasAnyKey}
             className="w-full rounded-lg bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving...' : 'Save & Start'}

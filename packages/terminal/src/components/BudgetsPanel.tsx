@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { BudgetConfig, BudgetLimits, BudgetUsage } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { BudgetPanel } from './BudgetPanel';
@@ -65,6 +66,7 @@ export function BudgetsPanel({
 }: BudgetsPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -370,8 +372,8 @@ export function BudgetsPanel({
         </box>
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>

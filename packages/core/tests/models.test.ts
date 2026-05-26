@@ -26,7 +26,7 @@ describe('Model Registry', () => {
     });
 
     it('should contain Gemini models', () => {
-      const geminiModels = MODELS.filter((m) => m.provider === 'gemini');
+      const geminiModels = MODELS.filter((m) => m.provider === 'google');
       expect(geminiModels.length).toBeGreaterThan(0);
       expect(geminiModels.some((m) => m.id.includes('gemini'))).toBe(true);
     });
@@ -65,14 +65,14 @@ describe('Model Registry', () => {
 
   describe('getModelById', () => {
     it('should return model for valid ID', () => {
-      const model = getModelById('claude-opus-4-5-20251101');
+      const model = getModelById('anthropic:claude-opus-4-5-20251101');
       expect(model).toBeDefined();
       expect(model?.name).toBe('Claude Opus 4.5');
       expect(model?.provider).toBe('anthropic');
     });
 
     it('should return model for OpenAI ID', () => {
-      const model = getModelById('gpt-5.2');
+      const model = getModelById('openai:gpt-5.2');
       expect(model).toBeDefined();
       expect(model?.name).toBe('GPT-5.2 Thinking');
       expect(model?.provider).toBe('openai');
@@ -98,33 +98,33 @@ describe('Model Registry', () => {
     });
 
     it('should return Gemini models', () => {
-      const models = getModelsByProvider('gemini');
+      const models = getModelsByProvider('google');
       expect(models.length).toBeGreaterThan(0);
-      expect(models.every((m) => m.provider === 'gemini')).toBe(true);
+      expect(models.every((m) => m.provider === 'google')).toBe(true);
     });
   });
 
   describe('getProviderForModel', () => {
     it('should return anthropic for Claude models', () => {
-      expect(getProviderForModel('claude-opus-4-5-20251101')).toBe('anthropic');
-      expect(getProviderForModel('claude-sonnet-4-20250514')).toBe('anthropic');
+      expect(getProviderForModel('anthropic:claude-opus-4-5-20251101')).toBe('anthropic');
+      expect(getProviderForModel('anthropic:claude-sonnet-4-20250514')).toBe('anthropic');
     });
 
     it('should return openai for GPT models', () => {
-      expect(getProviderForModel('gpt-4o')).toBe('openai');
-      expect(getProviderForModel('gpt-5.2-pro')).toBe('openai');
+      expect(getProviderForModel('openai:gpt-4o')).toBe('openai');
+      expect(getProviderForModel('openai:gpt-5.2-pro')).toBe('openai');
     });
 
-    it('should return gemini for Gemini models', () => {
-      expect(getProviderForModel('gemini-2.5-pro')).toBe('gemini');
+    it('should return google for Gemini models', () => {
+      expect(getProviderForModel('google:gemini-2.5-pro')).toBe('google');
     });
 
     it('should return xai for Grok models', () => {
-      expect(getProviderForModel('grok-4')).toBe('xai');
+      expect(getProviderForModel('xai:grok-4')).toBe('xai');
     });
 
     it('should return mistral for Mistral models', () => {
-      expect(getProviderForModel('mistral-small-latest')).toBe('mistral');
+      expect(getProviderForModel('mistral:mistral-small-latest')).toBe('mistral');
     });
 
     it('should return undefined for invalid models', () => {
@@ -134,9 +134,9 @@ describe('Model Registry', () => {
 
   describe('isValidModel', () => {
     it('should return true for valid models', () => {
-      expect(isValidModel('claude-opus-4-5-20251101')).toBe(true);
-      expect(isValidModel('gpt-5.2')).toBe(true);
-      expect(isValidModel('gemini-2.5-pro')).toBe(true);
+      expect(isValidModel('anthropic:claude-opus-4-5-20251101')).toBe(true);
+      expect(isValidModel('openai:gpt-5.2')).toBe(true);
+      expect(isValidModel('google:gemini-2.5-pro')).toBe(true);
     });
 
     it('should return false for invalid models', () => {
@@ -148,15 +148,15 @@ describe('Model Registry', () => {
     it('should return array of model IDs', () => {
       const ids = getAllModelIds();
       expect(ids.length).toBe(MODELS.length);
-      expect(ids).toContain('claude-opus-4-5-20251101');
-      expect(ids).toContain('gpt-5.2');
+      expect(ids).toContain('anthropic:claude-opus-4-5-20251101');
+      expect(ids).toContain('openai:gpt-5.2');
     });
   });
 
   describe('getModelDisplayName', () => {
     it('should return display name for valid model', () => {
-      expect(getModelDisplayName('claude-opus-4-5-20251101')).toBe('Claude Opus 4.5');
-      expect(getModelDisplayName('gpt-5.2')).toBe('GPT-5.2 Thinking');
+      expect(getModelDisplayName('anthropic:claude-opus-4-5-20251101')).toBe('Claude Opus 4.5');
+      expect(getModelDisplayName('openai:gpt-5.2')).toBe('GPT-5.2 Thinking');
     });
 
     it('should return ID for invalid model', () => {

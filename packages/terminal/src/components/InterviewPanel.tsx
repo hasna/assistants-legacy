@@ -129,7 +129,7 @@ function OptionList({
         return (
           <box key={opt.label} flexDirection="column">
             <box>
-              <text fg={isSelected ? 'cyan' : undefined}>
+              <text fg={isSelected ? themeColor('cyan') : undefined}>
                 {pointer} {idx + 1}. {isMultiSelect ? `${checkbox} ` : ''}{opt.label}
               </text>
             </box>
@@ -145,7 +145,7 @@ function OptionList({
       {/* "Other" / type something option */}
       <box flexDirection="column" marginTop={0}>
         <box>
-          <text fg={selectedOptionIndex === otherIndex || isInOtherInput ? 'cyan' : undefined}>
+          <text fg={selectedOptionIndex === otherIndex || isInOtherInput ? themeColor('cyan') : undefined}>
             {selectedOptionIndex === otherIndex && !isInOtherInput ? POINTER : ' '} {options.length + 1}. Type something.
           </text>
         </box>
@@ -208,10 +208,10 @@ function ReviewPanel({
 
       <text fg={themeColor('muted')}>Ready to submit your answers?</text>
       <box flexDirection="column" marginTop={1}>
-        <text fg={selectedIndex === 0 ? 'cyan' : undefined}>
+        <text fg={selectedIndex === 0 ? themeColor('cyan') : undefined}>
           {selectedIndex === 0 ? POINTER : ' '} Submit answers
         </text>
-        <text fg={selectedIndex === 1 ? 'cyan' : undefined}>
+        <text fg={selectedIndex === 1 ? themeColor('cyan') : undefined}>
           {selectedIndex === 1 ? POINTER : ' '} Cancel
         </text>
       </box>
@@ -545,10 +545,10 @@ export function InterviewPanel({
           {Divider}
           <box flexDirection="column">
             <box flexDirection="row" gap={1}>
-              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
+              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? themeColor('cyan') : undefined}>
                 {state.isInBottomMenu && state.bottomMenuIndex === 0 ? POINTER : ' '}
               </text>
-              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? 'cyan' : undefined}>
+              <text fg={state.isInBottomMenu && state.bottomMenuIndex === 0 ? themeColor('cyan') : undefined}>
                 {optionCount + 2}. Chat about this
               </text>
             </box>

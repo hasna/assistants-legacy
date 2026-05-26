@@ -48,7 +48,7 @@ export interface CreateSessionOptions {
   initialMessages?: Message[];
   /** Optional original startedAt timestamp (ISO string) */
   startedAt?: string;
-  /** Optional backend override (native, claude-agent-sdk, codex-sdk) */
+  /** Optional backend override. Only the AI SDK runtime is supported. */
   backend?: string;
   /** Parent session ID — set for subagent sessions */
   parentSessionId?: string;

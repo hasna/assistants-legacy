@@ -1,6 +1,9 @@
 import { describe, expect, test, spyOn, beforeEach, afterEach } from 'bun:test';
 import type { LLMConfig } from '@hasna/assistants-shared';
-import { createLLMClient, ProviderMismatchError } from '../src/llm/client';
+import { createLLMClient, parseProviderModel } from '../src/llm/client';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 describe('createLLMClient', () => {
   let consoleWarnSpy: ReturnType<typeof spyOn>;
@@ -13,180 +16,102 @@ describe('createLLMClient', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  describe('provider auto-detection', () => {
-    test('auto-detects anthropic provider from claude model', async () => {
-      const client = await createLLMClient({
-        model: 'claude-opus-4-5-20251101',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('claude-opus-4-5-20251101');
-    });
-
-    test('auto-detects anthropic provider from claude-sonnet model', async () => {
-      const client = await createLLMClient({
-        model: 'claude-sonnet-4-20250514',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('claude-sonnet-4-20250514');
-    });
-
-    test('auto-detects openai provider from gpt model', async () => {
-      // This will throw because OPENAI_API_KEY is not set, but we can catch the error
-      // to verify it tried to create an OpenAI client
-      try {
-        await createLLMClient({
-          model: 'gpt-4o',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('OPENAI_API_KEY');
+  describe('provider-prefixed models', () => {
+    test('builds a client for each supported provider and reports the configured model', async () => {
+      const cases: Array<[string, string]> = [
+        ['anthropic', 'anthropic:claude-opus-4-5-20251101'],
+        ['openai', 'openai:gpt-4o'],
+        ['google', 'google:gemini-2.5-pro'],
+        ['xai', 'xai:grok-4'],
+        ['mistral', 'mistral:mistral-large-latest'],
+      ];
+      for (const [, modelId] of cases) {
+        // An explicit apiKey avoids any dependence on the environment.
+        const client = await createLLMClient({ model: modelId, apiKey: 'test-key' } as LLMConfig);
+        expect(client.getModel()).toBe(modelId);
       }
     });
 
-    test('auto-detects gemini provider from gemini model', async () => {
-      try {
-        await createLLMClient({
-          model: 'gemini-2.5-pro',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('GEMINI_API_KEY');
-      }
+    test('preserves colons in the model portion of the id', async () => {
+      const client = await createLLMClient({ model: 'openai:ft:gpt-4o:custom', apiKey: 'k' } as LLMConfig);
+      expect(client.getModel()).toBe('openai:ft:gpt-4o:custom');
     });
 
-    test('auto-detects xai provider from grok model', async () => {
-      try {
-        await createLLMClient({
-          model: 'grok-4',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('XAI_API_KEY');
-      }
-    });
-
-    test('auto-detects mistral provider from mistral model', async () => {
-      try {
-        await createLLMClient({
-          model: 'mistral-large-latest',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('MISTRAL_API_KEY');
-      }
-    });
-
-    test('defaults to anthropic for unknown models without explicit provider', async () => {
-      const client = await createLLMClient({
-        model: 'some-unknown-model',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('some-unknown-model');
-    });
-  });
-
-  describe('provider validation', () => {
-    test('uses correct provider when explicit provider is anthropic for claude model', async () => {
-      const client = await createLLMClient({
-        provider: 'anthropic',
-        model: 'claude-opus-4-5-20251101',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('claude-opus-4-5-20251101');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-    });
-
-    test('warns and uses correct provider when openai is specified for claude model', async () => {
-      const client = await createLLMClient({
-        provider: 'openai',
-        model: 'claude-opus-4-5-20251101',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('claude-opus-4-5-20251101');
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("model 'claude-opus-4-5-20251101' belongs to provider 'anthropic'")
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("'openai' was specified")
-      );
-    });
-
-    test('warns and uses correct provider when anthropic is specified for gpt model', async () => {
-      // Will fail because no OPENAI_API_KEY, but should log warning first
-      try {
-        await createLLMClient({
-          provider: 'anthropic',
-          model: 'gpt-4o',
-        });
-      } catch {
-        // Expected to fail due to missing API key
-      }
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("model 'gpt-4o' belongs to provider 'openai'")
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("'anthropic' was specified")
-      );
-    });
-
-    test('uses specified provider for unknown model', async () => {
-      const client = await createLLMClient({
-        provider: 'anthropic',
-        model: 'unknown-custom-model',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('unknown-custom-model');
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-    });
-
-    test('uses specified openai provider for unknown model', async () => {
-      try {
-        await createLLMClient({
-          provider: 'openai',
-          model: 'custom-finetuned-gpt',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('OPENAI_API_KEY');
-      }
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
+    test('exposes the effort level (defaults to medium)', async () => {
+      const client = await createLLMClient({ model: 'anthropic:claude-opus-4-5-20251101', apiKey: 'k' } as LLMConfig);
+      expect(client.getEffortLevel()).toBe('medium');
+      client.setEffortLevel('high');
+      expect(client.getEffortLevel()).toBe('high');
     });
   });
 
   describe('error handling', () => {
-    test('throws for unsupported provider', async () => {
+    test('throws when an unknown model id has no provider prefix', async () => {
+      // Unknown bare ids can't be inferred from the catalog, so they still fail.
       await expect(
-        createLLMClient({
-          provider: 'unsupported' as LLMConfig['provider'],
-          model: 'some-model',
-        })
-      ).rejects.toThrow('Unsupported LLM provider: unsupported');
+        createLLMClient({ model: 'no-such-bare-model', apiKey: 'k' } as LLMConfig)
+      ).rejects.toThrow(/provider-prefixed/);
     });
 
-    test('returns anthropic client when provider is anthropic', async () => {
-      const client = await createLLMClient({
-        provider: 'anthropic',
-        model: 'stub',
-        apiKey: 'test-key',
-      });
-      expect(client.getModel()).toBe('stub');
+    test('accepts a known bare model id by inferring its provider (backward compat)', async () => {
+      // Older configs store bare ids like "claude-opus-4-5-20251101"; these are
+      // normalized to "anthropic:..." so existing setups keep working.
+      const client = await createLLMClient({ model: 'claude-opus-4-5-20251101', apiKey: 'k' } as LLMConfig);
+      expect(client.getModel()).toBe('anthropic:claude-opus-4-5-20251101');
+    });
+
+    test('throws for an unsupported provider prefix', async () => {
+      await expect(
+        createLLMClient({ model: 'unsupported:some-model', apiKey: 'k' } as LLMConfig)
+      ).rejects.toThrow(/Unsupported AI SDK provider/);
+    });
+
+    test('throws a helpful error when no API key is available', async () => {
+      // Key resolution checks env vars and then ~/.secrets, so isolate both:
+      // clear the env var and point HOME at a dir with no .secrets file.
+      const savedKey = process.env.MISTRAL_API_KEY;
+      const savedHome = process.env.HOME;
+      delete process.env.MISTRAL_API_KEY;
+      process.env.HOME = mkdtempSync(join(tmpdir(), 'llm-nokey-'));
+      try {
+        await expect(
+          createLLMClient({ model: 'mistral:mistral-large-latest' } as LLMConfig)
+        ).rejects.toThrow(/MISTRAL_API_KEY not found/);
+      } finally {
+        if (savedKey === undefined) delete process.env.MISTRAL_API_KEY;
+        else process.env.MISTRAL_API_KEY = savedKey;
+        if (savedHome === undefined) delete process.env.HOME;
+        else process.env.HOME = savedHome;
+      }
     });
   });
 });
 
-describe('ProviderMismatchError', () => {
-  test('has correct message format', () => {
-    const error = new ProviderMismatchError('openai', 'claude-opus-4-5-20251101', 'anthropic');
-    expect(error.message).toContain("model 'claude-opus-4-5-20251101' belongs to provider 'anthropic'");
-    expect(error.message).toContain("'openai' was specified");
-    expect(error.message).toContain("Using correct provider 'anthropic'");
-    expect(error.specifiedProvider).toBe('openai');
-    expect(error.model).toBe('claude-opus-4-5-20251101');
-    expect(error.detectedProvider).toBe('anthropic');
+describe('parseProviderModel', () => {
+  test('splits a provider-prefixed model id', () => {
+    expect(parseProviderModel('anthropic:claude-sonnet-4-6')).toEqual({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+    });
   });
 
-  test('has correct name', () => {
-    const error = new ProviderMismatchError('openai', 'model', 'anthropic');
-    expect(error.name).toBe('ProviderMismatchError');
+  test('keeps colons that appear inside the model portion', () => {
+    expect(parseProviderModel('openai:gpt-4o:2024')).toEqual({
+      provider: 'openai',
+      model: 'gpt-4o:2024',
+    });
+  });
+
+  test('throws when no provider prefix is present', () => {
+    expect(() => parseProviderModel('claude-sonnet-4-6')).toThrow(/provider-prefixed/);
+  });
+
+  test('throws when the prefix is empty or the model is empty', () => {
+    expect(() => parseProviderModel(':model')).toThrow(/provider-prefixed/);
+    expect(() => parseProviderModel('anthropic:')).toThrow(/provider-prefixed/);
+  });
+
+  test('throws for an unsupported provider', () => {
+    expect(() => parseProviderModel('madeup:some-model')).toThrow(/Unsupported AI SDK provider/);
   });
 });

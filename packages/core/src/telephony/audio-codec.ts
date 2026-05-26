@@ -6,9 +6,12 @@
  * This module handles the conversion between these formats.
  */
 
-// mulaw encoding/decoding lookup tables
-const MULAW_MAX = 0x1fff;
-const MULAW_BIAS = 33;
+// G.711 mu-law constants. The clip limit (32635) keeps samples within the
+// 14-bit magnitude the codec encodes, and the bias (0x84 = 132) is the standard
+// value the encode/decode segment math is defined against. Using a smaller bias
+// or clip silently distorts the reconstructed signal.
+const MULAW_MAX = 32635;
+const MULAW_BIAS = 0x84;
 
 /**
  * Encode a single 16-bit PCM sample to mulaw byte

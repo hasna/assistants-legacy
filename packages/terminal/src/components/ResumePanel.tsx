@@ -36,7 +36,8 @@ function truncate(text: string, maxLen: number): string {
   return `${text.slice(0, maxLen - 3)}...`;
 }
 
-function normalizeCwd(value: string): string {
+function normalizeCwd(value: string | undefined): string {
+  if (!value) return '';
   return value.replace(/\/+$/, '');
 }
 
@@ -70,10 +71,10 @@ export function ResumePanel({
       const time = formatRelativeTime(session.updatedAt).padEnd(8);
       const assistant = (session.assistantId || 'default').slice(0, 12).padEnd(12);
       const messages = String(session.messageCount ?? 0).padStart(4);
-      const cwd = truncate(session.cwd, 48);
+      const cwd = truncate(session.cwd ?? '', 48);
       return {
         name: `${time} ${assistant} ${messages} ${cwd}`,
-        description: `ID: ${session.id} | ${session.cwd}`,
+        description: `ID: ${session.id} | ${session.cwd ?? ''}`,
         value: session,
       };
     });

@@ -10,6 +10,12 @@ import { LocalInboxCache } from './storage/local-cache';
 import { EmailParser } from './parser/email-parser';
 import { createEmailProvider, type EmailProvider, type SendEmailOptions } from './providers';
 
+export interface InboxStorageClient {
+  listObjects(options?: { maxKeys?: number }): Promise<{ objects: { key: string }[] }>;
+  getObject(key: string): Promise<Buffer>;
+  extractEmailId(key: string): string;
+}
+
 export interface InboxManagerOptions {
   /** Assistant ID for scoping */
   assistantId: string;
@@ -19,6 +25,10 @@ export interface InboxManagerOptions {
   config: InboxConfig;
   /** Base path for local cache (default: ~/.hasna/assistants/inbox) */
   basePath: string;
+  /** Storage client override for tests and embedded runtimes */
+  s3Client?: InboxStorageClient;
+  /** Email provider override for tests and embedded runtimes */
+  emailProvider?: EmailProvider;
 }
 
 /**
@@ -28,7 +38,7 @@ export class InboxManager {
   private assistantId: string;
   private assistantName: string;
   private config: InboxConfig;
-  private s3Client: S3InboxClient | null = null;
+  private s3Client: InboxStorageClient | null = null;
   private localCache: LocalInboxCache;
   private emailParser: EmailParser;
   private emailProvider: EmailProvider | null = null;
@@ -48,7 +58,9 @@ export class InboxManager {
     this.emailParser = new EmailParser();
 
     // Initialize S3 client if storage is configured
-    if (this.config.storage?.bucket) {
+    if (options.s3Client) {
+      this.s3Client = options.s3Client;
+    } else if (this.config.storage?.bucket) {
       this.s3Client = new S3InboxClient({
         bucket: this.config.storage.bucket,
         region: this.config.storage.region,
@@ -56,6 +68,8 @@ export class InboxManager {
         credentialsProfile: this.config.storage.credentialsProfile,
       });
     }
+
+    this.emailProvider = options.emailProvider ?? null;
   }
 
   /**

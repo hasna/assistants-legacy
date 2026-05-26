@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { BudgetConfig, BudgetLimits } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
@@ -107,6 +108,7 @@ export function BudgetPanel({
   onCancel,
 }: BudgetPanelProps) {
   const [mode, setMode] = useState<Mode>('overview');
+  useClearOnChange(mode);
   const [selectedPreset, setSelectedPreset] = useState(0);
 
   // Edit-limits state
@@ -372,14 +374,14 @@ export function BudgetPanel({
                 <box minWidth={15}>
                   {isEditing ? (
                     <text>
-                      <text fg={themeColor('info')}>{value}</text>
-                      <text fg={themeColor('info')}><b>_</b></text>
-                      <text fg={themeColor('muted')}> {field.unit}</text>
+                      <span fg={themeColor('info')}>{value}</span>
+                      <span fg={themeColor('info')}><b>_</b></span>
+                      <span fg={themeColor('muted')}> {field.unit}</span>
                     </text>
                   ) : (
                     <text fg={value ? undefined : themeColor('muted')}>
                       {value || 'unlimited'}
-                      {value ? <text fg={themeColor('muted')}> {field.unit}</text> : null}
+                      {value ? <span fg={themeColor('muted')}> {field.unit}</span> : null}
                     </text>
                   )}
                 </box>
@@ -395,7 +397,7 @@ export function BudgetPanel({
             <text attributes={editFieldIndex === EDIT_FIELDS.length ? 1 : undefined} fg={editFieldIndex !== EDIT_FIELDS.length ? "gray" : undefined}><b>
               {'On Exceeded'.padEnd(20)}
             </b></text>
-            <text fg={editOnExceeded === 'stop' ? 'red' : editOnExceeded === 'pause' ? 'yellow' : 'cyan'}>
+            <text fg={editOnExceeded === 'stop' ? themeColor('red') : editOnExceeded === 'pause' ? themeColor('yellow') : themeColor('cyan')}>
               {editOnExceeded}
             </text>
             {editFieldIndex === EDIT_FIELDS.length && (
@@ -430,8 +432,8 @@ export function BudgetPanel({
             return (
               <box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
                 <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
-                  {isSelected ? '>' : ' '} <text attributes={isSelected ? 1 : undefined}><b>{preset.name.padEnd(12)}</b></text>
-                  <text fg={isSelected ? themeColor('text') : "gray"}>{preset.description}</text>
+                  {isSelected ? '>' : ' '} <span attributes={isSelected ? 1 : undefined}><b>{preset.name.padEnd(12)}</b></span>
+                  <span fg={isSelected ? themeColor('text') : "gray"}>{preset.description}</span>
                 </text>
               </box>
             );
@@ -492,7 +494,7 @@ export function BudgetPanel({
 
           <box marginTop={1}>
             <text fg={themeColor('muted')}>On Exceeded: </text>
-            <text fg={config.onExceeded === 'stop' ? 'red' : config.onExceeded === 'pause' ? 'yellow' : 'cyan'}>
+            <text fg={config.onExceeded === 'stop' ? themeColor('red') : config.onExceeded === 'pause' ? themeColor('yellow') : themeColor('cyan')}>
               {config.onExceeded || 'warn'}
             </text>
           </box>
@@ -514,13 +516,13 @@ export function BudgetPanel({
   return (
     <box flexDirection="column" paddingY={1}>
       <box marginBottom={1}>
-        <text><b>Budget</b>{' — '}<span fg={config.enabled ? themeColor('success') : 'red'}>{config.enabled ? 'Enforcing' : 'Disabled'}</span></text>
+        <text><b>Budget</b>{' — '}<span fg={config.enabled ? themeColor('success') : themeColor('red')}>{config.enabled ? 'Enforcing' : 'Disabled'}</span></text>
       </box>
 
       <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Status */}
         <box marginBottom={1}>
-          <text><b>Status: </b><span fg={overallExceeded ? 'red' : config.enabled ? themeColor('success') : themeColor('muted')}>{overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}</span></text>
+          <text><b>Status: </b><span fg={overallExceeded ? themeColor('red') : config.enabled ? themeColor('success') : themeColor('muted')}>{overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}</span></text>
         </box>
 
         {/* Usage */}

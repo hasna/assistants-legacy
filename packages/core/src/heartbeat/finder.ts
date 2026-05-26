@@ -27,7 +27,9 @@ export interface RecoverableSession {
 export function findRecoverableSessions(
   staleThresholdMs = 120000,
   maxAgeMs = 24 * 60 * 60 * 1000,
-  baseDir?: string
+  baseDir?: string,
+  /** Cap the number of sessions returned (most-recent first). Keeps the recovery UI usable. */
+  maxResults = 25
 ): RecoverableSession[] {
   const recoverableSessions: RecoverableSession[] = [];
 
@@ -117,6 +119,12 @@ export function findRecoverableSessions(
         // Non-critical — session_messages table may not exist or session has no messages
       }
 
+      // An empty session has nothing worth recovering — skip it so the recovery
+      // list isn't flooded with abandoned/never-used launches.
+      if (messageCount === 0) {
+        continue;
+      }
+
       recoverableSessions.push({
         sessionId: row.session_id,
         heartbeat,
@@ -138,7 +146,7 @@ export function findRecoverableSessions(
     (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime()
   );
 
-  return recoverableSessions;
+  return maxResults > 0 ? recoverableSessions.slice(0, maxResults) : recoverableSessions;
 }
 
 /**

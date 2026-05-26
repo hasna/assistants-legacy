@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Skill } from '@hasna/assistants-shared';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import type { CreateSkillOptions, CreateSkillResult, SkillScope } from '@hasna/assistants-core';
@@ -95,6 +96,7 @@ export function SkillsPanel({
   const [skills, setSkills] = useState(initialSkills);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
+  useClearOnChange(mode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailSkill, setDetailSkill] = useState<Skill | null>(null);
 
@@ -454,7 +456,7 @@ export function SkillsPanel({
                 {SCOPE_OPTIONS.map((opt, idx) => (
                   <box key={opt.id}>
                     <text bg={idx === createScopeIndex ? themeColor('primary') : undefined}>
-                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <text fg={themeColor('muted')}>{opt.desc}</text>
+                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <span fg={themeColor('muted')}>{opt.desc}</span>
                     </text>
                   </box>
                 ))}
@@ -587,11 +589,11 @@ export function SkillsPanel({
             <box flexDirection="column">
               <text><b>Confirm new skill:</b></text>
               <box flexDirection="column" marginTop={1} marginLeft={1}>
-                <text>Scope: <text fg={themeColor('info')}>{SCOPE_OPTIONS[createScopeIndex].label}</text></text>
-                <text>Name: <text fg={themeColor('info')}>{createName}</text></text>
-                {createDescription && <text>Description: <text fg={themeColor('muted')}>{createDescription}</text></text>}
-                {createTools && <text>Tools: <text fg={themeColor('muted')}>{createTools}</text></text>}
-                {createHint && <text>Hint: <text fg={themeColor('muted')}>{createHint}</text></text>}
+                <text>Scope: <span fg={themeColor('info')}>{SCOPE_OPTIONS[createScopeIndex].label}</span></text>
+                <text>Name: <span fg={themeColor('info')}>{createName}</span></text>
+                {createDescription && <text>Description: <span fg={themeColor('muted')}>{createDescription}</span></text>}
+                {createTools && <text>Tools: <span fg={themeColor('muted')}>{createTools}</span></text>}
+                {createHint && <text>Hint: <span fg={themeColor('muted')}>{createHint}</span></text>}
                 {createContent && (
                   <>
                     <text>Content:</text>
@@ -652,8 +654,8 @@ export function SkillsPanel({
         )}
         <box marginTop={1}>
           <text>
-            Press <text fg={themeColor('success')}><b>y</b></text> to confirm or{' '}
-            <text fg={themeColor('error')}><b>n</b></text> to cancel
+            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
+            <span fg={themeColor('error')}><b>n</b></span> to cancel
           </text>
         </box>
       </box>
@@ -700,7 +702,7 @@ export function SkillsPanel({
 
         <box marginTop={1}>
           <text fg={themeColor('muted')}>
-            [x]execute | [d]elete | Esc/q back
+            e[x]ecute | [d]elete | Esc/q back
           </text>
         </box>
 
@@ -726,7 +728,7 @@ export function SkillsPanel({
     <box flexDirection="column" paddingY={1}>
       <box flexDirection="row" marginBottom={1} justifyContent="space-between">
         <text><b>Skills</b></text>
-        <text fg={themeColor('muted')}>[n]ew [p]rompt [x]execute [d]elete [f]refresh</text>
+        <text fg={themeColor('muted')}>[n]ew [p]rompt e[x]ecute [d]elete re[f]resh</text>
       </box>
 
       <box marginBottom={1}>
@@ -801,7 +803,7 @@ export function SkillsPanel({
       )}
 
       <box marginTop={1}>
-        <text fg={themeColor('muted')}>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | [x]execute | q quit</text>
+        <text fg={themeColor('muted')}>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | e[x]ecute | q quit</text>
       </box>
 
       {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Processing...</text></box>}

@@ -131,6 +131,170 @@ describe('AssistantLoop tool execution', () => {
     expect(events).toContain('PostToolUseFailure');
   });
 
+  test('should expose executable AI SDK tools backed by the tool lifecycle', async () => {
+    const assistant = new AssistantLoop({ cwd: '/tmp/base' });
+    const emittedResults: unknown[] = [];
+
+    (assistant as any).toolRegistry.register(
+      makeTool('spy'),
+      async (input: Record<string, unknown>) => `ok:${input.cwd}`
+    );
+
+    (assistant as any).onChunk = (chunk: any) => {
+      if (chunk.type === 'tool_result') {
+        emittedResults.push(chunk.toolResult);
+      }
+    };
+
+    const [tool] = (assistant as any).buildExecutableTools([makeTool('spy')]);
+    const result = await tool.execute(
+      { id: 'call-1', name: 'spy', input: {} },
+      undefined
+    );
+
+    expect(result).toMatchObject({
+      toolCallId: 'call-1',
+      toolName: 'spy',
+      content: 'ok:/tmp/base',
+    });
+    expect(emittedResults).toEqual([]);
+  });
+
+  test('should not execute tool calls twice when AI SDK streams tool results', async () => {
+    const assistant = new AssistantLoop({ cwd: '/tmp/base' });
+    let executions = 0;
+
+    (assistant as any).llmClient = {
+      getModel: () => 'mock',
+      chat: async function* (): AsyncGenerator<any> {
+        yield { type: 'tool_use', toolCall: { id: 'tc1', name: 'spy', input: {} } };
+        yield {
+          type: 'tool_result',
+          toolResult: {
+            toolCallId: 'tc1',
+            toolName: 'spy',
+            content: 'already executed',
+          },
+        };
+        yield { type: 'done' };
+      },
+    };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
+    (assistant as any).toolRegistry.register(makeTool('spy'), async () => {
+      executions += 1;
+      return 'should-not-run';
+    });
+
+    await assistant.process('hi');
+
+    expect(executions).toBe(0);
+    const toolResults = assistant.getContext().getMessages().flatMap((m) => m.toolResults ?? []);
+    expect(toolResults).toHaveLength(1);
+    expect(toolResults[0]).toMatchObject({
+        toolCallId: 'tc1',
+        toolName: 'spy',
+        content: 'already executed',
+    });
+  });
+
+  test('should preserve AI SDK tool-step ordering before final text', async () => {
+    const assistant = new AssistantLoop({ cwd: '/tmp/base' });
+
+    (assistant as any).llmClient = {
+      getModel: () => 'mock',
+      chat: async function* (): AsyncGenerator<any> {
+        yield { type: 'tool_use', toolCall: { id: 'tc1', name: 'spy', input: {} } };
+        yield {
+          type: 'tool_result',
+          toolResult: {
+            toolCallId: 'tc1',
+            toolName: 'spy',
+            content: 'already executed',
+          },
+        };
+        yield { type: 'text', content: 'final answer' };
+        yield { type: 'done', finishReason: 'stop' };
+      },
+    };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
+    (assistant as any).toolRegistry.register(makeTool('spy'), async () => 'should-not-run');
+
+    await assistant.process('hi');
+
+    const messages = assistant.getContext().getMessages();
+    const assistantMessages = messages.filter((message) => message.role === 'assistant');
+    const toolResultMessages = messages.filter((message) => message.toolResults?.length);
+
+    expect(assistantMessages).toHaveLength(2);
+    expect(assistantMessages[0].content).toBe('');
+    expect(assistantMessages[0].toolCalls?.[0]).toMatchObject({ id: 'tc1', name: 'spy' });
+    expect(toolResultMessages).toHaveLength(1);
+    expect(toolResultMessages[0].toolResults?.[0]).toMatchObject({
+      toolCallId: 'tc1',
+      toolName: 'spy',
+      content: 'already executed',
+    });
+    expect(assistantMessages[1].content).toBe('final answer');
+    expect(assistantMessages[1].toolCalls).toBeUndefined();
+  });
+
+  test('should continue outer loop when AI SDK stops on tool calls without final text', async () => {
+    const assistant = new AssistantLoop({ cwd: '/tmp/base' });
+    let chatCalls = 0;
+
+    (assistant as any).llmClient = {
+      getModel: () => 'mock',
+      chat: async function* (): AsyncGenerator<any> {
+        chatCalls += 1;
+        if (chatCalls === 1) {
+          yield { type: 'tool_use', toolCall: { id: 'tc1', name: 'spy', input: {} } };
+          yield {
+            type: 'tool_result',
+            toolResult: {
+              toolCallId: 'tc1',
+              toolName: 'spy',
+              content: 'already executed',
+            },
+          };
+          yield { type: 'done', finishReason: 'tool-calls' };
+          return;
+        }
+        yield { type: 'text', content: 'final answer' };
+        yield { type: 'done', finishReason: 'stop' };
+      },
+    };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
+    (assistant as any).toolRegistry.register(makeTool('spy'), async () => 'should-not-run');
+
+    await assistant.process('hi');
+
+    expect(chatCalls).toBe(2);
+    const assistantMessages = assistant.getContext().getMessages().filter((message) => message.role === 'assistant');
+    expect(assistantMessages.at(-1)?.content).toBe('final answer');
+  });
+
+  test('should not persist dangling tool calls after stream errors', async () => {
+    const assistant = new AssistantLoop({ cwd: '/tmp/base' });
+
+    (assistant as any).llmClient = {
+      getModel: () => 'mock',
+      chat: async function* (): AsyncGenerator<any> {
+        yield { type: 'tool_use', toolCall: { id: 'tc1', name: 'spy', input: {} } };
+        yield { type: 'error', error: 'provider failed' };
+      },
+    };
+    (assistant as any).config = { llm: { model: 'anthropic:mock' } };
+    (assistant as any).toolRegistry.register(makeTool('spy'), async () => 'should-not-run');
+
+    await assistant.process('hi');
+
+    const danglingToolCallMessages = assistant
+      .getContext()
+      .getMessages()
+      .filter((message) => (message.toolCalls?.length ?? 0) > 0);
+    expect(danglingToolCallMessages).toHaveLength(0);
+  });
+
   test('should ignore tool result when stop() is called during execution', async () => {
     const assistant = new AssistantLoop({ cwd: '/tmp/base' });
     const emittedResults: unknown[] = [];

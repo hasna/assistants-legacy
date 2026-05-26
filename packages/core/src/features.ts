@@ -54,7 +54,7 @@ export function isSystemVoiceAvailable(): boolean {
  * Feature availability summary
  */
 export interface FeatureAvailability {
-  /** Core chat - always available with ANTHROPIC_API_KEY */
+  /** Core chat - available when any AI SDK provider API key is configured */
   coreChat: boolean;
   /** AWS features (inbox, wallet, secrets) */
   awsFeatures: boolean;
@@ -90,7 +90,8 @@ export function getFeatureStatusMessage(): string {
   const lines: string[] = [];
 
   if (!features.coreChat) {
-    lines.push('⚠️  ANTHROPIC_API_KEY not set - core chat disabled');
+    const envNames = LLM_PROVIDERS.map((provider) => provider.apiKeyEnv).join(', ');
+    lines.push(`⚠️  No LLM provider API key set - core chat disabled (set one of: ${envNames})`);
   } else {
     lines.push('✓ Core chat enabled');
   }

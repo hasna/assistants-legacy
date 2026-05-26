@@ -5,6 +5,7 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { MessageList } from '@/components/chat/MessageList';
 import { ModelSelector } from '@/components/chat/ModelSelector';
 import { useChat } from '@/hooks/use-chat';
+import { DEFAULT_MODEL } from '@/lib/models';
 
 export default function SessionChatPage({
   params,
@@ -12,7 +13,7 @@ export default function SessionChatPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = use(params);
-  const [model, setModel] = useState('claude-sonnet-4-5-20250929');
+  const [model, setModel] = useState(DEFAULT_MODEL);
   const { messages, isStreaming, error, sendMessage, stopStreaming, loadMessages } = useChat(sessionId);
 
   useEffect(() => {

@@ -168,7 +168,16 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       return;
     }
 
-    // Tab switching handled by <tab-select> component
+    const tabShortcut = Number(input);
+    if (Number.isInteger(tabShortcut) && tabShortcut >= 1 && tabShortcut <= tabs.length) {
+      const nextTab = tabs[tabShortcut - 1];
+      if (nextTab) {
+        setTab(nextTab);
+        setMode(nextTab);
+        setSelectedIndex(0);
+      }
+      return;
+    }
 
     // List navigation
     if (key.upArrow || input === 'k') {
@@ -392,10 +401,10 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
           <box flexDirection="column" paddingX={1}>
             {calls.map((call, i) => (
               <box key={call.id}>
-                <text fg={i === selectedIndex ? 'blue' : undefined}>
+                <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
                 </text>
-                <text fg={call.direction === 'inbound' ? themeColor('success') : 'cyan'}>
+                <text fg={call.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
                   {call.direction === 'inbound' ? 'IN ' : 'OUT'}
                 </text>
                 <text> {call.fromNumber} → {call.toNumber}</text>
@@ -426,10 +435,10 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
             {messages.map((msg, i) => (
               <box key={msg.id} flexDirection="column">
                 <box>
-                  <text fg={i === selectedIndex ? 'blue' : undefined}>
+                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
-                  <text fg={msg.direction === 'inbound' ? themeColor('success') : 'cyan'}>
+                  <text fg={msg.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
                     {msg.direction === 'inbound' ? 'IN ' : 'OUT'}
                   </text>
                   <text fg={msg.messageType === 'whatsapp' ? themeColor('success') : undefined}>
@@ -470,7 +479,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
               const isDefault = status?.defaultPhoneNumber === num.number;
               return (
                 <box key={num.id}>
-                  <text fg={i === selectedIndex ? 'blue' : undefined}>
+                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
                   {isDefault && <text fg={themeColor('warning')}>★ </text>}
@@ -501,7 +510,7 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
             {routes.map((rule, i) => (
               <box key={rule.id} flexDirection="column">
                 <box>
-                  <text fg={i === selectedIndex ? 'blue' : undefined}>
+                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
                   </text>
                   <text attributes={i === selectedIndex ? 1 : undefined}><b>{rule.name}</b></text>

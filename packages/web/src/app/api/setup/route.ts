@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server"
 import { writeFileSync, readFileSync, existsSync } from "fs"
 import { join } from "path"
+import { LLM_PROVIDERS } from "@hasna/assistants-shared"
+
+const PROVIDER_KEY_FIELDS = Object.fromEntries(
+  LLM_PROVIDERS.map((provider) => [provider.id, provider.apiKeyEnv])
+)
 
 export function GET() {
+  const providers = LLM_PROVIDERS.map((provider) => ({
+    id: provider.id,
+    label: provider.label,
+    apiKeyEnv: provider.apiKeyEnv,
+    configured: !!process.env[provider.apiKeyEnv],
+    docsUrl: provider.docsUrl,
+  }))
+
   return NextResponse.json({
-    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
-    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    hasLLMKey: providers.some((provider) => provider.configured),
+    providers,
   })
 }
 
@@ -24,8 +37,23 @@ export async function POST(req: Request) {
 
     // Update or add keys
     const updates: Record<string, string> = {}
-    if (body.anthropicKey) updates["ANTHROPIC_API_KEY"] = body.anthropicKey
-    if (body.openaiKey) updates["OPENAI_API_KEY"] = body.openaiKey
+    const providerKeys = body.providerKeys && typeof body.providerKeys === "object"
+      ? body.providerKeys as Record<string, unknown>
+      : {}
+
+    for (const [providerId, envName] of Object.entries(PROVIDER_KEY_FIELDS)) {
+      const value = providerKeys[providerId]
+      if (typeof value === "string" && value.trim()) {
+        updates[envName] = value.trim()
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "At least one AI SDK provider API key is required." },
+        { status: 400 }
+      )
+    }
 
     for (const [key, value] of Object.entries(updates)) {
       const idx = lines.findIndex((l) => l.startsWith(`${key}=`))

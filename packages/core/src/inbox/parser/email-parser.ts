@@ -37,7 +37,7 @@ export class EmailParser {
         if (typeof value === 'string') {
           headers[key] = value;
         } else if (value && typeof value === 'object') {
-          headers[key] = JSON.stringify(value);
+          headers[key] = stringifyHeaderValue(value);
         }
       }
     }
@@ -194,4 +194,11 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function stringifyHeaderValue(value: object): string {
+  if ('text' in value && typeof value.text === 'string') {
+    return value.text;
+  }
+  return JSON.stringify(value);
 }

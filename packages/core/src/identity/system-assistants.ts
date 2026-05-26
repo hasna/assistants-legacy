@@ -2,17 +2,13 @@
  * System Assistant Definitions
  *
  * Built-in assistants that are always present and cannot be deleted.
- * - Marcus (default): friendly personality, uses native agent loop
- * - Claude: full delegation to Claude Agent SDK
- * - Codex: full delegation to OpenAI Codex SDK
+ * Built-in assistants backed by the AI SDK runtime.
  */
 
 import type { Assistant, AssistantBackend } from './types';
 
 export const SYSTEM_ASSISTANT_IDS = {
   marcus: 'system-marcus',
-  claude: 'system-claude',
-  codex: 'system-codex',
 } as const;
 
 export type SystemAssistantId = (typeof SYSTEM_ASSISTANT_IDS)[keyof typeof SYSTEM_ASSISTANT_IDS];
@@ -35,24 +31,8 @@ const SYSTEM_ASSISTANT_DEFINITIONS: SystemAssistantDefinition[] = [
     name: 'Marcus',
     description: 'Your default AI assistant. Friendly, capable, and ready to help with any task.',
     avatar: '🤖',
-    backend: 'native',
-    model: 'claude-opus-4-5',
-  },
-  {
-    id: SYSTEM_ASSISTANT_IDS.claude,
-    name: 'Claude',
-    description: 'Powered by Claude Agent SDK. Full agentic capabilities with built-in tools (Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch).',
-    avatar: '🟣',
-    backend: 'claude-agent-sdk',
-    model: 'claude-sonnet-4-20250514',
-  },
-  {
-    id: SYSTEM_ASSISTANT_IDS.codex,
-    name: 'Codex',
-    description: 'Powered by OpenAI Codex SDK. Code-focused agent with deep coding capabilities.',
-    avatar: '🟢',
-    backend: 'codex-sdk',
-    model: 'codex-mini',
+    backend: 'ai-sdk',
+    model: 'anthropic:claude-opus-4-5-20251101',
   },
 ];
 

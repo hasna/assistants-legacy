@@ -95,7 +95,7 @@ export default function LandingPage() {
 
         <p className="mx-auto mt-8 max-w-lg text-lg text-muted-foreground leading-relaxed">
           A personal AI assistant that connects to your tools and extends
-          with skills and hooks. Like Claude Code, but yours.
+          with skills and hooks. AI SDK powered, local-first, and yours.
         </p>
 
         <div className="mx-auto mt-12 max-w-sm">
@@ -167,7 +167,7 @@ export default function LandingPage() {
           <div className="mx-auto mt-12 max-w-md space-y-5">
             {[
               { n: '1', label: 'Install globally', cmd: 'bun add -g @hasna/assistants' },
-              { n: '2', label: 'Set your API key', cmd: 'export ANTHROPIC_API_KEY="sk-..."' },
+              { n: '2', label: 'Set a provider key', cmd: 'export ANTHROPIC_API_KEY="sk-..."' },
               { n: '3', label: 'Run it', cmd: 'assistants' },
             ].map((s) => (
               <div key={s.n} className="flex items-start gap-4">

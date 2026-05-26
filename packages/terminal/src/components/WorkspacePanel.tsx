@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useClearOnChange } from '../hooks/useClearOnChange';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
 
@@ -65,6 +66,7 @@ export function WorkspacePanel({
   error,
 }: WorkspacePanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
+  useClearOnChange(mode);
   const [wsIndex, setWsIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceEntry | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<WorkspaceEntry | null>(null);
@@ -334,7 +336,7 @@ export function WorkspacePanel({
 
         {(error || statusMessage) && (
           <box marginTop={1}>
-            <text fg={error || statusMessage?.startsWith('Error') ? 'red' : themeColor('success')}>
+            <text fg={error || statusMessage?.startsWith('Error') ? themeColor('red') : themeColor('success')}>
               {error || statusMessage}
             </text>
           </box>
@@ -407,7 +409,7 @@ export function WorkspacePanel({
 
       {statusMessage && (
         <box marginTop={1}>
-          <text fg={statusMessage.startsWith('Error') ? 'red' : themeColor('success')}>{statusMessage}</text>
+          <text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</text>
         </box>
       )}
 
