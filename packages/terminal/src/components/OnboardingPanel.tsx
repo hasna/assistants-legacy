@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { InputRenderable } from '@opentui/core';
 import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { useTypewriter } from '../hooks/useTypewriter';
 import { useGradientCycle } from '../hooks/useGradientCycle';
@@ -59,6 +60,8 @@ const INTRO_FEATURES = [
 ];
 
 const MAX_VISIBLE_CONNECTORS = 5;
+
+type InputValueRef = InputRenderable;
 
 function getVisibleRange(
   selectedIndex: number,
@@ -134,19 +137,28 @@ function MaskedInput({ value, onChange, onSubmit, placeholder }: {
         <input
           value={value}
           onChange={onChange}
-          onSubmit={() => onSubmit(value)}
+          onSubmit={(submittedValue) => onSubmit(submittedInputValue(submittedValue, value))}
           placeholder={placeholder}
         />
       ) : (
         <input
           value={value}
           onChange={onChange}
-          onSubmit={() => onSubmit(value)}
+          onSubmit={(submittedValue) => onSubmit(submittedInputValue(submittedValue, value))}
           placeholder={placeholder}
         />
       )}
     </box>
   );
+}
+
+function submittedInputValue(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function inputRefValue(ref: React.RefObject<InputValueRef | null>, fallback: string): string {
+  const value = ref.current?.value;
+  return typeof value === 'string' ? value : fallback;
 }
 
 // ============================================
@@ -172,8 +184,10 @@ export function OnboardingPanel({
   const [selectedProviderIndex, setSelectedProviderIndex] = useState(initialProviderIndex);
   const [selectedModelIndex, setSelectedModelIndex] = useState(initialModelIndex >= 0 ? initialModelIndex : 0);
   const [apiKey, setApiKey] = useState(existingApiKeys?.[initialProvider] || '');
+  const apiKeyValueRef = useRef(existingApiKeys?.[initialProvider] || '');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [apiKeyValidated, setApiKeyValidated] = useState(!!existingApiKeys?.[initialProvider]);
+  const apiKeyInputRef = useRef<InputValueRef | null>(null);
   const [enabledConnectors, setEnabledConnectors] = useState<Set<string>>(
     () => new Set(discoveredConnectors)
   );
@@ -185,6 +199,7 @@ export function OnboardingPanel({
   const [connectorKeys, setConnectorKeys] = useState<Record<string, string>>({});
   const [connectorKeyIndex, setConnectorKeyIndex] = useState(0);
   const [connectorKeyValue, setConnectorKeyValue] = useState('');
+  const connectorKeyInputRef = useRef<InputValueRef | null>(null);
   const [introRevealCount, setIntroRevealCount] = useState(0);
   const [isCompact] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -199,14 +214,16 @@ export function OnboardingPanel({
   const availableModels = providerModels.length > 0 ? providerModels : ALL_MODELS;
 
   useEffect(() => {
+    // appPanelRenderers rebuilds existingApiKeys on every render; reset the input only when the provider changes.
     const existingKey = existingApiKeys?.[selectedProvider] || '';
+    apiKeyValueRef.current = existingKey;
     setApiKey(existingKey);
     setApiKeyValidated(!!existingKey);
     setApiKeyError(null);
     if (selectedModelIndex >= availableModels.length) {
       setSelectedModelIndex(0);
     }
-  }, [selectedProvider, existingApiKeys, availableModels.length]);
+  }, [selectedProvider, availableModels.length]);
 
   useEffect(() => {
     submitGuardRef.current = false;
@@ -265,7 +282,7 @@ export function OnboardingPanel({
     try {
       const selectedModel = availableModels[selectedModelIndex] || availableModels[0];
       await onComplete({
-        apiKey,
+        apiKey: apiKeyValueRef.current,
         provider: selectedProvider,
         model: selectedModel ? selectedModel.id : (existingModel || ''),
         connectors: Array.from(enabledConnectors),
@@ -275,7 +292,7 @@ export function OnboardingPanel({
     } finally {
       setIsSaving(false);
     }
-  }, [apiKey, selectedModelIndex, enabledConnectors, connectorKeys, onComplete, isSaving, selectedProvider, availableModels, existingModel, skillsList]);
+  }, [selectedModelIndex, enabledConnectors, connectorKeys, onComplete, isSaving, selectedProvider, availableModels, existingModel, skillsList]);
 
   const submitApiKey = useCallback((value: string) => {
     if (submitGuardRef.current) return;
@@ -284,6 +301,7 @@ export function OnboardingPanel({
     const existingKey = existingApiKeys?.[selectedProvider];
     if (!key && existingKey) {
       // Keep existing key
+      apiKeyValueRef.current = existingKey;
       setApiKey(existingKey);
       setApiKeyValidated(true);
       goNext();
@@ -299,6 +317,8 @@ export function OnboardingPanel({
       submitGuardRef.current = false;
       return;
     }
+    apiKeyValueRef.current = key;
+    setApiKey(key);
     setApiKeyValidated(true);
     goNext();
   }, [existingApiKeys, selectedProvider, goNext]);
@@ -591,13 +611,21 @@ export function OnboardingPanel({
         <box flexDirection="row">
           <text fg={themeColor('info')}>&gt; </text>
             <input
+              ref={apiKeyInputRef}
               value={apiKey}
               onChange={(v) => {
+                apiKeyValueRef.current = v;
                 setApiKey(v);
                 setApiKeyError(null);
                 setApiKeyValidated(false);
               }}
-              onSubmit={() => submitApiKey(apiKey)}
+              onInput={(v) => {
+                apiKeyValueRef.current = v;
+                setApiKey(v);
+                setApiKeyError(null);
+                setApiKeyValidated(false);
+              }}
+              onSubmit={(submittedValue) => submitApiKey(submittedInputValue(submittedValue, inputRefValue(apiKeyInputRef, apiKey)))}
               focused
               placeholder={selectedProvider === 'anthropic' ? 'sk-ant-...' : 'api-key'}
             />
@@ -766,9 +794,11 @@ export function OnboardingPanel({
         <box flexDirection="row">
           <text fg={themeColor('info')}>&gt; </text>
           <input
+            ref={connectorKeyInputRef}
             value={connectorKeyValue}
             onChange={setConnectorKeyValue}
-            onSubmit={() => submitConnectorKey(connectorKeyValue)}
+            onInput={setConnectorKeyValue}
+            onSubmit={(submittedValue) => submitConnectorKey(submittedInputValue(submittedValue, inputRefValue(connectorKeyInputRef, connectorKeyValue)))}
             focused
             placeholder="Enter API key or press Enter to skip"
           />

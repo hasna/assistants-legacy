@@ -1,21 +1,8 @@
-import { existsSync, readFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
 import { spawnSync } from 'child_process';
+import { loadApiKeyFromSecrets as loadSecretExport } from '../llm/provider-utils';
 
 export function loadApiKeyFromSecrets(key: string): string | undefined {
-  const envHome = process.env.HOME || process.env.USERPROFILE;
-  const homeDir = envHome && envHome.trim().length > 0 ? envHome : homedir();
-  const secretsPath = join(homeDir, '.secrets');
-  if (!existsSync(secretsPath)) return undefined;
-
-  try {
-    const content = readFileSync(secretsPath, 'utf-8');
-    const match = content.match(new RegExp(`export\\s+${key}\\s*=\\s*['\"]?([^'\"\\n]+)['\"]?`));
-    return match?.[1];
-  } catch {
-    return undefined;
-  }
+  return loadSecretExport(key);
 }
 
 export function findExecutable(name: string): string | null {

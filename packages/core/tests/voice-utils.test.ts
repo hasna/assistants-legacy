@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { writeFile } from 'fs/promises';
+import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { withTempDir } from './fixtures/helpers';
 
@@ -32,6 +32,21 @@ describe('voice utils', () => {
       process.env.HOME = originalHome;
 
       expect(value).toBe('value');
+    });
+  });
+
+  test('loadApiKeyFromSecrets reads from directory-based ~/.secrets layout', async () => {
+    await withTempDir(async (dir) => {
+      const secretsDir = join(dir, '.secrets', 'hasna', 'assistants');
+      await mkdir(secretsDir, { recursive: true });
+      await writeFile(join(secretsDir, 'live.env'), 'export TEST_KEY="directory-value"\n', 'utf-8');
+
+      const originalHome = process.env.HOME;
+      process.env.HOME = dir;
+      const value = loadApiKeyFromSecrets('TEST_KEY');
+      process.env.HOME = originalHome;
+
+      expect(value).toBe('directory-value');
     });
   });
 

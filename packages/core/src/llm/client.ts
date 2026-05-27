@@ -1,6 +1,3 @@
-import { existsSync, readFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
 import {
   jsonSchema,
   stepCountIs,
@@ -18,6 +15,7 @@ import { createXai } from '@ai-sdk/xai';
 import type { EffortLevel, LLMConfig, Message, StreamChunk, Tool, ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { getProviderInfo, type LLMProvider } from '@hasna/assistants-shared';
 import { getModelById, MODELS } from './models';
+import { resolveApiKey } from './provider-utils';
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
 const DEFAULT_THINKING_BUDGET = 10000;
@@ -475,26 +473,6 @@ Guidelines:
 - Never say you are "tired", "need rest", or that responses will be shorter — always respond fully
 
 Current date: ${new Date().toISOString().split('T')[0]}`;
-}
-
-function resolveApiKey(provider: LLMProvider, override?: string): string | undefined {
-  if (override) return override;
-  const envName = getProviderInfo(provider)?.apiKeyEnv;
-  if (!envName) return undefined;
-  return process.env[envName] || loadApiKeyFromSecrets(envName);
-}
-
-function loadApiKeyFromSecrets(envName: string): string | undefined {
-  const homeDir = process.env.HOME || process.env.USERPROFILE || homedir();
-  const secretsPath = join(homeDir, '.secrets');
-  if (!existsSync(secretsPath)) return undefined;
-  try {
-    const content = readFileSync(secretsPath, 'utf-8');
-    const match = content.match(new RegExp(`export\\s+${envName}\\s*=\\s*['\\"]?([^'\\\"\\n]+)['\\"]?`));
-    return match ? match[1] : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> {

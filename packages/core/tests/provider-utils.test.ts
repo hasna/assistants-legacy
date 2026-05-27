@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
@@ -71,6 +71,13 @@ describe('provider-utils', () => {
         ].join('\n')
       );
       expect(loadApiKeyFromSecrets('ANTHROPIC_API_KEY')).toBe('anthropic-val');
+    });
+
+    test('reads directory-based Hasna secrets layout', () => {
+      const secretsDir = join(tmpHome, '.secrets', 'hasna', 'assistants');
+      mkdirSync(secretsDir, { recursive: true });
+      writeFileSync(join(secretsDir, 'live.env'), 'export ANTHROPIC_API_KEY=directory-secret\n', 'utf-8');
+      expect(loadApiKeyFromSecrets('ANTHROPIC_API_KEY')).toBe('directory-secret');
     });
   });
 

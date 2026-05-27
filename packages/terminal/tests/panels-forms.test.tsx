@@ -1023,4 +1023,66 @@ describe('terminal panels', () => {
     expect(await waitForText("Let's set up your API key")).toBe(true);
     expect(captureCharFrame()).toContain('Get one at:');
   }, 10000);
+
+  test('OnboardingPanel persists the submitted API key value on completion', async () => {
+    let completedApiKey: string | undefined;
+    let forceParentRender: (() => void) | undefined;
+
+    function RerenderingOnboardingPanel() {
+      const [, setRenderCount] = React.useState(0);
+      forceParentRender = () => setRenderCount((count) => count + 1);
+      return (
+        <OnboardingPanel
+          onComplete={async (result) => {
+            completedApiKey = result.apiKey;
+          }}
+          onCancel={() => {}}
+          existingApiKeys={{} as Record<LLMProvider, string>}
+          discoveredConnectors={[]}
+        />
+      );
+    }
+
+    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+      <RerenderingOnboardingPanel />, { width: 80, height: 24 }
+    );
+
+    const waitForText = async (text: string, timeoutMs: number = 3000) => {
+      const started = Date.now();
+      while (Date.now() - started < timeoutMs) {
+        await renderOnce();
+        if (captureCharFrame().includes(text)) return true;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+      return false;
+    };
+
+    expect(await waitForText('Press Enter to get started')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('What can assistants do?')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('Choose your provider')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('Choose your default model')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText("Let's set up your API key")).toBe(true);
+
+    await mockInput.typeText('sk-ant-test-submitted-value');
+    mockInput.pressEnter();
+    expect(await waitForText('Connectors')).toBe(true);
+    forceParentRender?.();
+    await renderOnce();
+    mockInput.pressEnter();
+    expect(await waitForText('Skills')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText("You're all set!")).toBe(true);
+    mockInput.pressEnter();
+
+    const started = Date.now();
+    while (!completedApiKey && Date.now() - started < 1000) {
+      await renderOnce();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(completedApiKey).toBe('sk-ant-test-submitted-value');
+  }, 10000);
 });

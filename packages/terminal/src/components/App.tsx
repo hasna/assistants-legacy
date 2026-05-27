@@ -4,7 +4,6 @@ import { loadUserKeymap, resolveAction, generateHelp } from '../keybindings';
 import { useAppContext, useTerminalDimensions } from '@opentui/react';
 import { useDetectTheme, ThemeProvider } from '../hooks/useThemeColor';
 import { join } from 'path';
-import { homedir } from 'os';
 import { SessionRegistry, SessionStorage, findRecoverableSessions, clearRecoveryState, ConnectorBridge, AudioRecorder, ElevenLabsSTT, WhisperSTT, readHeartbeatHistoryBySession, type SessionInfo, type RecoverableSession, type CreateSessionOptions, type Identity, type Memory, type MemoryStats, type Heartbeat, type SavedSessionInfo } from '@hasna/assistants-core';
 import type { StreamChunk, Message, ToolCall, ToolResult, TokenUsage, VoiceState, HeartbeatState, ActiveIdentityInfo, AskUserRequest, AskUserResponse, InterviewRequest, InterviewResponse, Connector, HookConfig, HookEvent, ScheduledCommand, Skill } from '@hasna/assistants-shared';
 import { InterviewStore } from '@hasna/assistants-core';
@@ -66,6 +65,7 @@ import {
   loadSessionBudgetMap,
   saveSessionBudgetMap,
 } from '../lib/budgets';
+import { upsertSecretExport } from '../lib/secrets-env';
 import { renderActivePanel, type PanelRenderContext } from './appPanelRenderers';
 import { handleShowPanel as handleShowPanelChunk, loadMessagesAndInbox as loadMessagesAndInboxData } from './appShowPanel';
 import { handlePanelSlashCommand as handlePanelSlashCmd } from './appSlashCommands';
@@ -1970,37 +1970,17 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   }, [recoverableSessions, createSessionFromRecovery, workspaceBaseDir]);
 
   const handleOnboardingComplete = useCallback(async (result: OnboardingResult) => {
-    const { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } = await import('fs');
+    const { existsSync, mkdirSync, readFileSync, writeFileSync } = await import('fs');
 
     // 1. Save API key to ~/.secrets
-    const secretsPath = join(homedir(), '.secrets');
     const providerInfo = getProviderInfo(result.provider);
     const envName = providerInfo?.apiKeyEnv || 'ANTHROPIC_API_KEY';
-    const keyExport = `export ${envName}="${result.apiKey}"`;
-    if (existsSync(secretsPath)) {
-      const content = readFileSync(secretsPath, 'utf-8');
-      if (content.includes(envName)) {
-        // Replace existing line
-        const updated = content.replace(new RegExp(`^export ${envName}=.*$`, 'm'), keyExport);
-        writeFileSync(secretsPath, updated, 'utf-8');
-      } else {
-        appendFileSync(secretsPath, '\n' + keyExport + '\n', 'utf-8');
-      }
-    } else {
-      writeFileSync(secretsPath, keyExport + '\n', { mode: 0o600 });
-    }
+    upsertSecretExport({ envName, value: result.apiKey });
 
     // Save additional connector keys to ~/.secrets
     for (const [name, key] of Object.entries(result.connectorKeys)) {
-      const envName = `${name.toUpperCase()}_API_KEY`;
-      const connKeyExport = `export ${envName}="${key}"`;
-      const content = readFileSync(secretsPath, 'utf-8');
-      if (content.includes(envName)) {
-        const updated = content.replace(new RegExp(`^export ${envName}=.*$`, 'm'), connKeyExport);
-        writeFileSync(secretsPath, updated, 'utf-8');
-      } else {
-        appendFileSync(secretsPath, connKeyExport + '\n', 'utf-8');
-      }
+      const connectorEnvName = `${name.toUpperCase()}_API_KEY`;
+      upsertSecretExport({ envName: connectorEnvName, value: key });
     }
 
     // 2. Save config to active workspace config directory
