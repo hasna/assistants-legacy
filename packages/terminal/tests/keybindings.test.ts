@@ -92,6 +92,7 @@ describe('resolveAction (single keystroke)', () => {
       ['session:cycle', ']', { ctrl: true }],
       ['panel:assistantsDashboard', 'a', { ctrl: true }],
       ['panel:budget', 'b', { ctrl: true }],
+      ['panel:commands', 'p', { ctrl: true }],
       ['panel:messages', 'm', { ctrl: true }],
     ];
     for (const [action, input, key] of cases) {

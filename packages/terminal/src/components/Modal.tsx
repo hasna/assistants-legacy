@@ -48,7 +48,6 @@ export function Modal({ visible, onClose, title, children, width, height }: Moda
   const borderColor = themeColor('border');       // borderNormal
   const borderDimColor = themeColor('borderDim');
   const emphasizedColor = themeColor('emphasized'); // textEmphasized
-  const mutedColor = themeColor('muted');
 
   // Calculate content box dimensions (60% default per spec)
   const boxWidth = width ?? Math.max(40, Math.floor(termWidth * 0.6));
@@ -111,8 +110,7 @@ export function Modal({ visible, onClose, title, children, width, height }: Moda
         {/* Title bar — textEmphasized color, padded */}
         {title && (
           <box marginBottom={1}>
-            <text fg={emphasizedColor}><b>{title}</b></text>
-            <text fg={mutedColor}>{' '}(Esc to close)</text>
+            <text fg={emphasizedColor}>{title} (Esc to close)</text>
           </box>
         )}
 

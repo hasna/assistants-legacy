@@ -14,6 +14,7 @@ export const DEFAULT_KEYMAP: Record<KeybindingAction, string[]> = {
   'session:cycle': ['ctrl+]'],
   'panel:assistantsDashboard': ['ctrl+a'],
   'panel:budget': ['ctrl+b'],
+  'panel:commands': ['ctrl+p'],
   'panel:messages': ['ctrl+m'],
 };
 

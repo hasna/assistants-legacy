@@ -37,4 +37,5 @@ export type KeybindingAction =
   | 'session:cycle'
   | 'panel:assistantsDashboard'
   | 'panel:budget'
+  | 'panel:commands'
   | 'panel:messages';

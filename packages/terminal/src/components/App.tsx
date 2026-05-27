@@ -9,6 +9,7 @@ import type { StreamChunk, Message, ToolCall, ToolResult, TokenUsage, VoiceState
 import { InterviewStore } from '@hasna/assistants-core';
 import { generateId, now } from '@hasna/assistants-shared';
 import { Input, type InputHandle } from './Input';
+import { CommandPalette, buildDefaultCommands } from './CommandPalette';
 import { Messages, type FinishInfo } from './Messages';
 import { buildDisplayMessages } from './messageRender';
 import { estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
@@ -401,6 +402,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
   messagesLengthRef.current = messages.length;
   const pendingFirstGreetingRef = useRef(false);
   const inputRef = useRef<InputHandle>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const isPanelOpen = (
     showOnboardingPanel ||
     showRecoveryPanel ||
@@ -435,7 +437,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     showSwarmPanel ||
     showLogsPanel ||
     showHeartbeatPanel ||
-    showResumePanel
+    showResumePanel ||
+    showCommandPalette
   );
 
   // Clear terminal buffer when transitioning to/from a panel.
@@ -2458,6 +2461,56 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     [currentConfig],
   );
 
+  const paletteCommands = useMemo(() => buildDefaultCommands({
+    setShowModelPanel,
+    setShowSessionSelector,
+    setShowTasksPanel,
+    setShowConnectorsPanel,
+    setShowHooksPanel,
+    setShowConfigPanel,
+    setShowSkillsPanel,
+    setShowSchedulesPanel,
+    setShowMemoryPanel,
+    setShowIdentityPanel,
+    setShowBudgetPanel: (visible) => {
+      if (visible) {
+        void openBudgetsPanel();
+      } else {
+        setShowBudgetPanel(false);
+      }
+    },
+    setShowGuardrailsPanel,
+    setShowDocsPanel,
+    setShowAssistantsPanel,
+    setShowSwarmPanel,
+    setShowLogsPanel,
+    setShowProjectsPanel,
+    setShowWorkspacePanel,
+    handleNewSession: () => {
+      void handleNewSession();
+    },
+  }), [
+    handleNewSession,
+    openBudgetsPanel,
+    setShowAssistantsPanel,
+    setShowConfigPanel,
+    setShowConnectorsPanel,
+    setShowDocsPanel,
+    setShowGuardrailsPanel,
+    setShowHooksPanel,
+    setShowIdentityPanel,
+    setShowMemoryPanel,
+    setShowModelPanel,
+    setShowProjectsPanel,
+    setShowBudgetPanel,
+    setShowSchedulesPanel,
+    setShowSessionSelector,
+    setShowSkillsPanel,
+    setShowSwarmPanel,
+    setShowTasksPanel,
+    setShowWorkspacePanel,
+  ]);
+
   useInput((input, key) => {
     const action = resolveAction(globalKeymap, input, key);
 
@@ -2535,6 +2588,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
       case 'panel:budget':
         void openBudgetsPanel();
+        return;
+
+      case 'panel:commands':
+        setShowCommandPalette(true);
         return;
 
       case 'panel:messages':
@@ -3251,6 +3308,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
                 commands={commands}
                 skills={skills}
                 isAskingUser={false}
+                isActive={!showCommandPalette}
                 onFileSearch={searchFiles}
                 pasteConfig={currentConfig?.input?.paste ? {
                   enabled: currentConfig.input.paste.enabled,
@@ -3283,6 +3341,11 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             welcomeMode={true}
           />
         </box>
+        <CommandPalette
+          visible={showCommandPalette}
+          commands={paletteCommands}
+          onClose={() => setShowCommandPalette(false)}
+        />
       </box>
     );
   }
@@ -3408,6 +3471,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
             askPlaceholder={askPlaceholder}
             allowBlankAnswer={activeAskQuestion?.required === false}
+            isActive={!showCommandPalette}
             assistantName={identityInfo?.assistant?.name || undefined}
             isRecording={pttRecording}
             recordingStatus={pttStatus}
@@ -3457,6 +3521,11 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             })}
         />
       </box>
+      <CommandPalette
+        visible={showCommandPalette}
+        commands={paletteCommands}
+        onClose={() => setShowCommandPalette(false)}
+      />
     </box>
   );
 }

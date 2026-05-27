@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import type { SelectOption } from '@opentui/core';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTerminalDimensions } from '@opentui/react';
 import { Modal } from './Modal';
 import { themeColor } from '../theme/colors';
+import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 /**
  * A command entry for the palette.
@@ -25,17 +26,19 @@ interface CommandPaletteProps {
  *
  * Per OpenCode spec (section 8.4):
  * - Title: "Commands" in Primary, Bold, Padding(0,1)
- * - Text input at top for filtering
- * - List below with command name + description (two-line format)
+ * - Filter prompt at top
+ * - Compact one-line list below with command name and shortcut
  * - 60% width, 60% height overlay via Modal
  * - Min width: 40, expands to fit longest command title/description
- * - Max visible: 10
+ * - Max visible: capped by terminal height
  * - Selected: Primary bg, Background fg, Bold
- * - Normal title: Text color; Normal description: TextMuted
- * - Keys: up/down/j/k navigate, enter select, esc close
+ * - Normal title: Text color
+ * - Keys: up/down navigate, enter select, esc close
  */
 export function CommandPalette({ visible, commands, onClose }: CommandPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const dims = useTerminalDimensions();
 
   // Theme colors
   const primaryColor = themeColor('primary');
@@ -43,10 +46,9 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
   const textColor = themeColor('text');
   const mutedColor = themeColor('muted');
 
-  // Filter and build options
-  const { options, commandMap } = useMemo(() => {
+  const filteredCommands = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    const filtered = q
+    return q
       ? commands.filter(
           (cmd) =>
             cmd.label.toLowerCase().includes(q) ||
@@ -54,78 +56,124 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
             cmd.id.toLowerCase().includes(q),
         )
       : commands;
-
-    const opts: SelectOption[] = filtered.map((cmd) => ({
-      name: cmd.shortcut ? `${cmd.label}  (${cmd.shortcut})` : cmd.label,
-      description: cmd.description ?? '',
-      value: cmd.id,
-    }));
-
-    const map = new Map<string, PaletteCommand>();
-    for (const cmd of commands) {
-      map.set(cmd.id, cmd);
-    }
-
-    return { options: opts, commandMap: map };
   }, [searchQuery, commands]);
 
-  const handleSelect = useCallback((_index: number, option: SelectOption | null) => {
-    if (!option) return;
-    const cmd = commandMap.get(String(option.value));
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (selectedIndex >= filteredCommands.length) {
+      setSelectedIndex(Math.max(0, filteredCommands.length - 1));
+    }
+  }, [filteredCommands.length, selectedIndex]);
+
+  const runSelectedCommand = useCallback(() => {
+    const cmd = filteredCommands[selectedIndex];
     if (cmd) {
+      setSearchQuery('');
       onClose();
       cmd.handler();
     }
-  }, [commandMap, onClose]);
+  }, [filteredCommands, selectedIndex, onClose]);
+
+  useInput((input, key) => {
+    if (key.backspace) {
+      setSearchQuery((prev) => prev.slice(0, -1));
+      return;
+    }
+    if (input && !key.ctrl && !key.meta && !key.return && !key.escape) {
+      setSearchQuery((prev) => prev + input);
+      return;
+    }
+    if (filteredCommands.length === 0) return;
+    if (key.downArrow) {
+      setSelectedIndex((prev) => (prev + 1) % filteredCommands.length);
+      return;
+    }
+    if (key.upArrow) {
+      setSelectedIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+      return;
+    }
+    if (key.return) {
+      runSelectedCommand();
+    }
+  }, { isActive: visible });
 
   // Reset search when closing
   const handleClose = useCallback(() => {
     setSearchQuery('');
+    setSelectedIndex(0);
     onClose();
   }, [onClose]);
 
   if (!visible) return null;
 
+  const maxVisible = Math.max(3, Math.min(6, Math.floor((dims.height || 24) * 0.6) - 9));
+  const contentWidth = Math.max(20, Math.floor((dims.width || 80) * 0.6) - 8);
+  const fitLine = (line: string): string => {
+    if (line.length > contentWidth) {
+      return line.slice(0, Math.max(0, contentWidth - 3)) + '...';
+    }
+    return line.padEnd(contentWidth);
+  };
+  const startIndex = Math.max(
+    0,
+    Math.min(
+      selectedIndex - Math.floor(maxVisible / 2),
+      Math.max(0, filteredCommands.length - maxVisible),
+    ),
+  );
+  const visibleCommands = filteredCommands.slice(startIndex, startIndex + maxVisible);
+
   return (
     <Modal visible={visible} onClose={handleClose} title="Commands">
       {/* Search/filter input */}
-      <box marginBottom={1}>
-        <text fg={mutedColor}>&gt; </text>
-        <input
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Type a command..."
-          focused={visible}
-        />
+      <box flexDirection="row" marginBottom={1} backgroundColor={bgColor}>
+        <text fg={mutedColor} bg={bgColor}>&gt; </text>
+        <text fg={searchQuery ? textColor : mutedColor} bg={bgColor}>
+          {searchQuery || 'Type a command...'}
+        </text>
       </box>
 
-      {/* Command list with name + description */}
-      {options.length > 0 ? (
-        <select
-          options={options}
-          selectedIndex={0}
-          onSelect={handleSelect}
-          focused={visible && !searchQuery}
-          showDescription={true}
-          wrapSelection={true}
-          showScrollIndicator={true}
-          backgroundColor={bgColor}
-          textColor={textColor}
-          selectedBackgroundColor={primaryColor}
-          selectedTextColor={bgColor}
-          descriptionColor={mutedColor}
-          selectedDescriptionColor={bgColor}
-          flexGrow={1}
-        />
+      {/* Command list */}
+      {filteredCommands.length > 0 ? (
+        <box flexDirection="column" flexGrow={1}>
+          {startIndex > 0 && (
+            <box backgroundColor={bgColor} paddingX={1}>
+              <text fg={mutedColor} bg={bgColor}>{fitLine(`^ ${startIndex} more above`)}</text>
+            </box>
+          )}
+          {visibleCommands.map((cmd, offset) => {
+            const actualIndex = startIndex + offset;
+            const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? primaryColor : bgColor;
+            const rowText = isSelected ? bgColor : textColor;
+            const title = cmd.shortcut ? `${cmd.label}  (${cmd.shortcut})` : cmd.label;
+
+            return (
+              <box key={cmd.id} backgroundColor={rowBg} paddingX={1}>
+                <text fg={rowText} bg={rowBg}>
+                  {fitLine(`${isSelected ? '> ' : '  '}${title}`)}
+                </text>
+              </box>
+            );
+          })}
+          {startIndex + visibleCommands.length < filteredCommands.length && (
+            <box backgroundColor={bgColor} paddingX={1}>
+              <text fg={mutedColor} bg={bgColor}>{fitLine(`v ${filteredCommands.length - startIndex - visibleCommands.length} more below`)}</text>
+            </box>
+          )}
+        </box>
       ) : (
-        <box>
-          <text fg={mutedColor}>No commands match "{searchQuery}"</text>
+        <box backgroundColor={bgColor}>
+          <text fg={mutedColor} bg={bgColor}>No commands match "{searchQuery}"</text>
         </box>
       )}
 
       {/* Footer */}
-      <box marginTop={1}>
-        <text fg={mutedColor}>Enter select | Up/Down navigate | Esc close</text>
+      <box marginTop={1} backgroundColor={bgColor}>
+        <text fg={mutedColor} bg={bgColor}>Type filter | Up/Down | Enter | Esc</text>
       </box>
     </Modal>
   );

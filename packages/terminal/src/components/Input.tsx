@@ -146,6 +146,8 @@ interface InputProps {
   onFileSearch?: (query: string) => string[];
   /** Live partial transcript from streaming STT (talk mode) */
   partialTranscript?: string;
+  /** Whether the prompt should accept focus and global input events */
+  isActive?: boolean;
   /** Model variant labels for the variants bar (e.g. ["Build", "MiMo V2", ...]) */
   modelVariants?: string[];
   /** Index of the active variant (default 0) */
@@ -179,6 +181,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   onStopRecording,
   onFileSearch,
   partialTranscript = '',
+  isActive = true,
   modelVariants = [],
   activeVariant = 0,
   reasoningEffort,
@@ -539,7 +542,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       setTextareaValue('');
       return;
     }
-  });
+  }, { isActive });
 
   // Show different prompts based on state
   let placeholder = 'Type a message...';
@@ -647,7 +650,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
               placeholder={placeholder}
               placeholderColor={textMuted}
               wrapMode="word"
-              focused
+              focused={isActive}
               flexGrow={1}
               height={Math.max(1, lineCount)}
               textColor={textColor}
