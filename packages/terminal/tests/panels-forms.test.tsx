@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { getSecurityLogger } from '@hasna/assistants-core';
-import { DEFAULT_MODEL } from '@hasna/assistants-shared';
+import { DEFAULT_MODEL, type LLMProvider } from '@hasna/assistants-shared';
 
 const { LogsPanel } = await import('../src/components/LogsPanel');
 const { SecretsPanel } = await import('../src/components/SecretsPanel');
@@ -989,5 +989,38 @@ describe('terminal panels', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const hasProvider = await waitForText('Choose your provider');
     expect(hasProvider).toBe(true);
+  }, 10000);
+
+  test('OnboardingPanel renders API key step without invalid span nesting', async () => {
+    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+      <OnboardingPanel
+        onComplete={async () => {}}
+        onCancel={() => {}}
+        existingApiKeys={{ anthropic: 'existing-test-key' } as Record<LLMProvider, string>}
+        discoveredConnectors={[]}
+      />, { width: 80, height: 24 }
+    );
+
+    const waitForText = async (text: string, timeoutMs: number = 3000) => {
+      const started = Date.now();
+      while (Date.now() - started < timeoutMs) {
+        await renderOnce();
+        if (captureCharFrame().includes(text)) return true;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+      return false;
+    };
+
+    expect(await waitForText('Press Enter to get started')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('What can assistants do?')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('Choose your provider')).toBe(true);
+    mockInput.pressEnter();
+    expect(await waitForText('Choose your default model')).toBe(true);
+    mockInput.pressEnter();
+
+    expect(await waitForText("Let's set up your API key")).toBe(true);
+    expect(captureCharFrame()).toContain('Get one at:');
   }, 10000);
 });

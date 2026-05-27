@@ -574,10 +574,7 @@ export function OnboardingPanel({
         <box marginTop={1} marginBottom={1} flexDirection="column">
           <text>assistants uses {providerLabel}. You'll need an API key.</text>
           {providerInfo?.docsUrl ? (
-            <box flexDirection="row">
-              <span>Get one at: </span>
-              <span fg={themeColor('info')}><u>{providerInfo.docsUrl}</u></span>
-            </box>
+            <text>Get one at: <span fg={themeColor('info')}>{providerInfo.docsUrl}</span></text>
           ) : null}
         </box>
         {existingKey ? (
