@@ -595,9 +595,131 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const textMuted = themeColor('muted');        // TextMuted: #6a6a6a dark / #8a8a8a light
 
   const secondaryCol = themeColor('secondary');
+  const menuWidth = Math.max(20, screenWidth - 2);
+  const menuBg = themeColor('surface');
+
+  const autocompleteDropdown = (() => {
+    if (autocompleteMode === 'skill' && filteredSkills.length > 0) {
+      return (
+        <box
+          position="absolute"
+          bottom="100%"
+          left={0}
+          zIndex={50}
+          width={menuWidth}
+          flexDirection="column"
+          backgroundColor={menuBg}
+          paddingX={1}
+          paddingY={0}
+        >
+          {visibleSkills.startIndex > 0 && (
+            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleSkills.startIndex} more above</text>
+          )}
+          {visibleSkills.items.map((skill, i) => {
+            const actualIndex = visibleSkills.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : menuBg;
+            return (
+              <box flexDirection="row" key={skill.name} backgroundColor={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
+                  {isSelected ? '▸ ' : '  '}
+                  <b>{skill.name.padEnd(18)}</b>
+                </text>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
+                  {truncateDescription(skill.description)}
+                </text>
+              </box>
+            );
+          })}
+          {visibleSkills.startIndex + maxVisible < filteredSkills.length && (
+            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
+          )}
+        </box>
+      );
+    }
+
+    if (autocompleteMode === 'command' && filteredCommands.length > 0) {
+      return (
+        <box
+          position="absolute"
+          bottom="100%"
+          left={0}
+          zIndex={50}
+          width={menuWidth}
+          flexDirection="column"
+          backgroundColor={menuBg}
+          paddingX={1}
+          paddingY={0}
+        >
+          {visibleCommands.startIndex > 0 && (
+            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleCommands.startIndex} more above</text>
+          )}
+          {visibleCommands.items.map((cmd, i) => {
+            const actualIndex = visibleCommands.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : menuBg;
+            return (
+              <box flexDirection="row" key={cmd.name} backgroundColor={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
+                  {isSelected ? '▸ ' : '  '}
+                  <b>{cmd.name.padEnd(18)}</b>
+                </text>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
+                  {cmd.description}
+                </text>
+              </box>
+            );
+          })}
+          {visibleCommands.startIndex + maxVisible < filteredCommands.length && (
+            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
+          )}
+        </box>
+      );
+    }
+
+    if (autocompleteMode === 'file' && filteredFiles.length > 0) {
+      return (
+        <box
+          position="absolute"
+          bottom="100%"
+          left={0}
+          zIndex={50}
+          width={menuWidth}
+          flexDirection="column"
+          backgroundColor={menuBg}
+          paddingX={1}
+          paddingY={0}
+        >
+          {visibleFiles.startIndex > 0 && (
+            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleFiles.startIndex} more above</text>
+          )}
+          {visibleFiles.items.map((file, i) => {
+            const actualIndex = visibleFiles.startIndex + i;
+            const isSelected = actualIndex === selectedIndex;
+            const rowBg = isSelected ? themeColor('primary') : menuBg;
+            return (
+              <box flexDirection="row" key={file.name} backgroundColor={rowBg}>
+                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
+                  {isSelected ? '▸ ' : '  '}
+                  {file.name}
+                </text>
+              </box>
+            );
+          })}
+          {visibleFiles.startIndex + maxVisible < filteredFiles.length && (
+            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
+          )}
+        </box>
+      );
+    }
+
+    return null;
+  })();
 
   return (
-    <box flexDirection="column" marginTop={0}>
+    <box flexDirection="column" marginTop={0} position="relative">
+      {autocompleteDropdown}
+
       {/* Editor area — OpenCode uses Background color, no borders */}
       <box
         flexDirection="column"
@@ -689,93 +811,6 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           </box>
         )}
       </box>
-
-      {/* Skills autocomplete dropdown - below input */}
-      {autocompleteMode === 'skill' && filteredSkills.length > 0 && (
-        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
-          {/* Scroll indicator - top */}
-          {visibleSkills.startIndex > 0 && (
-            <text fg={mutedColor}>  ↑ {visibleSkills.startIndex} more above</text>
-          )}
-          {visibleSkills.items.map((skill, i) => {
-            const actualIndex = visibleSkills.startIndex + i;
-            const isSelected = actualIndex === selectedIndex;
-            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
-            return (
-              <box flexDirection="row" key={skill.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
-                  {isSelected ? '▸ ' : '  '}
-                  <b>{skill.name.padEnd(18)}</b>
-                </text>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
-                  {truncateDescription(skill.description)}
-                </text>
-              </box>
-            );
-          })}
-          {/* Scroll indicator - bottom */}
-          {visibleSkills.startIndex + maxVisible < filteredSkills.length && (
-            <text fg={mutedColor}>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
-          )}
-        </box>
-      )}
-
-      {/* Commands autocomplete dropdown - below input */}
-      {autocompleteMode === 'command' && filteredCommands.length > 0 && (
-        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
-          {/* Scroll indicator - top */}
-          {visibleCommands.startIndex > 0 && (
-            <text fg={mutedColor}>  ↑ {visibleCommands.startIndex} more above</text>
-          )}
-          {visibleCommands.items.map((cmd, i) => {
-            const actualIndex = visibleCommands.startIndex + i;
-            const isSelected = actualIndex === selectedIndex;
-            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
-            return (
-              <box flexDirection="row" key={cmd.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
-                  {isSelected ? '▸ ' : '  '}
-                  <b>{cmd.name.padEnd(18)}</b>
-                </text>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
-                  {cmd.description}
-                </text>
-              </box>
-            );
-          })}
-          {/* Scroll indicator - bottom */}
-          {visibleCommands.startIndex + maxVisible < filteredCommands.length && (
-            <text fg={mutedColor}>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
-          )}
-        </box>
-      )}
-
-      {/* File autocomplete dropdown - below input */}
-      {autocompleteMode === 'file' && filteredFiles.length > 0 && (
-        <box flexDirection="column" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
-          {/* Scroll indicator - top */}
-          {visibleFiles.startIndex > 0 && (
-            <text fg={mutedColor}>  ↑ {visibleFiles.startIndex} more above</text>
-          )}
-          {visibleFiles.items.map((file, i) => {
-            const actualIndex = visibleFiles.startIndex + i;
-            const isSelected = actualIndex === selectedIndex;
-            const rowBg = isSelected ? themeColor('primary') : themeColor('surface');
-            return (
-              <box flexDirection="row" key={file.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
-                  {isSelected ? '▸ ' : '  '}
-                  {file.name}
-                </text>
-              </box>
-            );
-          })}
-          {/* Scroll indicator - bottom */}
-          {visibleFiles.startIndex + maxVisible < filteredFiles.length && (
-            <text fg={mutedColor}>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
-          )}
-        </box>
-      )}
     </box>
   );
 });

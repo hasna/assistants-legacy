@@ -18,6 +18,58 @@ describe('Input component', () => {
     expect(frame).toContain('Enter=inline | Tab=queue | Shift+Enter=interrupt');
   });
 
+  test('shows slash commands above a bottom-docked editor pane', async () => {
+    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+      <box flexDirection="column" height={12} width={80}>
+        <box flexDirection="column" height={11} width={80}>
+          <box height={8} width={80}>
+            <text>message history</text>
+          </box>
+          <box flexDirection="column" height={3} width={80} flexShrink={0}>
+            <Input onSubmit={() => {}} />
+          </box>
+        </box>
+        <box height={1} width={80}>
+          <text>status footer</text>
+        </box>
+      </box>,
+      { width: 80, height: 12 }
+    );
+
+    await renderOnce();
+    await mockInput.typeText('/');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await renderOnce();
+
+    const frame = captureCharFrame();
+    expect(frame).toContain('/budget');
+    expect(frame).toContain('manage budget profiles');
+    expect(frame).toContain('status footer');
+  });
+
+  test('submits normally after opening and closing slash autocomplete', async () => {
+    const submitted: Array<{ value: string; mode: string }> = [];
+    const { renderOnce, mockInput } = await testRender(
+      <Input
+        onSubmit={(value, mode) => {
+          submitted.push({ value, mode });
+        }}
+      />,
+      { width: 80, height: 24 }
+    );
+
+    await renderOnce();
+    await mockInput.typeText('/');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    mockInput.pressEscape();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await mockInput.typeText('send after slash');
+    mockInput.pressEnter();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(submitted).toEqual([{ value: 'send after slash', mode: 'normal' }]);
+  });
+
   test('ctrl-c stops processing when callback is provided', async () => {
     let stopped = 0;
     const { renderOnce, mockInput } = await testRender(
