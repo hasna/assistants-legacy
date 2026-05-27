@@ -1,6 +1,6 @@
 {
   "name": "@hasna/assistants",
-  "version": "1.1.145",
+  "version": "1.1.146",
   "description": "Personal AI assistant that runs in your terminal — powered by the AI SDK",
   "type": "module",
   "bin": {

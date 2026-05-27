@@ -3052,11 +3052,13 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         return;
       }
 
-      // Inline mode: send immediately (client will queue while processing)
+      // Inline mode: show the follow-up immediately, but dispatch it through the
+      // queue once the active turn has fully finished. Calling client.send()
+      // during the final streaming window can strand the message without a turn.
       if (mode === 'inline') {
         if (!activeSessionId) return;
         const inlineId = generateId();
-        setInlinePending((prev) => [
+        setMessageQueue((prev) => [
           ...prev,
           {
             id: inlineId,
@@ -3075,13 +3077,6 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             timestamp: now(),
           },
         ]);
-        pendingSendsRef.current.push({ id: inlineId, sessionId: activeSessionId });
-        try {
-          await activeSession.client.send(trimmedInput);
-        } catch (err) {
-          clearPendingSend(inlineId, activeSessionId);
-          setError(err instanceof Error ? err.message : String(err));
-        }
         return;
       }
 

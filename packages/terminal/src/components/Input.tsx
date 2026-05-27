@@ -551,8 +551,8 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     placeholder = askPlaceholder || 'Answer the question...';
   } else if (isProcessing) {
     placeholder = queueLength > 0
-      ? 'Enter=inline | Tab=queue | Shift+Enter=interrupt'
-      : 'Enter=send inline | Shift+Enter=interrupt';
+      ? 'Enter=queue next | Tab=queue | Shift+Enter=interrupt'
+      : 'Enter=queue next | Shift+Enter=interrupt';
   }
 
   // Truncate description to fit in terminal

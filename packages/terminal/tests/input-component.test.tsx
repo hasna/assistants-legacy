@@ -15,7 +15,7 @@ describe('Input component', () => {
     const { captureCharFrame, renderOnce } = await testRender(<Input onSubmit={() => {}} isProcessing queueLength={2} />, { width: 80, height: 24 });
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain('Enter=inline | Tab=queue | Shift+Enter=interrupt');
+    expect(frame).toContain('Enter=queue next | Tab=queue | Shift+Enter=interrupt');
   });
 
   test('shows slash commands above a bottom-docked editor pane', async () => {
