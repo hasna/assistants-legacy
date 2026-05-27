@@ -47,6 +47,46 @@ describe('Input component', () => {
     expect(frame).toContain('status footer');
   });
 
+  test('keeps bottom editor visible when transcript overflows', async () => {
+    const history = Array.from({ length: 80 }, (_, i) => `history line ${i + 1}`);
+    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+      <box flexDirection="column" height={18} width={80}>
+        <box flexDirection="column" height={17} width={80}>
+          <box flexDirection="row" height={14} width={80}>
+            <box flexDirection="column" width={80} paddingTop={1} paddingRight={1} paddingBottom={0} paddingLeft={1}>
+              <scrollbox flexGrow={1} stickyScroll={true} focused={true}>
+                <box flexDirection="column" width="100%">
+                  {history.map((line) => (
+                    <box key={line}>
+                      <text>{line}</text>
+                    </box>
+                  ))}
+                </box>
+              </scrollbox>
+            </box>
+          </box>
+          <box flexDirection="column" height={3} width={80} flexShrink={0}>
+            <Input onSubmit={() => {}} />
+          </box>
+        </box>
+        <box height={1} width={80}>
+          <text>status footer</text>
+        </box>
+      </box>,
+      { width: 80, height: 18 }
+    );
+
+    await renderOnce();
+    let frame = captureCharFrame();
+    expect(frame).toContain('Type a message');
+    expect(frame).toContain('status footer');
+
+    await mockInput.typeText('visible text');
+    await renderOnce();
+    frame = captureCharFrame();
+    expect(frame).toContain('visible text');
+  });
+
   test('submits normally after opening and closing slash autocomplete', async () => {
     const submitted: Array<{ value: string; mode: string }> = [];
     const { renderOnce, mockInput } = await testRender(
