@@ -799,13 +799,34 @@ if (firstArg === 'remove' || firstArg === 'rm' || firstArg === 'uninstall' || fi
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 
+import { isStdioMode, resolveMcpHttpPort, startMcpHttpServer } from './http';
+
 async function main() {
-  const server = await createServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const args = process.argv.slice(2);
+  if (isStdioMode(args)) {
+    const server = await createServer();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    return;
+  }
+
+  // Default: shared Streamable HTTP server (one process per MCP, many agents).
+  startMcpHttpServer({
+    name: 'assistants',
+    port: resolveMcpHttpPort(args),
+    buildServer: () => createServer(),
+  });
 }
 
-main().catch((error) => {
-  console.error('MCP server error:', error);
-  process.exit(1);
-});
+const isDirectRun =
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith('mcp-server.ts') ||
+  process.argv[1]?.endsWith('index.js') ||
+  process.argv[1]?.endsWith('assistants-mcp');
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error('MCP server error:', error);
+    process.exit(1);
+  });
+}
