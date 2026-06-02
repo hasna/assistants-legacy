@@ -132,6 +132,16 @@ export class AISDKClient implements LLMClient {
         temperature: this.temperature,
         topP: this.topP,
         providerOptions: this.buildProviderOptions() as any,
+        // The AI SDK's default onError does `console.error(error)`, which dumps a
+        // raw error object (full request/response/stack) straight to stderr and
+        // corrupts the Ink TUI. We already surface stream failures through the
+        // 'error' part below (and the surrounding try/catch), so override it to
+        // suppress the noisy default. Stays visible under an explicit debug flag.
+        onError: ({ error }) => {
+          if (process.env.ASSISTANTS_DEBUG || process.env.DEBUG) {
+            console.error('[llm] stream error:', formatAIError(error));
+          }
+        },
       });
 
       const emittedToolCalls = new Set<string>();
