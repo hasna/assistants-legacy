@@ -247,6 +247,7 @@ export interface AppProps {
   cwd: string;
   version?: string;
   permissionMode?: 'normal' | 'plan' | 'auto-accept';
+  onExit?: () => void;
 }
 
 // Activity entry for tracking tool calls and text during a turn
@@ -302,3 +303,15 @@ export interface IdentityPanelIntent {
 export const MESSAGE_CHUNK_LINES = 12;
 export const MESSAGE_WRAP_CHARS = 120;
 export const CONNECTOR_INSTALL_PATTERN = /\b(connect-[a-z0-9._-]+(?:@[a-z0-9._-]+)?|@hasna\/[a-z0-9._-]+(?:@[a-z0-9._-]+)?)\b/i;
+
+/**
+ * Whether a stream chunk represents the start of genuinely visible assistant
+ * output (streamed text or a tool call). Used to decide when a new turn may
+ * clear a previously surfaced error banner: a bare terminal chunk — e.g. a
+ * 'done' immediately trailing an 'error' from an API failure — must NOT clear
+ * the error, otherwise the failure renders as dead air. Only real output should
+ * reset the banner.
+ */
+export function chunkStartsVisibleOutput(chunkType: string): boolean {
+  return chunkType === 'text' || chunkType === 'tool_use';
+}

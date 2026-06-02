@@ -8,6 +8,7 @@ import {
   formatShellResult,
   formatElapsedDuration,
   deepMerge,
+  chunkStartsVisibleOutput,
 } from '../src/components/appHelpers';
 
 describe('extractJsonObject', () => {
@@ -94,5 +95,21 @@ describe('formatShellResult', () => {
   test('notes truncation', () => {
     const out = formatShellResult('cat big', { exitCode: 0, stdout: 'x', stderr: '', truncated: true });
     expect(out).toContain('truncated');
+  });
+});
+
+describe('chunkStartsVisibleOutput (regression: API error must not render as dead air)', () => {
+  test('true only for chunks that begin visible output', () => {
+    expect(chunkStartsVisibleOutput('text')).toBe(true);
+    expect(chunkStartsVisibleOutput('tool_use')).toBe(true);
+  });
+  test('false for terminal/non-output chunks so a trailing "done" cannot clear an error banner', () => {
+    // The bug: a 'done' chunk trailing an immediate 'error' re-entered the
+    // turn-start path and called setError(null), wiping the error → dead air.
+    expect(chunkStartsVisibleOutput('done')).toBe(false);
+    expect(chunkStartsVisibleOutput('error')).toBe(false);
+    expect(chunkStartsVisibleOutput('usage')).toBe(false);
+    expect(chunkStartsVisibleOutput('tool_result')).toBe(false);
+    expect(chunkStartsVisibleOutput('partial_transcript')).toBe(false);
   });
 });
