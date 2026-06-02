@@ -37,7 +37,6 @@
     "cli",
     "ai-sdk",
     "chatbot",
-    "opentui",
     "bun"
   ],
   "publishConfig": {
@@ -53,16 +52,14 @@
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "dependencies": {
-    "@opentui/core": "0.1.90",
-    "@opentui/react": "0.1.90",
     "chalk": "4.1.2",
     "cli-boxes": "3.0.0",
     "indent-string": "5.0.0",
+    "ink": "7.0.3",
     "marked": "^17.0.1",
     "marked-terminal": "^7.3.0",
     "react": "^19.2.4",
-    "slice-ansi": "8.0.0",
-    "yoga-layout": "3.2.1"
+    "slice-ansi": "8.0.0"
   },
   "devDependencies": {
     "@hasna/assistants-core": "workspace:*",

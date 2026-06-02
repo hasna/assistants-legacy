@@ -1,4 +1,5 @@
 import React from 'react';
+import { Inline } from '../../ui/ink';
 import { color } from './color';
 
 interface KeyboardShortcutHintProps {
@@ -12,20 +13,19 @@ interface KeyboardShortcutHintProps {
 
 /**
  * Inline keyboard-shortcut hint like `ctrl+o expand` — the shortcut is
- * emphasized, the action muted. Renders `<span>`s, so it must live inside a
- * `<text>`. Separate multiple hints with a middot in the parent `<text>`.
+ * emphasized, the action muted.
  *
  * @example
- * <text><KeyboardShortcutHint shortcut="esc" action="cancel" parens /></text>
+ * <Text><KeyboardShortcutHint shortcut="esc" action="cancel" parens /></Text>
  */
 export function KeyboardShortcutHint({ shortcut, action, parens = false }: KeyboardShortcutHintProps) {
   const muted = color('muted');
   return (
     <>
-      {parens && <span fg={muted}>(</span>}
-      <span fg={color('text')}><b>{shortcut}</b></span>
-      <span fg={muted}> {action}</span>
-      {parens && <span fg={muted}>)</span>}
+      {parens ? <Inline fg={muted}>(</Inline> : null}
+      <Inline fg={color('text')} bold>{shortcut}</Inline>
+      <Inline fg={muted}> {action}</Inline>
+      {parens ? <Inline fg={muted}>)</Inline> : null}
     </>
   );
 }

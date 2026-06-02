@@ -18,6 +18,7 @@ import { SkillsPanel } from '../SkillsPanel';
 import { SchedulesPanel } from '../SchedulesPanel';
 import type { SkillDraft } from '../appHelpers';
 import { collectStreamText, extractJsonObject, normalizeAllowedTools } from '../appHelpers';
+import { Box } from '../../ui/ink';
 import type { PanelRenderContext } from './context';
 
 export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactNode {
@@ -51,7 +52,7 @@ export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactNode 
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <ConnectorsPanel
         connectors={ctx.connectors}
         initialConnector={ctx.connectorsPanelInitial}
@@ -63,7 +64,7 @@ export function renderConnectorsPanel(ctx: PanelRenderContext): React.ReactNode 
           ctx.setConnectorsPanelInitial(undefined);
         }}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -141,7 +142,7 @@ export function renderTasksPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <TasksPanel
         tasks={ctx.tasksList}
         paused={ctx.tasksPaused}
@@ -154,7 +155,7 @@ export function renderTasksPanel(ctx: PanelRenderContext): React.ReactNode {
         onChangePriority={handleTasksChangePriority}
         onClose={() => ctx.setShowTasksPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -266,7 +267,7 @@ export function renderSkillsPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <SkillsPanel
         skills={ctx.skillsList}
         onExecute={handleSkillExecute}
@@ -278,7 +279,7 @@ export function renderSkillsPanel(ctx: PanelRenderContext): React.ReactNode {
         onClose={() => ctx.setShowSkillsPanel(false)}
         cwd={ctx.cwd}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -377,7 +378,7 @@ export function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <SchedulesPanel
         schedules={ctx.schedulesList}
         sessionId={ctx.activeSessionId || 'default'}
@@ -389,7 +390,6 @@ export function renderSchedulesPanel(ctx: PanelRenderContext): React.ReactNode {
         onRefresh={handleScheduleRefresh}
         onClose={() => ctx.setShowSchedulesPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
-

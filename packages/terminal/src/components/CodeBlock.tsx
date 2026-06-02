@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { SyntaxStyle, RGBA } from '@opentui/core';
+/** @jsxImportSource react */
+import React from 'react';
 import type { ToolCall } from '@hasna/assistants-shared';
 import { themeColor } from '../theme/colors';
+import { Text } from '../ui/ink';
 
 /**
  * Map file extensions to Tree-Sitter filetype identifiers
@@ -64,39 +65,8 @@ const EXT_TO_FILETYPE: Record<string, string> = {
   php: 'php',
 };
 
-/**
- * Create a default syntax style for code highlighting.
- * Cached as a module-level singleton since it doesn't change.
- */
-let _cachedSyntaxStyle: SyntaxStyle | null = null;
-let _syntaxStyleFailed = false;
-
-export function getDefaultSyntaxStyle(): SyntaxStyle | null {
-  if (_syntaxStyleFailed) return null;
-  if (_cachedSyntaxStyle) return _cachedSyntaxStyle;
-  try {
-    _cachedSyntaxStyle = SyntaxStyle.fromStyles({
-      keyword: { fg: RGBA.fromHex('#c792ea'), bold: true },
-      string: { fg: RGBA.fromHex('#c3e88d') },
-      comment: { fg: RGBA.fromHex('#636d83'), italic: true },
-      number: { fg: RGBA.fromHex('#f78c6c') },
-      type: { fg: RGBA.fromHex('#ffcb6b') },
-      function: { fg: RGBA.fromHex('#82aaff') },
-      variable: { fg: RGBA.fromHex('#a6accd') },
-      operator: { fg: RGBA.fromHex('#89ddff') },
-      punctuation: { fg: RGBA.fromHex('#89ddff') },
-      property: { fg: RGBA.fromHex('#f07178') },
-      constant: { fg: RGBA.fromHex('#ff5370') },
-      tag: { fg: RGBA.fromHex('#f07178') },
-      attribute: { fg: RGBA.fromHex('#ffcb6b') },
-      default: { fg: RGBA.fromHex('#a6accd') },
-    });
-    return _cachedSyntaxStyle;
-  } catch {
-    // SyntaxStyle requires native Zig bindings — fall back gracefully in test environments
-    _syntaxStyleFailed = true;
-    return null;
-  }
+export function getDefaultSyntaxStyle(): null {
+  return null;
 }
 
 /**
@@ -178,31 +148,15 @@ export function shouldHighlightToolResult(
 }
 
 interface CodeBlockProps {
-  content: string;
+  content?: string;
+  code?: string;
   filetype?: string;
+  language?: string;
   maxHeight?: number;
 }
 
-/**
- * Renders syntax-highlighted code using OpenTUI's native <code> component.
- * Falls back to plain <text> if SyntaxStyle is unavailable (e.g. in tests).
- */
-export function CodeBlock({ content, filetype, maxHeight }: CodeBlockProps) {
-  const syntaxStyle = useMemo(() => getDefaultSyntaxStyle(), []);
-
-  // Fall back to dim plain text when native syntax highlighting is unavailable
-  if (!syntaxStyle) {
-    return <text fg={themeColor('muted')}>{content}</text>;
-  }
-
-  return (
-    <code
-      content={content}
-      filetype={filetype || 'text'}
-      syntaxStyle={syntaxStyle}
-      drawUnstyledText={true}
-      width="100%"
-      {...(maxHeight ? { maxHeight } : {})}
-    />
-  );
+export function CodeBlock({ content, code, maxHeight }: CodeBlockProps) {
+  const text = content ?? code ?? '';
+  const lines = maxHeight ? text.split('\n').slice(0, maxHeight).join('\n') : text;
+  return <Text fg={themeColor('muted')}>{lines}</Text>;
 }

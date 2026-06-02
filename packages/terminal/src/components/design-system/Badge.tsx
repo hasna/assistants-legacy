@@ -1,4 +1,5 @@
 import React from 'react';
+import { Inline } from '../../ui/ink';
 import { color, type ColorValue } from './color';
 
 interface BadgeProps {
@@ -10,13 +11,12 @@ interface BadgeProps {
 }
 
 /**
- * Inline label pill like `[beta]`, colored by tone. Renders a `<span>`, so it
- * must live inside a `<text>`.
+ * Inline label pill like `[beta]`, colored by tone.
  *
  * @example
- * <text><Badge label="beta" tone="warning" /><span> feature</span></text>
+ * <Text><Badge label="beta" tone="warning" /> feature</Text>
  */
 export function Badge({ label, tone = 'info', brackets = true }: BadgeProps) {
   const text = brackets ? `[${label}]` : label;
-  return <span fg={color(tone)}><b>{text}</b></span>;
+  return <Inline fg={color(tone)} bold>{text}</Inline>;
 }

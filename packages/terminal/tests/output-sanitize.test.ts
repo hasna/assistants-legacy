@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { sanitizeTerminalOutput, CLEAR_SCREEN_TOKEN } from '../src/output/sanitize';
 
 describe('sanitizeTerminalOutput', () => {

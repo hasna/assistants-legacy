@@ -1,11 +1,11 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { getSecurityLogger } from '@hasna/assistants-core';
 import { DEFAULT_MODEL } from '@hasna/assistants-shared';
+import { renderInk } from './utils/ink-test-harness';
 
 const { LogsPanel } = await import('../src/components/LogsPanel');
 const { SecretsPanel } = await import('../src/components/SecretsPanel');
@@ -91,19 +91,20 @@ const setupIsolatedSecurityLog = () => {
 describe('terminal panels', () => {
   test('LogsPanel renders empty state', async () => {
     const cleanup = setupIsolatedSecurityLog();
+    let harness: Awaited<ReturnType<typeof renderInk>> | null = null;
     try {
-      const { captureCharFrame, renderOnce } = await testRender(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
-      await renderOnce();
-      const frame = captureCharFrame();
+      harness = await renderInk(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
+      const frame = await harness.waitForText('No security events recorded.');
       expect(frame).toContain('Security Logs');
-      expect(frame).toContain('No security events recorded.');
     } finally {
+      await harness?.cleanup();
       cleanup();
     }
   });
 
   test('LogsPanel renders list entry when events exist', async () => {
     const cleanup = setupIsolatedSecurityLog();
+    let harness: Awaited<ReturnType<typeof renderInk>> | null = null;
     try {
       const logger = getSecurityLogger();
       logger.log({
@@ -112,24 +113,22 @@ describe('terminal panels', () => {
         sessionId: 's1',
         details: { reason: 'Blocked command pattern: rm -rf /', command: 'rm -rf /', tool: 'bash' },
       });
-      const { captureCharFrame, renderOnce } = await testRender(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
-      await renderOnce();
-      const frame = captureCharFrame();
+      harness = await renderInk(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
+      const frame = await harness.waitForText('blocked_command');
       expect(frame).toContain('Security Logs');
-      expect(frame).toContain('blocked_command');
     } finally {
+      await harness?.cleanup();
       cleanup();
     }
   });
 
   test('LogsPanel refreshes while open', async () => {
     const cleanup = setupIsolatedSecurityLog();
+    let harness: Awaited<ReturnType<typeof renderInk>> | null = null;
     try {
       const logger = getSecurityLogger();
-      const { captureCharFrame, renderOnce, mockInput } = await testRender(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
-      await renderOnce();
-      let frame = captureCharFrame();
-      expect(frame).toContain('No security events recorded.');
+      harness = await renderInk(<LogsPanel onCancel={() => {}} />, { width: 80, height: 24 });
+      await harness.waitForText('No security events recorded.');
 
       logger.log({
         eventType: 'validation_failure',
@@ -138,22 +137,17 @@ describe('terminal panels', () => {
         details: { reason: 'bad input' },
       });
 
-      mockInput.pressKey('r');
-      const started = Date.now();
-      while (Date.now() - started < 1200) {
-        await renderOnce();
-        frame = captureCharFrame();
-        if (frame.includes('validation_failure')) break;
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
+      harness.typeText('r');
+      const frame = await harness.waitForText('validation_failure', 1200);
       expect(frame).toContain('validation_failure');
     } finally {
+      await harness?.cleanup();
       cleanup();
     }
   });
 
   test('SecretsPanel renders empty state', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <SecretsPanel
         secrets={[]}
         onGet={async () => ''}
@@ -162,29 +156,79 @@ describe('terminal panels', () => {
         onClose={() => {}}
       />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('Secrets');
-    expect(frame).toContain('No secrets stored.');
+    try {
+      const frame = await harness.waitForText('No secrets stored.');
+      expect(frame).toContain('Secrets');
+    } finally {
+      await harness.cleanup();
+    }
+  });
+
+  test('SecretsPanel adds a secret with Ink TextInput', async () => {
+    let added: any = null;
+    const harness = await renderInk(
+      <SecretsPanel
+        secrets={[]}
+        onGet={async () => ''}
+        onAdd={async (input) => { added = input; }}
+        onDelete={async () => {}}
+        onClose={() => {}}
+      />, { width: 90, height: 24 }
+    );
+    try {
+      await harness.waitForText('No secrets stored.');
+      harness.typeText('n');
+      await harness.waitForText('Add Secret');
+
+      harness.typeText('GITHUB_TOKEN');
+      await harness.waitForText('GITHUB_TOKEN');
+      harness.pressEnter();
+
+      await harness.waitForText('Value:');
+      harness.typeText('s3cr3t');
+      await harness.waitForText('s3cr3t');
+      harness.pressEnter();
+
+      await harness.waitForText('Scope:');
+      harness.pressEnter();
+
+      await harness.waitForText('Description:');
+      harness.typeText('GitHub API token');
+      await harness.waitForText('GitHub API token');
+      harness.pressEnter();
+
+      await harness.waitForText('Secret saved.');
+      expect(added).toEqual({
+        name: 'GITHUB_TOKEN',
+        value: 's3cr3t',
+        scope: 'assistant',
+        description: 'GitHub API token',
+      });
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('WorkspacePanel renders empty state', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <WorkspacePanel
         workspaces={[]}
         onArchive={async () => {}}
         onDelete={async () => {}}
+        onSelect={async () => {}}
         onClose={() => {}}
       />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('Workspaces');
-    expect(frame).toContain('No workspaces found.');
+    try {
+      const frame = await harness.waitForText('No workspaces found.');
+      expect(frame).toContain('Workspaces');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('ProjectsPanel renders empty state and new project option', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <ProjectsPanel
         projects={[]}
         onSelect={() => {}}
@@ -194,30 +238,70 @@ describe('terminal panels', () => {
         onCancel={() => {}}
       />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('Projects');
-    expect(frame).toContain('No projects yet. Press n to create one.');
-    expect(frame).toContain('New project');
+    try {
+      const frame = await harness.waitForText('No projects yet. Press n to create one.');
+      expect(frame).toContain('Projects');
+      expect(frame).toContain('New project');
+    } finally {
+      await harness.cleanup();
+    }
+  });
+
+  test('ProjectsPanel creates a project with Ink TextInput', async () => {
+    let created: { name: string; description?: string } | null = null;
+    const harness = await renderInk(
+      <ProjectsPanel
+        projects={[]}
+        onSelect={() => {}}
+        onCreate={async (name, description) => { created = { name, description }; }}
+        onDelete={async () => {}}
+        onViewPlans={() => {}}
+        onCancel={() => {}}
+      />, { width: 90, height: 24 }
+    );
+    try {
+      await harness.waitForText('No projects yet. Press n to create one.');
+      harness.typeText('n');
+      await harness.waitForText('Create New Project');
+
+      harness.typeText('Ink Migration');
+      await harness.waitForText('Ink Migration');
+      harness.pressEnter();
+
+      await harness.waitForText('Description:');
+      harness.typeText('Move terminal UI to upstream Ink');
+      await harness.waitForText('Move terminal UI to upstream Ink');
+      harness.pressEnter();
+
+      await harness.waitForText('No projects yet. Press n to create one.');
+      expect(created).toEqual({
+        name: 'Ink Migration',
+        description: 'Move terminal UI to upstream Ink',
+      });
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('ConnectorsPanel renders empty state', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <ConnectorsPanel
         connectors={[]}
         onCheckAuth={async () => ({ authenticated: false })}
         onClose={() => {}}
       />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('Connectors');
-    expect(frame).toContain('No connectors found.');
+    try {
+      const frame = await harness.waitForText('No connectors found.');
+      expect(frame).toContain('Connectors');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('ConnectorsPanel remains interactive while navigating and searching', async () => {
     let closed = false;
-    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+    const harness = await renderInk(
       <ConnectorsPanel
         connectors={[
           {
@@ -245,15 +329,26 @@ describe('terminal panels', () => {
       />, { width: 80, height: 24 }
     );
 
-    await renderOnce();
+    try {
+      let frame = await harness.waitForText('alpha');
+      expect(frame).toContain('beta');
 
-    let frame = captureCharFrame();
-    expect(frame).toContain('alpha');
-    expect(frame).toContain('beta');
+      harness.pressKey('/');
+      await harness.waitForText('Search:');
+      harness.typeText('beta');
+      frame = await harness.waitForText('matching "beta"');
+      expect(frame).toContain('beta');
+      expect(frame).not.toContain('alpha        ');
 
-    mockInput.pressKey('q'); // quit panel
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(closed).toBe(true);
+      harness.pressEnter();
+      await harness.waitForText('Commands:');
+
+      harness.pressKey('q');
+      await harness.renderOnce();
+      expect(closed).toBe(true);
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('TelephonyPanel shows quick setup and default number', async () => {
@@ -261,21 +356,16 @@ describe('terminal panels', () => {
       defaultNumber: '+15550001111',
       defaultSource: 'local',
     });
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <TelephonyPanel manager={manager as any} onClose={() => {}} />, { width: 80, height: 24 }
     );
-    // Wait for useEffect to run and trigger re-render
-    const started = Date.now();
-    let frame = '';
-    while (Date.now() - started < 800) {
-      await renderOnce();
-      frame = captureCharFrame();
-      if (frame.includes('Quick Setup')) break;
-      await new Promise((resolve) => setTimeout(resolve, 20));
+    try {
+      const frame = await harness.waitForText('Quick Setup', 800);
+      expect(frame).toContain('Communication');
+      expect(frame).toContain('+15550001111');
+    } finally {
+      await harness.cleanup();
     }
-    expect(frame).toContain('Communication');
-    expect(frame).toContain('Quick Setup');
-    expect(frame).toContain('+15550001111');
   });
 
   test('TelephonyPanel highlights default number in numbers tab', async () => {
@@ -295,21 +385,17 @@ describe('terminal panels', () => {
         },
       ],
     });
-    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+    const harness = await renderInk(
       <TelephonyPanel manager={manager as any} onClose={() => {}} />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    mockInput.pressKey('4');
-    const started = Date.now();
-    let frame = '';
-    while (Date.now() - started < 800) {
-      await renderOnce();
-      frame = captureCharFrame();
-      if (frame.includes('★')) break;
-      await new Promise((resolve) => setTimeout(resolve, 20));
+    try {
+      await harness.waitForText('Quick Setup');
+      harness.pressKey('4');
+      const frame = await harness.waitForText('★', 800);
+      expect(frame).toContain('default');
+    } finally {
+      await harness.cleanup();
     }
-    expect(frame).toContain('★');
-    expect(frame).toContain('default');
   });
 
   test('TelephonyPanel sets default number with d key', async () => {
@@ -327,26 +413,53 @@ describe('terminal panels', () => {
         },
       ],
     });
-    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+    const harness = await renderInk(
       <TelephonyPanel manager={manager as any} onClose={() => {}} />, { width: 80, height: 24 }
     );
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    mockInput.pressKey('4');
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    mockInput.pressKey('d');
-    const started = Date.now();
-    let frame = '';
-    while (Date.now() - started < 2000) {
-      await renderOnce();
-      frame = captureCharFrame();
-      if (frame.includes('Default phone number set to +15550003333')) break;
-      await new Promise((resolve) => setTimeout(resolve, 30));
+    try {
+      await harness.waitForText('Quick Setup');
+      harness.pressKey('4');
+      await harness.waitForText('+15550003333');
+      harness.pressKey('d');
+      const frame = await harness.waitForText('Default phone number set to +15550003333', 2000);
+      expect(frame).toContain('Default phone number set to +15550003333');
+    } finally {
+      await harness.cleanup();
     }
-    expect(frame).toContain('Default phone number set to +15550003333');
+  });
+
+  test('TelephonyPanel sends SMS with Ink TextInput', async () => {
+    const manager = createTelephonyManagerStub() as any;
+    let sent: { to: string; body: string } | null = null;
+    manager.sendSms = async (to: string, body: string) => {
+      sent = { to, body };
+      return { success: true, message: 'SMS sent.' };
+    };
+
+    const harness = await renderInk(
+      <TelephonyPanel manager={manager} onClose={() => {}} />, { width: 90, height: 24 }
+    );
+    try {
+      await harness.waitForText('Quick Setup');
+      harness.typeText('s');
+      await harness.waitForText('Send SMS');
+      harness.typeText('+15550004444');
+      harness.pressEnter();
+      await harness.waitForText('Body:');
+      harness.typeText('Ink SMS check');
+      harness.pressEnter();
+      await harness.waitForText('SMS sent.');
+      expect(sent).toEqual({
+        to: '+15550004444',
+        body: 'Ink SMS check',
+      });
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('ConnectorsPanel does not auto-enter search mode when typing letters', async () => {
-    const { captureCharFrame, renderOnce, mockInput } = await testRender(
+    const harness = await renderInk(
       <ConnectorsPanel
         connectors={[
           {
@@ -361,12 +474,16 @@ describe('terminal panels', () => {
       />, { width: 80, height: 24 }
     );
 
-    await renderOnce();
-    mockInput.pressKey('a');
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).not.toContain('Search:');
-    expect(frame).toContain('alpha');
+    try {
+      await harness.waitForText('alpha');
+      harness.pressKey('a');
+      await harness.renderOnce();
+      const frame = harness.captureFrame();
+      expect(frame).not.toContain('Search:');
+      expect(frame).toContain('alpha');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
 });

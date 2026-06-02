@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { TelephonyManager, CallListItem, SmsListItem, PhoneNumber, RoutingRule, TelephonyStatus } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface TelephonyPanelProps {
@@ -159,6 +159,33 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
 
   const tabs: Tab[] = ['overview', 'calls', 'messages', 'numbers', 'routes'];
 
+  const submitSmsTo = (nextTo: string) => {
+    setComposeTo(nextTo);
+    if (nextTo.trim()) setComposeStep('body');
+  };
+
+  const submitSmsBody = async (nextBody: string) => {
+    setComposeBody(nextBody);
+    if (!nextBody.trim()) return;
+
+    const result = await manager.sendSms(composeTo.trim(), nextBody.trim());
+    setStatusMessage(result.success ? result.message : `Error: ${result.message}`);
+    setMode('messages');
+    setTab('messages');
+    loadData();
+  };
+
+  const submitCallTo = async (nextTo: string) => {
+    setComposeTo(nextTo);
+    if (!nextTo.trim()) return;
+
+    const result = await manager.makeCall(nextTo.trim());
+    setStatusMessage(result.success ? result.message : `Error: ${result.message}`);
+    setMode('calls');
+    setTab('calls');
+    loadData();
+  };
+
   useInput((input, key) => {
     // Don't handle during text input modes
     if (mode === 'sms-compose' || mode === 'call-compose') return;
@@ -222,32 +249,21 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
     }
   }, { isActive: mode === 'sms-compose' || mode === 'call-compose' });
 
-  // Tab bar - uses OpenTUI <tab-select> intrinsic
-  const tabSelectOptions = useMemo(() =>
-    tabs.map((t, i) => ({
-      name: `${i + 1}:${t}`,
-      description: '',
-      value: t,
-    })), []);
-
   const tabBar = (
-    <tab-select
-      options={tabSelectOptions}
-      selectedBackgroundColor={themeColor('primary')}
-      selectedTextColor={themeColor('text')}
-      textColor="gray"
-      showDescription={false}
-      wrapSelection
-      focused
-      onChange={(index) => {
-        const newTab = tabs[index];
-        if (newTab) {
-          setTab(newTab);
-          setMode(newTab);
-          setSelectedIndex(0);
-        }
-      }}
-    />
+    <Box marginBottom={1}>
+      {tabs.map((item, index) => {
+        const selected = item === tab;
+        return (
+          <Text
+            key={item}
+            bg={selected ? themeColor('primary') : undefined}
+            fg={selected ? themeColor('text') : "gray"}
+          >
+            {index > 0 ? ' ' : ''}{index + 1}:{item}
+          </Text>
+        );
+      })}
+    </Box>
   );
 
   // Header
@@ -258,219 +274,211 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
       : 'q close | 1-5 tabs | s sms | c call | r refresh';
 
   const header = (
-    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text><span fg={themeColor('secondary')}><b>Communication</b></span><span fg={themeColor('muted')}>{' | '}{headerHint}</span></text>
-    </box>
+    <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <Text>
+        <Inline fg={themeColor('secondary')} bold>Communication</Inline>
+        <Inline fg={themeColor('muted')}>{' | '}{headerHint}</Inline>
+      </Text>
+    </Box>
   );
 
   const statusBar2 = statusMessage ? (
-    <box marginBottom={1}><text fg={themeColor('warning')}>{statusMessage}</text></box>
+    <Box marginBottom={1}><Text fg={themeColor('warning')}>{statusMessage}</Text></Box>
   ) : null;
 
   const errorBar = error ? (
-    <box marginBottom={1}><text fg={themeColor('error')}>Error: {error}</text></box>
+    <Box marginBottom={1}><Text fg={themeColor('error')}>Error: {error}</Text></Box>
   ) : null;
 
   // SMS compose
   if (mode === 'sms-compose') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Send SMS</b></text>
-          <text> </text>
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Send SMS</Text>
+          <Text> </Text>
           {composeStep === 'to' ? (
-            <box>
-              <text>To: </text>
-              <input
+            <Box>
+              <Text>To: </Text>
+              <TextInput
                 value={composeTo}
                 onChange={setComposeTo}
-                onSubmit={() => {
-                  if (composeTo.trim()) setComposeStep('body');
-                }}
-                focused
+                onSubmit={submitSmsTo}
+                focus
                 placeholder="+15551234567"
               />
-            </box>
+            </Box>
           ) : (
-            <box flexDirection="column">
-              <text>To: {composeTo}</text>
-              <box>
-                <text>Body: </text>
-                <input
+            <Box flexDirection="column">
+              <Text>To: {composeTo}</Text>
+              <Box>
+                <Text>Body: </Text>
+                <TextInput
                   value={composeBody}
                   onChange={setComposeBody}
-                  onSubmit={async () => {
-                    if (composeBody.trim()) {
-                      const result = await manager.sendSms(composeTo.trim(), composeBody.trim());
-                      setStatusMessage(result.success ? result.message : `Error: ${result.message}`);
-                      setMode('messages');
-                      setTab('messages');
-                      loadData();
-                    }
+                  onSubmit={(nextBody) => {
+                    void submitSmsBody(nextBody);
                   }}
-                  focused
+                  focus
                   placeholder="Type your message..."
                 />
-              </box>
-            </box>
+              </Box>
+            </Box>
           )}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
   // Call compose
   if (mode === 'call-compose') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Make Call</b></text>
-          <text> </text>
-          <box>
-            <text>To: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Make Call</Text>
+          <Text> </Text>
+          <Box>
+            <Text>To: </Text>
+            <TextInput
               value={composeTo}
               onChange={setComposeTo}
-              onSubmit={async () => {
-                if (composeTo.trim()) {
-                  const result = await manager.makeCall(composeTo.trim());
-                  setStatusMessage(result.success ? result.message : `Error: ${result.message}`);
-                  setMode('calls');
-                  setTab('calls');
-                  loadData();
-                }
+              onSubmit={(nextTo) => {
+                void submitCallTo(nextTo);
               }}
-              focused
+              focus
               placeholder="+15551234567"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Overview tab
   if (tab === 'overview') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
-        <box flexDirection="column" paddingX={1}>
-          <text><b>System Status</b></text>
-          <text> </text>
+        <Box flexDirection="column" paddingX={1}>
+          <Text bold>System Status</Text>
+          <Text> </Text>
           {status ? (
             <>
-              <text>Twilio:       {status.twilioConfigured ? <span fg={themeColor('success')}>Connected</span> : <span fg={themeColor('error')}>Not configured</span>}</text>
-              <text>ElevenLabs:   {status.elevenLabsConfigured ? <span fg={themeColor('success')}>Connected</span> : <span fg={themeColor('error')}>Not configured</span>}</text>
-              <text>Default #:    {status.defaultPhoneNumber ? <span fg={themeColor('info')}>{status.defaultPhoneNumber}</span> : <span fg={themeColor('error')}>Not set</span>}{' '}{status.defaultPhoneNumberSource ? <span fg={themeColor('muted')}>{'('}{status.defaultPhoneNumberSource}{')'}</span> : null}</text>
-              <text>{`Phone #s:     ${status.phoneNumbers}`}</text>
-              <text>{`Active calls: ${status.activeCalls}`}</text>
-              <text>{`Routes:       ${status.routingRules}`}</text>
-              <text> </text>
-              <text fg={themeColor('muted')}>Press 's' to send SMS, 'c' to make a call</text>
-              <text> </text>
-              <text><b>Quick Setup</b></text>
-              <text fg={themeColor('muted')}>1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</text>
-              <text fg={themeColor('muted')}>2) Run /communication sync to import numbers</text>
-              <text fg={themeColor('muted')}>3) Pick a default number (numbers tab → 'd')</text>
-              <text fg={themeColor('muted')}>4) Set telephony.webhookUrl for voice calls</text>
+              <Text>Twilio:       {status.twilioConfigured ? <Inline fg={themeColor('success')}>Connected</Inline> : <Inline fg={themeColor('error')}>Not configured</Inline>}</Text>
+              <Text>ElevenLabs:   {status.elevenLabsConfigured ? <Inline fg={themeColor('success')}>Connected</Inline> : <Inline fg={themeColor('error')}>Not configured</Inline>}</Text>
+              <Text>
+                Default #:    {status.defaultPhoneNumber ? <Inline fg={themeColor('info')}>{status.defaultPhoneNumber}</Inline> : <Inline fg={themeColor('error')}>Not set</Inline>}{' '}
+                {status.defaultPhoneNumberSource ? <Inline fg={themeColor('muted')}>{'('}{status.defaultPhoneNumberSource}{')'}</Inline> : null}
+              </Text>
+              <Text>{`Phone #s:     ${status.phoneNumbers}`}</Text>
+              <Text>{`Active calls: ${status.activeCalls}`}</Text>
+              <Text>{`Routes:       ${status.routingRules}`}</Text>
+              <Text> </Text>
+              <Text fg={themeColor('muted')}>Press 's' to send SMS, 'c' to make a call</Text>
+              <Text> </Text>
+              <Text bold>Quick Setup</Text>
+              <Text fg={themeColor('muted')}>1) Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN</Text>
+              <Text fg={themeColor('muted')}>2) Run /communication sync to import numbers</Text>
+              <Text fg={themeColor('muted')}>3) Pick a default number (numbers tab → 'd')</Text>
+              <Text fg={themeColor('muted')}>4) Set telephony.webhookUrl for voice calls</Text>
             </>
           ) : (
-            <text fg={themeColor('muted')}>Loading...</text>
+            <Text fg={themeColor('muted')}>Loading...</Text>
           )}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
   // Calls tab
   if (tab === 'calls') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {calls.length === 0 ? (
-          <box paddingX={1}><text fg={themeColor('muted')}>No call history. Press 'c' to make a call.</text></box>
+          <Box paddingX={1}><Text fg={themeColor('muted')}>No call history. Press 'c' to make a call.</Text></Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {calls.map((call, i) => (
-              <box key={call.id}>
-                <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+              <Box key={call.id}>
+                <Text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
-                </text>
-                <text fg={call.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
+                </Text>
+                <Text fg={call.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
                   {call.direction === 'inbound' ? 'IN ' : 'OUT'}
-                </text>
-                <text> {call.fromNumber} → {call.toNumber}</text>
-                <text fg={themeColor('muted')}> | {call.status}</text>
-                {call.duration != null && <text fg={themeColor('muted')}>{` | ${call.duration}s`}</text>}
-                <text fg={themeColor('muted')}> | {formatRelativeTime(call.createdAt)}</text>
-                <text fg={themeColor('muted')}> | by {resolveActor(call.assistantId)}</text>
-              </box>
+                </Text>
+                <Text> {call.fromNumber} → {call.toNumber}</Text>
+                <Text fg={themeColor('muted')}> | {call.status}</Text>
+                {call.duration != null && <Text fg={themeColor('muted')}>{` | ${call.duration}s`}</Text>}
+                <Text fg={themeColor('muted')}> | {formatRelativeTime(call.createdAt)}</Text>
+                <Text fg={themeColor('muted')}> | by {resolveActor(call.assistantId)}</Text>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Messages tab
   if (tab === 'messages') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {messages.length === 0 ? (
-          <box paddingX={1}><text fg={themeColor('muted')}>No messages. Press 's' to send an SMS.</text></box>
+          <Box paddingX={1}><Text fg={themeColor('muted')}>No messages. Press 's' to send an SMS.</Text></Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {messages.map((msg, i) => (
-              <box key={msg.id} flexDirection="column">
-                <box>
-                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+              <Box key={msg.id} flexDirection="column">
+                <Box>
+                  <Text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </text>
-                  <text fg={msg.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
+                  </Text>
+                  <Text fg={msg.direction === 'inbound' ? themeColor('success') : themeColor('cyan')}>
                     {msg.direction === 'inbound' ? 'IN ' : 'OUT'}
-                  </text>
-                  <text fg={msg.messageType === 'whatsapp' ? themeColor('success') : undefined}>
+                  </Text>
+                  <Text fg={msg.messageType === 'whatsapp' ? themeColor('success') : undefined}>
                     [{msg.messageType === 'whatsapp' ? 'WA' : 'SMS'}]
-                  </text>
-                  <text> {msg.fromNumber} → {msg.toNumber}</text>
-                  <text fg={themeColor('muted')}> | {formatRelativeTime(msg.createdAt)}</text>
-                  <text fg={themeColor('muted')}> | by {resolveActor(msg.assistantId)}</text>
-                </box>
-                <box paddingLeft={4}>
-                  <text fg={themeColor('muted')}>{msg.bodyPreview}</text>
-                </box>
-              </box>
+                  </Text>
+                  <Text> {msg.fromNumber} → {msg.toNumber}</Text>
+                  <Text fg={themeColor('muted')}> | {formatRelativeTime(msg.createdAt)}</Text>
+                  <Text fg={themeColor('muted')}> | by {resolveActor(msg.assistantId)}</Text>
+                </Box>
+                <Box paddingLeft={4}>
+                  <Text fg={themeColor('muted')}>{msg.bodyPreview}</Text>
+                </Box>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Numbers tab
   if (tab === 'numbers') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {numbers.length === 0 ? (
-          <box paddingX={1}><text fg={themeColor('muted')}>No phone numbers. Run /communication sync to import from Twilio.</text></box>
+          <Box paddingX={1}><Text fg={themeColor('muted')}>No phone numbers. Run /communication sync to import from Twilio.</Text></Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {numbers.map((num, i) => {
               const caps: string[] = [];
               if (num.capabilities.voice) caps.push('voice');
@@ -478,62 +486,62 @@ export function TelephonyPanel({ manager, assistantLookup, onClose }: TelephonyP
               if (num.capabilities.whatsapp) caps.push('whatsapp');
               const isDefault = status?.defaultPhoneNumber === num.number;
               return (
-                <box key={num.id}>
-                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+                <Box key={num.id}>
+                  <Text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </text>
-                  {isDefault && <text fg={themeColor('warning')}>★ </text>}
-                  <text attributes={i === selectedIndex ? 1 : undefined}><b>{num.number}</b></text>
-                  {num.friendlyName && <text fg={themeColor('muted')}> ({num.friendlyName})</text>}
-                  <text fg={themeColor('muted')}> [{caps.join(', ')}]{isDefault ? ' default' : ''}</text>
-                </box>
+                  </Text>
+                  {isDefault && <Text fg={themeColor('warning')}>★ </Text>}
+                  <Text attributes={i === selectedIndex ? 1 : undefined} bold>{num.number}</Text>
+                  {num.friendlyName && <Text fg={themeColor('muted')}> ({num.friendlyName})</Text>}
+                  <Text fg={themeColor('muted')}> [{caps.join(', ')}]{isDefault ? ' default' : ''}</Text>
+                </Box>
               );
             })}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Routes tab
   if (tab === 'routes') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {tabBar}
         {statusBar2}
         {errorBar}
         {routes.length === 0 ? (
-          <box paddingX={1}><text fg={themeColor('muted')}>No routing rules configured.</text></box>
+          <Box paddingX={1}><Text fg={themeColor('muted')}>No routing rules configured.</Text></Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {routes.map((rule, i) => (
-              <box key={rule.id} flexDirection="column">
-                <box>
-                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+              <Box key={rule.id} flexDirection="column">
+                <Box>
+                  <Text fg={i === selectedIndex ? themeColor('blue') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </text>
-                  <text attributes={i === selectedIndex ? 1 : undefined}><b>{rule.name}</b></text>
-                  <text fg={themeColor('muted')}>{` (priority: ${rule.priority})`}</text>
-                  {!rule.enabled && <text fg={themeColor('error')}> [DISABLED]</text>}
-                </box>
-                <box paddingLeft={4}>
-                  <text fg={themeColor('muted')}>
+                  </Text>
+                  <Text attributes={i === selectedIndex ? 1 : undefined} bold>{rule.name}</Text>
+                  <Text fg={themeColor('muted')}>{` (priority: ${rule.priority})`}</Text>
+                  {!rule.enabled && <Text fg={themeColor('error')}> [DISABLED]</Text>}
+                </Box>
+                <Box paddingLeft={4}>
+                  <Text fg={themeColor('muted')}>
                     Type: {rule.messageType} → {rule.targetAssistantName}
-                  </text>
-                </box>
-              </box>
+                  </Text>
+                </Box>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {header}
-      <text fg={themeColor('muted')}>Loading...</text>
-    </box>
+      <Text fg={themeColor('muted')}>Loading...</Text>
+    </Box>
   );
 }

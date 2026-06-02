@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useAppContext } from '@opentui/react';
+import { useInkClipboard } from '../ui/ink';
 
 /**
  * Hook to copy text to clipboard via OSC52.
@@ -8,21 +8,20 @@ import { useAppContext } from '@opentui/react';
  * [brutus] Extracted from Messages.tsx to avoid circular dependencies.
  */
 export function useCopyToClipboard(): { copy: (text: string) => boolean; justCopied: boolean } {
-  const { renderer } = useAppContext();
+  const clipboard = useInkClipboard();
   const [justCopied, setJustCopied] = useState(false);
 
   const copy = useCallback(
     (text: string): boolean => {
-      if (!renderer) return false;
-      const ok = renderer.copyToClipboardOSC52(text);
+      const ok = clipboard.copy(text);
       if (ok) {
         setJustCopied(true);
         setTimeout(() => setJustCopied(false), 1500);
       }
       return ok;
     },
-    [renderer],
+    [clipboard],
   );
 
-  return { copy, justCopied };
+  return { copy, justCopied: justCopied || clipboard.justCopied };
 }

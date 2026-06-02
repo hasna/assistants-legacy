@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
+import React, { useState, useEffect, useRef } from 'react';
 import type { BudgetConfig, BudgetLimits } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface BudgetPanelProps {
@@ -89,8 +88,8 @@ function usageBarText(used: number, limit?: number): string {
 function usageBarColor(used: number, limit?: number): string {
   if (!limit) return themeColor('muted');
   const percent = Math.min(100, Math.round((used / limit) * 100));
-  if (percent >= 90) return 'red';
-  if (percent >= 75) return 'yellow';
+  if (percent >= 90) return themeColor('error');
+  if (percent >= 75) return themeColor('warning');
   return themeColor('success');
 }
 
@@ -108,7 +107,6 @@ export function BudgetPanel({
   onCancel,
 }: BudgetPanelProps) {
   const [mode, setMode] = useState<Mode>('overview');
-  useClearOnChange(mode);
   const [selectedPreset, setSelectedPreset] = useState(0);
 
   // Edit-limits state
@@ -116,6 +114,7 @@ export function BudgetPanel({
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editOnExceeded, setEditOnExceeded] = useState<'warn' | 'pause' | 'stop'>('warn');
   const [editingField, setEditingField] = useState(false);
+  const ignoreNextEditSubmitRef = useRef(false);
   // Total fields = EDIT_FIELDS.length + 1 (onExceeded row)
   const totalEditRows = EDIT_FIELDS.length + 1;
   const primaryKey = (primaryActionKey || 'a').trim().toLowerCase() || 'a';
@@ -166,36 +165,17 @@ export function BudgetPanel({
     setMode('overview');
   }
 
+  function startEditingField() {
+    ignoreNextEditSubmitRef.current = true;
+    setEditingField(true);
+  }
+
   useInput((input, key) => {
     // Edit-limits mode
     if (mode === 'edit-limits') {
       if (editingField) {
-        // Currently editing a field value
-        if (key.return) {
+        if (key.escape || input === '\x1b') {
           setEditingField(false);
-          return;
-        }
-        if (key.escape) {
-          setEditingField(false);
-          return;
-        }
-        if (key.backspace || key.delete) {
-          const fieldKey = editFieldIndex < EDIT_FIELDS.length ? EDIT_FIELDS[editFieldIndex].key : null;
-          if (fieldKey) {
-            setEditValues((prev) => ({
-              ...prev,
-              [fieldKey]: (prev[fieldKey] || '').slice(0, -1),
-            }));
-          }
-          return;
-        }
-        // Only accept digits for numeric fields
-        if (editFieldIndex < EDIT_FIELDS.length && /^\d$/.test(input)) {
-          const fieldKey = EDIT_FIELDS[editFieldIndex].key;
-          setEditValues((prev) => ({
-            ...prev,
-            [fieldKey]: (prev[fieldKey] || '') + input,
-          }));
           return;
         }
         return;
@@ -217,7 +197,7 @@ export function BudgetPanel({
       if (key.return || input === ' ') {
         if (editFieldIndex < EDIT_FIELDS.length) {
           // Start editing a numeric field
-          setEditingField(true);
+          startEditingField();
         } else {
           // Cycle onExceeded option
           const currentIdx = ON_EXCEEDED_OPTIONS.indexOf(editOnExceeded);
@@ -239,7 +219,7 @@ export function BudgetPanel({
         return;
       }
       // Cancel / back
-      if (key.escape || input === 'b' || input === 'B') {
+      if (key.escape || input === '\x1b' || input === 'b' || input === 'B') {
         setMode('overview');
         return;
       }
@@ -271,7 +251,7 @@ export function BudgetPanel({
         setMode('overview');
         return;
       }
-      if (key.escape || input === 'b' || input === 'B') {
+      if (key.escape || input === '\x1b' || input === 'b' || input === 'B') {
         setMode('overview');
         return;
       }
@@ -335,118 +315,135 @@ export function BudgetPanel({
         setMode('edit-limits');
         return;
       }
-      if (key.escape || input === 'b' || input === 'B') {
+      if (key.escape || input === '\x1b' || input === 'b' || input === 'B') {
         setMode('overview');
         return;
       }
     }
 
     // Quit
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (key.escape || input === '\x1b' || input === 'q' || input === 'Q') {
       onCancel();
       return;
     }
-  }, { isActive: true });
+  }, { isActive: !editingField });
 
   // Edit-limits mode
   if (mode === 'edit-limits') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text><b>Edit Budget Limits</b></text>
-          <text fg={themeColor('muted')}> (session scope)</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text bold>Edit Budget Limits</Text>
+          <Text fg={themeColor('muted')}> (session scope)</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {EDIT_FIELDS.map((field, index) => {
             const isSelected = index === editFieldIndex;
             const value = editValues[field.key] || '';
             const isEditing = isSelected && editingField;
 
             return (
-              <box key={field.key} gap={1}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+              <Box key={field.key} gap={1}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                   {isSelected ? '>' : ' '}
-                </text>
-                <text attributes={isSelected ? 1 : undefined} fg={isSelected ? themeColor('text') : "gray"}><b>
+                </Text>
+                <Text attributes={isSelected ? 1 : undefined} fg={isSelected ? themeColor('text') : themeColor('muted')} bold>
                   {field.label.padEnd(20)}
-                </b></text>
-                <box minWidth={15}>
+                </Text>
+                <Box minWidth={15}>
                   {isEditing ? (
-                    <text>
-                      <span fg={themeColor('info')}>{value}</span>
-                      <span fg={themeColor('info')}><b>_</b></span>
-                      <span fg={themeColor('muted')}> {field.unit}</span>
-                    </text>
+                    <Box>
+                      <TextInput
+                        value={value}
+                        onChange={(nextValue) => {
+                          const digitsOnly = nextValue.replace(/\D/g, '');
+                          if (digitsOnly !== value) {
+                            ignoreNextEditSubmitRef.current = false;
+                          }
+                          setEditValues((prev) => ({ ...prev, [field.key]: digitsOnly }));
+                        }}
+                        onSubmit={() => {
+                          if (ignoreNextEditSubmitRef.current) {
+                            ignoreNextEditSubmitRef.current = false;
+                            return;
+                          }
+                          setEditingField(false);
+                        }}
+                        focus
+                        placeholder=""
+                      />
+                      <Text fg={themeColor('muted')}> {field.unit}</Text>
+                    </Box>
                   ) : (
-                    <text fg={value ? undefined : themeColor('muted')}>
+                    <Text fg={value ? undefined : themeColor('muted')}>
                       {value || 'unlimited'}
-                      {value ? <span fg={themeColor('muted')}> {field.unit}</span> : null}
-                    </text>
+                      {value ? <Text fg={themeColor('muted')}> {field.unit}</Text> : null}
+                    </Text>
                   )}
-                </box>
-              </box>
+                </Box>
+              </Box>
             );
           })}
 
           {/* On Exceeded row */}
-          <box gap={1} marginTop={1}>
-            <text bg={editFieldIndex === EDIT_FIELDS.length ? themeColor('primary') : undefined} fg={editFieldIndex === EDIT_FIELDS.length ? themeColor('text') : undefined}>
+          <Box gap={1} marginTop={1}>
+            <Text bg={editFieldIndex === EDIT_FIELDS.length ? themeColor('primary') : undefined} fg={editFieldIndex === EDIT_FIELDS.length ? themeColor('text') : undefined}>
               {editFieldIndex === EDIT_FIELDS.length ? '>' : ' '}
-            </text>
-            <text attributes={editFieldIndex === EDIT_FIELDS.length ? 1 : undefined} fg={editFieldIndex !== EDIT_FIELDS.length ? "gray" : undefined}><b>
+            </Text>
+            <Text attributes={editFieldIndex === EDIT_FIELDS.length ? 1 : undefined} fg={editFieldIndex !== EDIT_FIELDS.length ? themeColor('muted') : undefined} bold>
               {'On Exceeded'.padEnd(20)}
-            </b></text>
-            <text fg={editOnExceeded === 'stop' ? themeColor('red') : editOnExceeded === 'pause' ? themeColor('yellow') : themeColor('cyan')}>
+            </Text>
+            <Text fg={editOnExceeded === 'stop' ? themeColor('error') : editOnExceeded === 'pause' ? themeColor('warning') : themeColor('info')}>
               {editOnExceeded}
-            </text>
+            </Text>
             {editFieldIndex === EDIT_FIELDS.length && (
-              <text fg={themeColor('muted')}> (Enter to cycle)</text>
+              <Text fg={themeColor('muted')}> (Enter to cycle)</Text>
             )}
-          </box>
-        </box>
+          </Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {editingField
               ? 'Type digits | Enter/Esc to confirm'
               : `↑↓ navigate | Enter to edit | [c]lear | [s]ave | [b]ack | [q]uit${onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}`}
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   // Preset selection mode
   if (mode === 'preset-select') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text><b>Select Budget Preset</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text bold>Select Budget Preset</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {presetKeys.map((key, index) => {
             const preset = PRESET_LIMITS[key];
             const isSelected = index === selectedPreset;
             return (
-              <box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
-                  {isSelected ? '>' : ' '} <span attributes={isSelected ? 1 : undefined}><b>{preset.name.padEnd(12)}</b></span>
-                  <span fg={isSelected ? themeColor('text') : "gray"}>{preset.description}</span>
-                </text>
-              </box>
+              <Box key={key} marginBottom={index < presetKeys.length - 1 ? 1 : 0}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                  {isSelected ? '>' : ' '} <Text attributes={isSelected ? 1 : undefined} bold>{preset.name.padEnd(12)}</Text>
+                  <Text fg={isSelected ? themeColor('text') : themeColor('muted')}>{preset.description}</Text>
+                </Text>
+              </Box>
             );
           })}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             ↑↓ navigate | Enter to select | [b]ack | [q]uit
             {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -455,58 +452,58 @@ export function BudgetPanel({
     const limits = config.session || {};
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text><b>Budget Limits</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text bold>Budget Limits</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box marginBottom={1}>
-            <text><b>Session Limits:</b></text>
-          </box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Box marginBottom={1}>
+            <Text bold>Session Limits:</Text>
+          </Box>
 
-          <box paddingLeft={1} flexDirection="column">
-            <box>
-              <text fg={themeColor('muted')}>Max Total Tokens: </text>
-              <text>{limits.maxTotalTokens ? formatNumber(limits.maxTotalTokens) : 'unlimited'}</text>
-            </box>
-            <box>
-              <text fg={themeColor('muted')}>Max Input Tokens: </text>
-              <text>{limits.maxInputTokens ? formatNumber(limits.maxInputTokens) : 'unlimited'}</text>
-            </box>
-            <box>
-              <text fg={themeColor('muted')}>Max Output Tokens: </text>
-              <text>{limits.maxOutputTokens ? formatNumber(limits.maxOutputTokens) : 'unlimited'}</text>
-            </box>
-            <box>
-              <text fg={themeColor('muted')}>Max LLM Calls: </text>
-              <text>{limits.maxLlmCalls != null ? String(limits.maxLlmCalls) : 'unlimited'}</text>
-            </box>
-            <box>
-              <text fg={themeColor('muted')}>Max Tool Calls: </text>
-              <text>{limits.maxToolCalls != null ? String(limits.maxToolCalls) : 'unlimited'}</text>
-            </box>
-            <box>
-              <text fg={themeColor('muted')}>Max Duration: </text>
-              <text>{limits.maxDurationMs ? formatDuration(limits.maxDurationMs) : 'unlimited'}</text>
-            </box>
-          </box>
+          <Box paddingLeft={1} flexDirection="column">
+            <Box>
+              <Text fg={themeColor('muted')}>Max Total Tokens: </Text>
+              <Text>{limits.maxTotalTokens ? formatNumber(limits.maxTotalTokens) : 'unlimited'}</Text>
+            </Box>
+            <Box>
+              <Text fg={themeColor('muted')}>Max Input Tokens: </Text>
+              <Text>{limits.maxInputTokens ? formatNumber(limits.maxInputTokens) : 'unlimited'}</Text>
+            </Box>
+            <Box>
+              <Text fg={themeColor('muted')}>Max Output Tokens: </Text>
+              <Text>{limits.maxOutputTokens ? formatNumber(limits.maxOutputTokens) : 'unlimited'}</Text>
+            </Box>
+            <Box>
+              <Text fg={themeColor('muted')}>Max LLM Calls: </Text>
+              <Text>{limits.maxLlmCalls != null ? String(limits.maxLlmCalls) : 'unlimited'}</Text>
+            </Box>
+            <Box>
+              <Text fg={themeColor('muted')}>Max Tool Calls: </Text>
+              <Text>{limits.maxToolCalls != null ? String(limits.maxToolCalls) : 'unlimited'}</Text>
+            </Box>
+            <Box>
+              <Text fg={themeColor('muted')}>Max Duration: </Text>
+              <Text>{limits.maxDurationMs ? formatDuration(limits.maxDurationMs) : 'unlimited'}</Text>
+            </Box>
+          </Box>
 
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>On Exceeded: </text>
-            <text fg={config.onExceeded === 'stop' ? themeColor('red') : config.onExceeded === 'pause' ? themeColor('yellow') : themeColor('cyan')}>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>On Exceeded: </Text>
+            <Text fg={config.onExceeded === 'stop' ? themeColor('error') : config.onExceeded === 'pause' ? themeColor('warning') : themeColor('info')}>
               {config.onExceeded || 'warn'}
-            </text>
-          </box>
-        </box>
+            </Text>
+          </Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             [i] edit | [b]ack | [q]uit
             {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -514,57 +511,57 @@ export function BudgetPanel({
   const { usage, limits, overallExceeded } = sessionStatus;
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text><b>Budget</b>{' — '}<span fg={config.enabled ? themeColor('success') : themeColor('red')}>{config.enabled ? 'Enforcing' : 'Disabled'}</span></text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text><Text bold>Budget</Text>{' — '}<Text fg={config.enabled ? themeColor('success') : themeColor('error')}>{config.enabled ? 'Enforcing' : 'Disabled'}</Text></Text>
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Status */}
-        <box marginBottom={1}>
-          <text><b>Status: </b><span fg={overallExceeded ? themeColor('red') : config.enabled ? themeColor('success') : themeColor('muted')}>{overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}</span></text>
-        </box>
+        <Box marginBottom={1}>
+          <Text><Text bold>Status: </Text><Text fg={overallExceeded ? themeColor('error') : config.enabled ? themeColor('success') : themeColor('muted')}>{overallExceeded ? 'EXCEEDED' : config.enabled ? 'Within limits' : 'Not enforcing'}</Text></Text>
+        </Box>
 
         {/* Usage */}
-        <box flexDirection="column">
-          <text fg={themeColor('muted')}><b>Session Usage:</b></text>
+        <Box flexDirection="column">
+          <Text fg={themeColor('muted')} bold>Session Usage:</Text>
 
-          <box marginTop={1} flexDirection="column">
+          <Box marginTop={1} flexDirection="column">
             {/* Tokens */}
-            <text>{'Tokens:'.padEnd(15)}{formatNumber(usage.totalTokens).padStart(8)}{limits.maxTotalTokens ? ` / ${formatNumber(limits.maxTotalTokens)}` : ''}{'  '}<span fg={usageBarColor(usage.totalTokens, limits.maxTotalTokens)}>{usageBarText(usage.totalTokens, limits.maxTotalTokens)}</span></text>
+            <Text>{'Tokens:'.padEnd(15)}{formatNumber(usage.totalTokens).padStart(8)}{limits.maxTotalTokens ? ` / ${formatNumber(limits.maxTotalTokens)}` : ''}{'  '}<Text fg={usageBarColor(usage.totalTokens, limits.maxTotalTokens)}>{usageBarText(usage.totalTokens, limits.maxTotalTokens)}</Text></Text>
 
             {/* LLM Calls */}
-            <text>{'LLM Calls:'.padEnd(15)}{String(usage.llmCalls).padStart(8)}{limits.maxLlmCalls ? ` / ${limits.maxLlmCalls}` : ''}{'  '}<span fg={usageBarColor(usage.llmCalls, limits.maxLlmCalls)}>{usageBarText(usage.llmCalls, limits.maxLlmCalls)}</span></text>
+            <Text>{'LLM Calls:'.padEnd(15)}{String(usage.llmCalls).padStart(8)}{limits.maxLlmCalls ? ` / ${limits.maxLlmCalls}` : ''}{'  '}<Text fg={usageBarColor(usage.llmCalls, limits.maxLlmCalls)}>{usageBarText(usage.llmCalls, limits.maxLlmCalls)}</Text></Text>
 
             {/* Tool Calls */}
-            <text>{'Tool Calls:'.padEnd(15)}{String(usage.toolCalls).padStart(8)}{limits.maxToolCalls ? ` / ${limits.maxToolCalls}` : ''}{'  '}<span fg={usageBarColor(usage.toolCalls, limits.maxToolCalls)}>{usageBarText(usage.toolCalls, limits.maxToolCalls)}</span></text>
+            <Text>{'Tool Calls:'.padEnd(15)}{String(usage.toolCalls).padStart(8)}{limits.maxToolCalls ? ` / ${limits.maxToolCalls}` : ''}{'  '}<Text fg={usageBarColor(usage.toolCalls, limits.maxToolCalls)}>{usageBarText(usage.toolCalls, limits.maxToolCalls)}</Text></Text>
 
             {/* Duration */}
-            <text>{'Duration:'.padEnd(15)}{formatDuration(usage.durationMs).padStart(8)}{limits.maxDurationMs ? ` / ${formatDuration(limits.maxDurationMs)}` : ''}{'  '}<span fg={usageBarColor(usage.durationMs, limits.maxDurationMs)}>{usageBarText(usage.durationMs, limits.maxDurationMs)}</span></text>
-          </box>
-        </box>
+            <Text>{'Duration:'.padEnd(15)}{formatDuration(usage.durationMs).padStart(8)}{limits.maxDurationMs ? ` / ${formatDuration(limits.maxDurationMs)}` : ''}{'  '}<Text fg={usageBarColor(usage.durationMs, limits.maxDurationMs)}>{usageBarText(usage.durationMs, limits.maxDurationMs)}</Text></Text>
+          </Box>
+        </Box>
 
         {/* Warnings */}
         {sessionStatus.warningsCount > 0 && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>{`! ${sessionStatus.warningsCount} warning${sessionStatus.warningsCount !== 1 ? 's' : ''}`}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>{`! ${sessionStatus.warningsCount} warning${sessionStatus.warningsCount !== 1 ? 's' : ''}`}</Text>
+          </Box>
         )}
 
         {/* Exceeded */}
         {overallExceeded && (
-          <box marginTop={1}>
-            <text fg={themeColor('error')}><b>Budget exceeded! Action: {config.onExceeded || 'warn'}</b></text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('error')} bold>Budget exceeded! Action: {config.onExceeded || 'warn'}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           [e]nable [d]isable [r]eset [l]imits [p]reset [i] edit | [q]uit
           {onPrimaryAction ? ` | [${primaryKey}] ${primaryActionLabel}` : ''}
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

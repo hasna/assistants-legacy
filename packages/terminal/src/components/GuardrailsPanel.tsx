@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { GuardrailsConfig, GuardrailsPolicy, PolicyAction, PolicyScope, ToolPolicyRule } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface PolicyInfo {
@@ -380,81 +380,81 @@ export function GuardrailsPanel({
   // --- RENDER: Delete confirmation ---
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete {deleteTarget.type === 'policy' ? 'Policy' : 'Rule'}</b></text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <text>Are you sure you want to delete this {deleteTarget.type}?</text>
-          <text fg={themeColor('muted')}>{deleteTarget.label}</text>
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete {deleteTarget.type === 'policy' ? 'Policy' : 'Rule'}</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Text>Are you sure you want to delete this {deleteTarget.type}?</Text>
+          <Text fg={themeColor('muted')}>{deleteTarget.label}</Text>
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // --- RENDER: Policy create form ---
   if (mode === 'policy-create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}><text><b>Create New Policy</b></text></box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Name: </text>
-            <text bg={createField === 0 ? themeColor('primary') : undefined}>{createName || ' '}</text>
-            {createField === 0 && <text fg={themeColor('info')}>|</text>}
-          </box>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Scope: </text>
-            <text bg={createField === 1 ? themeColor('primary') : undefined} fg={createField === 1 ? themeColor('text') : SCOPE_COLORS[SCOPES[createScopeIdx]]}>{SCOPES[createScopeIdx]}</text>
-            {createField === 1 && <text fg={themeColor('muted')}> ←/→</text>}
-          </box>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Default Action: </text>
-            <text bg={createField === 2 ? themeColor('primary') : undefined} fg={createField === 2 ? themeColor('text') : ACTION_COLORS[ACTIONS[createActionIdx]]}>{ACTIONS[createActionIdx]}</text>
-            {createField === 2 && <text fg={themeColor('muted')}> ←/→</text>}
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Tab next field | Enter save | Esc cancel</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}><Text bold>Create New Policy</Text></Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Name: </Text>
+            <Text bg={createField === 0 ? themeColor('primary') : undefined}>{createName || ' '}</Text>
+            {createField === 0 && <Text fg={themeColor('info')}>|</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Scope: </Text>
+            <Text bg={createField === 1 ? themeColor('primary') : undefined} fg={createField === 1 ? themeColor('text') : SCOPE_COLORS[SCOPES[createScopeIdx]]}>{SCOPES[createScopeIdx]}</Text>
+            {createField === 1 && <Text fg={themeColor('muted')}> ←/→</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Default Action: </Text>
+            <Text bg={createField === 2 ? themeColor('primary') : undefined} fg={createField === 2 ? themeColor('text') : ACTION_COLORS[ACTIONS[createActionIdx]]}>{ACTIONS[createActionIdx]}</Text>
+            {createField === 2 && <Text fg={themeColor('muted')}> ←/→</Text>}
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Tab next field | Enter save | Esc cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // --- RENDER: Rule create form ---
   if (mode === 'rule-create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box flexDirection="row" marginBottom={1}>
-          <text><b>Add Tool Rule</b></text>
-          {detailPolicy && <text fg={themeColor('muted')}> to {detailPolicy.name || detailPolicy.id}</text>}
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Pattern: </text>
-            <text bg={ruleField === 0 ? themeColor('primary') : undefined}>{rulePattern || ' '}</text>
-            {ruleField === 0 && <text fg={themeColor('info')}>|</text>}
-          </box>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Action: </text>
-            <text bg={ruleField === 1 ? themeColor('primary') : undefined} fg={ruleField === 1 ? themeColor('text') : ACTION_COLORS[ACTIONS[ruleActionIdx]]}>{ACTIONS[ruleActionIdx]}</text>
-            {ruleField === 1 && <text fg={themeColor('muted')}> ←/→</text>}
-          </box>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Reason: </text>
-            <text bg={ruleField === 2 ? themeColor('primary') : undefined}>{ruleReason || ' '}</text>
-            {ruleField === 2 && <text fg={themeColor('info')}>|</text>}
-            {ruleField !== 2 && <text fg={themeColor('muted')}> (optional)</text>}
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Tab next field | Enter save | Esc cancel</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box flexDirection="row" marginBottom={1}>
+          <Text bold>Add Tool Rule</Text>
+          {detailPolicy && <Text fg={themeColor('muted')}> to {detailPolicy.name || detailPolicy.id}</Text>}
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Pattern: </Text>
+            <Text bg={ruleField === 0 ? themeColor('primary') : undefined}>{rulePattern || ' '}</Text>
+            {ruleField === 0 && <Text fg={themeColor('info')}>|</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Action: </Text>
+            <Text bg={ruleField === 1 ? themeColor('primary') : undefined} fg={ruleField === 1 ? themeColor('text') : ACTION_COLORS[ACTIONS[ruleActionIdx]]}>{ACTIONS[ruleActionIdx]}</Text>
+            {ruleField === 1 && <Text fg={themeColor('muted')}> ←/→</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Reason: </Text>
+            <Text bg={ruleField === 2 ? themeColor('primary') : undefined}>{ruleReason || ' '}</Text>
+            {ruleField === 2 && <Text fg={themeColor('info')}>|</Text>}
+            {ruleField !== 2 && <Text fg={themeColor('muted')}> (optional)</Text>}
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Tab next field | Enter save | Esc cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -462,128 +462,128 @@ export function GuardrailsPanel({
   if (mode === 'policy-detail' && detailPolicy) {
     const isSystem = detailPolicy.location === 'system';
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-          <box flexDirection="row">
-            <text><b>{detailPolicy.name || detailPolicy.id}</b></text>
-            <text fg={detailPolicy.enabled ? themeColor('success') : themeColor('red')}> [{detailPolicy.enabled ? 'on' : 'off'}]</text>
-          </box>
-          <text fg={SCOPE_COLORS[detailPolicy.scope]}>{detailPolicy.scope}</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+          <Box flexDirection="row">
+            <Text bold>{detailPolicy.name || detailPolicy.id}</Text>
+            <Text fg={detailPolicy.enabled ? themeColor('success') : themeColor('red')}> [{detailPolicy.enabled ? 'on' : 'off'}]</Text>
+          </Box>
+          <Text fg={SCOPE_COLORS[detailPolicy.scope]}>{detailPolicy.scope}</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box flexDirection="row"><text fg={themeColor('muted')}>ID: </text><text>{detailPolicy.id}</text></box>
-          <box flexDirection="row"><text fg={themeColor('muted')}>Location: </text><text>{detailPolicy.location}</text></box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Box flexDirection="row"><Text fg={themeColor('muted')}>ID: </Text><Text>{detailPolicy.id}</Text></Box>
+          <Box flexDirection="row"><Text fg={themeColor('muted')}>Location: </Text><Text>{detailPolicy.location}</Text></Box>
           {detailPolicy.policy.tools && (
-            <box flexDirection="row"><text fg={themeColor('muted')}>Default Action: </text><text fg={ACTION_COLORS[detailPolicy.policy.tools.defaultAction]}>{detailPolicy.policy.tools.defaultAction}</text></box>
+            <Box flexDirection="row"><Text fg={themeColor('muted')}>Default Action: </Text><Text fg={ACTION_COLORS[detailPolicy.policy.tools.defaultAction]}>{detailPolicy.policy.tools.defaultAction}</Text></Box>
           )}
           {detailPolicy.policy.depth && (
-            <box><text fg={themeColor('muted')}>Max Depth: </text><text>{detailPolicy.policy.depth.maxDepth}</text></box>
+            <Box><Text fg={themeColor('muted')}>Max Depth: </Text><Text>{detailPolicy.policy.depth.maxDepth}</Text></Box>
           )}
           {detailPolicy.policy.rateLimits && (
-            <box><text fg={themeColor('muted')}>Rate Limits: </text><text>{detailPolicy.policy.rateLimits.toolCallsPerMinute || '-'} tools/min, {detailPolicy.policy.rateLimits.llmCallsPerMinute || '-'} llm/min</text></box>
+            <Box><Text fg={themeColor('muted')}>Rate Limits: </Text><Text>{detailPolicy.policy.rateLimits.toolCallsPerMinute || '-'} tools/min, {detailPolicy.policy.rateLimits.llmCallsPerMinute || '-'} llm/min</Text></Box>
           )}
-        </box>
+        </Box>
 
-        <box marginTop={1} marginBottom={0}>
-          <text fg={themeColor('muted')}><b>Tool Rules ({detailRules.length})</b></text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(8, detailRules.length + 2)} overflow="hidden">
+        <Box marginTop={1} marginBottom={0}>
+          <Text fg={themeColor('muted')} bold>Tool Rules ({detailRules.length})</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(8, detailRules.length + 2)} overflow="hidden">
           {detailRules.length === 0 ? (
-            <box paddingY={0}><text fg={themeColor('muted')}>{isSystem ? 'No tool rules.' : 'No tool rules. Press a to add one.'}</text></box>
+            <Box paddingY={0}><Text fg={themeColor('muted')}>{isSystem ? 'No tool rules.' : 'No tool rules. Press a to add one.'}</Text></Box>
           ) : (
             detailRules.map((rule, idx) => {
               const isSelected = idx === ruleIndex;
               return (
-                <box key={`${rule.pattern}-${idx}`}>
-                  <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                <Box key={`${rule.pattern}-${idx}`}>
+                  <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <span fg={ACTION_COLORS[rule.action]}>[{rule.action.slice(0, 4).padEnd(4)}]</span>{' '}
-                    <span attributes={isSelected ? 1 : undefined}><b>{rule.pattern.slice(0, 30).padEnd(30)}</b></span>
-                    {rule.reason && <span fg={themeColor('muted')}> {rule.reason.slice(0, 20)}</span>}
-                  </text>
-                </box>
+                    <Inline fg={ACTION_COLORS[rule.action]}>[{rule.action.slice(0, 4).padEnd(4)}]</Inline>{' '}
+                    <Inline attributes={isSelected ? 1 : undefined} bold>{rule.pattern.slice(0, 30).padEnd(30)}</Inline>
+                    {rule.reason && <Inline fg={themeColor('muted')}> {rule.reason.slice(0, 20)}</Inline>}
+                  </Text>
+                </Box>
               );
             })
           )}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {!isSystem ? '[e]nable [d]isable [a]dd rule [x] delete ' : ''}
             {!isSystem && detailRules.length > 0 ? '[del] rm rule ' : ''}
             [b]ack [q]uit | ↑↓ rules
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   // --- RENDER: Preset selection ---
   if (mode === 'preset-select') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}><text><b>Select Preset Policy</b></text></box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-          <box marginBottom={1}>
-            <text fg={themeColor('success')}><b>1.</b></text>
-            <text> Permissive - Allow most, warn on dangerous</text>
-          </box>
-          <box>
-            <text fg={themeColor('error')}><b>2.</b></text>
-            <text> Restrictive - Deny by default, require approval</text>
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>[1] permissive [2] restrictive [q] cancel</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}><Text bold>Select Preset Policy</Text></Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+          <Box marginBottom={1}>
+            <Text fg={themeColor('success')} bold>1.</Text>
+            <Text> Permissive - Allow most, warn on dangerous</Text>
+          </Box>
+          <Box>
+            <Text fg={themeColor('error')} bold>2.</Text>
+            <Text> Restrictive - Deny by default, require approval</Text>
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>[1] permissive [2] restrictive [q] cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // --- RENDER: Policies list ---
   if (mode === 'policies') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-          <text><b>Policies</b></text>
-          <text fg={themeColor('muted')}>{policies.length} polic{policies.length !== 1 ? 'ies' : 'y'}</text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(12, policies.length + 2)} overflow="hidden">
+      <Box flexDirection="column" paddingY={1}>
+        <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+          <Text bold>Policies</Text>
+          <Text fg={themeColor('muted')}>{policies.length} polic{policies.length !== 1 ? 'ies' : 'y'}</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(12, policies.length + 2)} overflow="hidden">
           {policies.length === 0 ? (
-            <box paddingY={1}><text fg={themeColor('muted')}>No policies. Press n to create one.</text></box>
+            <Box paddingY={1}><Text fg={themeColor('muted')}>No policies. Press n to create one.</Text></Box>
           ) : (
             policies.map((policy, index) => {
               const isSelected = index === selectedIndex;
               const scopeColor = SCOPE_COLORS[policy.scope] || 'white';
               return (
-                <box key={policy.id}>
-                  <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                <Box key={policy.id}>
+                  <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <span fg={policy.enabled ? themeColor('success') : themeColor('red')}>[{policy.enabled ? 'on ' : 'off'}]</span>{' '}
-                    <span attributes={isSelected ? 1 : undefined}><b>{(policy.name || policy.id).slice(0, 20).padEnd(20)}</b></span>{' '}
-                    <span fg={scopeColor}>{policy.scope.padEnd(10)}</span>{' '}
-                    <span fg={themeColor('muted')}>{policy.location}</span>
-                  </text>
-                </box>
+                    <Inline fg={policy.enabled ? themeColor('success') : themeColor('red')}>[{policy.enabled ? 'on ' : 'off'}]</Inline>{' '}
+                    <Inline attributes={isSelected ? 1 : undefined} bold>{(policy.name || policy.id).slice(0, 20).padEnd(20)}</Inline>{' '}
+                    <Inline fg={scopeColor}>{policy.scope.padEnd(10)}</Inline>{' '}
+                    <Inline fg={themeColor('muted')}>{policy.location}</Inline>
+                  </Text>
+                </Box>
               );
             })
           )}
 
           {/* New policy option */}
-          <box marginTop={policies.length > 0 ? 1 : 0} paddingY={0}>
-            <text
+          <Box marginTop={policies.length > 0 ? 1 : 0} paddingY={0}>
+            <Text
               bg={selectedIndex === policies.length ? themeColor('primary') : undefined}
               fg={selectedIndex === policies.length ? themeColor('text') : undefined}
             >
               + New policy (n)
-            </text>
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>[e]nable [d]isable [Enter] detail [b]ack [q]uit | ↑↓ navigate</text>
-        </box>
-      </box>
+            </Text>
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>[e]nable [d]isable [Enter] detail [b]ack [q]uit | ↑↓ navigate</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -591,43 +591,43 @@ export function GuardrailsPanel({
   if (mode === 'tools') {
     const selectedRule = toolRules[selectedIndex];
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-          <text><b>Tool Rules</b></text>
-          <text fg={themeColor('muted')}>{toolRules.length} rule{toolRules.length !== 1 ? 's' : ''}</text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(12, toolRules.length + 2)} overflow="hidden">
+      <Box flexDirection="column" paddingY={1}>
+        <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+          <Text bold>Tool Rules</Text>
+          <Text fg={themeColor('muted')}>{toolRules.length} rule{toolRules.length !== 1 ? 's' : ''}</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} height={Math.min(12, toolRules.length + 2)} overflow="hidden">
           {toolRules.length === 0 ? (
-            <box paddingY={1}><text fg={themeColor('muted')}>No tool rules configured.</text></box>
+            <Box paddingY={1}><Text fg={themeColor('muted')}>No tool rules configured.</Text></Box>
           ) : (
             toolRules.map((item, index) => {
               const isSelected = index === selectedIndex;
               const actionColor = ACTION_COLORS[item.rule.action];
               return (
-                <box key={`${item.policyId}-${item.rule.pattern}-${index}`}>
-                  <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                <Box key={`${item.policyId}-${item.rule.pattern}-${index}`}>
+                  <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                     {isSelected ? '>' : ' '}{' '}
-                    <span fg={actionColor}>[{item.rule.action.slice(0, 4).padEnd(4)}]</span>{' '}
-                    <span attributes={isSelected ? 1 : undefined}><b>{item.rule.pattern.slice(0, 25).padEnd(25)}</b></span>{' '}
-                    <span fg={themeColor('muted')}>{item.policyName.slice(0, 15)}</span>
-                  </text>
-                </box>
+                    <Inline fg={actionColor}>[{item.rule.action.slice(0, 4).padEnd(4)}]</Inline>{' '}
+                    <Inline attributes={isSelected ? 1 : undefined} bold>{item.rule.pattern.slice(0, 25).padEnd(25)}</Inline>{' '}
+                    <Inline fg={themeColor('muted')}>{item.policyName.slice(0, 15)}</Inline>
+                  </Text>
+                </Box>
               );
             })
           )}
-        </box>
+        </Box>
         {selectedRule && (
-          <box marginTop={1} flexDirection="column">
-            <box><text fg={themeColor('muted')}>Pattern: </text><text>{selectedRule.rule.pattern}</text></box>
-            <box><text fg={themeColor('muted')}>Action: </text><text fg={ACTION_COLORS[selectedRule.rule.action]}>{selectedRule.rule.action}</text></box>
-            {selectedRule.rule.reason && (<box><text fg={themeColor('muted')}>Reason: </text><text>{selectedRule.rule.reason}</text></box>)}
-            <box><text fg={themeColor('muted')}>Policy: </text><text>{selectedRule.policyName}</text></box>
-          </box>
+          <Box marginTop={1} flexDirection="column">
+            <Box><Text fg={themeColor('muted')}>Pattern: </Text><Text>{selectedRule.rule.pattern}</Text></Box>
+            <Box><Text fg={themeColor('muted')}>Action: </Text><Text fg={ACTION_COLORS[selectedRule.rule.action]}>{selectedRule.rule.action}</Text></Box>
+            {selectedRule.rule.reason && (<Box><Text fg={themeColor('muted')}>Reason: </Text><Text>{selectedRule.rule.reason}</Text></Box>)}
+            <Box><Text fg={themeColor('muted')}>Policy: </Text><Text>{selectedRule.policyName}</Text></Box>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>[b]ack [q]uit | ↑↓ navigate</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>[b]ack [q]uit | ↑↓ navigate</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -638,48 +638,48 @@ export function GuardrailsPanel({
   const approvalRules = toolRules.filter(r => r.rule.action === 'require_approval').length;
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Guardrails</b></text>
-        <text fg={config.enabled ? themeColor('success') : themeColor('red')}>{config.enabled ? 'Enabled' : 'Disabled'}</text>
-      </box>
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-        <box marginBottom={1}>
-          <text><b>Status: </b></text>
-          <text fg={config.enabled ? themeColor('success') : themeColor('red')}>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Guardrails</Text>
+        <Text fg={config.enabled ? themeColor('success') : themeColor('red')}>{config.enabled ? 'Enabled' : 'Disabled'}</Text>
+      </Box>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <Box marginBottom={1}>
+          <Text bold>Status: </Text>
+          <Text fg={config.enabled ? themeColor('success') : themeColor('red')}>
             {config.enabled ? 'Enforcing policies' : 'Not enforcing (all tools allowed)'}
-          </text>
-        </box>
-        <box marginBottom={1} flexDirection="column">
-          <box><text fg={themeColor('muted')}>Policies: </text><text>{enabledPolicies}/{policies.length} enabled</text></box>
-          <box>
-            <text fg={themeColor('muted')}>Tool Rules: </text><text>{totalRules} total</text>
+          </Text>
+        </Box>
+        <Box marginBottom={1} flexDirection="column">
+          <Box><Text fg={themeColor('muted')}>Policies: </Text><Text>{enabledPolicies}/{policies.length} enabled</Text></Box>
+          <Box>
+            <Text fg={themeColor('muted')}>Tool Rules: </Text><Text>{totalRules} total</Text>
             {denyRules > 0 && (
-              <text> (<span fg={themeColor('error')}>{denyRules} deny</span>
-                {approvalRules > 0 && <span>, </span>}
-                {approvalRules > 0 && <span fg={themeColor('warning')}>{approvalRules} approval</span>})
-              </text>
+              <Text> (<Inline fg={themeColor('error')}>{denyRules} deny</Inline>
+                {approvalRules > 0 && <Inline>, </Inline>}
+                {approvalRules > 0 && <Inline fg={themeColor('warning')}>{approvalRules} approval</Inline>})
+              </Text>
             )}
-          </box>
-          <box><text fg={themeColor('muted')}>Default Action: </text><text fg={ACTION_COLORS[config.defaultAction]}>{config.defaultAction}</text></box>
-        </box>
+          </Box>
+          <Box><Text fg={themeColor('muted')}>Default Action: </Text><Text fg={ACTION_COLORS[config.defaultAction]}>{config.defaultAction}</Text></Box>
+        </Box>
         {policies.filter(p => p.enabled).length > 0 && (
-          <box flexDirection="column">
-            <text fg={themeColor('muted')}><b>Active Policies:</b></text>
+          <Box flexDirection="column">
+            <Text fg={themeColor('muted')} bold>Active Policies:</Text>
             {policies.filter(p => p.enabled).slice(0, 3).map(p => (
-              <box key={p.id} paddingLeft={1}>
-                <text>- {p.name || p.id}</text><text fg={themeColor('muted')}> ({p.scope})</text>
-              </box>
+              <Box key={p.id} paddingLeft={1}>
+                <Text>- {p.name || p.id}</Text><Text fg={themeColor('muted')}> ({p.scope})</Text>
+              </Box>
             ))}
             {policies.filter(p => p.enabled).length > 3 && (
-              <box paddingLeft={1}><text fg={themeColor('muted')}>+ {policies.filter(p => p.enabled).length - 3} more</text></box>
+              <Box paddingLeft={1}><Text fg={themeColor('muted')}>+ {policies.filter(p => p.enabled).length - 3} more</Text></Box>
             )}
-          </box>
+          </Box>
         )}
-      </box>
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>[e]nable [d]isable [p]olicies [t]ool rules [s]et preset [q]uit</text>
-      </box>
-    </box>
+      </Box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>[e]nable [d]isable [p]olicies [t]ool rules [s]et preset [q]uit</Text>
+      </Box>
+    </Box>
   );
 }

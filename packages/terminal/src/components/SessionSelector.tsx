@@ -1,9 +1,10 @@
+/** @jsxImportSource react */
 import React, { useMemo, useCallback } from 'react';
 import type { SessionInfo } from '@hasna/assistants-core';
 import type { PersistedSessionData } from '@hasna/assistants-core';
-import type { SelectOption } from '@opentui/core';
 import { Modal } from './Modal';
 import { themeColor } from '../theme/colors';
+import { Box, Select, Text, useInput, type SelectOption } from '../ui/ink';
 
 interface SessionSelectorProps {
   sessions: SessionInfo[];
@@ -57,7 +58,7 @@ function formatPath(cwd: string | undefined | null): string {
  *
  * Per OpenCode spec (section 8.3):
  * - Title: "Switch Session" in Primary, Bold, Padding(0,1)
- * - SimpleList (our <select>) with session entries
+ * - Ink Select with session entries
  * - Shows title, date, message count
  * - Min width: 40, max: min(maxTitleLen+4, screenWidth-15), floor: 30
  * - Max visible sessions: 10
@@ -74,14 +75,11 @@ export function SessionSelector({
   subagentSessions = [],
 }: SessionSelectorProps) {
   // Theme colors
-  const primaryColor = themeColor('primary');
-  const bgColor = themeColor('bg');
-  const textColor = themeColor('text');
   const mutedColor = themeColor('muted');
 
   // Build select options from sessions
   const { options, initialIndex } = useMemo(() => {
-    const opts: SelectOption[] = [];
+    const opts: SelectOption<string>[] = [];
     let activeIdx = 0;
 
     // Group subagent sessions by parent
@@ -107,7 +105,7 @@ export function SessionSelector({
       if (isActive) activeIdx = opts.length;
 
       opts.push({
-        name: `${displayName}${processing}${activeMarker}`,
+        label: `${displayName}${processing}${activeMarker}`,
         description: `${time}${countSuffix}  ${session.id.slice(0, 8)}`,
         value: session.id,
       });
@@ -119,9 +117,10 @@ export function SessionSelector({
           const subTime = formatSessionTime(child.updatedAt);
           const statusTag = child.status === 'completed' ? ' (done)' : child.status === 'active' ? ' (running)' : '';
           opts.push({
-            name: `  \u21B3 ${child.label || 'subagent'}${statusTag}`,
+            label: `  \u21B3 ${child.label || 'subagent'}${statusTag}`,
             description: subTime,
             value: `__subagent__${child.id}`,
+            disabled: true,
           });
         }
       }
@@ -129,7 +128,7 @@ export function SessionSelector({
 
     // Add "New session" option at the end
     opts.push({
-      name: '+ New session',
+      label: '+ New session',
       description: 'Create a new session',
       value: '__new_session__',
     });
@@ -137,10 +136,7 @@ export function SessionSelector({
     return { options: opts, initialIndex: activeIdx };
   }, [sessions, activeSessionId, subagentSessions]);
 
-  const handleSelect = useCallback((_index: number, option: SelectOption | null) => {
-    if (!option) return;
-    const value = String(option.value);
-
+  const handleSelect = useCallback((value: string) => {
     // Skip subagent entries
     if (value.startsWith('__subagent__')) return;
 
@@ -152,30 +148,33 @@ export function SessionSelector({
     onSelect(value);
   }, [onSelect, onNew]);
 
+  useInput((input) => {
+    if (input === 'n' || input === 'N') {
+      void onNew();
+    }
+  }, { isActive: true });
+
+  const initialValue = options[initialIndex]?.value;
+
   return (
     <Modal visible={true} onClose={onCancel} title="Switch Session">
       {/* Session list */}
-      <select
+      <Select
         options={options}
-        selectedIndex={initialIndex}
+        value={activeSessionId ?? undefined}
+        defaultFocusValue={initialValue}
         onSelect={handleSelect}
-        focused={true}
-        showDescription={true}
+        onCancel={onCancel}
+        isActive={true}
         wrapSelection={true}
-        showScrollIndicator={true}
-        backgroundColor={bgColor}
-        textColor={textColor}
-        selectedBackgroundColor={primaryColor}
-        selectedTextColor={bgColor}
-        descriptionColor={mutedColor}
-        selectedDescriptionColor={bgColor}
-        flexGrow={1}
+        visibleOptionCount={10}
+        inlineDescriptions={true}
       />
 
       {/* Footer */}
-      <box marginTop={1}>
-        <text fg={mutedColor}>Enter select | Up/Down navigate | n new | Esc close</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={mutedColor}>Enter select | Up/Down navigate | n new | Esc close</Text>
+      </Box>
     </Modal>
   );
 }

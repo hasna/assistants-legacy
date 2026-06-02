@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import type { ToolResult } from '@hasna/assistants-shared';
 import {
   truncateToolResult,

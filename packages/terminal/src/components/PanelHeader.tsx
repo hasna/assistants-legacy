@@ -1,10 +1,9 @@
 import React from 'react';
-import { color as dsColor, Badge } from './design-system';
+import { Box, Text } from '../ui/ink';
+import { color as dsColor } from './design-system';
 
 interface PanelHeaderProps {
   title: string;
-  /** Deprecated/unused — retained for backward-compatible call sites. */
-  color?: string;
   count?: number;
   hints?: string;
 }
@@ -20,15 +19,11 @@ export function PanelHeader({ title, count, hints }: PanelHeaderProps) {
   const borderCol = dsColor('border');
 
   return (
-    <box flexDirection="row" borderStyle="rounded" borderColor={borderCol} border={["top", "bottom"]} paddingX={0} marginBottom={1}>
-      {/* One <text> with inline <span> runs: sibling <box>/<span> children would
-          stack (boxes default to column) and nested <span> drops its content. */}
-      <text>
-        <span fg={dsColor('text')}><b>{title}</b></span>
-        {count !== undefined && <span fg={mutedColor}> </span>}
-        {count !== undefined && <Badge label={String(count)} tone="muted" />}
-        {hints && <span fg={mutedColor}> | {hints}</span>}
-      </text>
-    </box>
+    <Box flexDirection="row" borderStyle="round" borderColor={borderCol} border={["top", "bottom"]} paddingX={0} marginBottom={1}>
+      <Text fg={dsColor('text')} bold>{title}</Text>
+      {count !== undefined ? <Text fg={mutedColor}> </Text> : null}
+      {count !== undefined ? <Text fg={mutedColor} bold>[{String(count)}]</Text> : null}
+      {hints ? <Text fg={mutedColor}> | {hints}</Text> : null}
+    </Box>
   );
 }

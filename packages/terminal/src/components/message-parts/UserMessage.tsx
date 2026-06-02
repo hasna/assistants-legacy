@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * User message renderer (plan 8d98da29 P4.2) — extracted from Messages.tsx.
  * Thick left border in the secondary color over a surface background; raw text.
@@ -5,7 +6,7 @@
 import React from 'react';
 import type { DisplayMessage } from '../messageLines';
 import { themeColor } from '../../theme/colors';
-import { linkifyText } from '../ToolCallDisplay';
+import { Box, Text } from '../../ui/ink';
 import { normalizeUserDisplay } from './helpers';
 import { ToolResultPanel } from './ToolParts';
 
@@ -33,38 +34,38 @@ export function UserMessage({
   const surfaceCol = themeColor('surface');
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {/* 1 empty line separator (skip for continuations) */}
-      {!isContinuation && <box height={1} />}
+      {!isContinuation && <Box height={1} />}
 
       {isDraft && !isContinuation && (
-        <box>
-          <text fg={mutedCol}>  Live dictation</text>
-        </box>
+        <Box>
+          <Text fg={mutedCol}>  Live dictation</Text>
+        </Box>
       )}
 
       {hasContent && (
-        <box
+        <Box
           flexDirection="row"
           width="100%"
           backgroundColor={surfaceCol}
         >
-          <text fg={secondaryCol} bg={surfaceCol}>{'│'} </text>
-          <box flexGrow={1} flexShrink={1} backgroundColor={surfaceCol}>
+          <Text fg={secondaryCol} bg={surfaceCol}>{'\u2502'} </Text>
+          <Box flexGrow={1} flexShrink={1} backgroundColor={surfaceCol}>
             {isQueued && !isContinuation ? (
-              <text fg={mutedCol} bg={surfaceCol}>{linkifyText(content)}</text>
+              <Text fg={mutedCol} bg={surfaceCol}>{content}</Text>
             ) : (
-              <text fg={isDraft ? mutedCol : themeColor('text')} bg={surfaceCol}>{linkifyText(displayContent)}</text>
+              <Text fg={isDraft ? mutedCol : themeColor('text')} bg={surfaceCol}>{displayContent}</Text>
             )}
-          </box>
-        </box>
+          </Box>
+        </Box>
       )}
 
       {showToolResultsOnly && (
-        <box>
+        <Box>
           <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
-        </box>
+        </Box>
       )}
-    </box>
+    </Box>
   );
 }

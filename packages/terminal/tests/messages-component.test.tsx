@@ -1,9 +1,9 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import type { Message, ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { Messages } from '../src/components/Messages';
 import type { DisplayMessage } from '../src/components/messageLines';
+import { renderInk } from './utils/ink-test-harness';
 
 describe('Messages component', () => {
   test('renders user and assistant messages with tool panels', async () => {
@@ -29,7 +29,7 @@ describe('Messages component', () => {
       { id: 'act3', type: 'tool_result' as const, toolResult: { toolCallId: 't2', toolName: 'read', content: 'data', isError: false } as ToolResult, timestamp: 1000 },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <Messages
         messages={[user, assistant]}
         currentResponse="Streaming response"
@@ -38,11 +38,12 @@ describe('Messages component', () => {
       />, { width: 80, height: 24 }
     );
 
-    await renderOnce();
-    const frame = captureCharFrame();
+    await harness.renderOnce();
+    const frame = harness.captureFrame();
     expect(frame).toContain('Run command');
     expect(frame).toContain('Bash');
     expect(frame).toContain('ok');
+    await harness.cleanup();
   });
 
   test('renders streaming messages list', async () => {
@@ -53,23 +54,16 @@ describe('Messages component', () => {
       timestamp: 0,
     };
 
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <Messages
         messages={[]}
         streamingMessages={[streaming]}
       />, { width: 80, height: 24 }
     );
 
-    // Markdown content renders asynchronously in the opentui harness, so render
-    // across several frames until the streamed text appears rather than relying
-    // on a single fixed delay (which is racy).
-    let frame = '';
-    for (let i = 0; i < 20 && !frame.includes('partial'); i++) {
-      await renderOnce();
-      await new Promise(r => setTimeout(r, 10));
-      frame = captureCharFrame();
-    }
+    const frame = await harness.waitForText('partial');
     expect(frame).toContain('partial');
+    await harness.cleanup();
   });
 
   test('renders listening draft label for draft messages', async () => {
@@ -80,16 +74,16 @@ describe('Messages component', () => {
       timestamp: 0,
     };
 
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <Messages
         messages={[]}
         streamingMessages={[draft]}
       />, { width: 80, height: 24 }
     );
 
-    await renderOnce();
-    const frame = captureCharFrame();
+    const frame = await harness.waitForText('Live dictation');
     expect(frame).toContain('Live dictation');
     expect(frame).toContain('dictating now');
+    await harness.cleanup();
   });
 });

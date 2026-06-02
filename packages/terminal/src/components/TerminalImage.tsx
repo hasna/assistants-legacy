@@ -1,6 +1,8 @@
+/** @jsxImportSource react */
 import React, { useEffect, useRef, useState } from 'react';
 import { readFileSync, existsSync } from 'fs';
 import { themeColor } from '../theme/colors';
+import { Box, Text } from '../ui/ink';
 
 interface TerminalImageProps {
   src: string;
@@ -72,24 +74,24 @@ export function TerminalImage({ src, width, height, alt }: TerminalImageProps) {
   if (status === 'rendered') {
     // Image was written directly to stdout — show alt text below
     return alt ? (
-      <box marginY={1}>
-        <text fg={themeColor('muted')}>{alt}</text>
-      </box>
+      <Box marginY={1}>
+        <Text fg={themeColor('muted')}>{alt}</Text>
+      </Box>
     ) : null;
   }
 
   if (status === 'fallback') {
     return (
-      <box marginY={1}>
-        <text fg={themeColor('muted')}>[Image: {alt || src}]</text>
-      </box>
+      <Box marginY={1}>
+        <Text fg={themeColor('muted')}>[Image: {alt || src}]</Text>
+      </Box>
     );
   }
 
   // Loading
   return (
-    <box marginY={1}>
-      <text fg={themeColor('muted')}>Loading image...</text>
-    </box>
+    <Box marginY={1}>
+      <Text fg={themeColor('muted')}>Loading image...</Text>
+    </Box>
   );
 }

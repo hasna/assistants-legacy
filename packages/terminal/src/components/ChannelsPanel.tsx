@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
-
 import type { ChannelsManager, ChannelListItem, ChannelMessage, ChannelMember, Channel } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 // Slack's base aubergine color for channel badges
@@ -71,7 +69,6 @@ function formatRelativeTime(isoDate: string | null | undefined): string {
 
 export function ChannelsPanel({ manager, onClose, activePersonId, activePersonName, activeAssistantName, onPersonMessage }: ChannelsPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [channels, setChannels] = useState<ChannelListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -210,7 +207,7 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
           setMentionIndex(0);
         }
       } else {
-        // No @ in input anymore — dismiss
+        // No @ in input anymore; dismiss the dropdown.
         setMentionActive(false);
       }
     }
@@ -264,10 +261,10 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
     // In text-entry modes (chat, create, invite), only handle Escape
     const isTextEntry = mode === 'create-name' || mode === 'create-desc' || mode === 'invite' || mode === 'chat';
 
-    if (key.escape || input === 'q' && !isTextEntry) {
-      if (key.escape && mode === 'list' || input === 'q' && mode === 'list') {
+    if (key.escape || input === '\x1b' || (input === 'q' && !isTextEntry)) {
+      if ((key.escape || input === '\x1b') && mode === 'list' || input === 'q' && mode === 'list') {
         onClose();
-      } else if (key.escape) {
+      } else if (key.escape || input === '\x1b') {
         setMode('list');
         setSelectedChannel(null);
         setStatusMessage(null);
@@ -349,113 +346,113 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text bg={SLACK_COLOR} fg={themeColor('text')}><b> Channels </b></text>
-      <text fg={themeColor('muted')}> | </text>
-      <text fg={themeColor('muted')}>
+    <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <Text bg={SLACK_COLOR} fg={themeColor('text')} bold> Channels </Text>
+      <Text fg={themeColor('muted')}> | </Text>
+      <Text fg={themeColor('muted')}>
         {mode === 'list' ? 'q:close c:create enter:open m:members i:invite l:leave d:delete r:refresh' :
          mode === 'chat' ? 'esc:back (type to chat, @ to mention)' :
          mode === 'members' ? 'esc:back' :
          mode === 'delete-confirm' ? 'y:confirm n:cancel' :
          mode === 'create-confirm' ? 'y:confirm n:cancel' :
          'Enter to continue'}
-      </text>
-    </box>
+      </Text>
+    </Box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('warning')}>{statusMessage}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('warning')}>{statusMessage}</Text>
+    </Box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('error')}>Error: {error}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('error')}>Error: {error}</Text>
+    </Box>
   ) : null;
 
   // List view
   if (mode === 'list') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
         {errorBar}
         {channels.length === 0 ? (
-          <box paddingX={1}>
-            <text fg={themeColor('muted')}>No channels. Press 'c' to create one.</text>
-          </box>
+          <Box paddingX={1}>
+            <Text fg={themeColor('muted')}>No channels. Press 'c' to create one.</Text>
+          </Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {channels.map((ch, i) => (
-              <box key={ch.id} flexDirection="column" marginBottom={1}>
-                <box>
-                  <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+              <Box key={ch.id} flexDirection="column" marginBottom={1}>
+                <Box>
+                  <Text fg={i === selectedIndex ? themeColor('accent') : undefined}>
                     {i === selectedIndex ? '▸ ' : '  '}
-                  </text>
-                  <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? themeColor('blue') : undefined}><b>
+                  </Text>
+                  <Text bold={i === selectedIndex} fg={i === selectedIndex ? themeColor('accent') : undefined}>
                     #{ch.name}
-                  </b></text>
-                  <text fg={themeColor('muted')}> · {ch.memberCount} members</text>
+                  </Text>
+                  <Text fg={themeColor('muted')}> · {ch.memberCount} members</Text>
                   {ch.unreadCount > 0 && (
-                    <text fg={themeColor('error')}> · {ch.unreadCount} unread</text>
+                    <Text fg={themeColor('error')}> · {ch.unreadCount} unread</Text>
                   )}
-                </box>
-                <box paddingLeft={2}>
-                  <text fg={themeColor('muted')}>
+                </Box>
+                <Box paddingLeft={2}>
+                  <Text fg={themeColor('muted')}>
                     {ch.lastMessagePreview ? ch.lastMessagePreview : 'No messages yet'}
-                  </text>
-                </box>
-              </box>
+                  </Text>
+                </Box>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Chat view
   if (mode === 'chat' && selectedChannel) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
 
-        <box flexDirection="column" paddingX={1}>
+        <Box flexDirection="column" paddingX={1}>
           {messages.length === 0 ? (
-            <text fg={themeColor('muted')}>No messages yet. Be the first to say something!</text>
+            <Text fg={themeColor('muted')}>No messages yet. Be the first to say something!</Text>
           ) : (
             messages.slice(-20).map((msg) => (
-              <box key={msg.id} marginBottom={0}>
-                <text fg={getAssistantColor(msg.senderName)}><b>{msg.senderName}</b></text>
-                <text fg={themeColor('muted')}> {formatRelativeTime(msg.createdAt)}  </text>
-                <text>{msg.content}</text>
-              </box>
+              <Box key={msg.id} marginBottom={0}>
+                <Text fg={getAssistantColor(msg.senderName)} bold>{msg.senderName}</Text>
+                <Text fg={themeColor('muted')}> {formatRelativeTime(msg.createdAt)}  </Text>
+                <Text>{msg.content}</Text>
+              </Box>
             ))
           )}
-        </box>
+        </Box>
 
         {/* Channel name badge above input (like assistant name badge) */}
-        <box flexDirection="row" justifyContent="flex-end" marginTop={0}>
-          <text bg={SLACK_COLOR} fg={themeColor('text')}><b> #{selectedChannel.name} </b></text>
-        </box>
+        <Box flexDirection="row" justifyContent="flex-end" marginTop={0}>
+          <Text bg={SLACK_COLOR} fg={themeColor('text')} bold> #{selectedChannel.name} </Text>
+        </Box>
 
-        <box paddingX={1} borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]}>
-          <text fg={themeColor('muted')}>{'> '}</text>
-          <input
+        <Box paddingX={1} borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]}>
+          <Text fg={themeColor('muted')}>{'> '}</Text>
+          <TextInput
             value={chatInput}
             onChange={handleChatInputChange}
-            onSubmit={() => {
-              if (chatInput.trim()) {
+            onSubmit={(value) => {
+              const msg = value.trim();
+              if (msg) {
                 // Dedup guard: prevent double-firing within 500ms
                 const now = Date.now();
                 if (now - lastSubmitTimeRef.current < 500) return;
                 lastSubmitTimeRef.current = now;
 
-                const msg = chatInput.trim();
                 // Send as person if logged in, otherwise as assistant
                 const result = activePersonId && activePersonName
                   ? manager.sendAs(selectedChannel.id, msg, activePersonId, activePersonName)
@@ -503,178 +500,191 @@ export function ChannelsPanel({ manager, onClose, activePersonId, activePersonNa
                 }
               }
             }}
-            focused
+            focus
+            onCancel={() => {
+              setMode('list');
+              setSelectedChannel(null);
+              setStatusMessage(null);
+              setMentionActive(false);
+            }}
             placeholder="Type a message... (@ to mention)"
           />
-        </box>
+        </Box>
 
         {mentionActive && mentionCandidates.length > 0 && (
-          <box flexDirection="column" paddingX={1} borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} marginTop={0}>
-            <text fg={themeColor('warning')}><b>Members (Tab to select, Esc to dismiss)</b></text>
+          <Box flexDirection="column" paddingX={1} borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} marginTop={0}>
+            <Text fg={themeColor('warning')} bold>Members (Tab to select, Esc to dismiss)</Text>
             {mentionCandidates.slice(0, 8).map((m, i) => (
-              <box key={m.assistantId}>
-                <text fg={i === mentionIndex ? themeColor('blue') : undefined}>
+              <Box key={m.assistantId}>
+                <Text fg={i === mentionIndex ? themeColor('accent') : undefined}>
                   {i === mentionIndex ? '▸ ' : '  '}
-                </text>
-                <text attributes={i === mentionIndex ? 1 : undefined} fg={i === mentionIndex ? themeColor('blue') : undefined}><b>
+                </Text>
+                <Text bold={i === mentionIndex} fg={i === mentionIndex ? themeColor('accent') : undefined}>
                   {m.assistantName}
-                </b></text>
-                <text fg={themeColor('muted')}>
+                </Text>
+                <Text fg={themeColor('muted')}>
                   {m.memberType === 'person' ? ' [person]' : ' [assistant]'}
-                </text>
-              </box>
+                </Text>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Members view
   if (mode === 'members' && selectedChannel) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} marginBottom={1}>
-          <text bg={SLACK_COLOR} fg={themeColor('text')}><b> #{selectedChannel.name} </b></text>
-          <text><b> Members ({members.length})</b></text>
-        </box>
-        <box flexDirection="column" paddingX={1}>
+        <Box paddingX={1} marginBottom={1}>
+          <Text bg={SLACK_COLOR} fg={themeColor('text')} bold> #{selectedChannel.name} </Text>
+          <Text bold> Members ({members.length})</Text>
+        </Box>
+        <Box flexDirection="column" paddingX={1}>
           {members.map((m) => (
-            <box key={`${m.channelId}-${m.assistantId}`}>
-              <text>  </text>
-              <text fg={getAssistantColor(m.assistantName)}><b>{m.assistantName}</b></text>
-              {m.role === 'owner' && <text fg={themeColor('warning')}> (owner)</text>}
-              {m.memberType === 'person' && <text fg={themeColor('success')}> [person]</text>}
-              <text fg={themeColor('muted')}> — joined {new Date(m.joinedAt).toLocaleDateString()}</text>
-            </box>
+            <Box key={`${m.channelId}-${m.assistantId}`}>
+              <Text>  </Text>
+              <Text fg={getAssistantColor(m.assistantName)} bold>{m.assistantName}</Text>
+              {m.role === 'owner' && <Text fg={themeColor('warning')}> (owner)</Text>}
+              {m.memberType === 'person' && <Text fg={themeColor('success')}> [person]</Text>}
+              <Text fg={themeColor('muted')}> - joined {new Date(m.joinedAt).toLocaleDateString()}</Text>
+            </Box>
           ))}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
   // Delete confirm
   if (mode === 'delete-confirm' && selectedChannel) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('error')}><b>Archive channel?</b></text>
-          <text> </text>
-          <text>This will archive #{selectedChannel.name} ({selectedChannel.id})</text>
-          <text>Messages will be preserved but the channel will be inactive.</text>
-          <text> </text>
-          <text>Press 'y' to confirm, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('error')} bold>Archive channel?</Text>
+          <Text> </Text>
+          <Text>This will archive #{selectedChannel.name} ({selectedChannel.id})</Text>
+          <Text>Messages will be preserved but the channel will be inactive.</Text>
+          <Text> </Text>
+          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Channel</b></text>
-          <text> </text>
-          <box>
-            <text>Name: #</text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Channel</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Name: #</Text>
+            <TextInput
               value={createName}
               onChange={setCreateName}
-              onSubmit={() => {
-                if (createName.trim()) {
+              onSubmit={(value) => {
+                const name = value.trim();
+                if (name) {
+                  setCreateName(name);
                   setMode('create-desc');
                 }
               }}
-              focused
+              focus
+              onCancel={() => setMode('list')}
               placeholder="e.g., general"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: description
   if (mode === 'create-desc') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Channel</b></text>
-          <text>Name: #{createName}</text>
-          <text> </text>
-          <box>
-            <text>Description: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Channel</Text>
+          <Text>Name: #{createName}</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Description: </Text>
+            <TextInput
               value={createDesc}
               onChange={setCreateDesc}
-              onSubmit={() => {
+              onSubmit={(value) => {
+                setCreateDesc(value);
                 setMode('create-confirm');
               }}
-              focused
+              focus
+              onCancel={() => setMode('create-name')}
               placeholder="(optional) What is this channel for?"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Confirm Channel Creation</b></text>
-          <text> </text>
-          <text>Name:        #{createName}</text>
-          {createDesc && <text>Description: {createDesc}</text>}
-          <text> </text>
-          <text>Press 'y' to create, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Confirm Channel Creation</Text>
+          <Text> </Text>
+          <Text>Name:        #{createName}</Text>
+          {createDesc && <Text>Description: {createDesc}</Text>}
+          <Text> </Text>
+          <Text>Press 'y' to create, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Invite
   if (mode === 'invite' && selectedChannel) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Invite to #{selectedChannel.name}</b></text>
-          <text> </text>
-          <box>
-            <text>Agent name: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Invite to #{selectedChannel.name}</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Agent name: </Text>
+            <TextInput
               value={inviteName}
               onChange={setInviteName}
-              onSubmit={() => {
-                if (inviteName.trim()) {
-                  const result = manager.invite(selectedChannel.id, inviteName.trim(), inviteName.trim());
+              onSubmit={(value) => {
+                const name = value.trim();
+                if (name) {
+                  const result = manager.invite(selectedChannel.id, name, name);
                   setStatusMessage(result.message);
                   setMode('list');
                   loadChannels();
                 }
               }}
-              focused
+              focus
+              onCancel={() => setMode('list')}
               placeholder="e.g., alice"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {header}
-      <text fg={themeColor('muted')}>Loading...</text>
-    </box>
+      <Text fg={themeColor('muted')}>Loading...</Text>
+    </Box>
   );
 }

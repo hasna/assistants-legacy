@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 
 let mockChunks: any[] = [];
 let mockClientError: Error | null = null;

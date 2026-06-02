@@ -41,6 +41,7 @@ import {
 } from './renderers/system';
 import { renderChannelsPanel, renderMessagesPanel } from './renderers/comms';
 import { CloseOnAnyKeyPanel } from './renderers/utils';
+import { Box } from '../ui/ink';
 
 export type { PanelRenderContext } from './renderers/context';
 
@@ -54,9 +55,9 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   // Initializing spinner
   if (ctx.isInitializing && !ctx.showRecoveryPanel && !ctx.showOnboardingPanel) {
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <Spinner label="Initializing..." />
-      </box>
+      </Box>
     );
   }
 
@@ -84,13 +85,13 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   // Recovery panel
   if (ctx.showRecoveryPanel && ctx.recoverableSessions.length > 0) {
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <RecoveryPanel
           sessions={ctx.recoverableSessions}
           onRecover={ctx.handleRecover}
           onStartFresh={ctx.handleStartFresh}
         />
-      </box>
+      </Box>
     );
   }
 
@@ -98,7 +99,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   if (ctx.showSessionSelector) {
     const subagentSessions = ctx.registry.getStore().listSubagentSessions();
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <SessionSelector
           sessions={ctx.sessions}
           activeSessionId={ctx.activeSessionId}
@@ -113,7 +114,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
           onCancel={() => ctx.setShowSessionSelector(false)}
           subagentSessions={subagentSessions}
         />
-      </box>
+      </Box>
     );
   }
 
@@ -127,7 +128,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   // Memory panel
   if (ctx.showMemoryPanel) {
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <MemoryPanel
           memories={ctx.memoryList}
           stats={ctx.memoryStats}
@@ -138,7 +139,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
             ctx.setMemoryError(null);
           }}
         />
-      </box>
+      </Box>
     );
   }
 
@@ -158,7 +159,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   // Resume panel
   if (ctx.showResumePanel) {
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <ResumePanel
           sessions={ctx.resumeSessions}
           activeCwd={ctx.cwd}
@@ -169,7 +170,7 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
           onRefresh={ctx.refreshResumeSessions}
           onClose={() => ctx.setShowResumePanel(false)}
         />
-      </box>
+      </Box>
     );
   }
 
@@ -178,9 +179,9 @@ export function renderActivePanel(ctx: import('./renderers/context').PanelRender
   // Logs panel
   if (ctx.showLogsPanel) {
     return (
-      <box flexDirection="column" padding={1}>
+      <Box flexDirection="column" padding={1}>
         <LogsPanel onCancel={() => ctx.setShowLogsPanel(false)} />
-      </box>
+      </Box>
     );
   }
 

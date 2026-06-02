@@ -4,8 +4,9 @@
  */
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { KeybindingProvider, useKeybinding, useKeymap } from '../src/keybindings';
+import { Text } from '../src/ui/ink';
+import { renderInk } from './utils/ink-test-harness';
 
 const wait = () => new Promise((r) => setTimeout(r, 40));
 
@@ -14,37 +15,39 @@ describe('KeybindingProvider + useKeybinding', () => {
     let seen: string[] | undefined;
     function Probe() {
       seen = useKeymap()['app:interrupt'];
-      return <text>x</text>;
+      return <Text>x</Text>;
     }
-    const { renderOnce } = await testRender(
+    const harness = await renderInk(
       <KeybindingProvider>
         <Probe />
       </KeybindingProvider>,
       { width: 20, height: 2 },
     );
-    await renderOnce();
+    await harness.renderOnce();
     await wait();
     expect(seen).toEqual(['ctrl+c']);
+    await harness.cleanup();
   });
 
   test('a registered handler dispatches when its action resolves', async () => {
     let fired = 0;
     function Comp() {
       useKeybinding('app:pushToTalk', () => { fired += 1; });
-      return <text>ready</text>;
+      return <Text>ready</Text>;
     }
-    const { renderOnce, mockInput } = await testRender(
+    const harness = await renderInk(
       <KeybindingProvider>
         <Comp />
       </KeybindingProvider>,
       { width: 20, height: 2 },
     );
-    await renderOnce();
+    await harness.renderOnce();
     await wait();
 
     // ctrl+r is the default binding for app:pushToTalk.
-    mockInput.pressKey('r', { ctrl: true });
+    harness.pressKey('r', { ctrl: true });
     await wait();
     expect(fired).toBeGreaterThanOrEqual(1);
+    await harness.cleanup();
   });
 });

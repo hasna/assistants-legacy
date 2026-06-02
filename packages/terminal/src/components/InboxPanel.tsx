@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
@@ -101,7 +100,6 @@ export function InboxPanel({
   error,
 }: InboxPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
-  useClearOnChange(mode);
   const [emailIndex, setEmailIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<EmailListItem | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -309,55 +307,55 @@ export function InboxPanel({
   // Empty state
   if (emails.length === 0 && mode === 'list') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Inbox</b></text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Inbox</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg={themeColor('muted')}>No emails in inbox.</text>
-          <text fg={themeColor('muted')}>Press f to fetch new emails from server.</text>
-        </box>
+          <Text fg={themeColor('muted')}>No emails in inbox.</Text>
+          <Text fg={themeColor('muted')}>Press f to fetch new emails from server.</Text>
+        </Box>
         {statusMessage && (
-          <box marginTop={1}>
-            <text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>f fetch | q quit</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>f fetch | q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Email</b></text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Email</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Are you sure you want to delete this email?</text>
-          <text fg={themeColor('muted')}>From: {deleteTarget.from}</text>
-          <text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</text>
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+          <Text>Are you sure you want to delete this email?</Text>
+          <Text fg={themeColor('muted')}>From: {deleteTarget.from}</Text>
+          <Text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</Text>
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -367,85 +365,85 @@ export function InboxPanel({
     const statusIcon = getStatusIcon(emailItem?.isRead ?? true);
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{statusIcon} Email</b></text>
-          {emailItem?.hasAttachments && <text> 📎</text>}
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>{statusIcon} Email</Text>
+          {emailItem?.hasAttachments && <Text> 📎</Text>}
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <box>
-            <text fg={themeColor('muted')}>From: </text>
-            <text>{detailEmail.from.name || detailEmail.from.address}</text>
+          <Box>
+            <Text fg={themeColor('muted')}>From: </Text>
+            <Text>{detailEmail.from.name || detailEmail.from.address}</Text>
             {detailEmail.from.name && (
-              <text fg={themeColor('muted')}> &lt;{detailEmail.from.address}&gt;</text>
+              <Text fg={themeColor('muted')}> &lt;{detailEmail.from.address}&gt;</Text>
             )}
-          </box>
+          </Box>
 
-          <box>
-            <text fg={themeColor('muted')}>To: </text>
-            <text>
+          <Box>
+            <Text fg={themeColor('muted')}>To: </Text>
+            <Text>
               {detailEmail.to.map((t) => t.name || t.address).join(', ')}
-            </text>
-          </box>
+            </Text>
+          </Box>
 
           {detailEmail.cc && detailEmail.cc.length > 0 && (
-            <box>
-              <text fg={themeColor('muted')}>Cc: </text>
-              <text>
+            <Box>
+              <Text fg={themeColor('muted')}>Cc: </Text>
+              <Text>
                 {detailEmail.cc.map((c) => c.name || c.address).join(', ')}
-              </text>
-            </box>
+              </Text>
+            </Box>
           )}
 
-          <box>
-            <text fg={themeColor('muted')}>Subject: </text>
-            <text><b>{detailEmail.subject}</b></text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Subject: </Text>
+            <Text bold>{detailEmail.subject}</Text>
+          </Box>
 
-          <box>
-            <text fg={themeColor('muted')}>Date: </text>
-            <text>{formatRelativeTime(detailEmail.date)}</text>
-            <text fg={themeColor('muted')}> ({new Date(detailEmail.date).toLocaleString()})</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Date: </Text>
+            <Text>{formatRelativeTime(detailEmail.date)}</Text>
+            <Text fg={themeColor('muted')}> ({new Date(detailEmail.date).toLocaleString()})</Text>
+          </Box>
 
           {detailEmail.attachments && detailEmail.attachments.length > 0 && (
-            <box>
-              <text fg={themeColor('muted')}>Attachments: </text>
-              <text>
+            <Box>
+              <Text fg={themeColor('muted')}>Attachments: </Text>
+              <Text>
                 {detailEmail.attachments.map((a) => a.filename).join(', ')}
-              </text>
-            </box>
+              </Text>
+            </Box>
           )}
 
-          <box marginTop={1} flexDirection="column">
-            <text fg={themeColor('muted')}>Message:</text>
-            <text wrapMode="word">
+          <Box marginTop={1} flexDirection="column">
+            <Text fg={themeColor('muted')}>Message:</Text>
+            <Text wrapMode="word">
               {detailEmail.body.text || '(No text content)'}
-            </text>
-          </box>
-        </box>
+            </Text>
+          </Box>
+        </Box>
 
         {(error || statusMessage) && (
-          <box marginTop={1}>
-            <text fg={error || statusMessage?.startsWith('Error') ? themeColor('red') : themeColor('success')}>
+          <Box marginTop={1}>
+            <Text fg={error || statusMessage?.startsWith('Error') ? themeColor('red') : themeColor('success')}>
               {error || statusMessage}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             r reply | u toggle read | d delete | Esc back
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -453,24 +451,24 @@ export function InboxPanel({
   const visibleEmails = emails.slice(emailRange.start, emailRange.end);
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text fg={themeColor('info')}><b>Inbox</b></text>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('info')} bold>Inbox</Text>
         {emails.length > MAX_VISIBLE_ITEMS && (
-          <text fg={themeColor('muted')}> ({emailIndex + 1}/{emails.length})</text>
+          <Text fg={themeColor('muted')}> ({emailIndex + 1}/{emails.length})</Text>
         )}
-      </box>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {emailRange.hasMore.above > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↑ {emailRange.hasMore.above} more above</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↑ {emailRange.hasMore.above} more above</Text>
+          </Box>
         )}
 
         {visibleEmails.map((email, visibleIdx) => {
@@ -483,51 +481,51 @@ export function InboxPanel({
           const subject = email.subject.slice(0, 25).padEnd(25);
 
           return (
-            <box key={email.id} paddingY={0}>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+            <Box key={email.id} paddingY={0}>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{statusIcon}{attachIcon}{' '}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
                 {fromStr}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : email.isRead ? "gray" : undefined}>
                 {' '}{subject}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {' '}{formatRelativeTime(email.date)}
-              </text>
-            </box>
+              </Text>
+            </Box>
           );
         })}
 
         {emailRange.hasMore.below > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↓ {emailRange.hasMore.below} more below</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↓ {emailRange.hasMore.below} more below</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: </text>
-        <text>📬</text>
-        <text fg={themeColor('muted')}> unread | </text>
-        <text>📖</text>
-        <text fg={themeColor('muted')}> read | </text>
-        <text>📎</text>
-        <text fg={themeColor('muted')}> attachment</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Legend: </Text>
+        <Text>📬</Text>
+        <Text fg={themeColor('muted')}> unread | </Text>
+        <Text>📖</Text>
+        <Text fg={themeColor('muted')}> read | </Text>
+        <Text>📎</Text>
+        <Text fg={themeColor('muted')}> attachment</Text>
+      </Box>
 
       {statusMessage && (
-        <box marginTop={1}>
-          <text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={statusMessage.startsWith('Error') ? themeColor('red') : themeColor('success')}>{statusMessage}</Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ select | Enter view | f fetch | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

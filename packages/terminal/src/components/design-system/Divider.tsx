@@ -1,4 +1,5 @@
 import React from 'react';
+import { Inline, Text } from '../../ui/ink';
 import { color, type ColorValue } from './color';
 
 interface DividerProps {
@@ -14,22 +15,21 @@ interface DividerProps {
 
 /**
  * Horizontal rule, optionally with a left-aligned title — `── Title ───────`.
- * Renders a block-level `<text>`.
  */
 export function Divider({ width = 80, tone = 'border', char = '─', title }: DividerProps) {
   const line = color(tone);
   const w = Math.max(1, width);
   if (!title) {
-    return <text fg={line}>{char.repeat(w)}</text>;
+    return <Text fg={line}>{char.repeat(w)}</Text>;
   }
   const label = ` ${title} `;
   const lead = 2;
   const rest = Math.max(0, w - lead - label.length);
   return (
-    <text>
-      <span fg={line}>{char.repeat(lead)}</span>
-      <span fg={color('text')}><b>{label}</b></span>
-      <span fg={line}>{char.repeat(rest)}</span>
-    </text>
+    <Text>
+      <Inline fg={line}>{char.repeat(lead)}</Inline>
+      <Inline fg={color('text')} bold>{label}</Inline>
+      <Inline fg={line}>{char.repeat(rest)}</Inline>
+    </Text>
   );
 }

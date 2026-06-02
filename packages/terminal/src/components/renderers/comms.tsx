@@ -8,6 +8,7 @@ import { ChannelsPanel } from '../ChannelsPanel';
 import { MessagesPanel } from '../MessagesPanel';
 import { themeColor } from '../../theme/colors';
 import { CloseOnAnyKeyPanel } from './utils';
+import { Box, Bold, Text } from '../../ui/ink';
 import type { PanelRenderContext } from './context';
 
 export function renderChannelsPanel(ctx: PanelRenderContext): React.ReactNode {
@@ -195,29 +196,29 @@ export function renderMessagesPanel(ctx: PanelRenderContext): React.ReactNode {
 
   if (!messagesManager && !inboxManager) {
     return (
-      <box flexDirection="column" padding={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Messages</b></text>
-        </box>
-        <box
+      <Box flexDirection="column" padding={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}><Bold>Messages</Bold></Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Messages are not enabled.</text>
-          <text fg={themeColor('muted')}>Configure messages in config.json to enable.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>q quit</text>
-        </box>
-      </box>
+          <Text>Messages are not enabled.</Text>
+          <Text fg={themeColor('muted')}>Configure messages in config.json to enable.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <MessagesPanel
         messages={ctx.messagesList}
         onRead={handleMessagesRead}
@@ -236,6 +237,6 @@ export function renderMessagesPanel(ctx: PanelRenderContext): React.ReactNode {
         inboxError={ctx.inboxError}
         inboxEnabled={ctx.inboxEnabled}
       />
-    </box>
+    </Box>
   );
 }

@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import type { Connector, ConnectorCommand, ConnectorStatus } from '@hasna/assistants-shared';
 import { ConnectorAutoRefreshManager } from '@hasna/assistants-core';
 import type { ConnectorAutoRefreshEntry, ConnectorAutoRefreshSchedule } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 
 type ViewMode = 'list' | 'detail' | 'command';
 
@@ -158,8 +157,6 @@ export function ConnectorsPanel({
   onClose,
 }: ConnectorsPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
-  // Clear stale cells when switching between list/detail/command layouts.
-  useClearOnChange(mode);
   const [connectorIndex, setConnectorIndex] = useState(0);
   const [commandIndex, setCommandIndex] = useState(0);
   const [authStatuses, setAuthStatuses] = useState<Map<string, ConnectorStatus>>(new Map());
@@ -341,7 +338,7 @@ export function ConnectorsPanel({
         onClose();
         return;
       }
-      if (key.escape) {
+      if (key.escape || input === '\x1b') {
         if (searchQuery) {
           setSearchQuery('');
         } else {
@@ -372,7 +369,7 @@ export function ConnectorsPanel({
     }
 
     // Escape to go back / close
-    if (key.escape && mode === 'list') {
+    if ((key.escape || input === '\x1b') && mode === 'list') {
       if (searchQuery) {
         setSearchQuery('');
         return;
@@ -382,7 +379,7 @@ export function ConnectorsPanel({
     }
 
     // Escape to go back
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'command') {
         setMode('detail');
         setCommandHelp(null);
@@ -446,7 +443,7 @@ export function ConnectorsPanel({
     if (!status) return { icon: '?', color: themeColor('muted') };
     if (status.error) return { icon: '?', color: themeColor('muted') };
     if (status.authenticated) return { icon: '✓', color: themeColor('success') };
-    return { icon: '○', color: 'yellow' };
+    return { icon: '○', color: themeColor('warning') };
   };
 
   // Calculate visible range for connector list
@@ -514,27 +511,27 @@ export function ConnectorsPanel({
   // Empty state
   if (connectors.length === 0) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>Connectors</text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>Connectors</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg={themeColor('muted')}>No connectors found.</text>
-          <text fg={themeColor('muted')}>Connectors are managed via the `connectors` CLI.</text>
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>Install with: `connectors install &lt;name&gt;`</text>
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>q quit</text>
-        </box>
-      </box>
+          <Text fg={themeColor('muted')}>No connectors found.</Text>
+          <Text fg={themeColor('muted')}>Connectors are managed via the `connectors` CLI.</Text>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>Install with: `connectors install &lt;name&gt;`</Text>
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -545,79 +542,79 @@ export function ConnectorsPanel({
     const hasOptions = currentCommand.options && currentCommand.options.length > 0;
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>{currentConnector.name} {'>'} {currentCommand.name}</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>{currentConnector.name} {'>'} {currentCommand.name}</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>{currentCommand.description || 'No description'}</text>
+          <Text>{currentCommand.description || 'No description'}</Text>
 
           {hasArgs && (
-            <box flexDirection="column" marginTop={1}>
-              <text>Arguments:</text>
+            <Box flexDirection="column" marginTop={1}>
+              <Text>Arguments:</Text>
               {currentCommand.args.map((arg, idx) => (
-                <box key={idx} marginLeft={2}>
-                  <text fg={arg.required ? themeColor('white') : themeColor('muted')}>
+                <Box key={idx} marginLeft={2}>
+                  <Text fg={arg.required ? themeColor('text') : themeColor('muted')}>
                     {arg.name}
                     {arg.required ? ' (required)' : ' (optional)'}
                     {arg.description ? ` - ${arg.description}` : ''}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               ))}
-            </box>
+            </Box>
           )}
 
           {hasOptions && (
-            <box flexDirection="column" marginTop={1}>
-              <text>Options:</text>
+            <Box flexDirection="column" marginTop={1}>
+              <Text>Options:</Text>
               {currentCommand.options.map((opt, idx) => (
-                <box key={idx} marginLeft={2}>
-                  <text fg={themeColor('muted')}>
+                <Box key={idx} marginLeft={2}>
+                  <Text fg={themeColor('muted')}>
                     --{opt.name}
                     {opt.alias ? `, -${opt.alias}` : ''}
                     {opt.type !== 'boolean' ? ` <${opt.type}>` : ''}
                     {opt.default !== undefined ? ` (default: ${String(opt.default)})` : ''}
                     {opt.description ? ` - ${opt.description}` : ''}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               ))}
-            </box>
+            </Box>
           )}
 
           {isLoadingHelp && (
-            <box marginTop={1}>
-              <text fg={themeColor('warning')}>Loading help...</text>
-            </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('warning')}>Loading help...</Text>
+            </Box>
           )}
 
           {commandHelp && !isLoadingHelp && (
-            <box flexDirection="column" marginTop={1}>
-              <text>Help output:</text>
-              <box marginLeft={2} marginTop={1}>
-                <text fg={themeColor('muted')}>{commandHelp}</text>
-              </box>
-            </box>
+            <Box flexDirection="column" marginTop={1}>
+              <Text>Help output:</Text>
+              <Box marginLeft={2} marginTop={1}>
+                <Text fg={themeColor('muted')}>{commandHelp}</Text>
+              </Box>
+            </Box>
           )}
 
-          <box flexDirection="column" marginTop={1}>
-            <text>Example:</text>
-            <box marginLeft={2}>
-              <text fg={themeColor('info')}>{cli} {currentCommand.name}</text>
-            </box>
-          </box>
-        </box>
+          <Box flexDirection="column" marginTop={1}>
+            <Text>Example:</Text>
+            <Box marginLeft={2}>
+              <Text fg={themeColor('info')}>{cli} {currentCommand.name}</Text>
+            </Box>
+          </Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Esc back | q quit</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Esc back | q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -626,7 +623,7 @@ export function ConnectorsPanel({
     const cli = currentConnector.cli || `connect-${currentConnector.name}`;
     const status = getStatusIcon(currentStatus);
     const autoRefreshColor = autoRefreshEntry
-      ? (autoRefreshEntry.enabled ? themeColor('success') : 'yellow')
+      ? (autoRefreshEntry.enabled ? themeColor('success') : themeColor('warning'))
       : themeColor('muted');
     const autoRefreshStatus = autoRefreshEntry
       ? (autoRefreshEntry.enabled ? 'enabled' : 'disabled')
@@ -636,69 +633,69 @@ export function ConnectorsPanel({
       : '';
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>{currentConnector.name}</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>{currentConnector.name}</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
         >
-          <box paddingY={1} flexDirection="column">
-            <box>
-              <text>{`Status: ${status.icon} ${currentStatus?.authenticated ? 'Authenticated' : currentStatus?.error || 'Not authenticated'}`}</text>
-            </box>
+          <Box paddingY={1} flexDirection="column">
+            <Box>
+              <Text>{`Status: ${status.icon} ${currentStatus?.authenticated ? 'Authenticated' : currentStatus?.error || 'Not authenticated'}`}</Text>
+            </Box>
             {currentStatus?.user && (
-              <box>
-                <text fg={themeColor('muted')}>Account: {currentStatus.user}</text>
-              </box>
+              <Box>
+                <Text fg={themeColor('muted')}>Account: {currentStatus.user}</Text>
+              </Box>
             )}
             {currentStatus?.email && !currentStatus?.user && (
-              <box>
-                <text fg={themeColor('muted')}>Account: {currentStatus.email}</text>
-              </box>
+              <Box>
+                <Text fg={themeColor('muted')}>Account: {currentStatus.email}</Text>
+              </Box>
             )}
-            <box>
-              <text fg={themeColor('muted')}>CLI: {cli}</text>
-            </box>
-            <box>
-              <text fg={autoRefreshColor}>Auto-refresh: {autoRefreshStatus}{autoRefreshSchedule ? ` (${autoRefreshSchedule})` : ''}</text>
-            </box>
+            <Box>
+              <Text fg={themeColor('muted')}>CLI: {cli}</Text>
+            </Box>
+            <Box>
+              <Text fg={autoRefreshColor}>Auto-refresh: {autoRefreshStatus}{autoRefreshSchedule ? ` (${autoRefreshSchedule})` : ''}</Text>
+            </Box>
             {autoRefreshEntry?.nextRunAt && (
-              <box>
-                <text fg={themeColor('muted')}>
+              <Box>
+                <Text fg={themeColor('muted')}>
                   Next refresh: {new Date(autoRefreshEntry.nextRunAt).toLocaleString()}
-                </text>
-              </box>
+                </Text>
+              </Box>
             )}
             {autoRefreshError && (
-              <box>
-                <text fg={themeColor('error')}>Auto-refresh error: {autoRefreshError}</text>
-              </box>
+              <Box>
+                <Text fg={themeColor('error')}>Auto-refresh error: {autoRefreshError}</Text>
+              </Box>
             )}
-          </box>
+          </Box>
 
-          <box marginTop={1} marginBottom={1}>
-            <text>Commands:{currentCommands.length > MAX_VISIBLE_ITEMS ? ` (${commandIndex + 1}/${currentCommands.length})` : ''}</text>
-          </box>
+          <Box marginTop={1} marginBottom={1}>
+            <Text>Commands:{currentCommands.length > MAX_VISIBLE_ITEMS ? ` (${commandIndex + 1}/${currentCommands.length})` : ''}</Text>
+          </Box>
 
           {loadingConnectorName === currentConnector.name ? (
-            <box paddingBottom={1}>
-              <text fg={themeColor('warning')}>Loading commands...</text>
-            </box>
+            <Box paddingBottom={1}>
+              <Text fg={themeColor('warning')}>Loading commands...</Text>
+            </Box>
           ) : currentCommands.length === 0 ? (
-            <box paddingBottom={1}>
-              <text fg={themeColor('muted')}>No commands discovered</text>
-            </box>
+            <Box paddingBottom={1}>
+              <Text fg={themeColor('muted')}>No commands discovered</Text>
+            </Box>
           ) : (
             <>
               {commandRange.hasMore.above > 0 && (
-                <box paddingY={0}>
-                  <text fg={themeColor('muted')}>  ↑ {commandRange.hasMore.above} more above</text>
-                </box>
+                <Box paddingY={0}>
+                  <Text fg={themeColor('muted')}>  ↑ {commandRange.hasMore.above} more above</Text>
+                </Box>
               )}
 
               {currentCommands.slice(commandRange.start, commandRange.end).map((cmd, visibleIdx) => {
@@ -708,82 +705,96 @@ export function ConnectorsPanel({
                 const displayName = cmd.name.padEnd(20);
 
                 return (
-                  <box key={cmd.name} paddingY={0}>
-                    <text
+                  <Box key={cmd.name} paddingY={0}>
+                    <Text
                       bg={isSelected ? themeColor('primary') : undefined}
                       fg={isSelected ? themeColor('text') : undefined}
                     >
                       {prefix}{actualIdx + 1}. {displayName} {cmd.description}
-                    </text>
-                  </box>
+                    </Text>
+                  </Box>
                 );
               })}
 
               {commandRange.hasMore.below > 0 && (
-                <box paddingY={0}>
-                  <text fg={themeColor('muted')}>  ↓ {commandRange.hasMore.below} more below</text>
-                </box>
+                <Box paddingY={0}>
+                  <Text fg={themeColor('muted')}>  ↓ {commandRange.hasMore.below} more below</Text>
+                </Box>
               )}
             </>
           )}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             ↑↓ navigate | Enter view command | a auto-refresh | Esc back | q quit
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   // Connector list view (default)
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text fg={themeColor('info')}>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('info')}>
           Connectors{filteredConnectors.length > 0 ? ` (${safeConnectorIndex + 1}/${filteredConnectors.length}${searchQuery ? ` matching "${searchQuery}"` : ''}${connectors.length !== filteredConnectors.length ? ` of ${connectors.length} total` : ''})` : ''}
-        </text>
-      </box>
+        </Text>
+      </Box>
 
       {/* Search input */}
       {isSearching && (
-        <box flexDirection="row" marginBottom={1}>
-          <text fg={themeColor('warning')}>Search: </text>
-          <input
+        <Box flexDirection="row" marginBottom={1}>
+          <Text fg={themeColor('warning')}>Search: </Text>
+          <TextInput
             value={searchQuery}
             onChange={setSearchQuery}
-            focused
+            onSubmit={() => {
+              if (filteredConnectors.length > 0) {
+                setIsSearching(false);
+                setMode('detail');
+                setCommandIndex(0);
+              }
+            }}
+            onCancel={() => {
+              if (searchQuery) {
+                setSearchQuery('');
+              } else {
+                setIsSearching(false);
+              }
+            }}
+            focus
             placeholder="Type to filter..."
           />
-        </box>
+        </Box>
       )}
 
       {/* Search indicator when not in search mode but query exists */}
       {!isSearching && searchQuery && (
-        <box marginBottom={1}>
-          <text fg={themeColor('muted')}>Filter: {searchQuery} (Esc to clear)</text>
-        </box>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('muted')}>Filter: {searchQuery} (Esc to clear)</Text>
+        </Box>
       )}
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {filteredConnectors.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>
               No connectors matching "{searchQuery}"
-            </text>
-          </box>
+            </Text>
+          </Box>
         ) : (
           <>
             {connectorRange.hasMore.above > 0 && (
-              <box paddingY={0}>
-                <text fg={themeColor('muted')}>  ↑ {connectorRange.hasMore.above} more above</text>
-              </box>
+              <Box paddingY={0}>
+                <Text fg={themeColor('muted')}>  ↑ {connectorRange.hasMore.above} more above</Text>
+              </Box>
             )}
 
             {visibleConnectors.map((connector, visibleIdx) => {
@@ -795,35 +806,35 @@ export function ConnectorsPanel({
               const nameDisplay = connector.name.padEnd(16);
 
               return (
-                <box key={connector.name} paddingY={0}>
-                  <text
+                <Box key={connector.name} paddingY={0}>
+                  <Text
                     bg={isSelected ? themeColor('primary') : undefined}
                     fg={isSelected ? themeColor('text') : undefined}
                   >
                     {`${prefix}${status.icon} ${nameDisplay} ${cmdCount.toString().padStart(2)} cmd${cmdCount !== 1 ? 's' : ' '} ${connector.description?.slice(0, 30) || ''}`}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               );
             })}
 
             {connectorRange.hasMore.below > 0 && (
-              <box paddingY={0}>
-                <text fg={themeColor('muted')}>  ↓ {connectorRange.hasMore.below} more below</text>
-              </box>
+              <Box paddingY={0}>
+                <Text fg={themeColor('muted')}>  ↓ {connectorRange.hasMore.below} more below</Text>
+              </Box>
             )}
           </>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: ✓ authenticated | ○ not authenticated | ? unknown</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Legend: ✓ authenticated | ○ not authenticated | ? unknown</Text>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ navigate | Enter view | / search | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

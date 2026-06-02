@@ -1,8 +1,8 @@
+/** @jsxImportSource react */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedSessionInfo } from '@hasna/assistants-core';
-import type { SelectOption } from '@opentui/core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import { themeColor } from '../theme/colors';
+import { Box, Select, Text, useInput, type SelectOption } from '../ui/ink';
 
 type FilterMode = 'cwd' | 'all';
 
@@ -65,30 +65,34 @@ export function ResumePanel({
 
   const selected = filteredSessions[selectedIndex];
 
-  // Build options for <select>
-  const selectOptions: SelectOption[] = useMemo(() => {
+  // Build options for the Ink Select primitive.
+  const selectOptions: SelectOption<string>[] = useMemo(() => {
     return filteredSessions.map((session) => {
       const time = formatRelativeTime(session.updatedAt).padEnd(8);
       const assistant = (session.assistantId || 'default').slice(0, 12).padEnd(12);
       const messages = String(session.messageCount ?? 0).padStart(4);
       const cwd = truncate(session.cwd ?? '', 48);
       return {
-        name: `${time} ${assistant} ${messages} ${cwd}`,
+        label: `${time} ${assistant} ${messages} ${cwd}`,
         description: `ID: ${session.id} | ${session.cwd ?? ''}`,
-        value: session,
+        value: session.id,
       };
     });
   }, [filteredSessions]);
 
-  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
-    setSelectedIndex(_index);
-  }, []);
+  const handleFocus = useCallback((sessionId: string) => {
+    setSelectedIndex((current) => {
+      const next = filteredSessions.findIndex((session) => session.id === sessionId);
+      return next >= 0 ? next : current;
+    });
+  }, [filteredSessions]);
 
-  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
-    if (_option) {
-      onResume(_option.value as SavedSessionInfo);
+  const handleSelectConfirm = useCallback((sessionId: string) => {
+    const session = filteredSessions.find((candidate) => candidate.id === sessionId);
+    if (session) {
+      onResume(session);
     }
-  }, [onResume]);
+  }, [filteredSessions, onResume]);
 
   // Handle non-navigation keys (escape, filter toggle, refresh)
   useInput((input, key) => {
@@ -115,46 +119,48 @@ export function ResumePanel({
   });
 
   return (
-    <box flexDirection="column">
-      <text><b>Resume Sessions</b></text>
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+    <Box flexDirection="column">
+      <Text bold>Resume Sessions</Text>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           Filter: {mode === 'cwd' ? 'current folder' : 'all sessions'} | Tab toggle | Enter resume | r refresh | q quit
-        </text>
-      </box>
+        </Text>
+      </Box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {filteredSessions.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>
               {mode === 'cwd'
                 ? 'No saved sessions for this folder.'
                 : 'No saved sessions found.'}
-            </text>
-          </box>
+            </Text>
+          </Box>
         ) : (
-          <select
+          <Select
             options={selectOptions}
-            focused={true}
+            isActive={true}
             wrapSelection={true}
-            showDescription={false}
-            showScrollIndicator={true}
-            selectedIndex={selectedIndex}
-            onChange={handleSelectChange}
+            inlineDescriptions={false}
+            visibleOptionCount={10}
+            defaultFocusValue={selectOptions[selectedIndex]?.value}
+            value={selected?.id}
+            onFocus={handleFocus}
             onSelect={handleSelectConfirm}
+            onCancel={onClose}
           />
         )}
-      </box>
+      </Box>
 
       {selected && (
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Selected</text>
-          <text>ID: {selected.id}</text>
-          <text>Assistant: {selected.assistantId || 'default'}</text>
-          <text>Updated: {selected.updatedAt}</text>
-          <text>CWD: {selected.cwd}</text>
-        </box>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Selected</Text>
+          <Text>ID: {selected.id}</Text>
+          <Text>Assistant: {selected.assistantId || 'default'}</Text>
+          <Text>Updated: {selected.updatedAt}</Text>
+          <Text>CWD: {selected.cwd}</Text>
+        </Box>
       )}
-    </box>
+    </Box>
   );
 }

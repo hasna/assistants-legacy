@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Skill } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import type { CreateSkillOptions, CreateSkillResult, SkillScope } from '@hasna/assistants-core';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface SkillsPanelProps {
@@ -96,7 +95,6 @@ export function SkillsPanel({
   const [skills, setSkills] = useState(initialSkills);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailSkill, setDetailSkill] = useState<Skill | null>(null);
 
@@ -160,8 +158,8 @@ export function SkillsPanel({
     return withoutPrefix || trimmed;
   }
 
-  async function handlePromptSubmit() {
-    const prompt = createPrompt.trim();
+  async function handlePromptSubmit(submittedPrompt?: string) {
+    const prompt = (submittedPrompt ?? createPrompt).trim();
     if (!prompt) {
       setCreateError('Prompt is required');
       return;
@@ -173,6 +171,9 @@ export function SkillsPanel({
 
     setIsSubmitting(true);
     setCreateError(null);
+    if (submittedPrompt !== undefined) {
+      setCreatePrompt(submittedPrompt);
+    }
     try {
       const scope = SCOPE_OPTIONS[createScopeIndex].id;
       const draft = await onGenerateDraft(prompt, scope);
@@ -240,7 +241,9 @@ export function SkillsPanel({
     // Steps that use TextInput handle their own input
     if (['prompt', 'name', 'description', 'tools', 'hint', 'content'].includes(createStep)) return;
 
-    if (key.escape) {
+    const isEscape = key.escape || input === '\x1b';
+
+    if (isEscape) {
       if (createStep === 'scope') {
         resetCreateState();
         setMode('list');
@@ -293,7 +296,7 @@ export function SkillsPanel({
   useInput((input, key) => {
     if (mode !== 'create') return;
     if (!['prompt', 'name', 'description', 'tools', 'hint', 'content'].includes(createStep)) return;
-    if (!key.escape) return;
+    if (!key.escape && input !== '\x1b') return;
 
     const stepOrder: CreateStep[] = createMode === 'prompt'
       ? ['scope', 'prompt', 'name', 'description', 'tools', 'hint', 'content', 'confirm']
@@ -310,6 +313,7 @@ export function SkillsPanel({
   // List/detail/delete mode input
   useInput((input, key) => {
     if (mode === 'create') return;
+    const isEscape = key.escape || input === '\x1b';
 
     if (mode === 'delete-confirm') {
       if (input === 'y' || input === 'Y') {
@@ -326,7 +330,7 @@ export function SkillsPanel({
         }
         return;
       }
-      if (input === 'n' || input === 'N' || key.escape) {
+      if (input === 'n' || input === 'N' || isEscape) {
         setMode('list');
         return;
       }
@@ -334,7 +338,7 @@ export function SkillsPanel({
     }
 
     if (mode === 'detail') {
-      if (key.escape || input === 'q' || input === 'Q') {
+      if (isEscape || input === 'q' || input === 'Q') {
         setDetailSkill(null);
         setMode('list');
         return;
@@ -356,7 +360,7 @@ export function SkillsPanel({
     }
 
     // List mode
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (isEscape || input === 'q' || input === 'Q') {
       onClose();
       return;
     }
@@ -440,195 +444,230 @@ export function SkillsPanel({
 
   if (mode === 'create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>
             {createMode === 'prompt' ? 'New Skill (Prompt)' : 'New Skill'}
-          </b></text>
-        </box>
+          </Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Step 1: Scope selection */}
           {createStep === 'scope' && (
-            <box flexDirection="column">
-              <text><b>Select scope:</b></text>
-              <box flexDirection="column" marginTop={1}>
+            <Box flexDirection="column">
+              <Text bold>Select scope:</Text>
+              <Box flexDirection="column" marginTop={1}>
                 {SCOPE_OPTIONS.map((opt, idx) => (
-                  <box key={opt.id}>
-                    <text bg={idx === createScopeIndex ? themeColor('primary') : undefined}>
-                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)} <span fg={themeColor('muted')}>{opt.desc}</span>
-                    </text>
-                  </box>
+                  <Box key={opt.id} gap={1}>
+                    <Text bg={idx === createScopeIndex ? themeColor('primary') : undefined}>
+                      {idx === createScopeIndex ? '>' : ' '} {opt.label.padEnd(10)}
+                    </Text>
+                    <Text fg={themeColor('muted')}>{opt.desc}</Text>
+                  </Box>
                 ))}
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>↑↓ select | Enter confirm | Esc cancel</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>↑↓ select | Enter confirm | Esc cancel</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 2: Prompt */}
           {createStep === 'prompt' && (
-            <box flexDirection="column">
-              <text><b>Describe what this skill should do:</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Describe what this skill should do:</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createPrompt}
                   onChange={setCreatePrompt}
                   onSubmit={handlePromptSubmit}
-                  focused
+                  focus
                   placeholder="e.g. Summarize meeting notes and draft follow-up"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter generate | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter generate | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 2: Name */}
           {createStep === 'name' && (
-            <box flexDirection="column">
-              <text><b>Enter skill name:</b></text>
-              <box marginTop={1}>
-                <text>Name: </text>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Enter skill name:</Text>
+              <Box marginTop={1}>
+                <Text>Name: </Text>
+                <TextInput
                   value={createName}
                   onChange={setCreateName}
-                  onSubmit={() => {
-                    if (createName.trim()) setCreateStep('description');
+                  onSubmit={(nextName) => {
+                    setCreateName(nextName);
+                    if (nextName.trim()) setCreateStep('description');
                   }}
-                  focused
+                  focus
                   placeholder="e.g. my-helper"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 3: Description */}
           {createStep === 'description' && (
-            <box flexDirection="column">
-              <text><b>Description (optional):</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Description (optional):</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createDescription}
                   onChange={setCreateDescription}
-                  onSubmit={() => setCreateStep('tools')}
-                  focused
+                  onSubmit={(nextDescription) => {
+                    setCreateDescription(nextDescription);
+                    setCreateStep('tools');
+                  }}
+                  focus
                   placeholder="What does this skill do?"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 4: Allowed tools */}
           {createStep === 'tools' && (
-            <box flexDirection="column">
-              <text><b>Allowed tools (optional, comma-separated):</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Allowed tools (optional, comma-separated):</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createTools}
                   onChange={setCreateTools}
-                  onSubmit={() => setCreateStep('hint')}
-                  focused
+                  onSubmit={(nextTools) => {
+                    setCreateTools(nextTools);
+                    setCreateStep('hint');
+                  }}
+                  focus
                   placeholder="e.g. bash, filesystem"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 5: Argument hint */}
           {createStep === 'hint' && (
-            <box flexDirection="column">
-              <text><b>Argument hint (optional):</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Argument hint (optional):</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createHint}
                   onChange={setCreateHint}
-                  onSubmit={() => setCreateStep('content')}
-                  focused
+                  onSubmit={(nextHint) => {
+                    setCreateHint(nextHint);
+                    setCreateStep('content');
+                  }}
+                  focus
                   placeholder="e.g. [filename] [options]"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 6: Content */}
           {createStep === 'content' && (
-            <box flexDirection="column">
-              <text><b>Skill content (optional, single line):</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Skill content (optional, single line):</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createContent}
                   onChange={setCreateContent}
-                  onSubmit={() => setCreateStep('confirm')}
-                  focused
+                  onSubmit={(nextContent) => {
+                    setCreateContent(nextContent);
+                    setCreateStep('confirm');
+                  }}
+                  focus
                   placeholder="Instructions for the skill (or leave empty for default template)"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 7: Confirm */}
           {createStep === 'confirm' && (
-            <box flexDirection="column">
-              <text><b>Confirm new skill:</b></text>
-              <box flexDirection="column" marginTop={1} marginLeft={1}>
-                <text>Scope: <span fg={themeColor('info')}>{SCOPE_OPTIONS[createScopeIndex].label}</span></text>
-                <text>Name: <span fg={themeColor('info')}>{createName}</span></text>
-                {createDescription && <text>Description: <span fg={themeColor('muted')}>{createDescription}</span></text>}
-                {createTools && <text>Tools: <span fg={themeColor('muted')}>{createTools}</span></text>}
-                {createHint && <text>Hint: <span fg={themeColor('muted')}>{createHint}</span></text>}
+            <Box flexDirection="column">
+              <Text bold>Confirm new skill:</Text>
+              <Box flexDirection="column" marginTop={1} marginLeft={1}>
+                <Box>
+                  <Text>Scope: </Text>
+                  <Text fg={themeColor('info')}>{SCOPE_OPTIONS[createScopeIndex].label}</Text>
+                </Box>
+                <Box>
+                  <Text>Name: </Text>
+                  <Text fg={themeColor('info')}>{createName}</Text>
+                </Box>
+                {createDescription && (
+                  <Box>
+                    <Text>Description: </Text>
+                    <Text fg={themeColor('muted')}>{createDescription}</Text>
+                  </Box>
+                )}
+                {createTools && (
+                  <Box>
+                    <Text>Tools: </Text>
+                    <Text fg={themeColor('muted')}>{createTools}</Text>
+                  </Box>
+                )}
+                {createHint && (
+                  <Box>
+                    <Text>Hint: </Text>
+                    <Text fg={themeColor('muted')}>{createHint}</Text>
+                  </Box>
+                )}
                 {createContent && (
                   <>
-                    <text>Content:</text>
-                    <box marginLeft={2} flexDirection="column">
+                    <Text>Content:</Text>
+                    <Box marginLeft={2} flexDirection="column">
                       {createContent.split('\n').slice(0, 6).map((line, i) => (
-                        <text key={i} fg={themeColor('muted')}>{line}</text>
+                        <Text key={i} fg={themeColor('muted')}>{line}</Text>
                       ))}
                       {createContent.split('\n').length > 6 && (
-                        <text fg={themeColor('muted')}>... ({createContent.split('\n').length - 6} more lines)</text>
+                        <Text fg={themeColor('muted')}>... ({createContent.split('\n').length - 6} more lines)</Text>
                       )}
-                    </box>
+                    </Box>
                   </>
                 )}
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {createError && (
-            <box marginTop={1}>
-              <text fg={themeColor('error')}>{createError}</text>
-            </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('error')}>{createError}</Text>
+            </Box>
           )}
-        </box>
+        </Box>
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>
               {createMode === 'prompt' && createStep === 'prompt' ? 'Generating draft...' : 'Creating skill...'}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -638,27 +677,28 @@ export function SkillsPanel({
     const skill = detailSkill || selectedSkill;
     const displayName = skill?.name || '';
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Skill</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Skill</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Delete skill &quot;{displayName}&quot;?
-          </text>
-        </box>
+          </Text>
+        </Box>
         {skill && (
-          <box marginBottom={1}>
-            <text fg={themeColor('muted')}>File: {skill.filePath}</text>
-          </box>
+          <Box marginBottom={1}>
+            <Text fg={themeColor('muted')}>File: {skill.filePath}</Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text>Press </Text>
+          <Text fg={themeColor('success')} bold>y</Text>
+          <Text> to confirm or </Text>
+          <Text fg={themeColor('error')} bold>n</Text>
+          <Text> to cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -669,45 +709,45 @@ export function SkillsPanel({
     const scope = getSkillScope(s.filePath);
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Skill Details</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Skill Details</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
-          <box><text><b>Name: </b></text><text fg={themeColor('info')}>{s.name}</text></box>
-          <box><text><b>Scope: </b></text><text>{scope}</text>{s.source && <text fg={themeColor('muted')}> ({s.source})</text>}{s.version && <text fg={themeColor('muted')}> v{s.version}</text>}</box>
-          {s.description && <box><text><b>Description: </b></text><text>{s.description}</text></box>}
-          {s.argumentHint && <box><text><b>Argument Hint: </b></text><text>{s.argumentHint}</text></box>}
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
+          <Box><Text bold>Name: </Text><Text fg={themeColor('info')}>{s.name}</Text></Box>
+          <Box><Text bold>Scope: </Text><Text>{scope}</Text>{s.source && <Text fg={themeColor('muted')}> ({s.source})</Text>}{s.version && <Text fg={themeColor('muted')}> v{s.version}</Text>}</Box>
+          {s.description && <Box><Text bold>Description: </Text><Text>{s.description}</Text></Box>}
+          {s.argumentHint && <Box><Text bold>Argument Hint: </Text><Text>{s.argumentHint}</Text></Box>}
           {s.allowedTools && s.allowedTools.length > 0 && (
-            <box><text><b>Allowed Tools: </b></text><text>{s.allowedTools.join(', ')}</text></box>
+            <Box><Text bold>Allowed Tools: </Text><Text>{s.allowedTools.join(', ')}</Text></Box>
           )}
-          {s.model && <box><text><b>Model: </b></text><text>{s.model}</text></box>}
-          <box><text><b>File: </b></text><text fg={themeColor('muted')}>{s.filePath}</text></box>
+          {s.model && <Box><Text bold>Model: </Text><Text>{s.model}</Text></Box>}
+          <Box><Text bold>File: </Text><Text fg={themeColor('muted')}>{s.filePath}</Text></Box>
 
           {s.contentLoaded && s.content && (
             <>
-              <box marginTop={1}><text><b>Content:</b></text></box>
-              <box marginLeft={2} flexDirection="column">
+              <Box marginTop={1}><Text bold>Content:</Text></Box>
+              <Box marginLeft={2} flexDirection="column">
                 {s.content.split('\n').slice(0, 20).map((line, i) => (
-                  <text key={i} wrapMode="word" fg={themeColor('muted')}>{line}</text>
+                  <Text key={i} wrapMode="word" fg={themeColor('muted')}>{line}</Text>
                 ))}
                 {s.content.split('\n').length > 20 && (
-                  <text fg={themeColor('muted')}>... ({s.content.split('\n').length - 20} more lines)</text>
+                  <Text fg={themeColor('muted')}>... ({s.content.split('\n').length - 20} more lines)</Text>
                 )}
-              </box>
+              </Box>
             </>
           )}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             e[x]ecute | [d]elete | Esc/q back
-          </text>
-        </box>
+          </Text>
+        </Box>
 
-        {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Loading...</text></box>}
-      </box>
+        {isSubmitting && <Box marginTop={1}><Text fg={themeColor('warning')}>Loading...</Text></Box>}
+      </Box>
     );
   }
 
@@ -725,40 +765,40 @@ export function SkillsPanel({
   let lastGroup: 'project' | 'global' | null = null;
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Skills</b></text>
-        <text fg={themeColor('muted')}>[n]ew [p]rompt e[x]ecute [d]elete re[f]resh</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Skills</Text>
+        <Text fg={themeColor('muted')}>[n]ew [p]rompt e[x]ecute [d]elete re[f]resh</Text>
+      </Box>
 
-      <box marginBottom={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('muted')}>
           {sortedSkills.length} skill(s) — {projectSkills.length} project, {globalSkills.length} global
-        </text>
-      </box>
+        </Text>
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sortedSkills.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No skills loaded. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No skills loaded. Press n to create one.</Text>
+          </Box>
         ) : (
           <>
             {skillRange.hasMore.above > 0 && (
-              <box paddingY={0}>
-                <text fg={themeColor('muted')}>  ↑ {skillRange.hasMore.above} more above</text>
-              </box>
+              <Box paddingY={0}>
+                <Text fg={themeColor('muted')}>  ↑ {skillRange.hasMore.above} more above</Text>
+              </Box>
             )}
             {visibleEntries.map((entry) => {
               const desc = entry.skill.description ? ` - ${entry.skill.description}` : '';
               const isSelected = entry.actualIdx === selectedIndex;
               const header = entry.group !== lastGroup
                 ? (
-                  <box marginTop={lastGroup ? 1 : 0}>
-                    <text fg={themeColor('muted')}><b>
+                  <Box marginTop={lastGroup ? 1 : 0}>
+                    <Text fg={themeColor('muted')} bold>
                       {entry.group === 'project' ? 'Project Skills' : 'Global Skills'}
-                    </b></text>
-                  </box>
+                    </Text>
+                  </Box>
                 )
                 : null;
               lastGroup = entry.group;
@@ -766,47 +806,47 @@ export function SkillsPanel({
               return (
                 <React.Fragment key={`${entry.skill.name}-${entry.actualIdx}`}>
                   {header}
-                  <box paddingY={0}>
-                    <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                  <Box paddingY={0}>
+                    <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                       {isSelected ? '>' : ' '} {(entry.actualIdx + 1).toString().padStart(2)}. {entry.skill.name.padEnd(20)}{desc.slice(0, 40)}{badge}
-                    </text>
-                  </box>
+                    </Text>
+                  </Box>
                 </React.Fragment>
               );
             })}
             {skillRange.hasMore.below > 0 && (
-              <box paddingY={0}>
-                <text fg={themeColor('muted')}>  ↓ {skillRange.hasMore.below} more below</text>
-              </box>
+              <Box paddingY={0}>
+                <Text fg={themeColor('muted')}>  ↓ {skillRange.hasMore.below} more below</Text>
+              </Box>
             )}
           </>
         )}
 
         {/* New skill option at bottom */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={selectedIndex === sortedSkills.length ? themeColor('primary') : undefined}
             fg={selectedIndex === sortedSkills.length ? themeColor('text') : "gray"}
           >
             + New skill (n) | Prompt (p)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {/* Compact preview of selected */}
       {selectedSkill && selectedIndex < sortedSkills.length && (
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {getSkillScope(selectedSkill.filePath)} | {selectedSkill.argumentHint || 'no args'} | Enter for details
-          </text>
-        </box>
+          </Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | e[x]ecute | q quit</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Enter view | ↑↓ navigate | [n]ew | [p]rompt | [d]elete | e[x]ecute | q quit</Text>
+      </Box>
 
-      {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Processing...</text></box>}
-    </box>
+      {isSubmitting && <Box marginTop={1}><Text fg={themeColor('warning')}>Processing...</Text></Box>}
+    </Box>
   );
 }

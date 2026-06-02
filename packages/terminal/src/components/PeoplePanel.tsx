@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { PeopleManager, PersonListItem, Person } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface PeoplePanelProps {
@@ -22,7 +21,6 @@ type Mode =
 
 export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [people, setPeople] = useState<PersonListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -65,14 +63,15 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   useInput((input, key) => {
     const isTextEntry = mode === 'create-name' || mode === 'create-email' ||
       mode === 'create-phone' || mode === 'create-role' || mode === 'create-notes';
+    const isEscape = key.escape || input === '\x1b';
 
-    if (key.escape || (input === 'q' && !isTextEntry)) {
+    if (isEscape || (input === 'q' && !isTextEntry)) {
       if (mode === 'list') {
         onClose();
       } else if (mode === 'view') {
         setMode('list');
         setViewPerson(null);
-      } else if (key.escape) {
+      } else if (isEscape) {
         setMode('list');
         setStatusMessage(null);
       }
@@ -191,84 +190,84 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg={themeColor('success')}><b>People</b></text>
-      <text fg={themeColor('muted')}> | </text>
-      <text fg={themeColor('muted')}>{getHeaderHints()}</text>
-    </box>
+    <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <Text fg={themeColor('success')} bold>People</Text>
+      <Text fg={themeColor('muted')}> | </Text>
+      <Text fg={themeColor('muted')}>{getHeaderHints()}</Text>
+    </Box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('warning')}>{statusMessage}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('warning')}>{statusMessage}</Text>
+    </Box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('error')}>Error: {error}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('error')}>Error: {error}</Text>
+    </Box>
   ) : null;
 
   // View person detail
   if (mode === 'view' && viewPerson) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('success')}><b>{viewPerson.name}</b></text>
-          <text fg={themeColor('muted')}>ID: {viewPerson.id}</text>
-          <text>{' '}</text>
-          {viewPerson.email && <text>Email:  {viewPerson.email}</text>}
-          {viewPerson.phone && <text>Phone:  {viewPerson.phone}</text>}
-          {viewPerson.role && <text>Role:   {viewPerson.role}</text>}
-          <text>Status: {viewPerson.status}</text>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('success')} bold>{viewPerson.name}</Text>
+          <Text fg={themeColor('muted')}>ID: {viewPerson.id}</Text>
+          <Text>{' '}</Text>
+          {viewPerson.email && <Text>Email:  {viewPerson.email}</Text>}
+          {viewPerson.phone && <Text>Phone:  {viewPerson.phone}</Text>}
+          {viewPerson.role && <Text>Role:   {viewPerson.role}</Text>}
+          <Text>Status: {viewPerson.status}</Text>
           {viewPerson.notes && (
-            <box flexDirection="column" marginTop={1}>
-              <text><b>Notes:</b></text>
-              <text>  {viewPerson.notes}</text>
-            </box>
+            <Box flexDirection="column" marginTop={1}>
+              <Text bold>Notes:</Text>
+              <Text>  {viewPerson.notes}</Text>
+            </Box>
           )}
-          <text>{' '}</text>
-          <text fg={themeColor('muted')}>Created: {viewPerson.createdAt}</text>
-          <text fg={themeColor('muted')}>Updated: {viewPerson.updatedAt}</text>
-        </box>
-      </box>
+          <Text>{' '}</Text>
+          <Text fg={themeColor('muted')}>Created: {viewPerson.createdAt}</Text>
+          <Text fg={themeColor('muted')}>Updated: {viewPerson.updatedAt}</Text>
+        </Box>
+      </Box>
     );
   }
 
   // List view
   if (mode === 'list') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
         {errorBar}
         {people.length === 0 ? (
-          <box paddingX={1}>
-            <text fg={themeColor('muted')}>No people registered. Press 'c' to create one.</text>
-          </box>
+          <Box paddingX={1}>
+            <Text fg={themeColor('muted')}>No people registered. Press 'c' to create one.</Text>
+          </Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {people.map((p) => (
-              <box key={p.id}>
-                <text fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}>
+              <Box key={p.id}>
+                <Text fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}>
                   {p.id === people[selectedIndex]?.id ? '> ' : '  '}
-                </text>
-                <text attributes={p.id === people[selectedIndex]?.id ? 1 : undefined} fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}><b>
+                </Text>
+                <Text bold={p.id === people[selectedIndex]?.id} fg={p.id === people[selectedIndex]?.id ? themeColor('success') : undefined}>
                   {p.name}
-                </b></text>
-                {p.role && <text fg={themeColor('muted')}> ({p.role})</text>}
-                {p.email && <text fg={themeColor('muted')}> &lt;{p.email}&gt;</text>}
-                {p.phone && <text fg={themeColor('muted')}> {p.phone}</text>}
-                {p.isActive && <text fg={themeColor('info')}> (active)</text>}
-              </box>
+                </Text>
+                {p.role && <Text fg={themeColor('muted')}> ({p.role})</Text>}
+                {p.email && <Text fg={themeColor('muted')}> &lt;{p.email}&gt;</Text>}
+                {p.phone && <Text fg={themeColor('muted')}> {p.phone}</Text>}
+                {p.isActive && <Text fg={themeColor('info')}> (active)</Text>}
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -276,170 +275,183 @@ export function PeoplePanel({ manager, onClose }: PeoplePanelProps) {
   if (mode === 'delete-confirm' && people.length > 0) {
     const person = people[selectedIndex];
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('error')}><b>Delete person?</b></text>
-          <text>{' '}</text>
-          <text>This will permanently delete {person.name} ({person.id})</text>
-          <text>{' '}</text>
-          <text>Press 'y' to confirm, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('error')} bold>Delete person?</Text>
+          <Text>{' '}</Text>
+          <Text>This will permanently delete {person.name} ({person.id})</Text>
+          <Text>{' '}</Text>
+          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Person</b></text>
-          <text>{' '}</text>
-          <box>
-            <text>Name: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Person</Text>
+          <Text>{' '}</Text>
+          <Box>
+            <Text>Name: </Text>
+            <TextInput
               value={createName}
               onChange={setCreateName}
-              onSubmit={() => {
-                if (createName.trim()) setMode('create-email');
+              onSubmit={(nextName) => {
+                setCreateName(nextName);
+                if (nextName.trim()) setMode('create-email');
               }}
-              focused
+              focus
               placeholder="e.g., Jane Smith"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: email
   if (mode === 'create-email') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Person</b></text>
-          <text>Name: {createName}</text>
-          <text>{' '}</text>
-          <box>
-            <text>Email: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Person</Text>
+          <Text>Name: {createName}</Text>
+          <Text>{' '}</Text>
+          <Box>
+            <Text>Email: </Text>
+            <TextInput
               value={createEmail}
               onChange={setCreateEmail}
-              onSubmit={() => setMode('create-phone')}
-              focused
+              onSubmit={(nextEmail) => {
+                setCreateEmail(nextEmail);
+                setMode('create-phone');
+              }}
+              focus
               placeholder="(optional) e.g., jane@example.com"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: phone
   if (mode === 'create-phone') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Person</b></text>
-          <text>Name: {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          <text>{' '}</text>
-          <box>
-            <text>Phone: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Person</Text>
+          <Text>Name: {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          <Text>{' '}</Text>
+          <Box>
+            <Text>Phone: </Text>
+            <TextInput
               value={createPhone}
               onChange={setCreatePhone}
-              onSubmit={() => setMode('create-role')}
-              focused
+              onSubmit={(nextPhone) => {
+                setCreatePhone(nextPhone);
+                setMode('create-role');
+              }}
+              focus
               placeholder="(optional) e.g., +1-555-123-4567"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: role
   if (mode === 'create-role') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Person</b></text>
-          <text>Name:  {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          {createPhone && <text>Phone: {createPhone}</text>}
-          <text>{' '}</text>
-          <box>
-            <text>Role: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Person</Text>
+          <Text>Name:  {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          {createPhone && <Text>Phone: {createPhone}</Text>}
+          <Text>{' '}</Text>
+          <Box>
+            <Text>Role: </Text>
+            <TextInput
               value={createRole}
               onChange={setCreateRole}
-              onSubmit={() => setMode('create-notes')}
-              focused
+              onSubmit={(nextRole) => {
+                setCreateRole(nextRole);
+                setMode('create-notes');
+              }}
+              focus
               placeholder="(optional) e.g., Developer, Manager"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: notes
   if (mode === 'create-notes') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Person</b></text>
-          <text>Name:  {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          {createPhone && <text>Phone: {createPhone}</text>}
-          {createRole && <text>Role:  {createRole}</text>}
-          <text>{' '}</text>
-          <box>
-            <text>Notes: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Person</Text>
+          <Text>Name:  {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          {createPhone && <Text>Phone: {createPhone}</Text>}
+          {createRole && <Text>Role:  {createRole}</Text>}
+          <Text>{' '}</Text>
+          <Box>
+            <Text>Notes: </Text>
+            <TextInput
               value={createNotes}
               onChange={setCreateNotes}
-              onSubmit={() => setMode('create-confirm')}
-              focused
+              onSubmit={(nextNotes) => {
+                setCreateNotes(nextNotes);
+                setMode('create-confirm');
+              }}
+              focus
               placeholder="(optional) Any notes about this person"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Confirm Person Creation</b></text>
-          <text>{' '}</text>
-          <text>Name:  {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          {createPhone && <text>Phone: {createPhone}</text>}
-          {createRole && <text>Role:  {createRole}</text>}
-          {createNotes && <text>Notes: {createNotes}</text>}
-          <text>{' '}</text>
-          <text>Press 'y' to create, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Confirm Person Creation</Text>
+          <Text>{' '}</Text>
+          <Text>Name:  {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          {createPhone && <Text>Phone: {createPhone}</Text>}
+          {createRole && <Text>Role:  {createRole}</Text>}
+          {createNotes && <Text>Notes: {createNotes}</Text>}
+          <Text>{' '}</Text>
+          <Text>Press 'y' to create, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {header}
-      <text fg={themeColor('muted')}>Loading...</text>
-    </box>
+      <Text fg={themeColor('muted')}>Loading...</Text>
+    </Box>
   );
 }

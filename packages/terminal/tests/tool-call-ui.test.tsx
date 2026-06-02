@@ -1,11 +1,20 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { Messages } from '../src/components/Messages';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import type { DisplayMessage } from '../src/components/messageLines';
+import { renderInk } from './utils/ink-test-harness';
 
-const wait = () => new Promise((resolve) => setTimeout(resolve, 50));
+async function renderMessages(messages: DisplayMessage[], options: { verboseTools?: boolean } = {}): Promise<string> {
+  const harness = await renderInk(
+    <Messages messages={messages} height={24} verboseTools={options.verboseTools} />,
+    { width: 80, height: 24 },
+  );
+  await harness.renderOnce();
+  const output = harness.captureFrame();
+  await harness.cleanup();
+  return output;
+}
 
 describe('Tool Call UI - New Style', () => {
   test('single running tool call shows tool name and status', async () => {
@@ -23,12 +32,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Shows "Read: Reading..." format
     expect(output).toContain('Read');
@@ -55,12 +59,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Shows "Read: factory.ts" format
     expect(output).toContain('Read');
@@ -93,12 +92,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should show compact summary
     expect(output).toContain('Searched 2 patterns');
@@ -125,12 +119,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should show running summary with ellipsis
     expect(output).toContain('…');
@@ -156,12 +145,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should show memory-related content
     expect(output.length).toBeGreaterThan(0);
@@ -188,12 +172,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} verboseTools={true} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages, { verboseTools: true });
 
     // Should show individual tool calls, not compact summary
     expect(output).toContain('Grep');
@@ -219,12 +198,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should NOT have any border characters from old panels
     expect(output).not.toContain('╭');
@@ -249,12 +223,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should show Grep running
     expect(output).toContain('Grep');
@@ -279,12 +248,7 @@ describe('Tool Call UI - New Style', () => {
       },
     ];
 
-    const { captureCharFrame, renderOnce } = await testRender(
-      <Messages messages={messages} />, { width: 80, height: 24 }
-    );
-    await renderOnce();
-    await wait();
-    const output = captureCharFrame();
+    const output = await renderMessages(messages);
 
     // Should show Read and file name
     expect(output).toContain('Read');

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { WebhookListItem, WebhookRegistration, WebhookEventListItem, WebhooksManager } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface WebhooksPanelProps {
@@ -47,7 +46,6 @@ function formatRelativeTime(isoDate: string | undefined): string {
 
 export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [webhooks, setWebhooks] = useState<WebhookListItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedWebhook, setSelectedWebhook] = useState<WebhookRegistration | null>(null);
@@ -105,6 +103,18 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
+  };
+
+  const submitCreateName = (nextName: string) => {
+    setCreateName(nextName);
+    if (nextName.trim()) {
+      setMode('create-source');
+    }
+  };
+
+  const submitCreateSource = (nextSource: string) => {
+    setCreateSource(nextSource);
+    setMode('create-confirm');
   };
 
   useInput((input, key) => {
@@ -211,66 +221,66 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
 
   // Header
   const header = (
-    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg={themeColor('info')}><b>Webhooks</b></text>
-      <text fg={themeColor('muted')}> | </text>
-      <text fg={themeColor('muted')}>
+    <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <Text fg={themeColor('info')} bold>Webhooks</Text>
+      <Text fg={themeColor('muted')}> | </Text>
+      <Text fg={themeColor('muted')}>
         {mode === 'list' ? 'q:close c:create d:delete p:pause/resume t:test e:events r:refresh' :
          mode === 'detail' ? 'esc:back r:reveal/hide secret e:events' :
          mode === 'events' ? 'esc:back' :
          mode === 'delete-confirm' ? 'y:confirm n:cancel' :
          mode === 'create-confirm' ? 'y:confirm n:cancel' :
          'Enter to continue'}
-      </text>
-    </box>
+      </Text>
+    </Box>
   );
 
   // Status message
   const statusBar = statusMessage ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('warning')}>{statusMessage}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('warning')}>{statusMessage}</Text>
+    </Box>
   ) : null;
 
   // Error bar
   const errorBar = error ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('error')}>Error: {error}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('error')}>Error: {error}</Text>
+    </Box>
   ) : null;
 
   // List view
   if (mode === 'list') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
         {errorBar}
         {webhooks.length === 0 ? (
-          <box paddingX={1}>
-            <text fg={themeColor('muted')}>No webhooks registered. Press 'c' to create one.</text>
-          </box>
+          <Box paddingX={1}>
+            <Text fg={themeColor('muted')}>No webhooks registered. Press 'c' to create one.</Text>
+          </Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {webhooks.map((wh, i) => (
-              <box key={wh.id}>
-                <text fg={i === selectedIndex ? themeColor('cyan') : undefined}>
+              <Box key={wh.id}>
+                <Text fg={i === selectedIndex ? themeColor('cyan') : undefined}>
                   {i === selectedIndex ? '▸ ' : '  '}
-                </text>
-                <text fg={STATUS_COLORS[wh.status]}>
+                </Text>
+                <Text fg={STATUS_COLORS[wh.status]}>
                   {STATUS_ICONS[wh.status] || '?'}{' '}
-                </text>
-                <text attributes={i === selectedIndex ? 1 : undefined}><b>
+                </Text>
+                <Text attributes={i === selectedIndex ? 1 : undefined} bold>
                   {wh.name}
-                </b></text>
-                <text fg={themeColor('muted')}>
+                </Text>
+                <Text fg={themeColor('muted')}>
                   {' '}({wh.source}) | {wh.deliveryCount} events | Last: {formatRelativeTime(wh.lastDeliveryAt)}
-                </text>
-              </box>
+                </Text>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -281,158 +291,155 @@ export function WebhooksPanel({ manager, onClose }: WebhooksPanelProps) {
       : selectedWebhook.secret.slice(0, 10) + '•'.repeat(20);
 
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
-        <box flexDirection="column" paddingX={1}>
-          <text><b>{selectedWebhook.name}</b></text>
-          <text> </text>
-          <text>ID:          <span fg={themeColor('info')}>{selectedWebhook.id}</span></text>
-          <text>Source:      {selectedWebhook.source}</text>
-          <text>Status:      <span fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</span></text>
+        <Box flexDirection="column" paddingX={1}>
+          <Text bold>{selectedWebhook.name}</Text>
+          <Text> </Text>
+          <Text>ID:          <Inline fg={themeColor('info')}>{selectedWebhook.id}</Inline></Text>
+          <Text>Source:      {selectedWebhook.source}</Text>
+          <Text>Status:      <Inline fg={STATUS_COLORS[selectedWebhook.status]}>{selectedWebhook.status}</Inline></Text>
           {selectedWebhook.description && (
-            <text>Description: {selectedWebhook.description}</text>
+            <Text>Description: {selectedWebhook.description}</Text>
           )}
-          <text>URL:         <span fg={themeColor('success')}>/api/v1/webhooks/receive/{selectedWebhook.id}</span></text>
-          <text>Secret:      <span fg={showSecret ? themeColor('yellow') : themeColor('muted')}>{maskedSecret}</span> <span fg={themeColor('muted')}>(r to {showSecret ? 'hide' : 'reveal'})</span></text>
-          <text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</text>
-          <text>Deliveries:  {selectedWebhook.deliveryCount}</text>
-          <text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</text>
+          <Text>URL:         <Inline fg={themeColor('success')}>/api/v1/webhooks/receive/{selectedWebhook.id}</Inline></Text>
+          <Text>
+            Secret:      <Inline fg={showSecret ? themeColor('yellow') : themeColor('muted')}>{maskedSecret}</Inline>{' '}
+            <Inline fg={themeColor('muted')}>(r to {showSecret ? 'hide' : 'reveal'})</Inline>
+          </Text>
+          <Text>Filter:      {selectedWebhook.eventsFilter.length > 0 ? selectedWebhook.eventsFilter.join(', ') : 'all events'}</Text>
+          <Text>Deliveries:  {selectedWebhook.deliveryCount}</Text>
+          <Text>Created:     {new Date(selectedWebhook.createdAt).toLocaleString()}</Text>
           {selectedWebhook.lastDeliveryAt && (
-            <text>Last Event:  {new Date(selectedWebhook.lastDeliveryAt).toLocaleString()}</text>
+            <Text>Last Event:  {new Date(selectedWebhook.lastDeliveryAt).toLocaleString()}</Text>
           )}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
   // Events view
   if (mode === 'events') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {events.length === 0 ? (
-          <box paddingX={1}>
-            <text fg={themeColor('muted')}>No events received yet.</text>
-          </box>
+          <Box paddingX={1}>
+            <Text fg={themeColor('muted')}>No events received yet.</Text>
+          </Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {events.map((evt) => (
-              <box key={evt.id} flexDirection="column" marginBottom={1}>
-                <box>
-                  <text>{EVENT_STATUS_ICONS[evt.status] || '?'} </text>
-                  <text><b>{evt.eventType}</b></text>
-                  <text fg={themeColor('muted')}> ({evt.id})</text>
-                </box>
-                <box paddingLeft={2}>
-                  <text fg={themeColor('muted')}>
+              <Box key={evt.id} flexDirection="column" marginBottom={1}>
+                <Box>
+                  <Text>{EVENT_STATUS_ICONS[evt.status] || '?'} </Text>
+                  <Text bold>{evt.eventType}</Text>
+                  <Text fg={themeColor('muted')}> ({evt.id})</Text>
+                </Box>
+                <Box paddingLeft={2}>
+                  <Text fg={themeColor('muted')}>
                     {evt.source} | {evt.status} | {new Date(evt.timestamp).toLocaleString()}
-                  </text>
-                </box>
-                <box paddingLeft={2}>
-                  <text fg={themeColor('muted')} truncate={true} wrapMode="none">
+                  </Text>
+                </Box>
+                <Box paddingLeft={2}>
+                  <Text fg={themeColor('muted')} wrapMode="truncate-end">
                     {evt.preview}
-                  </text>
-                </box>
-              </box>
+                  </Text>
+                </Box>
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Delete confirm
   if (mode === 'delete-confirm' && selectedWebhook) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('error')}><b>Delete webhook?</b></text>
-          <text> </text>
-          <text>This will permanently delete "{selectedWebhook.name}" ({selectedWebhook.id})</text>
-          <text>and all its event history.</text>
-          <text> </text>
-          <text>Press 'y' to confirm, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('error')} bold>Delete webhook?</Text>
+          <Text> </Text>
+          <Text>This will permanently delete "{selectedWebhook.name}" ({selectedWebhook.id})</Text>
+          <Text>and all its event history.</Text>
+          <Text> </Text>
+          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Webhook</b></text>
-          <text> </text>
-          <box>
-            <text>Name: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Webhook</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Name: </Text>
+            <TextInput
               value={createName}
               onChange={setCreateName}
-              onSubmit={() => {
-                if (createName.trim()) {
-                  setMode('create-source');
-                }
-              }}
-              focused
+              onSubmit={submitCreateName}
+              focus
               placeholder="e.g., gmail-notifications"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: source
   if (mode === 'create-source') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Webhook</b></text>
-          <text>Name: {createName}</text>
-          <text> </text>
-          <box>
-            <text>Source: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Webhook</Text>
+          <Text>Name: {createName}</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Source: </Text>
+            <TextInput
               value={createSource}
               onChange={setCreateSource}
-              onSubmit={() => {
-                setMode('create-confirm');
-              }}
-              focused
+              onSubmit={submitCreateSource}
+              focus
               placeholder="e.g., gmail, notion, github, custom"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Confirm Webhook Creation</b></text>
-          <text> </text>
-          <text>Name:   {createName}</text>
-          <text>Source: {createSource || 'custom'}</text>
-          <text> </text>
-          <text>Press 'y' to create, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Confirm Webhook Creation</Text>
+          <Text> </Text>
+          <Text>Name:   {createName}</Text>
+          <Text>Source: {createSource || 'custom'}</Text>
+          <Text> </Text>
+          <Text>Press 'y' to create, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {header}
-      <text fg={themeColor('muted')}>Loading...</text>
-    </box>
+      <Text fg={themeColor('muted')}>Loading...</Text>
+    </Box>
   );
 }

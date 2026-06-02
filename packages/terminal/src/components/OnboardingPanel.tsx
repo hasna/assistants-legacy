@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { InputRenderable } from '@opentui/core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { useTypewriter } from '../hooks/useTypewriter';
 import { useGradientCycle } from '../hooks/useGradientCycle';
 import {
@@ -61,8 +60,6 @@ const INTRO_FEATURES = [
 
 const MAX_VISIBLE_CONNECTORS = 5;
 
-type InputValueRef = InputRenderable;
-
 function getVisibleRange(
   selectedIndex: number,
   totalItems: number,
@@ -110,55 +107,13 @@ export function ProgressBar({ step, total }: { step: number; total: number }) {
   const empty = width - filled;
   const pct = Math.round((step / total) * 100);
   return (
-    <box flexDirection="row" marginBottom={1}>
-      <text fg={themeColor('muted')}>Step {step} of {total}  [</text>
-      <text fg={themeColor('info')}>{'='.repeat(filled)}</text>
-      <text fg={themeColor('muted')}>{' '.repeat(empty)}</text>
-      <text fg={themeColor('muted')}>] {pct}%</text>
-    </box>
+    <Box flexDirection="row" marginBottom={1}>
+      <Text fg={themeColor('muted')}>Step {step} of {total}  [</Text>
+      <Text fg={themeColor('info')}>{'='.repeat(filled)}</Text>
+      <Text fg={themeColor('muted')}>{' '.repeat(empty)}</Text>
+      <Text fg={themeColor('muted')}>] {pct}%</Text>
+    </Box>
   );
-}
-
-function MaskedInput({ value, onChange, onSubmit, placeholder }: {
-  value: string;
-  onChange: (v: string) => void;
-  onSubmit: (v: string) => void;
-  placeholder?: string;
-}) {
-  // Show first 7 chars + mask the rest
-  const masked = value.length > 7
-    ? value.slice(0, 7) + '*'.repeat(Math.min(value.length - 7, 32))
-    : value;
-
-  return (
-    <box flexDirection="row">
-      <text fg={themeColor('info')}>&gt; </text>
-      {value.length === 0 ? (
-        <input
-          value={value}
-          onChange={onChange}
-          onSubmit={(submittedValue) => onSubmit(submittedInputValue(submittedValue, value))}
-          placeholder={placeholder}
-        />
-      ) : (
-        <input
-          value={value}
-          onChange={onChange}
-          onSubmit={(submittedValue) => onSubmit(submittedInputValue(submittedValue, value))}
-          placeholder={placeholder}
-        />
-      )}
-    </box>
-  );
-}
-
-function submittedInputValue(value: unknown, fallback: string): string {
-  return typeof value === 'string' ? value : fallback;
-}
-
-function inputRefValue(ref: React.RefObject<InputValueRef | null>, fallback: string): string {
-  const value = ref.current?.value;
-  return typeof value === 'string' ? value : fallback;
 }
 
 // ============================================
@@ -187,7 +142,6 @@ export function OnboardingPanel({
   const apiKeyValueRef = useRef(existingApiKeys?.[initialProvider] || '');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [apiKeyValidated, setApiKeyValidated] = useState(!!existingApiKeys?.[initialProvider]);
-  const apiKeyInputRef = useRef<InputValueRef | null>(null);
   const [enabledConnectors, setEnabledConnectors] = useState<Set<string>>(
     () => new Set(discoveredConnectors)
   );
@@ -195,11 +149,10 @@ export function OnboardingPanel({
   const currentStepRef = useRef(currentStep);
   currentStepRef.current = currentStep;
 
-  // useSafeInput handles Escape; avoid toggling raw mode directly to prevent conflicts.
+  // Ink owns raw-mode input for this panel.
   const [connectorKeys, setConnectorKeys] = useState<Record<string, string>>({});
   const [connectorKeyIndex, setConnectorKeyIndex] = useState(0);
   const [connectorKeyValue, setConnectorKeyValue] = useState('');
-  const connectorKeyInputRef = useRef<InputValueRef | null>(null);
   const [introRevealCount, setIntroRevealCount] = useState(0);
   const [isCompact] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -346,7 +299,9 @@ export function OnboardingPanel({
 
   // Input handling
   useInput((input, key) => {
-    if (key.escape) {
+    const isEscape = key.escape || input === '\x1b';
+
+    if (isEscape) {
       if (currentStep === 'welcome') {
         onCancel();
       } else {
@@ -457,15 +412,17 @@ export function OnboardingPanel({
   }, { isActive: currentStep !== 'api-key' && currentStep !== 'connector-keys' });
 
   // Handle Escape on text-input steps; TextInput owns enter/typing behavior.
-  useInput((_input, key) => {
+  useInput((input, key) => {
+    const isEscape = key.escape || input === '\x1b';
+
     if (currentStep === 'api-key') {
-      if (key.escape) {
+      if (isEscape) {
         goBack();
       }
       return;
     }
     if (currentStep === 'connector-keys') {
-      if (key.escape) {
+      if (isEscape) {
         goBack();
       }
     }
@@ -512,18 +469,18 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'welcome') {
     return (
-      <box flexDirection="column" paddingX={1}>
-        <box marginTop={1} marginBottom={1}>
-          <text fg={logoColor}><b>{COMPACT_LOGO}</b></text>
-        </box>
-        <box flexDirection="row" marginBottom={1}>
-          <text fg={themeColor('info')}>&gt; </text>
-          <text>{subtitle}</text>
-          {!subtitleDone && <text fg={themeColor('info')}>_</text>}
-        </box>
-        <text fg={themeColor('muted')}>Press Enter to get started...</text>
-        <text fg={themeColor('muted')}>Press Escape to skip</text>
-      </box>
+      <Box flexDirection="column" paddingX={1}>
+        <Box marginTop={1} marginBottom={1}>
+          <Text fg={logoColor} bold>{COMPACT_LOGO}</Text>
+        </Box>
+        <Box flexDirection="row" marginBottom={1}>
+          <Text fg={themeColor('info')}>&gt; </Text>
+          <Text>{subtitle}</Text>
+          {!subtitleDone && <Text fg={themeColor('info')}>_</Text>}
+        </Box>
+        <Text fg={themeColor('muted')}>Press Enter to get started...</Text>
+        <Text fg={themeColor('muted')}>Press Escape to skip</Text>
+      </Box>
     );
   }
 
@@ -532,23 +489,23 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'intro') {
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>What can assistants do?</b></text>
-        <box flexDirection="column" marginTop={1} marginBottom={1}>
+        <Text bold>What can assistants do?</Text>
+        <Box flexDirection="column" marginTop={1} marginBottom={1}>
           {INTRO_FEATURES.slice(0, introRevealCount).map((feature, i) => (
-            <box flexDirection="row" key={i}>
-              <text fg={themeColor('info')}>  &gt; </text>
-              <text>{feature}</text>
-            </box>
+            <Box flexDirection="row" key={i}>
+              <Text fg={themeColor('info')}>  &gt; </Text>
+              <Text>{feature}</Text>
+            </Box>
           ))}
           {introRevealCount < INTRO_FEATURES.length && (
-            <text fg={themeColor('muted')}>  ...</text>
+            <Text fg={themeColor('muted')}>  ...</Text>
           )}
-        </box>
-        <text fg={themeColor('muted')}>Press Enter to continue...</text>
-        <text fg={themeColor('muted')}>Esc or B to go back</text>
-      </box>
+        </Box>
+        <Text fg={themeColor('muted')}>Press Enter to continue...</Text>
+        <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+      </Box>
     );
   }
 
@@ -557,25 +514,25 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'provider-select') {
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Choose your provider</b></text>
-        <box flexDirection="column" marginTop={1} marginBottom={1}>
+        <Text bold>Choose your provider</Text>
+        <Box flexDirection="column" marginTop={1} marginBottom={1}>
           {LLM_PROVIDERS.map((provider, i) => (
-            <box flexDirection="row" key={provider.id}>
-              <text fg={i === selectedProviderIndex ? themeColor('cyan') : themeColor('muted')}>
+            <Box flexDirection="row" key={provider.id}>
+              <Text fg={i === selectedProviderIndex ? themeColor('info') : themeColor('muted')}>
                 {i === selectedProviderIndex ? '  > ' : '    '}
-              </text>
-              <text attributes={i === selectedProviderIndex ? 1 : undefined} fg={i === selectedProviderIndex ? themeColor('white') : undefined}><b>
+              </Text>
+              <Text attributes={i === selectedProviderIndex ? 1 : undefined} fg={i === selectedProviderIndex ? themeColor('text') : undefined} bold={i === selectedProviderIndex}>
                 {provider.label}
-              </b></text>
-              <text fg={themeColor('muted')}>  {provider.description}</text>
-            </box>
+              </Text>
+              <Text fg={themeColor('muted')}>  {provider.description}</Text>
+            </Box>
           ))}
-        </box>
-        <text fg={themeColor('muted')}>Arrow keys to move, Enter to continue</text>
-        <text fg={themeColor('muted')}>Esc or B to go back</text>
-      </box>
+        </Box>
+        <Text fg={themeColor('muted')}>Arrow keys to move, Enter to continue</Text>
+        <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+      </Box>
     );
   }
 
@@ -588,30 +545,29 @@ export function OnboardingPanel({
     const envName = providerInfo?.apiKeyEnv || 'API_KEY';
     const existingKey = existingApiKeys?.[selectedProvider];
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Let's set up your API key</b></text>
-        <box marginTop={1} marginBottom={1} flexDirection="column">
-          <text>assistants uses {providerLabel}. You'll need an API key.</text>
+        <Text bold>Let's set up your API key</Text>
+        <Box marginTop={1} marginBottom={1} flexDirection="column">
+          <Text>assistants uses {providerLabel}. You'll need an API key.</Text>
           {providerInfo?.docsUrl ? (
-            <text>Get one at: <span fg={themeColor('info')}>{providerInfo.docsUrl}</span></text>
+            <Text>Get one at: <Text fg={themeColor('info')}>{providerInfo.docsUrl}</Text></Text>
           ) : null}
-        </box>
+        </Box>
         {existingKey ? (
-          <box flexDirection="column">
-            <text fg={themeColor('success')}>Existing API key detected: {existingKey.slice(0, 10)}...{existingKey.slice(-4)}</text>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press Enter to keep it, or type a new key:</text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Text fg={themeColor('success')}>Existing API key detected: {existingKey.slice(0, 10)}...{existingKey.slice(-4)}</Text>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press Enter to keep it, or type a new key:</Text>
+            </Box>
+          </Box>
         ) : null}
-        <box marginTop={1}>
-          <text>Enter your {providerLabel} API key ({envName}):</text>
-        </box>
-        <box flexDirection="row">
-          <text fg={themeColor('info')}>&gt; </text>
-            <input
-              ref={apiKeyInputRef}
+        <Box marginTop={1}>
+          <Text>Enter your {providerLabel} API key ({envName}):</Text>
+        </Box>
+        <Box flexDirection="row">
+          <Text fg={themeColor('info')}>&gt; </Text>
+            <TextInput
               value={apiKey}
               onChange={(v) => {
                 apiKeyValueRef.current = v;
@@ -619,31 +575,25 @@ export function OnboardingPanel({
                 setApiKeyError(null);
                 setApiKeyValidated(false);
               }}
-              onInput={(v) => {
-                apiKeyValueRef.current = v;
-                setApiKey(v);
-                setApiKeyError(null);
-                setApiKeyValidated(false);
-              }}
-              onSubmit={(submittedValue) => submitApiKey(submittedInputValue(submittedValue, inputRefValue(apiKeyInputRef, apiKey)))}
-              focused
+              onSubmit={(submittedValue) => submitApiKey(submittedValue)}
+              focus
               placeholder={selectedProvider === 'anthropic' ? 'sk-ant-...' : 'api-key'}
             />
-        </box>
+        </Box>
         {apiKeyError && (
-          <box marginTop={1}>
-            <text fg={themeColor('error')}>{apiKeyError}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('error')}>{apiKeyError}</Text>
+          </Box>
         )}
         {apiKeyValidated && (
-          <box marginTop={1}>
-            <text fg={themeColor('success')}>Key validated successfully!</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('success')}>Key validated successfully!</Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Escape to go back</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Escape to go back</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -652,25 +602,25 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'model-select') {
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Choose your default model</b></text>
-        <box flexDirection="column" marginTop={1} marginBottom={1}>
+        <Text bold>Choose your default model</Text>
+        <Box flexDirection="column" marginTop={1} marginBottom={1}>
           {availableModels.map((model, i) => (
-            <box flexDirection="row" key={model.id}>
-              <text fg={i === selectedModelIndex ? themeColor('cyan') : themeColor('muted')}>
+            <Box flexDirection="row" key={model.id}>
+              <Text fg={i === selectedModelIndex ? themeColor('info') : themeColor('muted')}>
                 {i === selectedModelIndex ? '  > ' : '    '}
-              </text>
-              <text attributes={i === selectedModelIndex ? 1 : undefined} fg={i === selectedModelIndex ? themeColor('white') : undefined}><b>
+              </Text>
+              <Text attributes={i === selectedModelIndex ? 1 : undefined} fg={i === selectedModelIndex ? themeColor('text') : undefined} bold={i === selectedModelIndex}>
                 {model.name}
-              </b></text>
-              <text fg={themeColor('muted')}>  {model.description}</text>
-            </box>
+              </Text>
+              <Text fg={themeColor('muted')}>  {model.description}</Text>
+            </Box>
           ))}
-        </box>
-        <text fg={themeColor('muted')}>Arrow keys to select, Enter to confirm</text>
-        <text fg={themeColor('muted')}>Esc or B to go back</text>
-      </box>
+        </Box>
+        <Text fg={themeColor('muted')}>Arrow keys to select, Enter to confirm</Text>
+        <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+      </Box>
     );
   }
 
@@ -683,15 +633,15 @@ export function OnboardingPanel({
     const visibleConnectors = connectorList.slice(visibleRange.start, visibleRange.end);
 
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Connectors</b></text>
-        <box marginTop={1} marginBottom={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Select connectors to enable. Uninstalled ones will be installed automatically.</text>
-        </box>
-        <box flexDirection="column">
+        <Text bold>Connectors</Text>
+        <Box marginTop={1} marginBottom={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Select connectors to enable. Uninstalled ones will be installed automatically.</Text>
+        </Box>
+        <Box flexDirection="column">
           {visibleRange.hasMore.above > 0 && (
-            <text fg={themeColor('muted')}>  ^ {visibleRange.hasMore.above} more above</text>
+            <Text fg={themeColor('muted')}>  ^ {visibleRange.hasMore.above} more above</Text>
           )}
           {visibleConnectors.map((connector, visibleIdx) => {
             const actualIdx = visibleRange.start + visibleIdx;
@@ -701,27 +651,27 @@ export function OnboardingPanel({
             const descDisplay = desc.length > 32 ? desc.slice(0, 29) + '...' : desc;
             const checkbox = enabled ? 'x' : ' ';
             return (
-              <box flexDirection="row" key={connector.name}>
-                <text fg={isSelected ? themeColor('cyan') : themeColor('muted')}>
+              <Box flexDirection="row" key={connector.name}>
+                <Text fg={isSelected ? themeColor('info') : themeColor('muted')}>
                   {isSelected ? '> ' : '  '}
-                </text>
-                <text fg={enabled ? themeColor('success') : themeColor('muted')}>
+                </Text>
+                <Text fg={enabled ? themeColor('success') : themeColor('muted')}>
                   [{checkbox}]
-                </text>
-                <text> {connector.name}</text>
-                <text fg={themeColor('muted')}>  {descDisplay}</text>
-              </box>
+                </Text>
+                <Text> {connector.name}</Text>
+                <Text fg={themeColor('muted')}>  {descDisplay}</Text>
+              </Box>
             );
           })}
           {visibleRange.hasMore.below > 0 && (
-            <text fg={themeColor('muted')}>  v {visibleRange.hasMore.below} more below</text>
+            <Text fg={themeColor('muted')}>  v {visibleRange.hasMore.below} more below</Text>
           )}
-        </box>
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Arrow keys to move, Space to toggle, Enter to continue</text>
-          <text fg={themeColor('muted')}>Esc or B to go back</text>
-        </box>
-      </box>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Arrow keys to move, Space to toggle, Enter to continue</Text>
+          <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -730,46 +680,46 @@ export function OnboardingPanel({
   // ============================================
   if (currentStep === 'skills') {
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Skills</b></text>
-        <box marginTop={1} marginBottom={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Skills teach your assistant specialized workflows.</text>
-          <box flexDirection="row">
-            <text fg={themeColor('muted')}>Install skills with: </text>
-            <text fg={themeColor('info')}>bun add -g @hasna/skills</text>
-          </box>
-        </box>
+        <Text bold>Skills</Text>
+        <Box marginTop={1} marginBottom={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Skills teach your assistant specialized workflows.</Text>
+          <Box flexDirection="row">
+            <Text fg={themeColor('muted')}>Install skills with: </Text>
+            <Text fg={themeColor('info')}>bun add -g @hasna/skills</Text>
+          </Box>
+        </Box>
         {skillsList.length > 0 ? (
-          <box flexDirection="column">
+          <Box flexDirection="column">
             {skillsList.map((skill, i) => {
               const isSelected = i === selectedSkillIndex;
               return (
-                <box flexDirection="row" key={skill.name}>
-                  <text fg={isSelected ? themeColor('cyan') : themeColor('muted')}>
+                <Box flexDirection="row" key={skill.name}>
+                  <Text fg={isSelected ? themeColor('info') : themeColor('muted')}>
                     {isSelected ? '> ' : '  '}
-                  </text>
-                  <text fg={themeColor('success')}>[x]</text>
-                  <text> /{skill.name}</text>
+                  </Text>
+                  <Text fg={themeColor('success')}>[x]</Text>
+                  <Text> /{skill.name}</Text>
                   {skill.description && (
-                    <text fg={themeColor('muted')}>  {skill.description.length > 40 ? skill.description.slice(0, 37) + '...' : skill.description}</text>
+                    <Text fg={themeColor('muted')}>  {skill.description.length > 40 ? skill.description.slice(0, 37) + '...' : skill.description}</Text>
                   )}
-                </box>
+                </Box>
               );
             })}
-          </box>
+          </Box>
         ) : (
-          <box marginBottom={1} flexDirection="row">
-            <text fg={themeColor('muted')}>  No skills installed. Run </text>
-            <text fg={themeColor('info')}>bun add -g @hasna/skills</text>
-            <text fg={themeColor('muted')}> to get started.</text>
-          </box>
+          <Box marginBottom={1} flexDirection="row">
+            <Text fg={themeColor('muted')}>  No skills installed. Run </Text>
+            <Text fg={themeColor('info')}>bun add -g @hasna/skills</Text>
+            <Text fg={themeColor('muted')}> to get started.</Text>
+          </Box>
         )}
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Press Enter to continue...</text>
-          <text fg={themeColor('muted')}>Esc or B to go back</text>
-        </box>
-      </box>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Press Enter to continue...</Text>
+          <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -785,28 +735,26 @@ export function OnboardingPanel({
     }
 
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text><b>Configure connector: {currentConnector}</b></text>
-        <box marginTop={1}>
-          <text>Enter API key for {currentConnector}:</text>
-        </box>
-        <box flexDirection="row">
-          <text fg={themeColor('info')}>&gt; </text>
-          <input
-            ref={connectorKeyInputRef}
+        <Text bold>Configure connector: {currentConnector}</Text>
+        <Box marginTop={1}>
+          <Text>Enter API key for {currentConnector}:</Text>
+        </Box>
+        <Box flexDirection="row">
+          <Text fg={themeColor('info')}>&gt; </Text>
+          <TextInput
             value={connectorKeyValue}
             onChange={setConnectorKeyValue}
-            onInput={setConnectorKeyValue}
-            onSubmit={(submittedValue) => submitConnectorKey(submittedInputValue(submittedValue, inputRefValue(connectorKeyInputRef, connectorKeyValue)))}
-            focused
+            onSubmit={(submittedValue) => submitConnectorKey(submittedValue)}
+            focus
             placeholder="Enter API key or press Enter to skip"
           />
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>{connectorKeyIndex + 1} of {connectorKeysNeeded.length} connectors</text>
-        </box>
-      </box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>{connectorKeyIndex + 1} of {connectorKeysNeeded.length} connectors</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -824,34 +772,34 @@ export function OnboardingPanel({
     const modelDisplay = modelLabel.length > 24 ? modelLabel.slice(0, 21) + '...' : modelLabel.padEnd(24);
 
     return (
-      <box flexDirection="column" paddingX={1}>
+      <Box flexDirection="column" paddingX={1}>
         <ProgressBar step={stepIndex} total={STEPS.length} />
-        <text fg={themeColor('success')}><b>You're all set!</b></text>
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>{'┌─────────────────────────────────────┐'}</text>
-          <text fg={themeColor('muted')}>{'│'} Configuration Summary{'              │'}</text>
-          <text fg={themeColor('muted')}>{'├─────────────────────────────────────┤'}</text>
-          <text fg={themeColor('muted')}>{'│'} API Key:    {maskedKey.padEnd(24)}{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Model:      {modelDisplay}{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Connectors: {connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Skills:     {skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}{'│'}</text>
-          <text fg={themeColor('muted')}>{'│'} Config:     {'~/.hasna/assistants/'.padEnd(24)}{'│'}</text>
-          <text fg={themeColor('muted')}>{'└─────────────────────────────────────┘'}</text>
-        </box>
-        <box marginTop={1}>
+        <Text fg={themeColor('success')} bold>You're all set!</Text>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>{'┌─────────────────────────────────────┐'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} Configuration Summary{'              │'}</Text>
+          <Text fg={themeColor('muted')}>{'├─────────────────────────────────────┤'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} API Key:    {maskedKey.padEnd(24)}{'│'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} Model:      {modelDisplay}{'│'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} Connectors: {connectorList.length > 24 ? connectorList.slice(0, 21) + '...' : connectorList.padEnd(24)}{'│'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} Skills:     {skillsDisplay.length > 24 ? skillsDisplay.slice(0, 21) + '...' : skillsDisplay.padEnd(24)}{'│'}</Text>
+          <Text fg={themeColor('muted')}>{'│'} Config:     {'~/.hasna/assistants/'.padEnd(24)}{'│'}</Text>
+          <Text fg={themeColor('muted')}>{'└─────────────────────────────────────┘'}</Text>
+        </Box>
+        <Box marginTop={1}>
           {isSaving ? (
-            <text fg={themeColor('warning')}>Saving configuration...</text>
+            <Text fg={themeColor('warning')}>Saving configuration...</Text>
           ) : (
-            <text fg={themeColor('muted')}>Press Enter to start chatting...</text>
+            <Text fg={themeColor('muted')}>Press Enter to start chatting...</Text>
           )}
-        </box>
+        </Box>
         {!isSaving && (
-          <box marginTop={1} flexDirection="column">
-            <text fg={themeColor('muted')}>Edit: (P)rovider  (M)odel  (K)ey  (C)onnectors  (S)kills</text>
-            <text fg={themeColor('muted')}>Esc or B to go back</text>
-          </box>
+          <Box marginTop={1} flexDirection="column">
+            <Text fg={themeColor('muted')}>Edit: (P)rovider  (M)odel  (K)ey  (C)onnectors  (S)kills</Text>
+            <Text fg={themeColor('muted')}>Esc or B to go back</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 

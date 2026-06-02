@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Memory, MemoryStats } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface MemoryPanelProps {
@@ -38,7 +37,6 @@ function formatValue(value: unknown, maxLen: number = 800): string {
 export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: MemoryPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const sorted = useMemo(
@@ -115,83 +113,83 @@ export function MemoryPanel({ memories, stats, onRefresh, onClose, error }: Memo
 
   if (mode === 'detail' && selected) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Memory Detail</b></text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
-          <text><span fg={themeColor('muted')}>Key:</span> {selected.key}</text>
-          <text><span fg={themeColor('muted')}>Scope:</span> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</text>
-          <text><span fg={themeColor('muted')}>Category:</span> {selected.category}</text>
-          <text><span fg={themeColor('muted')}>Importance:</span> {selected.importance}/10</text>
-          <text><span fg={themeColor('muted')}>Tags:</span> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</text>
-          <text><span fg={themeColor('muted')}>Created:</span> {selected.createdAt}</text>
-          <text><span fg={themeColor('muted')}>Updated:</span> {selected.updatedAt}</text>
-          <text><span fg={themeColor('muted')}>Accessed:</span> {selected.accessCount} times</text>
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>Value:</text>
-          </box>
-          <box>
-            <text>{formatValue(selected.value)}</text>
-          </box>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Esc back | r refresh | q close</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Memory Detail</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+          <Text><Inline fg={themeColor('muted')}>Key:</Inline> {selected.key}</Text>
+          <Text><Inline fg={themeColor('muted')}>Scope:</Inline> {selected.scope}{selected.scopeId ? ` (${selected.scopeId})` : ''}</Text>
+          <Text><Inline fg={themeColor('muted')}>Category:</Inline> {selected.category}</Text>
+          <Text><Inline fg={themeColor('muted')}>Importance:</Inline> {selected.importance}/10</Text>
+          <Text><Inline fg={themeColor('muted')}>Tags:</Inline> {selected.tags.length > 0 ? selected.tags.join(', ') : '(none)'}</Text>
+          <Text><Inline fg={themeColor('muted')}>Created:</Inline> {selected.createdAt}</Text>
+          <Text><Inline fg={themeColor('muted')}>Updated:</Inline> {selected.updatedAt}</Text>
+          <Text><Inline fg={themeColor('muted')}>Accessed:</Inline> {selected.accessCount} times</Text>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>Value:</Text>
+          </Box>
+          <Box>
+            <Text>{formatValue(selected.value)}</Text>
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Esc back | r refresh | q close</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <box flexDirection="row">
-          <text><b>Memory</b></text>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Box flexDirection="row">
+          <Text bold>Memory</Text>
           {stats && (
-            <text fg={themeColor('muted')}>
+            <Text fg={themeColor('muted')}>
               {' '}({stats.totalCount} total · G{stats.byScope.global}/S{stats.byScope.shared}/P{stats.byScope.private})
-            </text>
+            </Text>
           )}
-        </box>
-        <text fg={themeColor('muted')}>[r]efresh</text>
-      </box>
+        </Box>
+        <Text fg={themeColor('muted')}>[r]efresh</Text>
+      </Box>
 
       {error && (
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}>Error: {error}</text>
-        </box>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')}>Error: {error}</Text>
+        </Box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sorted.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No memories yet.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No memories yet.</Text>
+          </Box>
         ) : (
           sorted.map((memory, index) => {
             const isSelected = index === selectedIndex;
             const summary = formatSummary(memory);
             const scopeTag = SCOPE_TAG[memory.scope];
             return (
-              <box key={memory.id} paddingY={0}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+              <Box key={memory.id} paddingY={0}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                   {scopeTag} {index + 1}. {memory.key.padEnd(18)} {summary}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
-      </box>
+      </Box>
 
       {isRefreshing && (
-        <box marginTop={1}>
-          <text fg={themeColor('warning')}>Refreshing...</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('warning')}>Refreshing...</Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Enter view | Esc close | ↑↓ navigate | 1-9 jump</text>
-      </box>
-    </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Enter view | Esc close | ↑↓ navigate | 1-9 jump</Text>
+      </Box>
+    </Box>
   );
 }

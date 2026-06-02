@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Heartbeat } from '@hasna/assistants-core';
 import type { HeartbeatState } from '@hasna/assistants-shared';
-import type { SelectOption } from '@opentui/core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Select, Text, useInput, type SelectOption } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface HeartbeatPanelProps {
@@ -55,30 +54,31 @@ export function HeartbeatPanel({
     }
   }, [mode, selectedRun]);
 
-  // Build options for <select>
-  const selectOptions: SelectOption[] = useMemo(() => {
+  const selectOptions: SelectOption<Heartbeat>[] = useMemo(() => {
     return sortedRuns.map((run) => {
       const time = formatRelativeTime(run.timestamp).padEnd(8);
       const activity = formatRelativeTime(run.lastActivity).padEnd(8);
       const stats = run.stats || { messagesProcessed: 0, toolCallsExecuted: 0, errorsEncountered: 0 };
       const summary = `msgs:${stats.messagesProcessed} tools:${stats.toolCallsExecuted} err:${stats.errorsEncountered}`;
       return {
-        name: `${time} ${run.state.padEnd(12)} ${activity}`,
+        label: `${time} ${run.state.padEnd(12)} ${activity}`,
         description: summary,
         value: run,
       };
     });
   }, [sortedRuns]);
 
-  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
-    if (_option) {
-      setSelectedIndex(sortedRuns.indexOf(_option.value));
+  const handleSelectFocus = useCallback((run: Heartbeat) => {
+    const nextIndex = sortedRuns.indexOf(run);
+    if (nextIndex >= 0) {
+      setSelectedIndex(nextIndex);
     }
   }, [sortedRuns]);
 
-  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
-    if (_option && sortedRuns.length > 0) {
-      setSelectedIndex(sortedRuns.indexOf(_option.value));
+  const handleSelectConfirm = useCallback((run: Heartbeat) => {
+    const nextIndex = sortedRuns.indexOf(run);
+    if (nextIndex >= 0) {
+      setSelectedIndex(nextIndex);
       setMode('detail');
     }
   }, [sortedRuns]);
@@ -105,55 +105,54 @@ export function HeartbeatPanel({
 
   if (mode === 'detail' && selectedRun) {
     return (
-      <box flexDirection="column">
-        <text><b>Heartbeat Run Details</b></text>
-        <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
-          <text>{JSON.stringify(selectedRun, null, 2)}</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Esc / q to go back</text>
-        </box>
-      </box>
+      <Box flexDirection="column">
+        <Text bold>Heartbeat Run Details</Text>
+        <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+          <Text>{JSON.stringify(selectedRun, null, 2)}</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Esc / q to go back</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
-      <text><b>Heartbeat</b></text>
+    <Box flexDirection="column">
+      <Text bold>Heartbeat</Text>
 
-      <box marginTop={1}>
+      <Box marginTop={1}>
         {heartbeatState ? (
-          <text fg={themeColor('muted')}>
+          <Text fg={themeColor('muted')}>
             State: {heartbeatState.state} | Stale: {heartbeatState.isStale ? 'yes' : 'no'} | Last Activity:{' '}
             {formatRelativeTime(heartbeatState.lastActivity)} | Uptime: {heartbeatState.uptimeSeconds}s
-          </text>
+          </Text>
         ) : (
-          <text fg={themeColor('muted')}>Heartbeat status unavailable.</text>
+          <Text fg={themeColor('muted')}>Heartbeat status unavailable.</Text>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sortedRuns.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No heartbeat runs recorded yet.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No heartbeat runs recorded yet.</Text>
+          </Box>
         ) : (
-          <select
+          <Select
             options={selectOptions}
-            focused={mode === 'list'}
+            isActive={mode === 'list'}
             wrapSelection={true}
-            showDescription={true}
-            showScrollIndicator={true}
-            selectedIndex={selectedIndex}
-            onChange={handleSelectChange}
+            visibleOptionCount={8}
+            focusValue={selectedRun}
+            onFocus={handleSelectFocus}
             onSelect={handleSelectConfirm}
           />
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>↑↓ navigate | Enter details | r refresh | q quit</text>
-      </box>
-    </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>↑↓ navigate | Enter details | r refresh | q quit</Text>
+      </Box>
+    </Box>
   );
 }

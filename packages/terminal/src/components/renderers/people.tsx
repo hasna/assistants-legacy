@@ -17,6 +17,7 @@ import {
   HOOK_EVENT_SET, HOOK_TYPE_SET, HOOK_LOCATION_SET, HOOK_EVENT_MAP,
   collectStreamText, extractJsonObject,
 } from '../appHelpers';
+import { Box } from '../../ui/ink';
 import type { PanelRenderContext } from './context';
 
 export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactNode {
@@ -109,7 +110,7 @@ export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactNode 
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <AssistantsPanel
         assistants={assistantsList}
         activeAssistantId={activeAssistantId}
@@ -124,7 +125,7 @@ export function renderAssistantsPanel(ctx: PanelRenderContext): React.ReactNode 
         error={ctx.assistantError}
         onClearError={() => ctx.setAssistantError(null)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -231,7 +232,7 @@ export function renderIdentityPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <IdentityPanel
         identities={ctx.identitiesList}
         activeIdentityId={activeIdentity?.id}
@@ -251,7 +252,7 @@ export function renderIdentityPanel(ctx: PanelRenderContext): React.ReactNode {
         }}
         error={ctx.identityError}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -382,7 +383,7 @@ export function renderHooksPanel(ctx: PanelRenderContext): React.ReactNode {
   const nativeHooks = nativeHookRegistry.listFlat();
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <HooksPanel
         hooks={ctx.hooksConfig}
         nativeHooks={nativeHooks}
@@ -393,6 +394,6 @@ export function renderHooksPanel(ctx: PanelRenderContext): React.ReactNode {
         onGenerateDraft={handleHookDraft}
         onCancel={() => ctx.setShowHooksPanel(false)}
       />
-    </box>
+    </Box>
   );
 }

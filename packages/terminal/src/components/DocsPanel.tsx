@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
-import { useTerminalDimensions } from '@opentui/react';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, useInput, useWindowSize } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 import { ListItem } from './design-system';
 
@@ -257,14 +255,13 @@ function buildSectionLines(section: DocsSection, width: number): string[] {
 }
 
 export function DocsPanel({ onClose }: DocsPanelProps) {
-  const termDims = useTerminalDimensions();
-  const columns = termDims.width || 80;
-  const rows = termDims.height || 30;
+  const termDims = useWindowSize();
+  const columns = termDims.columns || 80;
+  const rows = termDims.rows || 30;
   const contentWidth = Math.max(40, columns - 8);
   const contentHeight = Math.max(8, rows - 10);
 
   const [mode, setMode] = useState<Mode>('index');
-  useClearOnChange(mode);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -398,24 +395,27 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
 
   if (mode === 'index') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text><span fg={themeColor('info')}><b>Documentation</b></span>{' — '}<span fg={themeColor('muted')}>{`${DOCS_SECTIONS.length} sections`}</span></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text>
+            <Inline fg={themeColor('info')} bold>Documentation</Inline>
+            {' — '}
+            <Inline fg={themeColor('muted')}>{`${DOCS_SECTIONS.length} sections`}</Inline>
+          </Text>
+        </Box>
 
-        <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
-          <text fg={themeColor('muted')}>Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</text>
-          <text fg={themeColor('muted')}>Close with q or Esc.</text>
-          <box marginTop={1} />
+        <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
+          <Text fg={themeColor('muted')}>Use up/down (or j/k) to choose, Enter to open, number keys for quick jump.</Text>
+          <Text fg={themeColor('muted')}>Close with q or Esc.</Text>
+          <Box marginTop={1} />
 
           {sectionWindow.above > 0 && (
-            <text fg={themeColor('muted')}>{`... ${sectionWindow.above} more above`}</text>
+            <Text fg={themeColor('muted')}>{`... ${sectionWindow.above} more above`}</Text>
           )}
 
           {DOCS_SECTIONS.slice(sectionWindow.start, sectionWindow.end).map((section, offset) => {
             const absoluteIndex = sectionWindow.start + offset;
             const selected = absoluteIndex === selectedIndex;
-            // Design-system ListItem (plan P2.2) — shared focus-pointer row.
             return (
               <ListItem
                 key={section.id}
@@ -426,48 +426,52 @@ export function DocsPanel({ onClose }: DocsPanelProps) {
           })}
 
           {sectionWindow.below > 0 && (
-            <text fg={themeColor('muted')}>{`... ${sectionWindow.below} more below`}</text>
+            <Text fg={themeColor('muted')}>{`... ${sectionWindow.below} more below`}</Text>
           )}
 
-          <box marginTop={1} />
-          <text><b>Selected</b></text>
+          <Box marginTop={1} />
+          <Text bold>Selected</Text>
           {wrapParagraph(selectedSection.summary, contentWidth).map((line, index) => (
-            <text key={`${selectedSection.id}-summary-${index}`} wrapMode="word">{line}</text>
+            <Text key={`${selectedSection.id}-summary-${index}`} wrapMode="word">{line}</Text>
           ))}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Keys: [Enter] open  [j/k] move  [[/]] switch  [q] close</Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text><span fg={themeColor('info')}><b>{selectedSection.title}</b></span>{' — '}<span fg={themeColor('muted')}>{`${selectedIndex + 1}/${DOCS_SECTIONS.length}`}</span></text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text>
+          <Inline fg={themeColor('info')} bold>{selectedSection.title}</Inline>
+          {' — '}
+          <Inline fg={themeColor('muted')}>{`${selectedIndex + 1}/${DOCS_SECTIONS.length}`}</Inline>
+        </Text>
+      </Box>
 
-      <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
+      <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} flexDirection="column" paddingX={1} paddingY={0}>
         {visibleContent.length === 0 ? (
-          <text fg={themeColor('muted')}>No content.</text>
+          <Text fg={themeColor('muted')}>No content.</Text>
         ) : (
           visibleContent.map((line, index) => (
-            <text key={`${selectedSection.id}-line-${clampedScroll + index}`} wrapMode="word">
+            <Text key={`${selectedSection.id}-line-${clampedScroll + index}`} wrapMode="word">
               {line || ' '}
-            </text>
+            </Text>
           ))
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom  [b/Esc] index  [[/]] section  [q] close</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Keys: [j/k] scroll  [u/d] half-page  [g/G] top/bottom  [b/Esc] index  [[/]] section  [q] close</Text>
+      </Box>
 
-      <box marginTop={0}>
-        <text fg={themeColor('muted')}>{`Lines ${Math.min(sectionLines.length, clampedScroll + 1)}-${Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of ${sectionLines.length}`}</text>
-      </box>
-    </box>
+      <Box marginTop={0}>
+        <Text fg={themeColor('muted')}>{`Lines ${Math.min(sectionLines.length, clampedScroll + 1)}-${Math.min(sectionLines.length, clampedScroll + visibleContent.length)} of ${sectionLines.length}`}</Text>
+      </Box>
+    </Box>
   );
 }

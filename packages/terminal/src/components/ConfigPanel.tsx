@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import type { AssistantsConfig } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
 import {
   ALL_MODELS,
   DEFAULT_MODEL,
@@ -8,6 +7,7 @@ import {
   getProviderModelId,
   getProviderLabel,
 } from '@hasna/assistants-shared';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 type ConfigLocation = 'user' | 'project' | 'local';
@@ -99,7 +99,7 @@ export function ConfigPanel({
     }
 
     // Escape or q to close
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (key.escape || input === '\x1b' || input === 'q' || input === 'Q') {
       onCancel();
       return;
     }
@@ -112,7 +112,7 @@ export function ConfigPanel({
     const section = SECTIONS[selectedSection];
 
     // Escape to go back (reset unsaved model selection)
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       setEditingField(null);
       setSelectedModelIndex(configModelIndex >= 0 ? configModelIndex : defaultModelIndex);
       setMaxOutputTokens(config.llm?.maxOutputTokens ?? 8192);
@@ -199,10 +199,10 @@ export function ConfigPanel({
   }, { isActive: mode === 'editing' && !editingField });
 
   // Text input submit handler
-  const handleFieldSubmit = useCallback(() => {
+  const handleFieldSubmit = useCallback((submittedValue: string = editValue) => {
     if (!editingField) return;
 
-    const numValue = parseInt(editValue, 10);
+    const numValue = parseInt(submittedValue, 10);
     if (isNaN(numValue) || numValue < 0) {
       setMessage({ type: 'error', text: 'Invalid number' });
       return;
@@ -213,8 +213,8 @@ export function ConfigPanel({
   }, [editingField, editValue]);
 
   // Field escape handler
-  useInput((_input, key) => {
-    if (mode === 'editing' && editingField && key.escape) {
+  useInput((input, key) => {
+    if (mode === 'editing' && editingField && (key.escape || input === '\x1b')) {
       setEditingField(null);
     }
   }, { isActive: mode === 'editing' && !!editingField });
@@ -238,7 +238,7 @@ export function ConfigPanel({
       performSave(locations[locationSelectIndex]);
       return;
     }
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       setMode('editing');
       return;
     }
@@ -324,254 +324,259 @@ export function ConfigPanel({
     switch (section.id) {
       case 'overview':
         return (
-          <box flexDirection="column">
-            <text><b>Configuration Overview</b></text>
-            <box marginTop={1} flexDirection="column">
-              <text fg={themeColor('muted')}>Config sources (in priority order):</text>
-              <text>  1. Local:   .assistants/config.local.json {localConfig ? 'present' : 'none'}</text>
-              <text>  2. Project: .assistants/config.json {projectConfig ? 'present' : 'none'}</text>
-              <text>  3. User:    ~/.hasna/assistants/config.json {userConfig ? 'present' : 'none'}</text>
-              <text>  4. Default: Built-in defaults</text>
-            </box>
-            <box marginTop={1} flexDirection="column">
-              <text fg={themeColor('muted')}>Current effective settings:</text>
-              <text>  Model: {getModelDisplayName(config.llm?.model ?? DEFAULT_MODEL)}</text>
-              <text>  Max Output Tokens: {config.llm?.maxOutputTokens ?? 8192}</text>
-              <text>  Memory: {config.memory?.enabled ? 'enabled' : 'disabled'}</text>
-              <text>  Voice: {config.voice?.enabled ? 'enabled' : 'disabled'}</text>
-              <text>  Theme: {config.theme ?? 'auto'} <span fg={themeColor('muted')}>(/theme to change)</span></text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Text bold>Configuration Overview</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text fg={themeColor('muted')}>Config sources (in priority order):</Text>
+              <Text>  1. Local:   .assistants/config.local.json {localConfig ? 'present' : 'none'}</Text>
+              <Text>  2. Project: .assistants/config.json {projectConfig ? 'present' : 'none'}</Text>
+              <Text>  3. User:    ~/.hasna/assistants/config.json {userConfig ? 'present' : 'none'}</Text>
+              <Text>  4. Default: Built-in defaults</Text>
+            </Box>
+            <Box marginTop={1} flexDirection="column">
+              <Text fg={themeColor('muted')}>Current effective settings:</Text>
+              <Text>  Model: {getModelDisplayName(config.llm?.model ?? DEFAULT_MODEL)}</Text>
+              <Text>  Max Output Tokens: {config.llm?.maxOutputTokens ?? 8192}</Text>
+              <Text>  Memory: {config.memory?.enabled ? 'enabled' : 'disabled'}</Text>
+              <Text>  Voice: {config.voice?.enabled ? 'enabled' : 'disabled'}</Text>
+              <Text>  Theme: {config.theme ?? 'auto'} <Text fg={themeColor('muted')}>(/theme to change)</Text></Text>
+            </Box>
+          </Box>
         );
 
       case 'model':
         return (
-          <box flexDirection="column">
-            <text><b>Model Settings</b></text>
-            <box marginTop={1} flexDirection="column">
-              <text fg={themeColor('muted')}>Select model: (↑/↓)</text>
-              <box flexDirection="column" marginTop={1} marginBottom={1}>
+          <Box flexDirection="column">
+            <Text bold>Model Settings</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text fg={themeColor('muted')}>Select model: (↑/↓)</Text>
+              <Box flexDirection="column" marginTop={1} marginBottom={1}>
                 {ALL_MODELS.map((model, index) => (
-                  <text
+                  <Text
                     key={getProviderModelId(model)}
                     bg={index === selectedModelIndex ? themeColor('primary') : undefined}
                     fg={index === selectedModelIndex ? themeColor('text') : undefined}
                   >
                     {index === selectedModelIndex ? '>' : ' '} {model.name}
-                    <span fg={themeColor('muted')}> ({getProviderLabel(model.provider)})</span>
-                    <span fg={themeColor('muted')}> - {model.description}</span>
-                  </text>
+                    <Text fg={themeColor('muted')}> ({getProviderLabel(model.provider)})</Text>
+                    <Text fg={themeColor('muted')}> - {model.description}</Text>
+                  </Text>
                 ))}
-              </box>
-            </box>
-            <box marginTop={1} flexDirection="column">
-              <text>Max Output Tokens: <span fg={themeColor('info')}>{maxOutputTokens}</span> (←/→ to adjust by 1024)</text>
-              <text fg={themeColor('muted')}>
+              </Box>
+            </Box>
+            <Box marginTop={1} flexDirection="column">
+              <Text>Max Output Tokens: <Text fg={themeColor('info')}>{maxOutputTokens}</Text> (←/→ to adjust by 1024)</Text>
+              <Text fg={themeColor('muted')}>
                 {maxOutputTokens < 4096 ? 'Short responses' : maxOutputTokens > 12000 ? 'Very long responses' : 'Standard length'}
-              </text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press s to save | Esc to cancel</text>
-            </box>
-          </box>
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press s to save | Esc to cancel</Text>
+            </Box>
+          </Box>
         );
 
       case 'context':
         return (
-          <box flexDirection="column">
-            <text><b>Context Settings</b></text>
-            <box marginTop={1} flexDirection="column">
+          <Box flexDirection="column">
+            <Text bold>Context Settings</Text>
+            <Box marginTop={1} flexDirection="column">
               {editingField === 'context.maxContextTokens' ? (
-                <box>
-                  <text>1. Max Context Tokens: </text>
-                  <input
+                <Box>
+                  <Text>1. Max Context Tokens: </Text>
+                  <TextInput
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focused
+                    focus
+                    onCancel={() => setEditingField(null)}
                   />
-                </box>
+                </Box>
               ) : (
-                <text>
-                  1. Max Context Tokens: <span fg={themeColor('info')}>{config.context?.maxContextTokens ?? 180000}</span>
-                  <span fg={themeColor('muted')}> {getSource('context.maxContextTokens')}</span>
-                </text>
+                <Text>
+                  1. Max Context Tokens: <Text fg={themeColor('info')}>{config.context?.maxContextTokens ?? 180000}</Text>
+                  <Text fg={themeColor('muted')}> {getSource('context.maxContextTokens')}</Text>
+                </Text>
               )}
               {editingField === 'context.keepRecentMessages' ? (
-                <box>
-                  <text>2. Keep Recent Messages: </text>
-                  <input
+                <Box>
+                  <Text>2. Keep Recent Messages: </Text>
+                  <TextInput
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focused
+                    focus
+                    onCancel={() => setEditingField(null)}
                   />
-                </box>
+                </Box>
               ) : (
-                <text>
-                  2. Keep Recent Messages: <span fg={themeColor('info')}>{config.context?.keepRecentMessages ?? 10}</span>
-                  <span fg={themeColor('muted')}> {getSource('context.keepRecentMessages')}</span>
-                </text>
+                <Text>
+                  2. Keep Recent Messages: <Text fg={themeColor('info')}>{config.context?.keepRecentMessages ?? 10}</Text>
+                  <Text fg={themeColor('muted')}> {getSource('context.keepRecentMessages')}</Text>
+                </Text>
               )}
-              <text>
-                Summary Strategy: <span fg={themeColor('info')}>{config.context?.summaryStrategy ?? 'hybrid'}</span>
-                <span fg={themeColor('muted')}> {getSource('context.summaryStrategy')}</span>
-              </text>
-              <text>
-                Summary Max Tokens: <span fg={themeColor('info')}>{config.context?.summaryMaxTokens ?? 2000}</span>
-              </text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press 1-2 to edit | Esc to go back</text>
-            </box>
-          </box>
+              <Text>
+                Summary Strategy: <Text fg={themeColor('info')}>{config.context?.summaryStrategy ?? 'hybrid'}</Text>
+                <Text fg={themeColor('muted')}> {getSource('context.summaryStrategy')}</Text>
+              </Text>
+              <Text>
+                Summary Max Tokens: <Text fg={themeColor('info')}>{config.context?.summaryMaxTokens ?? 2000}</Text>
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press 1-2 to edit | Esc to go back</Text>
+            </Box>
+          </Box>
         );
 
       case 'memory':
         return (
-          <box flexDirection="column">
-            <text><b>Memory Settings</b></text>
-            <box marginTop={1} flexDirection="column">
-              <text>
-                Enabled: <span fg={config.memory?.enabled ? themeColor('success') : themeColor('red')}>{config.memory?.enabled ? 'Yes' : 'No'}</span>
-                <span fg={themeColor('muted')}> (t to toggle) {getSource('memory.enabled')}</span>
-              </text>
-              <text>
-                Injection: <span fg={config.memory?.injection?.enabled ? themeColor('success') : themeColor('red')}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</span>
-              </text>
-              <text>
-                Max Injection Tokens: <span fg={themeColor('info')}>{config.memory?.injection?.maxTokens ?? 500}</span>
-              </text>
-              <text>
-                Min Importance: <span fg={themeColor('info')}>{config.memory?.injection?.minImportance ?? 5}</span>
-              </text>
-              <text>
-                Max Entries: <span fg={themeColor('info')}>{config.memory?.storage?.maxEntries ?? 1000}</span>
-              </text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Scopes:</text>
-              <text fg={themeColor('muted')}>  Global: {config.memory?.scopes?.globalEnabled ? 'enabled' : 'disabled'}</text>
-              <text fg={themeColor('muted')}>  Shared: {config.memory?.scopes?.sharedEnabled ? 'enabled' : 'disabled'}</text>
-              <text fg={themeColor('muted')}>  Private: {config.memory?.scopes?.privateEnabled ? 'enabled' : 'disabled'}</text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press t to toggle enabled | Esc to go back</text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Text bold>Memory Settings</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text>
+                Enabled: <Text fg={config.memory?.enabled ? themeColor('success') : themeColor('error')}>{config.memory?.enabled ? 'Yes' : 'No'}</Text>
+                <Text fg={themeColor('muted')}> (t to toggle) {getSource('memory.enabled')}</Text>
+              </Text>
+              <Text>
+                Injection: <Text fg={config.memory?.injection?.enabled ? themeColor('success') : themeColor('error')}>{config.memory?.injection?.enabled ? 'Yes' : 'No'}</Text>
+              </Text>
+              <Text>
+                Max Injection Tokens: <Text fg={themeColor('info')}>{config.memory?.injection?.maxTokens ?? 500}</Text>
+              </Text>
+              <Text>
+                Min Importance: <Text fg={themeColor('info')}>{config.memory?.injection?.minImportance ?? 5}</Text>
+              </Text>
+              <Text>
+                Max Entries: <Text fg={themeColor('info')}>{config.memory?.storage?.maxEntries ?? 1000}</Text>
+              </Text>
+            </Box>
+            <Box marginTop={1} flexDirection="column">
+              <Text fg={themeColor('muted')}>Scopes:</Text>
+              <Text fg={themeColor('muted')}>  Global: {config.memory?.scopes?.globalEnabled ? 'enabled' : 'disabled'}</Text>
+              <Text fg={themeColor('muted')}>  Shared: {config.memory?.scopes?.sharedEnabled ? 'enabled' : 'disabled'}</Text>
+              <Text fg={themeColor('muted')}>  Private: {config.memory?.scopes?.privateEnabled ? 'enabled' : 'disabled'}</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press t to toggle enabled | Esc to go back</Text>
+            </Box>
+          </Box>
         );
 
       case 'subassistants':
         return (
-          <box flexDirection="column">
-            <text><b>Subassistants Settings</b></text>
-            <box marginTop={1} flexDirection="column">
+          <Box flexDirection="column">
+            <Text bold>Subassistants Settings</Text>
+            <Box marginTop={1} flexDirection="column">
               {editingField === 'subassistants.maxDepth' ? (
-                <box>
-                  <text>1. Max Depth: </text>
-                  <input
+                <Box>
+                  <Text>1. Max Depth: </Text>
+                  <TextInput
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focused
+                    focus
+                    onCancel={() => setEditingField(null)}
                   />
-                </box>
+                </Box>
               ) : (
-                <text>
-                  1. Max Depth: <span fg={themeColor('info')}>{config.subassistants?.maxDepth ?? 3}</span>
-                  <span fg={themeColor('muted')}> {getSource('subassistants.maxDepth')}</span>
-                </text>
+                <Text>
+                  1. Max Depth: <Text fg={themeColor('info')}>{config.subassistants?.maxDepth ?? 3}</Text>
+                  <Text fg={themeColor('muted')}> {getSource('subassistants.maxDepth')}</Text>
+                </Text>
               )}
               {editingField === 'subassistants.maxConcurrent' ? (
-                <box>
-                  <text>2. Max Concurrent: </text>
-                  <input
+                <Box>
+                  <Text>2. Max Concurrent: </Text>
+                  <TextInput
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focused
+                    focus
+                    onCancel={() => setEditingField(null)}
                   />
-                </box>
+                </Box>
               ) : (
-                <text>
-                  2. Max Concurrent: <span fg={themeColor('info')}>{config.subassistants?.maxConcurrent ?? 5}</span>
-                  <span fg={themeColor('muted')}> {getSource('subassistants.maxConcurrent')}</span>
-                </text>
+                <Text>
+                  2. Max Concurrent: <Text fg={themeColor('info')}>{config.subassistants?.maxConcurrent ?? 5}</Text>
+                  <Text fg={themeColor('muted')}> {getSource('subassistants.maxConcurrent')}</Text>
+                </Text>
               )}
               {editingField === 'subassistants.maxTurns' ? (
-                <box>
-                  <text>3. Max Turns: </text>
-                  <input
+                <Box>
+                  <Text>3. Max Turns: </Text>
+                  <TextInput
                     value={editValue}
                     onChange={setEditValue}
                     onSubmit={handleFieldSubmit}
-                    focused
+                    focus
+                    onCancel={() => setEditingField(null)}
                   />
-                </box>
+                </Box>
               ) : (
-                <text>
-                  3. Max Turns: <span fg={themeColor('info')}>{config.subassistants?.maxTurns ?? 10}</span>
-                  <span fg={themeColor('muted')}> {getSource('subassistants.maxTurns')}</span>
-                </text>
+                <Text>
+                  3. Max Turns: <Text fg={themeColor('info')}>{config.subassistants?.maxTurns ?? 10}</Text>
+                  <Text fg={themeColor('muted')}> {getSource('subassistants.maxTurns')}</Text>
+                </Text>
               )}
-              <text>
-                Default Timeout: <span fg={themeColor('info')}>{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</span>
-              </text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Default Tools: {(config.subassistants?.defaultTools ?? []).slice(0, 5).join(', ')}...</text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press 1-3 to edit | Esc to go back</text>
-            </box>
-          </box>
+              <Text>
+                Default Timeout: <Text fg={themeColor('info')}>{Math.round((config.subassistants?.defaultTimeoutMs ?? 120000) / 1000)}s</Text>
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Default Tools: {(config.subassistants?.defaultTools ?? []).slice(0, 5).join(', ')}...</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press 1-3 to edit | Esc to go back</Text>
+            </Box>
+          </Box>
         );
 
       case 'voice':
         return (
-          <box flexDirection="column">
-            <text><b>Voice Settings</b></text>
-            <box marginTop={1} flexDirection="column">
-              <text>
-                Enabled: <span fg={config.voice?.enabled ? themeColor('success') : themeColor('red')}>{config.voice?.enabled ? 'Yes' : 'No'}</span>
-                <span fg={themeColor('muted')}> (t to toggle) {getSource('voice.enabled')}</span>
-              </text>
-              <text>
-                TTS Provider: <span fg={themeColor('info')}>{config.voice?.tts?.provider ?? 'elevenlabs'}</span>
-              </text>
-              <text>
-                STT Provider: <span fg={themeColor('info')}>{config.voice?.stt?.provider ?? 'whisper'}</span>
-              </text>
-              <text>
-                Auto Listen: <span fg={config.voice?.autoListen ? themeColor('success') : themeColor('red')}>{config.voice?.autoListen ? 'Yes' : 'No'}</span>
-              </text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Press t to toggle enabled | Esc to go back</text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Text bold>Voice Settings</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text>
+                Enabled: <Text fg={config.voice?.enabled ? themeColor('success') : themeColor('error')}>{config.voice?.enabled ? 'Yes' : 'No'}</Text>
+                <Text fg={themeColor('muted')}> (t to toggle) {getSource('voice.enabled')}</Text>
+              </Text>
+              <Text>
+                TTS Provider: <Text fg={themeColor('info')}>{config.voice?.tts?.provider ?? 'elevenlabs'}</Text>
+              </Text>
+              <Text>
+                STT Provider: <Text fg={themeColor('info')}>{config.voice?.stt?.provider ?? 'whisper'}</Text>
+              </Text>
+              <Text>
+                Auto Listen: <Text fg={config.voice?.autoListen ? themeColor('success') : themeColor('error')}>{config.voice?.autoListen ? 'Yes' : 'No'}</Text>
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Press t to toggle enabled | Esc to go back</Text>
+            </Box>
+          </Box>
         );
 
       case 'statusLine': {
         const sl = config.statusLine || {};
         const showIcon = (v?: boolean) => (v ?? true) ? 'Yes' : 'No';
-        const showColor = (v?: boolean) => (v ?? true) ? themeColor('success') : 'red';
+        const showColor = (v?: boolean) => (v ?? true) ? themeColor('success') : themeColor('error');
         return (
-          <box flexDirection="column">
-            <text><b>Status Line Settings</b></text>
-            <box marginTop={1} flexDirection="column">
-              <text>1. Context %:     <span fg={showColor(sl.showContext)}>{showIcon(sl.showContext)}</span></text>
-              <text>2. Session:       <span fg={showColor(sl.showSession)}>{showIcon(sl.showSession)}</span></text>
-              <text>3. Elapsed Time:  <span fg={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</span></text>
-              <text>4. Heartbeat:     <span fg={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</span></text>
-              <text>5. Voice:         <span fg={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</span></text>
-              <text>6. Queue:         <span fg={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</span></text>
-              <text>7. Recent Tools:  <span fg={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</span></text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>1-7 toggle metric | Esc back</text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Text bold>Status Line Settings</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text>1. Context %:     <Text fg={showColor(sl.showContext)}>{showIcon(sl.showContext)}</Text></Text>
+              <Text>2. Session:       <Text fg={showColor(sl.showSession)}>{showIcon(sl.showSession)}</Text></Text>
+              <Text>3. Elapsed Time:  <Text fg={showColor(sl.showElapsed)}>{showIcon(sl.showElapsed)}</Text></Text>
+              <Text>4. Heartbeat:     <Text fg={showColor(sl.showHeartbeat)}>{showIcon(sl.showHeartbeat)}</Text></Text>
+              <Text>5. Voice:         <Text fg={showColor(sl.showVoice)}>{showIcon(sl.showVoice)}</Text></Text>
+              <Text>6. Queue:         <Text fg={showColor(sl.showQueue)}>{showIcon(sl.showQueue)}</Text></Text>
+              <Text>7. Recent Tools:  <Text fg={showColor(sl.showRecentTools)}>{showIcon(sl.showRecentTools)}</Text></Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>1-7 toggle metric | Esc back</Text>
+            </Box>
+          </Box>
         );
       }
 
@@ -589,93 +594,93 @@ export function ConfigPanel({
     ];
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Save to which config?</b></text>
-        </box>
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Save to which config?</Text>
+        </Box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
           {locations.map((loc, index) => (
-            <box key={loc.id} flexDirection="column">
-              <text
+            <Box key={loc.id} flexDirection="column">
+              <Text
                 bg={index === locationSelectIndex ? themeColor('primary') : undefined}
                 fg={index === locationSelectIndex ? themeColor('text') : undefined}
               >
                 {index === locationSelectIndex ? '>' : ' '} {loc.name}
-              </text>
+              </Text>
               {index === locationSelectIndex && (
-                <text fg={themeColor('muted')}>    {loc.desc}</text>
+                <Text fg={themeColor('muted')}>    {loc.desc}</Text>
               )}
-            </box>
+            </Box>
           ))}
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>↑/↓ select | Enter confirm | Esc cancel</text>
-        </box>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>↑/↓ select | Enter confirm | Esc cancel</Text>
+        </Box>
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Saving...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Saving...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Main UI
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Configuration</b></text>
-        <text fg={themeColor('muted')}>{mode === 'editing' ? 'Editing' : 'Sections'}</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Configuration</Text>
+        <Text fg={themeColor('muted')}>{mode === 'editing' ? 'Editing' : 'Sections'}</Text>
+      </Box>
 
-      <box>
+      <Box>
         {/* Section list */}
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           marginRight={1}
           width={26}
         >
           {SECTIONS.map((section, index) => (
-            <text
+            <Text
               key={section.id}
               bg={index === selectedSection ? themeColor('primary') : undefined}
               fg={index === selectedSection ? themeColor('text') : undefined}
             >
               {index === selectedSection ? '>' : ' '} {section.name}
-            </text>
+            </Text>
           ))}
-        </box>
+        </Box>
 
         {/* Section content */}
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           flexGrow={1}
         >
           {renderSectionContent()}
-        </box>
-      </box>
+        </Box>
+      </Box>
 
       {/* Message */}
       {message && (
-        <box marginTop={1}>
-          <text fg={message.type === 'success' ? themeColor('success') : themeColor('red')}>{message.text}</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={message.type === 'success' ? themeColor('success') : themeColor('error')}>{message.text}</Text>
+        </Box>
       )}
 
       {/* Footer */}
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           {mode === 'sections'
             ? '↑/↓ navigate | Enter edit section | 1-7 jump | Esc close'
             : 'Esc back to sections'}
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

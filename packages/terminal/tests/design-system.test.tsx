@@ -2,13 +2,12 @@
  * Tests for the design-system primitives (plan 8d98da29 P2.1).
  *
  * Verifies each primitive renders its expected content/glyphs and that colors
- * resolve through the active theme (no hardcoded hex). Inline primitives are
- * wrapped in a <text> for rendering, as their contract requires.
+ * resolve through the active theme (no hardcoded hex).
  */
 import React from 'react';
 import { describe, expect, test, afterEach } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { setActiveTheme } from '../src/theme/colors';
+import { Text } from '../src/ui/ink';
 import {
   StatusIcon,
   STATUS_CONFIG,
@@ -19,13 +18,16 @@ import {
   Pane,
   color,
 } from '../src/components/design-system';
+import { renderInk } from './utils/ink-test-harness';
 
-const wait = () => new Promise((r) => setTimeout(r, 60));
 async function frame(node: React.ReactElement, width = 80, height = 6): Promise<string> {
-  const { captureCharFrame, renderOnce } = await testRender(node, { width, height });
-  await renderOnce();
-  await wait();
-  return captureCharFrame();
+  const harness = await renderInk(node, { width, height });
+  try {
+    await harness.renderOnce();
+    return harness.captureFrame();
+  } finally {
+    await harness.cleanup();
+  }
 }
 
 afterEach(() => setActiveTheme('dark'));
@@ -45,22 +47,22 @@ describe('color helper', () => {
 describe('StatusIcon', () => {
   test('renders the configured glyph for each status', async () => {
     for (const status of Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[]) {
-      const out = await frame(<text><StatusIcon status={status} /></text>);
+      const out = await frame(<Text><StatusIcon status={status} /></Text>);
       expect(out).toContain(STATUS_CONFIG[status].icon);
     }
   });
   test('withSpace appends a trailing space before a label', async () => {
-    const out = await frame(<text><StatusIcon status="success" withSpace /><span>Done</span></text>);
+    const out = await frame(<Text><StatusIcon status="success" withSpace />Done</Text>);
     expect(out).toContain('✓ Done');
   });
 });
 
 describe('KeyboardShortcutHint', () => {
   test('renders shortcut and action, with optional parens', async () => {
-    const plain = await frame(<text><KeyboardShortcutHint shortcut="ctrl+o" action="expand" /></text>);
+    const plain = await frame(<Text><KeyboardShortcutHint shortcut="ctrl+o" action="expand" /></Text>);
     expect(plain).toContain('ctrl+o');
     expect(plain).toContain('expand');
-    const parens = await frame(<text><KeyboardShortcutHint shortcut="esc" action="cancel" parens /></text>);
+    const parens = await frame(<Text><KeyboardShortcutHint shortcut="esc" action="cancel" parens /></Text>);
     expect(parens).toContain('(');
     expect(parens).toContain(')');
   });
@@ -68,10 +70,10 @@ describe('KeyboardShortcutHint', () => {
 
 describe('Badge', () => {
   test('wraps the label in brackets by default', async () => {
-    expect(await frame(<text><Badge label="beta" /></text>)).toContain('[beta]');
+    expect(await frame(<Text><Badge label="beta" /></Text>)).toContain('[beta]');
   });
   test('omits brackets when disabled', async () => {
-    const out = await frame(<text><Badge label="beta" brackets={false} /></text>);
+    const out = await frame(<Text><Badge label="beta" brackets={false} /></Text>);
     expect(out).toContain('beta');
     expect(out).not.toContain('[beta]');
   });
@@ -109,7 +111,7 @@ describe('Pane', () => {
   test('renders title, count, hints and children', async () => {
     const out = await frame(
       <Pane title="Skills" count={3} hints="[n]ew">
-        <text>body line</text>
+        <Text>body line</Text>
       </Pane>,
       60,
       8,

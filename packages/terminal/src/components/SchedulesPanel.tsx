@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { ScheduledCommand } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface SchedulesPanelProps {
@@ -111,7 +110,6 @@ export function SchedulesPanel({
 }: SchedulesPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
@@ -467,38 +465,38 @@ export function SchedulesPanel({
 
   if (mode === 'create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>New Schedule</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>New Schedule</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
           {/* Step 1: Kind selection */}
           {createStep === 'kind' && (
-            <box flexDirection="column">
-              <text><b>Select schedule type:</b></text>
-              <box flexDirection="column" marginTop={1}>
+            <Box flexDirection="column">
+              <Text bold>Select schedule type:</Text>
+              <Box flexDirection="column" marginTop={1}>
                 {KIND_OPTIONS.map((opt, idx) => (
-                  <box key={opt.id}>
-                    <text bg={idx === createKindIndex ? themeColor('primary') : undefined}>
-                      {idx === createKindIndex ? '>' : ' '} {opt.label.padEnd(12)} <span fg={themeColor('muted')}>{opt.desc}</span>
-                    </text>
-                  </box>
+                  <Box key={opt.id}>
+                    <Text bg={idx === createKindIndex ? themeColor('primary') : undefined}>
+                      {idx === createKindIndex ? '>' : ' '} {opt.label.padEnd(12)} <Inline fg={themeColor('muted')}>{opt.desc}</Inline>
+                    </Text>
+                  </Box>
                 ))}
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>↑↓ select | Enter confirm | Esc cancel</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>↑↓ select | Enter confirm | Esc cancel</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 2a: Cron expression */}
           {createStep === 'cron' && (
-            <box flexDirection="column">
-              <text><b>Enter cron expression:</b></text>
-              <box flexDirection="row" marginTop={1}>
-                <text>Cron: </text>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Enter cron expression:</Text>
+              <Box flexDirection="row" marginTop={1}>
+                <Text>Cron: </Text>
+                <TextInput
                   value={createCron}
                   onChange={setCreateCron}
                   onSubmit={() => {
@@ -507,23 +505,23 @@ export function SchedulesPanel({
                       setCreateStep('command');
                     }
                   }}
-                  focused
+                  focus
                   placeholder='e.g. "0 9 * * *" (daily at 9am, 5-6 fields)'
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter confirm | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter confirm | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 2b: One-time ISO date */}
           {createStep === 'time' && (
-            <box flexDirection="column">
-              <text><b>Enter date/time (ISO 8601):</b></text>
-              <box flexDirection="row" marginTop={1}>
-                <text>Time: </text>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Enter date/time (ISO 8601):</Text>
+              <Box flexDirection="row" marginTop={1}>
+                <Text>Time: </Text>
+                <TextInput
                   value={createTime}
                   onChange={setCreateTime}
                   onSubmit={() => {
@@ -532,110 +530,111 @@ export function SchedulesPanel({
                       setCreateStep('command');
                     }
                   }}
-                  focused
+                  focus
                   placeholder="e.g. 2026-02-08T09:00:00 (valid ISO date)"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter confirm | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter confirm | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 2c: Interval config */}
           {createStep === 'interval' && (
-            <box flexDirection="column">
-              <text><b>Configure interval:</b></text>
-              <box flexDirection="row" marginTop={1}>
-                <text>Every </text>
-                <text fg={themeColor('info')}><b>{createInterval}</b></text>
-                <text> </text>
-                <text fg={themeColor('info')}><b>{INTERVAL_UNITS[createIntervalUnitIndex]}</b></text>
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>↑↓ change value | ←→ change unit | Enter confirm | Esc back</text>
-              </box>
-            </box>
+            <Box flexDirection="column">
+              <Text bold>Configure interval:</Text>
+              <Box flexDirection="row" marginTop={1}>
+                <Text>Every </Text>
+                <Text fg={themeColor('info')} bold>{createInterval}</Text>
+                <Text> </Text>
+                <Text fg={themeColor('info')} bold>{INTERVAL_UNITS[createIntervalUnitIndex]}</Text>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>↑↓ change value | ←→ change unit | Enter confirm | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 3: Command to execute */}
           {createStep === 'command' && (
-            <box flexDirection="column">
-              <text><b>Enter command to execute:</b></text>
-              <box flexDirection="row" marginTop={1}>
-                <text>$ </text>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Enter command to execute:</Text>
+              <Box flexDirection="row" marginTop={1}>
+                <Text>$ </Text>
+                <TextInput
                   value={createCommand}
                   onChange={setCreateCommand}
                   onSubmit={() => {
                     if (createCommand.trim()) setCreateStep('description');
                   }}
-                  focused
+                  focus
                   placeholder="e.g. /summarize or any slash command"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 4: Optional description */}
           {createStep === 'description' && (
-            <box flexDirection="column">
-              <text><b>Description (optional):</b></text>
-              <box marginTop={1}>
-                <input
+            <Box flexDirection="column">
+              <Text bold>Description (optional):</Text>
+              <Box marginTop={1}>
+                <TextInput
                   value={createDescription}
                   onChange={setCreateDescription}
                   onSubmit={() => setCreateStep('confirm')}
-                  focused
+                  allowEmptySubmit
+                  focus
                   placeholder="What does this schedule do?"
                 />
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter next | Esc back</text>
-              </box>
-            </box>
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter next | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {/* Step 5: Confirm */}
           {createStep === 'confirm' && (
-            <box flexDirection="column">
-              <text><b>Confirm new schedule:</b></text>
-              <box flexDirection="column" marginTop={1} marginLeft={1}>
-                <text>Type: <span fg={themeColor('info')}>{KIND_OPTIONS[createKindIndex].label}</span></text>
+            <Box flexDirection="column">
+              <Text bold>Confirm new schedule:</Text>
+              <Box flexDirection="column" marginTop={1} marginLeft={1}>
+                <Text>Type: <Inline fg={themeColor('info')}>{KIND_OPTIONS[createKindIndex].label}</Inline></Text>
                 {KIND_OPTIONS[createKindIndex].id === 'cron' && (
-                  <text>Cron: <span fg={themeColor('info')}>{createCron}</span></text>
+                  <Text>Cron: <Inline fg={themeColor('info')}>{createCron}</Inline></Text>
                 )}
                 {KIND_OPTIONS[createKindIndex].id === 'once' && (
-                  <text>Time: <span fg={themeColor('info')}>{createTime}</span></text>
+                  <Text>Time: <Inline fg={themeColor('info')}>{createTime}</Inline></Text>
                 )}
                 {KIND_OPTIONS[createKindIndex].id === 'interval' && (
-                  <text>Interval: <span fg={themeColor('info')}>Every {createInterval} {INTERVAL_UNITS[createIntervalUnitIndex]}</span></text>
+                  <Text>Interval: <Inline fg={themeColor('info')}>Every {createInterval} {INTERVAL_UNITS[createIntervalUnitIndex]}</Inline></Text>
                 )}
-                <text>Command: <span fg={themeColor('info')}>{createCommand}</span></text>
-                {createDescription && <text>Description: <span fg={themeColor('muted')}>{createDescription}</span></text>}
-              </box>
-              <box marginTop={1}>
-                <text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</text>
-              </box>
-            </box>
+                <Text>Command: <Inline fg={themeColor('info')}>{createCommand}</Inline></Text>
+                {createDescription && <Text>Description: <Inline fg={themeColor('muted')}>{createDescription}</Inline></Text>}
+              </Box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('muted')}>Enter/y create | n cancel | Esc back</Text>
+              </Box>
+            </Box>
           )}
 
           {createError && (
-            <box marginTop={1}>
-              <text fg={themeColor('error')}>{createError}</text>
-            </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('error')}>{createError}</Text>
+            </Box>
           )}
-        </box>
+        </Box>
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Creating schedule...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Creating schedule...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -645,22 +644,22 @@ export function SchedulesPanel({
     const action = selectedSchedule ? getActionDisplay(selectedSchedule) : { type: 'command', content: '' };
     const displayContent = action.content.slice(0, 50) + (action.content.length > 50 ? '...' : '');
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Schedule</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Schedule</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Delete {action.type}: &quot;{displayContent}&quot;?
-          </text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Inline fg={themeColor('success')} bold>y</Inline> to confirm or{' '}
+            <Inline fg={themeColor('error')} bold>n</Inline> to cancel
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -672,55 +671,55 @@ export function SchedulesPanel({
     const statusColor = STATUS_COLORS[s.status];
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Schedule Details</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Schedule Details</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
-          <box><text><b>ID: </b></text><text>{s.id}</text></box>
-          <box><text><b>Status: </b></text><text fg={statusColor}>{statusIcon} {s.status}</text></box>
-          <box><text><b>Type: </b></text><text>{KIND_LABELS[s.schedule.kind] || s.schedule.kind}</text></box>
-          <box><text><b>Schedule: </b></text><text>{getScheduleDescription(s)}</text></box>
-          {s.description && <box><text><b>Description: </b></text><text>{s.description}</text></box>}
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
+          <Box><Text bold>ID: </Text><Text>{s.id}</Text></Box>
+          <Box><Text bold>Status: </Text><Text fg={statusColor}>{statusIcon} {s.status}</Text></Box>
+          <Box><Text bold>Type: </Text><Text>{KIND_LABELS[s.schedule.kind] || s.schedule.kind}</Text></Box>
+          <Box><Text bold>Schedule: </Text><Text>{getScheduleDescription(s)}</Text></Box>
+          {s.description && <Box><Text bold>Description: </Text><Text>{s.description}</Text></Box>}
 
-          <box marginTop={1}><text><b>Command: </b></text></box>
-          <box marginLeft={2}><text wrapMode="word" fg={themeColor('info')}>{s.command}</text></box>
+          <Box marginTop={1}><Text bold>Command: </Text></Box>
+          <Box marginLeft={2}><Text wrapMode="word" fg={themeColor('info')}>{s.command}</Text></Box>
 
           {s.message && (
             <>
-              <box marginTop={1}><text><b>Message: </b></text></box>
-              <box marginLeft={2}><text wrapMode="word">{s.message}</text></box>
+              <Box marginTop={1}><Text bold>Message: </Text></Box>
+              <Box marginLeft={2}><Text wrapMode="word">{s.message}</Text></Box>
             </>
           )}
 
-          <box marginTop={1}><text><b>Next Run: </b></text>
-            <text fg={s.status === 'active' ? themeColor('success') : undefined}>
+          <Box marginTop={1}><Text bold>Next Run: </Text>
+            <Text fg={s.status === 'active' ? themeColor('success') : undefined}>
               {formatAbsoluteTime(s.nextRunAt)} ({formatRelativeTime(s.nextRunAt)})
-            </text>
-          </box>
-          <box><text><b>Last Run: </b></text><text>{formatAbsoluteTime(s.lastRunAt)}</text></box>
+            </Text>
+          </Box>
+          <Box><Text bold>Last Run: </Text><Text>{formatAbsoluteTime(s.lastRunAt)}</Text></Box>
 
           {s.lastResult && (
-            <box><text><b>Last Result: </b></text>
-              <text fg={s.lastResult.ok ? themeColor('success') : themeColor('red')}>
+            <Box><Text bold>Last Result: </Text>
+              <Text fg={s.lastResult.ok ? themeColor('success') : themeColor('red')}>
                 {s.lastResult.ok ? 'Success' : `Error: ${s.lastResult.error}`}
-              </text>
-            </box>
+              </Text>
+            </Box>
           )}
 
-          <box><text><b>Created: </b></text><text>{formatAbsoluteTime(s.createdAt)} by {s.createdBy}</text></box>
-        </box>
+          <Box><Text bold>Created: </Text><Text>{formatAbsoluteTime(s.createdAt)} by {s.createdBy}</Text></Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {s.status === 'active' ? '[p]ause' : s.status === 'paused' ? '[r]esume' : ''}{' '}
             [r]un now | [d]elete | Esc/q back
-          </text>
-        </box>
+          </Text>
+        </Box>
 
-        {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Processing...</text></box>}
-      </box>
+        {isSubmitting && <Box marginTop={1}><Text fg={themeColor('warning')}>Processing...</Text></Box>}
+      </Box>
     );
   }
 
@@ -732,23 +731,23 @@ export function SchedulesPanel({
   const errorCount = visibleSchedules.filter((s) => s.status === 'error').length;
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Schedules {showAll ? '(all sessions)' : '(this session)'}</b></text>
-        <text fg={themeColor('muted')}>[n]ew [p]ause [r]esume [d]elete re[f]resh to[g]gle scope</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Schedules {showAll ? '(all sessions)' : '(this session)'}</Text>
+        <Text fg={themeColor('muted')}>[n]ew [p]ause [r]esume [d]elete re[f]resh to[g]gle scope</Text>
+      </Box>
 
-      <box marginBottom={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('muted')}>
           {activeCount} active, {pausedCount} paused, {completedCount} done, {errorCount} errors
-        </text>
-      </box>
+        </Text>
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {sortedSchedules.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No schedules. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No schedules. Press n to create one.</Text>
+          </Box>
         ) : (
           sortedSchedules.map((schedule, index) => {
             const isSelected = index === selectedIndex;
@@ -761,42 +760,42 @@ export function SchedulesPanel({
             const kindLabel = KIND_LABELS[schedule.schedule.kind] || schedule.schedule.kind;
 
             return (
-              <box key={schedule.id} paddingY={0}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : schedule.status === 'completed' ? "gray" : undefined}>
-                  <span fg={statusColor}>{statusIcon}</span>
+              <Box key={schedule.id} paddingY={0}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : schedule.status === 'completed' ? "gray" : undefined}>
+                  <Inline fg={statusColor}>{statusIcon}</Inline>
                   {' '}
                   {actionIcon} {index + 1}. {content.padEnd(32)} {kindLabel.padEnd(10)} {nextRun}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New schedule option at bottom */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={selectedIndex === sortedSchedules.length ? themeColor('primary') : undefined}
             fg={selectedIndex === sortedSchedules.length ? themeColor('text') : undefined}
           >
             + New schedule (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {/* Compact preview of selected */}
       {sortedSchedules.length > 0 && selectedSchedule && selectedIndex < sortedSchedules.length && (
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {getScheduleDescription(selectedSchedule)} | {selectedSchedule.status} | Enter for details
-          </text>
-        </box>
+          </Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Enter view | ↑↓ navigate | q quit</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Enter view | ↑↓ navigate | q quit</Text>
+      </Box>
 
-      {isSubmitting && <box marginTop={1}><text fg={themeColor('warning')}>Processing...</text></box>}
-    </box>
+      {isSubmitting && <Box marginTop={1}><Text fg={themeColor('warning')}>Processing...</Text></Box>}
+    </Box>
   );
 }

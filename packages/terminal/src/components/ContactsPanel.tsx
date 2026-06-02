@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import {
   listContacts as sdkListContacts,
   getContact as sdkGetContact,
@@ -11,7 +10,7 @@ import {
   listContactsInGroup as sdkListContactsInGroup,
 } from '@hasna/assistants-core';
 import type { ContactWithDetails, Group } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface ContactsPanelProps {
@@ -68,7 +67,6 @@ function toListEntry(c: ContactWithDetails): ContactListEntry {
 
 export function ContactsPanel({ onClose }: ContactsPanelProps) {
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [contacts, setContacts] = useState<ContactListEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +126,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
     const isTextEntry = mode === 'create-name' || mode === 'create-email' ||
       mode === 'create-phone' || mode === 'create-company' || mode === 'search';
 
-    if (key.escape || (input === 'q' && !isTextEntry)) {
+    if (key.escape || input === '\x1b' || (input === 'q' && !isTextEntry)) {
       if (mode === 'list') {
         onClose();
       } else if (mode === 'view') {
@@ -140,7 +138,7 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
         setMode('groups');
         setViewGroup(null);
         setGroupMembers([]);
-      } else if (key.escape) {
+      } else if (key.escape || input === '\x1b') {
         setMode('list');
         setStatusMessage(null);
       }
@@ -273,42 +271,43 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
   };
 
   const header = (
-    <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-      <text fg={themeColor('secondary')}><b>Contacts</b></text>
-      <text fg={themeColor('muted')}> | </text>
-      <text fg={themeColor('muted')}>{getHeaderHints()}</text>
-      {loading && <text fg={themeColor('warning')}> (loading...)</text>}
-    </box>
+    <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+      <Text fg={themeColor('secondary')} bold>Contacts</Text>
+      <Text fg={themeColor('muted')}> | </Text>
+      <Text fg={themeColor('muted')}>{getHeaderHints()}</Text>
+      {loading && <Text fg={themeColor('warning')}> (loading...)</Text>}
+    </Box>
   );
 
   const statusBar = statusMessage ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('warning')}>{statusMessage}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('warning')}>{statusMessage}</Text>
+    </Box>
   ) : null;
 
   const errorBar = error ? (
-    <box marginBottom={1}>
-      <text fg={themeColor('error')}>Error: {error}</text>
-    </box>
+    <Box marginBottom={1}>
+      <Text fg={themeColor('error')}>Error: {error}</Text>
+    </Box>
   ) : null;
 
   // Search mode
   if (mode === 'search') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Search Contacts</b></text>
-          <text> </text>
-          <box>
-            <text>Query: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Search Contacts</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Query: </Text>
+            <TextInput
               value={searchQuery}
               onChange={setSearchQuery}
-              onSubmit={() => {
-                if (searchQuery.trim()) {
-                  sdkSearchContacts(searchQuery.trim()).then((results) => {
+              onSubmit={(value) => {
+                const query = value.trim();
+                if (query) {
+                  sdkSearchContacts(query).then((results) => {
                     setContacts(results.map(toListEntry));
                     setSelectedIndex(0);
                     setStatusMessage(`Found ${results.length} contact(s)`);
@@ -321,12 +320,14 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
                   });
                 }
               }}
-              focused
+              onCancel={() => setMode('list')}
+              focus
+              allowEmptySubmit
               placeholder="Search by name, email, company..."
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
@@ -335,68 +336,68 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
     const displayName = viewContact.display_name || `${viewContact.first_name ?? ''} ${viewContact.last_name ?? ''}`.trim() || viewContact.id;
     const isFav = isFavorite(viewContact);
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('secondary')}><b>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('secondary')} bold>
             {isFav ? '* ' : ''}{displayName}
-          </b></text>
-          <text fg={themeColor('muted')}>ID: {viewContact.id}</text>
-          <text> </text>
-          {(viewContact as any).company?.name && <text>Company: {(viewContact as any).company.name}</text>}
-          {viewContact.job_title && <text>Title: {viewContact.job_title}</text>}
-          {viewContact.birthday && <text>Birthday: {viewContact.birthday}</text>}
+          </Text>
+          <Text fg={themeColor('muted')}>ID: {viewContact.id}</Text>
+          <Text> </Text>
+          {(viewContact as any).company?.name && <Text>Company: {(viewContact as any).company.name}</Text>}
+          {viewContact.job_title && <Text>Title: {viewContact.job_title}</Text>}
+          {viewContact.birthday && <Text>Birthday: {viewContact.birthday}</Text>}
           {viewContact.emails && viewContact.emails.length > 0 && (
             <>
-              <text> </text>
-              <text><b>Emails:</b></text>
+              <Text> </Text>
+              <Text bold>Emails:</Text>
               {viewContact.emails.map((e: any, i: number) => (
-                <text key={i}>  {e.address} ({e.label || 'personal'}){e.is_primary ? ' [primary]' : ''}</text>
+                <Text key={i}>  {e.address} ({e.label || 'personal'}){e.is_primary ? ' [primary]' : ''}</Text>
               ))}
             </>
           )}
           {viewContact.phones && viewContact.phones.length > 0 && (
             <>
-              <text> </text>
-              <text><b>Phones:</b></text>
+              <Text> </Text>
+              <Text bold>Phones:</Text>
               {viewContact.phones.map((p: any, i: number) => (
-                <text key={i}>  {p.number} ({p.label || 'mobile'}){p.is_primary ? ' [primary]' : ''}</text>
+                <Text key={i}>  {p.number} ({p.label || 'mobile'}){p.is_primary ? ' [primary]' : ''}</Text>
               ))}
             </>
           )}
           {viewContact.addresses && viewContact.addresses.length > 0 && (
             <>
-              <text> </text>
-              <text><b>Addresses:</b></text>
+              <Text> </Text>
+              <Text bold>Addresses:</Text>
               {viewContact.addresses.map((a: any, i: number) => {
                 const parts = [a.street, a.city, a.state, a.postal_code, a.country].filter(Boolean);
-                return <text key={i}>  {parts.join(', ')} ({a.label || 'home'})</text>;
+                return <Text key={i}>  {parts.join(', ')} ({a.label || 'home'})</Text>;
               })}
             </>
           )}
           {viewContact.social_profiles && viewContact.social_profiles.length > 0 && (
             <>
-              <text> </text>
-              <text><b>Social:</b></text>
+              <Text> </Text>
+              <Text bold>Social:</Text>
               {viewContact.social_profiles.map((s: any, i: number) => (
-                <text key={i}>  {s.platform}: {s.handle || s.url}</text>
+                <Text key={i}>  {s.platform}: {s.handle || s.url}</Text>
               ))}
             </>
           )}
           {viewContact.tags && viewContact.tags.length > 0 && (
             <>
-              <text> </text>
-              <text>Tags: {viewContact.tags.map((t: any) => typeof t === 'string' ? t : t.name).join(', ')}</text>
+              <Text> </Text>
+              <Text>Tags: {viewContact.tags.map((t: any) => typeof t === 'string' ? t : t.name).join(', ')}</Text>
             </>
           )}
           {viewContact.notes && (
             <>
-              <text> </text>
-              <text>Notes: {viewContact.notes}</text>
+              <Text> </Text>
+              <Text>Notes: {viewContact.notes}</Text>
             </>
           )}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
@@ -404,225 +405,245 @@ export function ContactsPanel({ onClose }: ContactsPanelProps) {
   if (mode === 'delete-confirm' && contacts.length > 0) {
     const c = contacts[selectedIndex];
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('error')}><b>Delete contact?</b></text>
-          <text> </text>
-          <text>This will permanently delete {c.name} ({c.id})</text>
-          <text> </text>
-          <text>Press 'y' to confirm, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('error')} bold>Delete contact?</Text>
+          <Text> </Text>
+          <Text>This will permanently delete {c.name} ({c.id})</Text>
+          <Text> </Text>
+          <Text>Press 'y' to confirm, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: name
   if (mode === 'create-name') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Contact</b></text>
-          <text> </text>
-          <box>
-            <text>Name: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Contact</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Name: </Text>
+            <TextInput
               value={createName}
               onChange={setCreateName}
-              onSubmit={() => {
-                if (createName.trim()) setMode('create-email');
+              onSubmit={(value) => {
+                const name = value.trim();
+                if (name) {
+                  setCreateName(name);
+                  setMode('create-email');
+                }
               }}
-              focused
+              onCancel={() => setMode('list')}
+              focus
               placeholder="e.g., John Doe"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: email
   if (mode === 'create-email') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Contact</b></text>
-          <text>Name: {createName}</text>
-          <text> </text>
-          <box>
-            <text>Email: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Contact</Text>
+          <Text>Name: {createName}</Text>
+          <Text> </Text>
+          <Box>
+            <Text>Email: </Text>
+            <TextInput
               value={createEmail}
               onChange={setCreateEmail}
-              onSubmit={() => setMode('create-phone')}
-              focused
+              onSubmit={(value) => {
+                setCreateEmail(value.trim());
+                setMode('create-phone');
+              }}
+              onCancel={() => setMode('create-name')}
+              focus
+              allowEmptySubmit
               placeholder="(optional) e.g., john@example.com"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: phone
   if (mode === 'create-phone') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Contact</b></text>
-          <text>Name: {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          <text> </text>
-          <box>
-            <text>Phone: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Contact</Text>
+          <Text>Name: {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          <Text> </Text>
+          <Box>
+            <Text>Phone: </Text>
+            <TextInput
               value={createPhone}
               onChange={setCreatePhone}
-              onSubmit={() => setMode('create-company')}
-              focused
+              onSubmit={(value) => {
+                setCreatePhone(value.trim());
+                setMode('create-company');
+              }}
+              onCancel={() => setMode('create-email')}
+              focus
+              allowEmptySubmit
               placeholder="(optional) e.g., +1-555-123-4567"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: company
   if (mode === 'create-company') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Create Contact</b></text>
-          <text>Name: {createName}</text>
-          {createEmail && <text>Email: {createEmail}</text>}
-          {createPhone && <text>Phone: {createPhone}</text>}
-          <text> </text>
-          <box>
-            <text>Company: </text>
-            <input
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Create Contact</Text>
+          <Text>Name: {createName}</Text>
+          {createEmail && <Text>Email: {createEmail}</Text>}
+          {createPhone && <Text>Phone: {createPhone}</Text>}
+          <Text> </Text>
+          <Box>
+            <Text>Company: </Text>
+            <TextInput
               value={createCompany}
               onChange={setCreateCompany}
-              onSubmit={() => setMode('create-confirm')}
-              focused
+              onSubmit={(value) => {
+                setCreateCompany(value.trim());
+                setMode('create-confirm');
+              }}
+              onCancel={() => setMode('create-phone')}
+              focus
+              allowEmptySubmit
               placeholder="(optional) e.g., Acme Corp"
             />
-          </box>
-        </box>
-      </box>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   // Create wizard: confirm
   if (mode === 'create-confirm') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text><b>Confirm Contact Creation</b></text>
-          <text> </text>
-          <text>Name:    {createName}</text>
-          {createEmail && <text>Email:   {createEmail}</text>}
-          {createPhone && <text>Phone:   {createPhone}</text>}
-          {createCompany && <text>Company: {createCompany}</text>}
-          <text> </text>
-          <text>Press 'y' to create, 'n' to cancel.</text>
-        </box>
-      </box>
+        <Box paddingX={1} flexDirection="column">
+          <Text bold>Confirm Contact Creation</Text>
+          <Text> </Text>
+          <Text>Name:    {createName}</Text>
+          {createEmail && <Text>Email:   {createEmail}</Text>}
+          {createPhone && <Text>Phone:   {createPhone}</Text>}
+          {createCompany && <Text>Company: {createCompany}</Text>}
+          <Text> </Text>
+          <Text>Press 'y' to create, 'n' to cancel.</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Groups list
   if (mode === 'groups') {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
         {statusBar}
         {groups.length === 0 ? (
-          <box paddingX={1}>
-            <text fg={themeColor('muted')}>No groups. Groups can be created via the AI assistant.</text>
-          </box>
+          <Box paddingX={1}>
+            <Text fg={themeColor('muted')}>No groups. Groups can be created via the AI assistant.</Text>
+          </Box>
         ) : (
-          <box flexDirection="column" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             {groups.map((g, i) => (
-              <box key={g.id}>
-                <text fg={i === selectedGroupIndex ? themeColor('blue') : undefined}>
+              <Box key={g.id}>
+                <Text fg={i === selectedGroupIndex ? themeColor('accent') : undefined}>
                   {i === selectedGroupIndex ? '> ' : '  '}
-                </text>
-                <text attributes={i === selectedGroupIndex ? 1 : undefined} fg={i === selectedGroupIndex ? themeColor('blue') : undefined}><b>
+                </Text>
+                <Text bold={i === selectedGroupIndex} fg={i === selectedGroupIndex ? themeColor('accent') : undefined}>
                   {g.name}
-                </b></text>
-                {g.description && <text fg={themeColor('muted')}> - {g.description}</text>}
-              </box>
+                </Text>
+                {g.description && <Text fg={themeColor('muted')}> - {g.description}</Text>}
+              </Box>
             ))}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // Group view
   if (mode === 'group-view' && viewGroup) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {header}
-        <box paddingX={1} flexDirection="column">
-          <text fg={themeColor('secondary')}><b>{viewGroup.name}</b></text>
-          {viewGroup.description && <text fg={themeColor('muted')}>{viewGroup.description}</text>}
-          <text> </text>
+        <Box paddingX={1} flexDirection="column">
+          <Text fg={themeColor('secondary')} bold>{viewGroup.name}</Text>
+          {viewGroup.description && <Text fg={themeColor('muted')}>{viewGroup.description}</Text>}
+          <Text> </Text>
           {groupMembers.length === 0 ? (
-            <text fg={themeColor('muted')}>No members in this group.</text>
+            <Text fg={themeColor('muted')}>No members in this group.</Text>
           ) : (
             groupMembers.map((m) => {
               const email = m.primaryEmail ? ` <${m.primaryEmail}>` : '';
               const company = m.company ? ` @ ${m.company}` : '';
               return (
-                <text key={m.id}>  - {m.name}{company}{email}</text>
+                <Text key={m.id}>  - {m.name}{company}{email}</Text>
               );
             })
           )}
-        </box>
-      </box>
+        </Box>
+      </Box>
     );
   }
 
   // List view (default)
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {header}
       {statusBar}
       {errorBar}
       {contacts.length === 0 ? (
-        <box paddingX={1}>
-          <text fg={themeColor('muted')}>No contacts. Press 'c' to create one, or ask the AI to add contacts.</text>
-        </box>
+        <Box paddingX={1}>
+          <Text fg={themeColor('muted')}>No contacts. Press 'c' to create one, or ask the AI to add contacts.</Text>
+        </Box>
       ) : (
-        <box flexDirection="column" paddingX={1}>
+        <Box flexDirection="column" paddingX={1}>
           {contacts.map((c, i) => (
-            <box key={c.id}>
-              <text fg={i === selectedIndex ? themeColor('blue') : undefined}>
+            <Box key={c.id}>
+              <Text fg={i === selectedIndex ? themeColor('accent') : undefined}>
                 {i === selectedIndex ? '> ' : '  '}
-              </text>
-              <text attributes={i === selectedIndex ? 1 : undefined} fg={i === selectedIndex ? themeColor('blue') : undefined}><b>
+              </Text>
+              <Text bold={i === selectedIndex} fg={i === selectedIndex ? themeColor('accent') : undefined}>
                 {c.favorite ? '* ' : ''}{truncate(c.name, 16).padEnd(16)}
-              </b></text>
-              <text fg={themeColor('muted')}>
+              </Text>
+              <Text fg={themeColor('muted')}>
                 {' '}{truncate(c.company || '', 14).padEnd(14)}
-              </text>
-              <text>
+              </Text>
+              <Text>
                 {' '}{truncate(c.primaryEmail || '', 24).padEnd(24)}
-              </text>
+              </Text>
               {c.tags.length > 0 && (
-                <text fg={themeColor('muted')}> [{c.tags.join(', ')}]</text>
+                <Text fg={themeColor('muted')}> [{c.tags.join(', ')}]</Text>
               )}
-            </box>
+            </Box>
           ))}
-        </box>
+        </Box>
       )}
-    </box>
+    </Box>
   );
 }

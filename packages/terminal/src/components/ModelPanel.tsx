@@ -3,7 +3,7 @@ import {
   getModelById,
   getModelDisplayName,
 } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 function fmtTokens(n?: number): string {
@@ -57,85 +57,85 @@ export function ModelPanel({
   );
 
   return (
-    <box flexDirection="column" paddingY={1}>
+    <Box flexDirection="column" paddingY={1}>
       {/* Header */}
-      <box marginBottom={1}>
-        <text><b>Model Info</b></text>
-      </box>
+      <Box marginBottom={1}>
+        <Text bold>Model Info</Text>
+      </Box>
 
       {/* Agent info */}
-      <box flexDirection="column" marginBottom={1}>
-        <box>
-          <text fg={themeColor('muted')}>Agent:   </text>
-          <text fg={themeColor('primary')}><b>{agentName || 'Default'}</b></text>
-        </box>
+      <Box flexDirection="column" marginBottom={1}>
+        <Box>
+          <Text fg={themeColor('muted')}>Agent:   </Text>
+          <Text fg={themeColor('primary')} bold>{agentName || 'Default'}</Text>
+        </Box>
         {agentDescription && (
-          <box>
-            <text fg={themeColor('muted')}>         {agentDescription}</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>         {agentDescription}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
       {/* Model info */}
-      <box flexDirection="column" marginBottom={1}>
-        <box>
-          <text fg={themeColor('muted')}>Model:   </text>
-          <text><b>{displayName}</b></text>
+      <Box flexDirection="column" marginBottom={1}>
+        <Box>
+          <Text fg={themeColor('muted')}>Model:   </Text>
+          <Text bold>{displayName}</Text>
           {currentModelId && currentModelId !== displayName && (
-            <text fg={themeColor('muted')}> ({currentModelId})</text>
+            <Text fg={themeColor('muted')}> ({currentModelId})</Text>
           )}
-        </box>
+        </Box>
         {model?.provider && (
-          <box>
-            <text fg={themeColor('muted')}>Provider: </text>
-            <text>{model.provider}</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Provider: </Text>
+            <Text>{model.provider}</Text>
+          </Box>
         )}
         {model?.contextWindow && (
-          <box>
-            <text fg={themeColor('muted')}>Context:  </text>
-            <text>{fmtTokens(model.contextWindow)} tokens</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Context:  </Text>
+            <Text>{fmtTokens(model.contextWindow)} tokens</Text>
+          </Box>
         )}
         {model?.maxOutputTokens && (
-          <box>
-            <text fg={themeColor('muted')}>Output:   </text>
-            <text>{fmtTokens(model.maxOutputTokens)} tokens</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Output:   </Text>
+            <Text>{fmtTokens(model.maxOutputTokens)} tokens</Text>
+          </Box>
         )}
         {(model?.inputCostPer1M != null || model?.outputCostPer1M != null) && (
-          <box>
-            <text fg={themeColor('muted')}>Cost/1M:  </text>
-            <text>{fmtCost(model?.inputCostPer1M, model?.outputCostPer1M)} (in/out)</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Cost/1M:  </Text>
+            <Text>{fmtCost(model?.inputCostPer1M, model?.outputCostPer1M)} (in/out)</Text>
+          </Box>
         )}
         {model?.description && (
-          <box>
-            <text fg={themeColor('muted')}>Info:     </text>
-            <text fg={themeColor('muted')}>{model.description}</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Info:     </Text>
+            <Text fg={themeColor('muted')}>{model.description}</Text>
+          </Box>
         )}
         {model?.notes && (
-          <box>
-            <text fg={themeColor('muted')}>Notes:    </text>
-            <text fg={themeColor('muted')}>{model.notes}</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Notes:    </Text>
+            <Text fg={themeColor('muted')}>{model.notes}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
       {/* Hint to switch via agents */}
-      <box marginTop={1} marginBottom={1}>
-        <text fg={themeColor('warning')}>
+      <Box marginTop={1} marginBottom={1}>
+        <Text fg={themeColor('warning')}>
           Models are tied to agents. To change the model, switch to a different agent.
-        </text>
-      </box>
+        </Text>
+      </Box>
 
       {/* Footer */}
-      <box>
-        <text fg={themeColor('muted')}>
-          <b>a</b>/<b>tab</b> switch agent  |  <b>q</b>/<b>esc</b> close
-        </text>
-      </box>
-    </box>
+      <Box>
+        <Text fg={themeColor('muted')}>
+          <Inline bold>a</Inline>/<Inline bold>tab</Inline> switch agent  |  <Inline bold>q</Inline>/<Inline bold>esc</Inline> close
+        </Text>
+      </Box>
+    </Box>
   );
 }

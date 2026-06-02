@@ -1,4 +1,5 @@
 import React from 'react';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface ParsedError {
@@ -36,11 +37,11 @@ export function ErrorBanner({ error, showErrorCodes = false }: ErrorBannerProps)
   const prefix = showErrorCodes && parsed.code ? `${parsed.code}: ` : '';
 
   return (
-    <box marginY={1} flexDirection="column">
-      <text fg={severity}>{prefix}{parsed.message}</text>
+    <Box marginY={1} flexDirection="column">
+      <Text fg={severity}>{prefix}{parsed.message}</Text>
       {parsed.suggestion && (
-        <text fg={severity}>Suggestion: {parsed.suggestion}</text>
+        <Text fg={severity}>Suggestion: {parsed.suggestion}</Text>
       )}
-    </box>
+    </Box>
   );
 }

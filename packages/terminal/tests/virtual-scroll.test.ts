@@ -1,8 +1,8 @@
 /**
  * Regression tests for the virtual-scroll transcript (plan 8d98da29 P4.1).
  *
- * The historical transcript is rendered in full inside a <scrollbox> (which
- * handles overflow natively); line-trimming was removed from the historical
+ * The historical transcript is rendered in full inside the scrollable transcript
+ * viewport; line-trimming was removed from the historical
  * path and now only applies to the transient streaming/activity region. These
  * tests pin that the historical display accumulation NEVER drops old messages,
  * so scrollback is always complete — and that the budget trimmer still works

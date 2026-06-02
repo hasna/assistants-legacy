@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react';
+import { Box, Inline, Text } from '../../ui/ink';
 import { color, type ColorValue } from './color';
 
 interface PaneProps {
@@ -15,19 +16,19 @@ interface PaneProps {
 
 /**
  * A titled, bordered container — the standard panel chrome (a superset of
- * PanelHeader that also wraps content). Renders a block-level `<box>`.
+ * PanelHeader that also wraps content).
  */
 export function Pane({ title, count, hints, tone = 'border', children }: PaneProps) {
   const borderCol = color(tone);
   const muted = color('muted');
   return (
-    <box flexDirection="column" borderStyle="rounded" borderColor={borderCol} paddingX={1}>
-      <text>
-        <span fg={color('text')}><b>{title}</b></span>
-        {count !== undefined && <span fg={muted}> ({count})</span>}
-        {hints && <span fg={muted}>   {hints}</span>}
-      </text>
+    <Box flexDirection="column" borderStyle="round" borderColor={borderCol} paddingX={1}>
+      <Text>
+        <Inline fg={color('text')} bold>{title}</Inline>
+        {count !== undefined ? <Inline fg={muted}> ({count})</Inline> : null}
+        {hints ? <Inline fg={muted}>   {hints}</Inline> : null}
+      </Text>
       {children}
-    </box>
+    </Box>
   );
 }

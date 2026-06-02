@@ -3,15 +3,12 @@
   "compilerOptions": {
     "outDir": "dist",
     "jsx": "react-jsx",
-    "jsxImportSource": "@opentui/react",
+    "jsxImportSource": "react",
     "types": [
       "bun-types"
     ]
   },
   "include": [
     "src"
-  ],
-  "exclude": [
-    "src/ink"
   ]
 }

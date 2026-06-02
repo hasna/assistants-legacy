@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
@@ -118,7 +117,6 @@ export function SecretsPanel({
   error,
 }: SecretsPanelProps) {
   const [mode, setMode] = useState<ViewMode>(initialMode === 'add' ? 'add-form' : 'list');
-  useClearOnChange(mode);
   const [secretIndex, setSecretIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<SecretEntry | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -215,10 +213,14 @@ export function SecretsPanel({
     };
   };
 
-  const advanceAddForm = async () => {
+  const advanceAddForm = async (submittedValue?: string) => {
     if (!currentAddField) return;
 
-    const currentValue = String(addForm[currentAddField.key] || '');
+    let nextForm: SecretAddInput = {
+      ...addForm,
+      [currentAddField.key]: submittedValue ?? String(addForm[currentAddField.key] || ''),
+    };
+    const currentValue = String(nextForm[currentAddField.key] || '');
     if (currentAddField.required && !currentValue.trim()) {
       setStatusMessage(`${currentAddField.label} is required.`);
       return;
@@ -230,7 +232,10 @@ export function SecretsPanel({
         setStatusMessage('Scope must be "assistant" or "global".');
         return;
       }
-      setAddForm((prev) => ({ ...prev, scope: normalizedScope }));
+      nextForm = { ...nextForm, scope: normalizedScope };
+      setAddForm(nextForm);
+    } else if (submittedValue !== undefined) {
+      setAddForm(nextForm);
     }
 
     if (addFieldIndex < ADD_FIELDS.length - 1) {
@@ -239,7 +244,7 @@ export function SecretsPanel({
       return;
     }
 
-    const normalized = normalizeAddInput(addForm);
+    const normalized = normalizeAddInput(nextForm);
     if (!normalized) {
       setStatusMessage('Scope must be "assistant" or "global".');
       return;
@@ -282,9 +287,10 @@ export function SecretsPanel({
   // Keyboard navigation
   useInput((input, key) => {
     if (isProcessing) return;
+    const isEscape = key.escape || input === '\x1b';
 
     if (mode === 'add-form') {
-      if (key.escape) {
+      if (isEscape) {
         if (addFieldIndex > 0) {
           setAddFieldIndex((prev) => prev - 1);
         } else {
@@ -296,13 +302,13 @@ export function SecretsPanel({
     }
 
     // Exit with q or Escape at top level
-    if (input === 'q' || (key.escape && mode === 'list')) {
+    if (input === 'q' || (isEscape && mode === 'list')) {
       onClose();
       return;
     }
 
     // Escape to go back
-    if (key.escape) {
+    if (isEscape) {
       if (mode === 'detail') {
         setMode('list');
         setRevealedValue(null);
@@ -381,15 +387,15 @@ export function SecretsPanel({
   // Add form
   if (mode === 'add-form') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Add Secret</b></text>
-          <text fg={themeColor('muted')}> ({addFieldIndex + 1}/{ADD_FIELDS.length})</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Add Secret</Text>
+          <Text fg={themeColor('muted')}> ({addFieldIndex + 1}/{ADD_FIELDS.length})</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
@@ -402,9 +408,9 @@ export function SecretsPanel({
 
             if (isCurrent) {
               return (
-                <box key={field.key}>
-                  <text fg={themeColor('info')}>{label}</text>
-                  <input
+                <Box key={field.key}>
+                  <Text fg={themeColor('info')}>{label}</Text>
+                  <TextInput
                     value={value}
                     onChange={(nextValue) => {
                       setAddForm((prev) => ({
@@ -412,172 +418,173 @@ export function SecretsPanel({
                         [field.key]: nextValue,
                       }));
                     }}
-                    onSubmit={() => {
-                      void advanceAddForm();
+                    onSubmit={(nextValue) => {
+                      void advanceAddForm(nextValue);
                     }}
+                    focus
                     placeholder={field.placeholder}
                   />
-                </box>
+                </Box>
               );
             }
 
             if (isCompleted) {
               return (
-                <box key={field.key}>
-                  <text fg={themeColor('muted')}>{label}</text>
-                  <text>{maskFieldValue(field, value)}</text>
-                </box>
+                <Box key={field.key}>
+                  <Text fg={themeColor('muted')}>{label}</Text>
+                  <Text>{maskFieldValue(field, value)}</Text>
+                </Box>
               );
             }
 
             return (
-              <box key={field.key}>
-                <text fg={themeColor('muted')}>{label}</text>
-                <text fg={themeColor('muted')}>{field.placeholder}</text>
-              </box>
+              <Box key={field.key}>
+                <Text fg={themeColor('muted')}>{label}</Text>
+                <Text fg={themeColor('muted')}>{field.placeholder}</Text>
+              </Box>
             );
           })}
-        </box>
+        </Box>
 
         {(error || statusMessage) && (
-          <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
+          <Box marginTop={1}>
+            <Text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Enter next field | Esc back</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Enter next field | Esc back</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Empty state
   if (secrets.length === 0) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Secrets</b></text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Secrets</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg={themeColor('muted')}>No secrets stored.</text>
-          <text fg={themeColor('muted')}>Press n to add your first secret.</text>
-        </box>
+          <Text fg={themeColor('muted')}>No secrets stored.</Text>
+          <Text fg={themeColor('muted')}>Press n to add your first secret.</Text>
+        </Box>
         {(error || statusMessage) && (
-          <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
+          <Box marginTop={1}>
+            <Text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>n add secret | q quit</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>n add secret | q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Secret</b></text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Secret</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
-          <text fg={themeColor('muted')}>Scope: {deleteTarget.scope}</text>
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
+          <Text>Are you sure you want to delete "{deleteTarget.name}"?</Text>
+          <Text fg={themeColor('muted')}>Scope: {deleteTarget.scope}</Text>
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
         {(error || statusMessage) && (
-          <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
+          <Box marginTop={1}>
+            <Text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Detail view
   if (mode === 'detail' && currentSecret) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{currentSecret.name}</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>{currentSecret.name}</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <box>
-            <text fg={themeColor('muted')}>Scope: </text>
-            <text fg={currentSecret.scope === 'global' ? themeColor('yellow') : themeColor('blue')}>
+          <Box>
+            <Text fg={themeColor('muted')}>Scope: </Text>
+            <Text fg={currentSecret.scope === 'global' ? themeColor('yellow') : themeColor('blue')}>
               {currentSecret.scope}
-            </text>
-          </box>
+            </Text>
+          </Box>
 
           {currentSecret.createdAt && (
-            <box>
-              <text fg={themeColor('muted')}>Created: </text>
-              <text>{new Date(currentSecret.createdAt).toLocaleString()}</text>
-            </box>
+            <Box>
+              <Text fg={themeColor('muted')}>Created: </Text>
+              <Text>{new Date(currentSecret.createdAt).toLocaleString()}</Text>
+            </Box>
           )}
 
           {currentSecret.updatedAt && (
-            <box>
-              <text fg={themeColor('muted')}>Updated: </text>
-              <text>{new Date(currentSecret.updatedAt).toLocaleString()}</text>
-            </box>
+            <Box>
+              <Text fg={themeColor('muted')}>Updated: </Text>
+              <Text>{new Date(currentSecret.updatedAt).toLocaleString()}</Text>
+            </Box>
           )}
 
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>Value: </text>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>Value: </Text>
             {revealedValue !== null ? (
-              <text fg={themeColor('success')}>{revealedValue}</text>
+              <Text fg={themeColor('success')}>{revealedValue}</Text>
             ) : (
-              <text fg={themeColor('muted')}>••••••••</text>
+              <Text fg={themeColor('muted')}>••••••••</Text>
             )}
-          </box>
-        </box>
+          </Box>
+        </Box>
 
         {(error || statusMessage) && (
-          <box marginTop={1}>
-            <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
+          <Box marginTop={1}>
+            <Text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
               {error || statusMessage}
-            </text>
-          </box>
+            </Text>
+          </Box>
         )}
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {revealedValue === null && 'r reveal | '}
             x delete | n add | Esc back
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -585,24 +592,24 @@ export function SecretsPanel({
   const visibleSecrets = secrets.slice(secretRange.start, secretRange.end);
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text fg={themeColor('info')}><b>Secrets</b></text>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('info')} bold>Secrets</Text>
         {secrets.length > MAX_VISIBLE_ITEMS && (
-          <text fg={themeColor('muted')}> ({secretIndex + 1}/{secrets.length})</text>
+          <Text fg={themeColor('muted')}> ({secretIndex + 1}/{secrets.length})</Text>
         )}
-      </box>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {secretRange.hasMore.above > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↑ {secretRange.hasMore.above} more above</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↑ {secretRange.hasMore.above} more above</Text>
+          </Box>
         )}
 
         {visibleSecrets.map((secret, visibleIdx) => {
@@ -613,45 +620,45 @@ export function SecretsPanel({
           const scopeColor = secret.scope === 'global' ? 'yellow' : 'blue';
 
           return (
-            <box key={`${secret.name}-${secret.scope}`} paddingY={0}>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+            <Box key={`${secret.name}-${secret.scope}`} paddingY={0}>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {prefix}{nameDisplay}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : scopeColor}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : scopeColor}>
                 {secret.scope.padEnd(8)}
-              </text>
-            </box>
+              </Text>
+            </Box>
           );
         })}
 
         {secretRange.hasMore.below > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↓ {secretRange.hasMore.below} more below</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↓ {secretRange.hasMore.below} more below</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: </text>
-        <text fg={themeColor('warning')}>global</text>
-        <text fg={themeColor('muted')}> = shared | </text>
-        <text fg={themeColor('secondary')}>assistant</text>
-        <text fg={themeColor('muted')}> = assistant-specific</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Legend: </Text>
+        <Text fg={themeColor('warning')}>global</Text>
+        <Text fg={themeColor('muted')}> = shared | </Text>
+        <Text fg={themeColor('secondary')}>assistant</Text>
+        <Text fg={themeColor('muted')}> = assistant-specific</Text>
+      </Box>
 
       {(error || statusMessage) && (
-        <box marginTop={1}>
-          <text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
+        <Box marginTop={1}>
+          <Text fg={(error || statusMessage || '').startsWith('Error') ? themeColor('red') : themeColor('yellow')}>
             {error || statusMessage}
-          </text>
-        </box>
+          </Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ select | Enter view | n add | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

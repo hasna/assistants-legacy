@@ -1,10 +1,11 @@
+/** @jsxImportSource react */
 /**
  * Assistant message renderer (plan 8d98da29 P4.2) — extracted from Messages.tsx.
  * Thick left border in the primary color; markdown content; tool calls below.
  */
 import React from 'react';
 import type { DisplayMessage } from '../messageLines';
-import { Markdown } from '../Markdown';
+import { Box, Markdown, Text } from '../../ui/ink';
 import { themeColor } from '../../theme/colors';
 import { ToolCallsBlock, ToolResultPanel } from './ToolParts';
 
@@ -26,40 +27,40 @@ export function AssistantMessage({
   const primaryCol = themeColor('primary');
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {/* 1 empty line separator (skip for continuations) */}
-      {!isContinuation && <box height={1} />}
+      {!isContinuation && <Box height={1} />}
 
       {/* Assistant text content — left border with primary color, markdown rendered */}
       {hasContent && (
-        <box
+        <Box
           flexDirection="row"
           width="100%"
         >
-          <text fg={primaryCol}>{'│'} </text>
-          <box flexDirection="column" flexGrow={1} flexShrink={1}>
-            <Markdown content={content} preRendered={Boolean(message.__rendered)} indent={0} />
-          </box>
-        </box>
+          <Text fg={primaryCol}>{'\u2502'} </Text>
+          <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+            <Markdown content={content} />
+          </Box>
+        </Box>
       )}
 
       {/* Tool calls rendered below the text content */}
       {toolCalls.length > 0 && (
-        <box marginTop={0} flexDirection="column">
+        <Box marginTop={0} flexDirection="column">
           <ToolCallsBlock
             toolCalls={toolCalls}
             toolResults={toolResults}
             verboseTools={verboseTools}
           />
-        </box>
+        </Box>
       )}
 
       {/* Orphan tool results */}
       {showToolResultsOnly && (
-        <box marginTop={0}>
+        <Box marginTop={0}>
           <ToolResultPanel toolResults={toolResults} verboseTools={verboseTools} />
-        </box>
+        </Box>
       )}
-    </box>
+    </Box>
   );
 }

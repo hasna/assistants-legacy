@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import type { ProjectRecord, ProjectPlan, ProjectPlanStep, PlanStepStatus } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import type { ProjectRecord, ProjectPlan, PlanStepStatus } from '@hasna/assistants-core';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface PlansPanelProps {
@@ -21,13 +21,6 @@ const STATUS_ICONS: Record<PlanStepStatus, string> = {
   doing: '~',
   done: '*',
   blocked: '!',
-};
-
-const STATUS_COLORS: Record<PlanStepStatus, string | undefined> = {
-  todo: undefined,
-  doing: 'yellow',
-  done: themeColor('success'),
-  blocked: 'red',
 };
 
 const STATUS_CYCLE: PlanStepStatus[] = ['todo', 'doing', 'done', 'blocked'];
@@ -90,14 +83,11 @@ export function PlansPanel({
 
   useEffect(() => {
     if (!currentPlan) {
-      if (mode !== 'plans') {
+      if (mode !== 'plans' && mode !== 'create-plan') {
         setMode('plans');
         setStepIndex(0);
       }
       return;
-    }
-    if (mode === 'delete-plan-confirm' && !currentPlan) {
-      setMode('plans');
     }
   }, [mode, currentPlan]);
 
@@ -276,83 +266,83 @@ export function PlansPanel({
   // Create plan mode
   if (mode === 'create-plan') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Create New Plan</b></text>
-        </box>
-        <box>
-          <text>Title: </text>
-          <input
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Create New Plan</Text>
+        </Box>
+        <Box>
+          <Text>Title: </Text>
+          <TextInput
             value={newPlanTitle}
             onChange={setNewPlanTitle}
             onSubmit={handleCreatePlan}
-            focused
+            focus
             placeholder="Enter plan title..."
           />
-        </box>
+        </Box>
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Creating plan...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Creating plan...</Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Enter to create | Esc to cancel</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Enter to create | Esc to cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Delete plan confirmation
   if (mode === 'delete-plan-confirm') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Plan</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Plan</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Are you sure you want to delete &quot;{currentPlan?.title}&quot;?
-          </text>
-        </box>
-        <box>
-          <text fg={themeColor('muted')}>This will delete all {currentSteps.length} steps.</text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+        <Box>
+          <Text fg={themeColor('muted')}>This will delete all {currentSteps.length} steps.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Inline fg={themeColor('success')} bold>y</Inline> to confirm or{' '}
+            <Inline fg={themeColor('error')} bold>n</Inline> to cancel
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   // Add step mode
   if (mode === 'add-step') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Add Step to &quot;{currentPlan?.title}&quot;</b></text>
-        </box>
-        <box>
-          <text>Step: </text>
-          <input
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Add Step to &quot;{currentPlan?.title}&quot;</Text>
+        </Box>
+        <Box>
+          <Text>Step: </Text>
+          <TextInput
             value={newStepText}
             onChange={setNewStepText}
             onSubmit={handleAddStep}
-            focused
+            focus
             placeholder="Enter step description..."
           />
-        </box>
+        </Box>
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Adding step...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Adding step...</Text>
+          </Box>
         )}
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Enter to add | Esc to cancel</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Enter to add | Esc to cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -360,22 +350,22 @@ export function PlansPanel({
   if (mode === 'delete-step-confirm') {
     const step = currentSteps[stepIndex];
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Step</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Step</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Remove: &quot;{step?.text}&quot;?
-          </text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Inline fg={themeColor('success')} bold>y</Inline> to confirm or{' '}
+            <Inline fg={themeColor('error')} bold>n</Inline> to cancel
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -385,85 +375,84 @@ export function PlansPanel({
     const totalCount = currentSteps.length;
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-          <text><b>{currentPlan.title}</b></text>
-          <text fg={themeColor('muted')}>[a]dd  [d]elete</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+          <Text bold>{currentPlan.title}</Text>
+          <Text fg={themeColor('muted')}>[a]dd  [d]elete</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
         >
           {currentSteps.length === 0 ? (
-            <box paddingY={1}>
-              <text fg={themeColor('muted')}>No steps yet. Press a to add one.</text>
-            </box>
+            <Box paddingY={1}>
+              <Text fg={themeColor('muted')}>No steps yet. Press a to add one.</Text>
+            </Box>
           ) : (
             currentSteps.map((step, index) => {
               const isSelected = index === stepIndex;
               const icon = STATUS_ICONS[step.status];
-              const color = STATUS_COLORS[step.status];
 
               return (
-                <box key={step.id} paddingY={0}>
-                  <text
+                <Box key={step.id} paddingY={0}>
+                  <Text
                     bg={isSelected ? themeColor('primary') : undefined}
                     fg={isSelected ? themeColor('text') : undefined}
                   >
                     [{icon}] {index + 1}. {step.text}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               );
             })
           )}
 
           {/* Add step option */}
-          <box marginTop={1} paddingY={0}>
-            <text
+          <Box marginTop={1} paddingY={0}>
+            <Text
               bg={stepIndex === currentSteps.length ? themeColor('primary') : undefined}
               fg={stepIndex === currentSteps.length ? themeColor('text') : undefined}
             >
               + Add step (a)
-            </text>
-          </box>
-        </box>
+            </Text>
+          </Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             Progress: {doneCount}/{totalCount} ({totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}%)
-          </text>
-        </box>
+          </Text>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             Space/Enter toggle | Esc back | 1-{Math.max(1, currentSteps.length)} jump
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   // Plans list view
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Plans for &quot;{project.name}&quot;</b></text>
-        <text fg={themeColor('muted')}>[n]ew</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Plans for &quot;{project.name}&quot;</Text>
+        <Text fg={themeColor('muted')}>[n]ew</Text>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {plans.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No plans yet. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No plans yet. Press n to create one.</Text>
+          </Box>
         ) : (
           plans.map((plan, index) => {
             const isSelected = index === planIndex;
@@ -472,34 +461,34 @@ export function PlansPanel({
             const time = formatPlanTime(plan.updatedAt);
 
             return (
-              <box key={plan.id} paddingY={0}>
-                <text
+              <Box key={plan.id} paddingY={0}>
+                <Text
                   bg={isSelected ? themeColor('primary') : undefined}
                   fg={isSelected ? themeColor('text') : undefined}
                 >
                   {index + 1}. {plan.title.padEnd(25)} [{doneCount}/{totalCount}] {time}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New plan option */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={planIndex === plans.length ? themeColor('primary') : undefined}
             fg={planIndex === plans.length ? themeColor('text') : undefined}
           >
             + New plan (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           Enter view | d delete | Esc back | 1-{Math.max(1, plans.length)} jump
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

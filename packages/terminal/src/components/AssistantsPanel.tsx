@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Assistant, AssistantSettings, CreateAssistantOptions } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import {
   ALL_MODELS,
   DEFAULT_MODEL,
@@ -166,7 +166,7 @@ export function AssistantsPanel({
     }
 
     // Escape or q: cancel
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (key.escape || input === '\x1b' || input === 'q' || input === 'Q') {
       onClearError?.();
       onCancel();
       return;
@@ -220,19 +220,19 @@ export function AssistantsPanel({
       return;
     }
 
-    if (input === 'n' || input === 'N' || key.escape) {
+    if (input === 'n' || input === 'N' || key.escape || input === '\x1b') {
       setMode('list');
       return;
     }
   }, { isActive: mode === 'delete-confirm' });
 
   // Handle create/edit mode escape
-  useInput((_input, key) => {
+  useInput((input, key) => {
     if (mode !== 'create' && mode !== 'edit') return;
     const step = mode === 'create' ? createStep : editStep;
     if (step === 'name') return;
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'create') {
         if (createStep === 'description') setCreateStep('name');
         else if (createStep === 'model') setCreateStep('description');
@@ -287,7 +287,7 @@ export function AssistantsPanel({
       return;
     }
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'create') {
         setCreateStep('description');
       } else {
@@ -322,7 +322,7 @@ export function AssistantsPanel({
       return;
     }
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'create') {
         setCreateStep('model');
       } else {
@@ -333,12 +333,12 @@ export function AssistantsPanel({
   }, { isActive: (mode === 'create' && createStep === 'temperature') || (mode === 'edit' && editStep === 'temperature') });
 
   // Handle system prompt step escape
-  useInput((_input, key) => {
+  useInput((input, key) => {
     const isCreateSystemPromptStep = mode === 'create' && createStep === 'systemPrompt';
     const isEditSystemPromptStep = mode === 'edit' && editStep === 'systemPrompt';
     if (!isCreateSystemPromptStep && !isEditSystemPromptStep) return;
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'create') {
         setCreateStep('temperature');
       } else {
@@ -348,20 +348,21 @@ export function AssistantsPanel({
   }, { isActive: (mode === 'create' && createStep === 'systemPrompt') || (mode === 'edit' && editStep === 'systemPrompt') });
 
   // Handle name step escape (full cancel)
-  useInput((_input, key) => {
+  useInput((input, key) => {
     const isCreateNameStep = mode === 'create' && createStep === 'name';
     const isEditNameStep = mode === 'edit' && editStep === 'name';
     if (!isCreateNameStep && !isEditNameStep) return;
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       resetForm();
       setMode('list');
     }
   }, { isActive: (mode === 'create' && createStep === 'name') || (mode === 'edit' && editStep === 'name') });
 
   // Form submission handlers
-  const handleNameSubmit = () => {
-    if (!newName.trim()) return;
+  const handleNameSubmit = (submittedName: string) => {
+    setNewName(submittedName);
+    if (!submittedName.trim()) return;
     if (mode === 'create') {
       setCreateStep('description');
     } else {
@@ -369,7 +370,8 @@ export function AssistantsPanel({
     }
   };
 
-  const handleDescriptionSubmit = () => {
+  const handleDescriptionSubmit = (submittedDescription: string) => {
+    setNewDescription(submittedDescription);
     if (mode === 'create') {
       setCreateStep('model');
     } else {
@@ -386,35 +388,39 @@ export function AssistantsPanel({
     }
   };
 
-  const handleSystemPromptSubmit = () => {
+  const handleSystemPromptSubmit = (submittedPrompt: string) => {
+    setNewSystemPrompt(submittedPrompt);
     if (mode === 'create') {
-      handleCreate();
+      handleCreate({ systemPrompt: submittedPrompt });
     } else {
-      handleUpdate();
+      handleUpdate({ systemPrompt: submittedPrompt });
     }
   };
 
   const handleSkipSystemPrompt = () => {
     setNewSystemPrompt('');
     if (mode === 'create') {
-      handleCreate();
+      handleCreate({ systemPrompt: '' });
     } else {
-      handleUpdate();
+      handleUpdate({ systemPrompt: '' });
     }
   };
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
+  const handleCreate = async (overrides: { name?: string; description?: string; systemPrompt?: string } = {}) => {
+    const submittedName = (overrides.name ?? newName).trim();
+    if (!submittedName) return;
+    const submittedDescription = (overrides.description ?? newDescription).trim();
+    const submittedSystemPrompt = (overrides.systemPrompt ?? newSystemPrompt).trim();
     setIsSubmitting(true);
     try {
       const settings: Partial<AssistantSettings> = {
         model: getProviderModelId(ALL_MODELS[selectedModelIndex]),
         temperature,
-        systemPromptAddition: newSystemPrompt.trim() || undefined,
+        systemPromptAddition: submittedSystemPrompt || undefined,
       };
       await onCreate({
-        name: newName.trim(),
-        description: newDescription.trim() || undefined,
+        name: submittedName,
+        description: submittedDescription || undefined,
         settings,
       });
       resetForm();
@@ -424,18 +430,21 @@ export function AssistantsPanel({
     }
   };
 
-  const handleUpdate = async () => {
-    if (!editingAssistant || !newName.trim()) return;
+  const handleUpdate = async (overrides: { name?: string; description?: string; systemPrompt?: string } = {}) => {
+    const submittedName = (overrides.name ?? newName).trim();
+    if (!editingAssistant || !submittedName) return;
+    const submittedDescription = (overrides.description ?? newDescription).trim();
+    const submittedSystemPrompt = (overrides.systemPrompt ?? newSystemPrompt).trim();
     setIsSubmitting(true);
     try {
       await onUpdate(editingAssistant.id, {
-        name: newName.trim(),
-        description: newDescription.trim() || undefined,
+        name: submittedName,
+        description: submittedDescription || undefined,
         settings: {
           ...editingAssistant.settings,
           model: getProviderModelId(ALL_MODELS[selectedModelIndex]),
           temperature,
-          systemPromptAddition: newSystemPrompt.trim() || undefined,
+          systemPromptAddition: submittedSystemPrompt || undefined,
         } as Record<string, unknown>,
       });
       resetForm();
@@ -447,35 +456,35 @@ export function AssistantsPanel({
 
   // Render model selection
   const renderModelSelection = () => (
-    <box flexDirection="column">
-      <box marginBottom={1}>
-        <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-        <text fg={themeColor('muted')}> - Model</text>
-      </box>
+    <Box flexDirection="column">
+      <Box marginBottom={1}>
+        <Text fg={themeColor('info')} bold>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
+        <Text fg={themeColor('muted')}> - Model</Text>
+      </Box>
 
-      <box marginBottom={1} flexDirection="column">
-        <text fg={themeColor('muted')}>Name: {newName}</text>
-        {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
-      </box>
+      <Box marginBottom={1} flexDirection="column">
+        <Text fg={themeColor('muted')}>Name: {newName}</Text>
+        {newDescription && <Text fg={themeColor('muted')}>Description: {newDescription}</Text>}
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {ALL_MODELS.map((model, index) => (
-          <box key={getProviderModelId(model)} paddingY={0}>
-            <text
+          <Box key={getProviderModelId(model)} paddingY={0}>
+            <Text
               bg={index === selectedModelIndex ? themeColor('primary') : undefined}
               fg={index === selectedModelIndex ? themeColor('text') : undefined}
             >
               {index === selectedModelIndex ? '>' : ' '} {model.name}
-              <span fg={themeColor('muted')}> - {model.description}</span>
-            </text>
-          </box>
+              <Text fg={themeColor('muted')}> - {model.description}</Text>
+            </Text>
+          </Box>
         ))}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Up/Down select | Enter continue | Esc back</text>
-      </box>
-    </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Up/Down select | Enter continue | Esc back</Text>
+      </Box>
+    </Box>
   );
 
   // Render temperature slider
@@ -486,39 +495,39 @@ export function AssistantsPanel({
     const slider = '[' + '='.repeat(filledWidth) + ' '.repeat(emptyWidth) + ']';
 
     return (
-      <box flexDirection="column">
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-          <text fg={themeColor('muted')}> - Temperature</text>
-        </box>
+      <Box flexDirection="column">
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
+          <Text fg={themeColor('muted')}> - Temperature</Text>
+        </Box>
 
-        <box marginBottom={1} flexDirection="column">
-          <text fg={themeColor('muted')}>Name: {newName}</text>
-          {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
-          <text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</text>
-        </box>
+        <Box marginBottom={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>Name: {newName}</Text>
+          {newDescription && <Text fg={themeColor('muted')}>Description: {newDescription}</Text>}
+          <Text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</Text>
+        </Box>
 
-        <box>
-          <text>Temperature: </text>
-          <text fg={themeColor('info')}>{temperature.toFixed(1)}</text>
-          <text fg={themeColor('muted')}> {slider}</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box>
+          <Text>Temperature: </Text>
+          <Text fg={themeColor('info')}>{temperature.toFixed(1)}</Text>
+          <Text fg={themeColor('muted')}> {slider}</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {temperature < 0.5 ? 'More deterministic' : temperature > 1.5 ? 'More creative' : 'Balanced'}
-          </text>
-        </box>
+          </Text>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Left/Right adjust | Enter continue | Esc back</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Left/Right adjust | Enter continue | Esc back</Text>
+        </Box>
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating...' : 'Saving...'}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>{mode === 'create' ? 'Creating...' : 'Saving...'}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   };
 
@@ -528,110 +537,110 @@ export function AssistantsPanel({
 
     if (currentStep === 'model') {
       return (
-        <box flexDirection="column" paddingY={1}>
+        <Box flexDirection="column" paddingY={1}>
           {renderModelSelection()}
-        </box>
+        </Box>
       );
     }
 
     if (currentStep === 'temperature') {
       return (
-        <box flexDirection="column" paddingY={1}>
+        <Box flexDirection="column" paddingY={1}>
           {renderTemperatureSlider()}
-        </box>
+        </Box>
       );
     }
 
     if (currentStep === 'systemPrompt') {
       return (
-        <box flexDirection="column" paddingY={1}>
-          <box marginBottom={1}>
-            <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-            <text fg={themeColor('muted')}> - Custom Instructions</text>
-          </box>
+        <Box flexDirection="column" paddingY={1}>
+          <Box marginBottom={1}>
+            <Text fg={themeColor('info')} bold>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
+            <Text fg={themeColor('muted')}> - Custom Instructions</Text>
+          </Box>
 
-          <box marginBottom={1} flexDirection="column">
-            <text fg={themeColor('muted')}>Name: {newName}</text>
-            {newDescription && <text fg={themeColor('muted')}>Description: {newDescription}</text>}
-            <text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</text>
-            <text fg={themeColor('muted')}>Temperature: {temperature.toFixed(1)}</text>
-          </box>
+          <Box marginBottom={1} flexDirection="column">
+            <Text fg={themeColor('muted')}>Name: {newName}</Text>
+            {newDescription && <Text fg={themeColor('muted')}>Description: {newDescription}</Text>}
+            <Text fg={themeColor('muted')}>Model: {ALL_MODELS[selectedModelIndex].name}</Text>
+            <Text fg={themeColor('muted')}>Temperature: {temperature.toFixed(1)}</Text>
+          </Box>
 
-          <box>
-            <text>Instructions: </text>
-            <input
+          <Box>
+            <Text>Instructions: </Text>
+            <TextInput
               value={newSystemPrompt}
               onChange={setNewSystemPrompt}
               onSubmit={handleSystemPromptSubmit}
-              focused
+              focus
               placeholder="Custom system prompt (optional)..."
             />
-          </box>
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</text>
-          </box>
+          </Box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>Enter to {mode === 'create' ? 'create' : 'save'} | Tab to skip | Esc back</Text>
+          </Box>
 
           {isSubmitting && (
-            <box marginTop={1}>
-              <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
-            </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</Text>
+            </Box>
           )}
-        </box>
+        </Box>
       );
     }
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>{mode === 'create' ? 'Create New Assistant' : 'Edit Assistant'}</Text>
+        </Box>
 
         {currentStep === 'name' && (
-          <box flexDirection="column">
-            <box>
-              <text>Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Name: </Text>
+              <TextInput
                 value={newName}
                 onChange={setNewName}
                 onSubmit={handleNameSubmit}
-                focused
+                focus
                 placeholder="Enter assistant name..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc to cancel</Text>
+            </Box>
+          </Box>
         )}
 
         {currentStep === 'description' && (
-          <box flexDirection="column">
-            <box>
-              <text fg={themeColor('muted')}>Name: </text>
-              <text>{newName}</text>
-            </box>
-            <box marginTop={1}>
-              <text>Description: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text fg={themeColor('muted')}>Name: </Text>
+              <Text>{newName}</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text>Description: </Text>
+              <TextInput
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={handleDescriptionSubmit}
-                focused
+                focus
                 placeholder="Enter description (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Tab to skip | Esc to go back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Tab to skip | Esc to go back</Text>
+            </Box>
+          </Box>
         )}
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>{mode === 'create' ? 'Creating assistant...' : 'Updating assistant...'}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -639,57 +648,57 @@ export function AssistantsPanel({
   if (mode === 'delete-confirm') {
     const assistant = sortedAssistants[selectedIndex];
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Assistant</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
-            Are you sure you want to delete &quot;{assistant?.name}&quot;?
-          </text>
-        </box>
-        <box>
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Assistant</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
+            Are you sure you want to delete "{assistant?.name}"?
+          </Text>
+        </Box>
+        <Box>
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Text fg={themeColor('success')} bold>y</Text> to confirm or{' '}
+            <Text fg={themeColor('error')} bold>n</Text> to cancel
+          </Text>
+        </Box>
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Deleting...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Deleting...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   // List mode UI
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Assistants</b></text>
-        <text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Assistants</Text>
+        <Text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</Text>
+      </Box>
 
       {error && (
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}>Error: {error}</text>
-        </box>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')}>Error: {error}</Text>
+        </Box>
       )}
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {sortedAssistants.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No assistants yet. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No assistants yet. Press n to create one.</Text>
+          </Box>
         ) : (
           sortedAssistants.map((assistant, index) => {
             const isActive = assistant.id === activeAssistantId;
@@ -701,54 +710,54 @@ export function AssistantsPanel({
             const systemBadge = assistant.isSystem ? '[system] ' : '';
 
             return (
-              <box key={assistant.id} paddingY={0}>
-                <text
+              <Box key={assistant.id} paddingY={0}>
+                <Text
                   bg={isSelected ? themeColor('primary') : undefined}
                   fg={isSelected ? themeColor('text') : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {systemBadge}{assistant.name.padEnd(16)} {modelName.padEnd(18)} {backendLabel.padEnd(10)} T:{temp} {time}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New assistant option */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={selectedIndex === sortedAssistants.length ? themeColor('primary') : undefined}
             fg={selectedIndex === sortedAssistants.length ? themeColor('text') : undefined}
           >
             + New assistant (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {/* Selected assistant details */}
       {sortedAssistants.length > 0 && selectedIndex < sortedAssistants.length && (
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>
             {sortedAssistants[selectedIndex].description || 'No description'}
-          </text>
+          </Text>
           {sortedAssistants[selectedIndex].settings.systemPromptAddition && (
-            <text fg={themeColor('muted')}>
+            <Text fg={themeColor('muted')}>
               System prompt: {sortedAssistants[selectedIndex].settings.systemPromptAddition.slice(0, 50)}
               {(sortedAssistants[selectedIndex].settings.systemPromptAddition?.length || 0) > 50 ? '...' : ''}
-            </text>
+            </Text>
           )}
           {sortedAssistants[selectedIndex].isSystem && (
-            <text fg={themeColor('warning')}>
+            <Text fg={themeColor('warning')}>
               System assistant — cannot be deleted
-            </text>
+            </Text>
           )}
-        </box>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           Enter select | e edit | d delete | Esc close | 1-{Math.max(1, sortedAssistants.length)} jump
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

@@ -8,7 +8,6 @@
   },
   "files": [
     "dist",
-    "scripts",
     "README.md",
     "LICENSE"
   ],
@@ -22,7 +21,7 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean && rm -rf node_modules dist",
     "prepublishOnly": "bun run build",
-    "postinstall": "mkdir -p $HOME/.hasna/assistants/{logs,temp,messages,backups,connectors,workspaces,agents} 2>/dev/null || true; node scripts/patch-opentui.mjs 2>/dev/null || true"
+    "postinstall": "mkdir -p $HOME/.hasna/assistants/{logs,temp,messages,backups,connectors,workspaces,agents} 2>/dev/null || true"
   },
   "devDependencies": {
     "@hasna/assistants-core": "workspace:*",
@@ -54,7 +53,6 @@
     "terminal",
     "ai-sdk",
     "bun",
-    "opentui",
     "open-source"
   ],
   "author": "Hasna",
@@ -72,7 +70,6 @@
   ],
   "dependencies": {
     "@hasna/cloud": "^0.1.24",
-    "@opentui/core": "0.1.91",
-    "@opentui/react": "0.1.91"
+    "ink": "7.0.3"
   }
 }

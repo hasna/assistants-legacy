@@ -7,8 +7,9 @@
  */
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { usePanelVisibility, nextActivePanel, PANEL_IDS } from '../src/state/usePanelVisibility';
+import { Text } from '../src/ui/ink';
+import { renderInk } from './utils/ink-test-harness';
 
 const wait = () => new Promise((r) => setTimeout(r, 40));
 
@@ -29,9 +30,9 @@ describe('nextActivePanel (pure transition)', () => {
 describe('usePanelVisibility interface', () => {
   test('exposes show + set for every panel id, plus activePanel controls', async () => {
     let pv: any;
-    function Probe() { pv = usePanelVisibility(); return <text>x</text>; }
-    const { renderOnce } = await testRender(<Probe />, { width: 20, height: 2 });
-    await renderOnce();
+    function Probe() { pv = usePanelVisibility(); return <Text>x</Text>; }
+    const harness = await renderInk(<Probe />, { width: 20, height: 2 });
+    await harness.renderOnce();
     await wait();
 
     expect(pv.activePanel).toBeNull();
@@ -49,33 +50,35 @@ describe('usePanelVisibility interface', () => {
     expect(setters).toBe(PANEL_IDS.length);
     expect(pv.showConfigPanel).toBe(false);
     expect(typeof pv.setShowConfigPanel).toBe('function');
+    await harness.cleanup();
   });
 
   test('setters accept React SetStateAction functional updaters and enforce one-at-a-time', async () => {
     let pv: any;
-    function Probe() { pv = usePanelVisibility(); return <text>x</text>; }
-    const { renderOnce } = await testRender(<Probe />, { width: 20, height: 2 });
-    await renderOnce();
+    function Probe() { pv = usePanelVisibility(); return <Text>x</Text>; }
+    const harness = await renderInk(<Probe />, { width: 20, height: 2 });
+    await harness.renderOnce();
     await wait();
 
     // Boolean form opens config.
     pv.setShowConfigPanel(true);
-    await renderOnce();
+    await harness.renderOnce();
     await wait();
     expect(pv.showConfigPanel).toBe(true);
 
     // Opening another panel closes config (single source of truth).
     pv.setShowSkillsPanel(true);
-    await renderOnce();
+    await harness.renderOnce();
     await wait();
     expect(pv.showSkillsPanel).toBe(true);
     expect(pv.showConfigPanel).toBe(false);
 
     // Functional updater resolves against the panel's current visibility (toggle off).
     pv.setShowSkillsPanel((prev: boolean) => !prev);
-    await renderOnce();
+    await harness.renderOnce();
     await wait();
     expect(pv.showSkillsPanel).toBe(false);
     expect(pv.activePanel).toBeNull();
+    await harness.cleanup();
   });
 });

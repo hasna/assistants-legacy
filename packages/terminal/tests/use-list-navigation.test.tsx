@@ -5,8 +5,9 @@
  */
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { useListNavigation } from '../src/hooks/useListNavigation';
+import { Text } from '../src/ui/ink';
+import { renderInk } from './utils/ink-test-harness';
 
 const wait = () => new Promise((r) => setTimeout(r, 30));
 
@@ -15,18 +16,19 @@ async function mountNav(opts: Parameters<typeof useListNavigation>[0]) {
   let api: ReturnType<typeof useListNavigation>;
   function Probe() {
     api = useListNavigation(opts);
-    return <text>{String(api.selectedIndex)}</text>;
+    return <Text>{String(api.selectedIndex)}</Text>;
   }
-  const { renderOnce } = await testRender(<Probe />, { width: 10, height: 2 });
-  await renderOnce();
+  const harness = await renderInk(<Probe />, { width: 10, height: 2 });
+  await harness.renderOnce();
   await wait();
   return {
     get index() { return api.selectedIndex; },
     async act(fn: (a: ReturnType<typeof useListNavigation>) => void) {
       fn(api);
-      await renderOnce();
+      await harness.renderOnce();
       await wait();
     },
+    cleanup: () => harness.cleanup(),
   };
 }
 
@@ -41,6 +43,7 @@ describe('useListNavigation', () => {
     expect(nav.index).toBe(2);
     await nav.act((a) => a.moveDown());    // clamp at last
     expect(nav.index).toBe(2);
+    await nav.cleanup();
   });
 
   test('wraparound cycles past the ends', async () => {
@@ -49,6 +52,7 @@ describe('useListNavigation', () => {
     expect(nav.index).toBe(2);
     await nav.act((a) => a.moveDown());    // last → 0
     expect(nav.index).toBe(0);
+    await nav.cleanup();
   });
 
   test('handleArrowKey returns false for an empty list', async () => {
@@ -57,6 +61,7 @@ describe('useListNavigation', () => {
     await nav.act((a) => { handled = a.handleArrowKey('down'); });
     expect(handled).toBe(false);
     expect(nav.index).toBe(0);
+    await nav.cleanup();
   });
 
   test('reset returns to the initial index', async () => {
@@ -66,5 +71,6 @@ describe('useListNavigation', () => {
     expect(nav.index).toBe(3);
     await nav.act((a) => a.reset());
     expect(nav.index).toBe(2);
+    await nav.cleanup();
   });
 });

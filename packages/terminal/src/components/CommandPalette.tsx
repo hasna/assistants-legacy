@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useTerminalDimensions } from '@opentui/react';
 import { Modal } from './Modal';
+import { Box, Text, useInput, useWindowSize } from '../ui/ink';
 import { themeColor } from '../theme/colors';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
 
 /**
  * A command entry for the palette.
@@ -38,7 +37,7 @@ interface CommandPaletteProps {
 export function CommandPalette({ visible, commands, onClose }: CommandPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const dims = useTerminalDimensions();
+  const dims = useWindowSize();
 
   // Theme colors
   const primaryColor = themeColor('primary');
@@ -109,8 +108,8 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
 
   if (!visible) return null;
 
-  const maxVisible = Math.max(3, Math.min(6, Math.floor((dims.height || 24) * 0.6) - 9));
-  const contentWidth = Math.max(20, Math.floor((dims.width || 80) * 0.6) - 8);
+  const maxVisible = Math.max(3, Math.min(6, Math.floor((dims.rows || 24) * 0.6) - 9));
+  const contentWidth = Math.max(20, Math.floor((dims.columns || 80) * 0.6) - 8);
   const fitLine = (line: string): string => {
     if (line.length > contentWidth) {
       return line.slice(0, Math.max(0, contentWidth - 3)) + '...';
@@ -129,20 +128,20 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
   return (
     <Modal visible={visible} onClose={handleClose} title="Commands">
       {/* Search/filter input */}
-      <box flexDirection="row" marginBottom={1} backgroundColor={bgColor}>
-        <text fg={mutedColor} bg={bgColor}>&gt; </text>
-        <text fg={searchQuery ? textColor : mutedColor} bg={bgColor}>
+      <Box flexDirection="row" marginBottom={1} backgroundColor={bgColor}>
+        <Text fg={mutedColor} bg={bgColor}>&gt; </Text>
+        <Text fg={searchQuery ? textColor : mutedColor} bg={bgColor}>
           {searchQuery || 'Type a command...'}
-        </text>
-      </box>
+        </Text>
+      </Box>
 
       {/* Command list */}
       {filteredCommands.length > 0 ? (
-        <box flexDirection="column" flexGrow={1}>
+        <Box flexDirection="column" flexGrow={1}>
           {startIndex > 0 && (
-            <box backgroundColor={bgColor} paddingX={1}>
-              <text fg={mutedColor} bg={bgColor}>{fitLine(`^ ${startIndex} more above`)}</text>
-            </box>
+            <Box backgroundColor={bgColor} paddingX={1}>
+              <Text fg={mutedColor} bg={bgColor}>{fitLine(`^ ${startIndex} more above`)}</Text>
+            </Box>
           )}
           {visibleCommands.map((cmd, offset) => {
             const actualIndex = startIndex + offset;
@@ -152,29 +151,29 @@ export function CommandPalette({ visible, commands, onClose }: CommandPalettePro
             const title = cmd.shortcut ? `${cmd.label}  (${cmd.shortcut})` : cmd.label;
 
             return (
-              <box key={cmd.id} backgroundColor={rowBg} paddingX={1}>
-                <text fg={rowText} bg={rowBg}>
+              <Box key={cmd.id} backgroundColor={rowBg} paddingX={1}>
+                <Text fg={rowText} bg={rowBg}>
                   {fitLine(`${isSelected ? '> ' : '  '}${title}`)}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })}
           {startIndex + visibleCommands.length < filteredCommands.length && (
-            <box backgroundColor={bgColor} paddingX={1}>
-              <text fg={mutedColor} bg={bgColor}>{fitLine(`v ${filteredCommands.length - startIndex - visibleCommands.length} more below`)}</text>
-            </box>
+            <Box backgroundColor={bgColor} paddingX={1}>
+              <Text fg={mutedColor} bg={bgColor}>{fitLine(`v ${filteredCommands.length - startIndex - visibleCommands.length} more below`)}</Text>
+            </Box>
           )}
-        </box>
+        </Box>
       ) : (
-        <box backgroundColor={bgColor}>
-          <text fg={mutedColor} bg={bgColor}>No commands match "{searchQuery}"</text>
-        </box>
+        <Box backgroundColor={bgColor}>
+          <Text fg={mutedColor} bg={bgColor}>No commands match "{searchQuery}"</Text>
+        </Box>
       )}
 
       {/* Footer */}
-      <box marginTop={1} backgroundColor={bgColor}>
-        <text fg={mutedColor} bg={bgColor}>Type filter | Up/Down | Enter | Esc</text>
-      </box>
+      <Box marginTop={1} backgroundColor={bgColor}>
+        <Text fg={mutedColor} bg={bgColor}>Type filter | Up/Down | Enter | Esc</Text>
+      </Box>
     </Modal>
   );
 }

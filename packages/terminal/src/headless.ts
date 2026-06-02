@@ -1,5 +1,6 @@
-import { EmbeddedClient, SessionStorage, SessionStore } from '@hasna/assistants-core';
+import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, TokenUsage, Message } from '@hasna/assistants-shared';
+import { loadSessionByIdOrLabel } from './session-lookup';
 
 export interface HeadlessOptions {
   prompt: string;
@@ -59,28 +60,15 @@ export async function runHeadless(options: HeadlessOptions): Promise<HeadlessRes
   let sessionData = null as null | { id: string; data: ReturnType<typeof SessionStorage.loadSession> };
 
   if (resume) {
-    // Try loading by ID first
-    let resolvedId = resume;
-    let data = SessionStorage.loadSession(resume);
-
-    // If not found by ID, try finding by label (name-based resume)
-    if (!data) {
-      const store = new SessionStore();
-      const match = store.findByLabel(resume);
-      if (match) {
-        resolvedId = match.id;
-        data = SessionStorage.loadSession(match.id);
-      }
-    }
-
-    if (!data) {
+    const loaded = loadSessionByIdOrLabel(resume);
+    if (!loaded) {
       throw new Error(`Session "${resume}" not found (tried ID and label lookup)`);
     }
-    sessionData = { id: resolvedId, data };
+    sessionData = loaded;
   } else if (shouldContinue) {
     const latest = SessionStorage.getLatestSession();
     if (latest) {
-      const data = SessionStorage.loadSession(latest.id);
+      const data = SessionStorage.loadSession(latest.id, latest.assistantId ?? null);
       if (data) {
         sessionData = { id: latest.id, data };
       }

@@ -1,7 +1,8 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
+import { Text } from '../src/ui/ink';
 import { ToolCallBox, useToolCallExpansion } from '../src/components/ToolCallBox';
+import { renderInk } from './utils/ink-test-harness';
 
 function ExpansionProbe({ forceExpand }: { forceExpand?: boolean }) {
   const { isExpanded, setIsExpanded } = useToolCallExpansion();
@@ -10,12 +11,12 @@ function ExpansionProbe({ forceExpand }: { forceExpand?: boolean }) {
       setIsExpanded(true);
     }
   }, [forceExpand, setIsExpanded]);
-  return <text>{isExpanded ? 'expanded' : 'collapsed'}</text>;
+  return <Text>{isExpanded ? 'expanded' : 'collapsed'}</Text>;
 }
 
 describe('ToolCallBox', () => {
   test('renders tool call summaries and hidden count', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       <ToolCallBox
         entries={[
           { toolCall: { id: 't1', name: 'bash', input: { command: 'ls -la' }, type: 'tool' } as any },
@@ -25,17 +26,35 @@ describe('ToolCallBox', () => {
         maxVisible={2}
       />, { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('Tools');
-    expect(frame).toContain('Listing scheduled tasks');
-    expect(frame).toContain('more above');
+    try {
+      const frame = await harness.waitForText('Listing scheduled tasks');
+      expect(frame).toContain('Tools');
+      expect(frame).toContain('Listing scheduled tasks');
+      expect(frame).toContain('more above');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('useToolCallExpansion defaults to collapsed', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(<ExpansionProbe />, { width: 80, height: 24 });
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain('collapsed');
+    const harness = await renderInk(<ExpansionProbe />, { width: 80, height: 24 });
+    try {
+      const frame = await harness.waitForText('collapsed');
+      expect(frame).toContain('collapsed');
+    } finally {
+      await harness.cleanup();
+    }
+  });
+
+  test('useToolCallExpansion toggles on ctrl+o', async () => {
+    const harness = await renderInk(<ExpansionProbe />, { width: 80, height: 24 });
+    try {
+      await harness.waitForText('collapsed');
+      harness.pressKey('o', { ctrl: true });
+      const frame = await harness.waitForText('expanded');
+      expect(frame).toContain('expanded');
+    } finally {
+      await harness.cleanup();
+    }
   });
 });

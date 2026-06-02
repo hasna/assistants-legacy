@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Per-type message dispatcher (plan 8d98da29 P4.2) — extracted from Messages.tsx.
  * Routes a message to its role-specific renderer. System messages are
@@ -6,6 +7,7 @@
 import React from 'react';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import type { DisplayMessage } from '../messageLines';
+import { Box } from '../../ui/ink';
 import { UserMessage } from './UserMessage';
 import { AssistantMessage } from './AssistantMessage';
 import { ToolCallsBlock } from './ToolParts';
@@ -51,9 +53,9 @@ export function CombinedToolMessage({
   }
 
   return (
-    <box flexDirection="column">
-      <box height={1} />
+    <Box flexDirection="column">
+      <Box height={1} />
       <ToolCallsBlock toolCalls={allToolCalls} toolResults={allToolResults} verboseTools={verboseTools} />
-    </box>
+    </Box>
   );
 }

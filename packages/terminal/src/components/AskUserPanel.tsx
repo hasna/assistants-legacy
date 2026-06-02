@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AskUserQuestion, AskUserRequest } from '@hasna/assistants-shared';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface AskUserPanelProps {
@@ -18,36 +19,36 @@ export function AskUserPanel({
   total,
 }: AskUserPanelProps) {
   return (
-    <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginY={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={themeColor('info')}><b>{request.title || 'Question'}</b></text>
-        <text fg={themeColor('muted')}>{index + 1}/{total}</text>
-      </box>
+    <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginY={1}>
+      <Box flexDirection="row" justifyContent="space-between">
+        <Text fg={themeColor('info')} bold>{request.title || 'Question'}</Text>
+        <Text fg={themeColor('muted')}>{index + 1}/{total}</Text>
+      </Box>
       {request.description && (
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>{request.description}</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>{request.description}</Text>
+        </Box>
       )}
-      <box marginTop={1}>
-        <text>{question.question}</text>
-      </box>
+      <Box marginTop={1}>
+        <Text>{question.question}</Text>
+      </Box>
       {question.options && question.options.length > 0 && (
-        <box flexDirection="column" marginTop={1}>
+        <Box flexDirection="column" marginTop={1}>
           {question.options.map((opt, idx) => (
-            <text key={`${opt}-${idx}`} fg={themeColor('muted')}>
+            <Text key={`${opt}-${idx}`} fg={themeColor('muted')}>
               • {opt}
-            </text>
+            </Text>
           ))}
-        </box>
+        </Box>
       )}
       {question.multiline && (
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Multi-line answer allowed. Use Alt+Enter to insert newlines.</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Multi-line answer allowed. Use Alt+Enter to insert newlines.</Text>
+        </Box>
       )}
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Session: {sessionId}</text>
-      </box>
-    </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Session: {sessionId}</Text>
+      </Box>
+    </Box>
   );
 }

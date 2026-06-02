@@ -3,11 +3,33 @@
  *
  * Runtime-agnostic core. Bindings are authored as human strings ("ctrl+r",
  * "escape", "ctrl+k ctrl+s") and parsed into normalized keystrokes that match
- * against the app's existing (input, key) event model (see hooks/useSafeInput).
+ * against the app's existing (input, key) event model. The shape intentionally
+ * matches upstream Ink's Key type while staying independent of a renderer.
  */
-import type { Key } from '../hooks/useSafeInput';
 
-export type { Key };
+export interface Key {
+  upArrow: boolean;
+  downArrow: boolean;
+  leftArrow: boolean;
+  rightArrow: boolean;
+  pageDown: boolean;
+  pageUp: boolean;
+  home: boolean;
+  end: boolean;
+  return: boolean;
+  escape: boolean;
+  ctrl: boolean;
+  shift: boolean;
+  tab: boolean;
+  backspace: boolean;
+  delete: boolean;
+  meta: boolean;
+  super?: boolean;
+  hyper?: boolean;
+  capsLock?: boolean;
+  numLock?: boolean;
+  eventType?: 'press' | 'repeat' | 'release';
+}
 
 /** A single normalized keystroke: a base key plus modifier flags. */
 export interface ParsedKeystroke {

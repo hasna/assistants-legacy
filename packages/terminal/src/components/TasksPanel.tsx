@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Task, TaskPriority, TaskStatus, TaskCreateOptions } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface TasksPanelProps {
@@ -82,7 +81,6 @@ export function TasksPanel({
 }: TasksPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [newDescription, setNewDescription] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('normal');
   const [newBlockedBy, setNewBlockedBy] = useState<string[]>([]);
@@ -347,7 +345,7 @@ export function TasksPanel({
       setSelectedIndex(num - 1);
       return;
     }
-  }, { isActive: mode !== 'create' });
+  }, { isActive: !isSubmitting });
 
   const handleCreateSubmit = async () => {
     if (!newDescription.trim()) return;
@@ -384,139 +382,139 @@ export function TasksPanel({
     const isFieldActive = (field: CreateField) => createField === field;
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Add New Task</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Add New Task</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
           {/* Description field */}
-          <box flexDirection="row">
-            <text bg={isFieldActive('description') ? themeColor('primary') : undefined} fg={isFieldActive('description') ? themeColor('text') : undefined}>
+          <Box flexDirection="row">
+            <Text bg={isFieldActive('description') ? themeColor('primary') : undefined} fg={isFieldActive('description') ? themeColor('text') : undefined}>
               Task:{' '}
-            </text>
+            </Text>
             {isFieldActive('description') ? (
-              <input
+              <TextInput
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={() => setCreateField('priority')}
-                focused
+                focus
                 placeholder="What needs to be done..."
               />
             ) : (
-              <text fg={!newDescription ? "gray" : undefined}>{newDescription || '(empty)'}</text>
+              <Text fg={!newDescription ? "gray" : undefined}>{newDescription || '(empty)'}</Text>
             )}
-          </box>
+          </Box>
 
           {/* Priority field */}
-          <box flexDirection="row" marginTop={0}>
-            <text bg={isFieldActive('priority') ? themeColor('primary') : undefined} fg={isFieldActive('priority') ? themeColor('text') : undefined}>
+          <Box flexDirection="row" marginTop={0}>
+            <Text bg={isFieldActive('priority') ? themeColor('primary') : undefined} fg={isFieldActive('priority') ? themeColor('text') : undefined}>
               Priority:{' '}
-            </text>
-            <text fg={PRIORITY_COLORS[newPriority]}>
+            </Text>
+            <Text fg={PRIORITY_COLORS[newPriority]}>
               {PRIORITY_ICONS[newPriority]} {newPriority}
-            </text>
-            {isFieldActive('priority') && <text fg={themeColor('muted')}> (←/→ to change)</text>}
-          </box>
+            </Text>
+            {isFieldActive('priority') && <Text fg={themeColor('muted')}> (←/→ to change)</Text>}
+          </Box>
 
           {/* Blocked By field */}
-          <box marginTop={0} flexDirection="column">
-            <box flexDirection="row">
-              <text bg={isFieldActive('blockedBy') ? themeColor('primary') : undefined} fg={isFieldActive('blockedBy') ? themeColor('text') : undefined}>
+          <Box marginTop={0} flexDirection="column">
+            <Box flexDirection="row">
+              <Text bg={isFieldActive('blockedBy') ? themeColor('primary') : undefined} fg={isFieldActive('blockedBy') ? themeColor('text') : undefined}>
                 Blocked by:{' '}
-              </text>
+              </Text>
               {newBlockedBy.length > 0 ? (
-                <text>{newBlockedBy.map((id) => getTaskLabel(id)).join(', ')}</text>
+                <Text>{newBlockedBy.map((id) => getTaskLabel(id)).join(', ')}</Text>
               ) : (
-                <text fg={themeColor('muted')}>(none)</text>
+                <Text fg={themeColor('muted')}>(none)</Text>
               )}
-            </box>
+            </Box>
             {isFieldActive('blockedBy') && selectableTasks.length > 0 && (
-              <box flexDirection="column" marginLeft={2}>
+              <Box flexDirection="column" marginLeft={2}>
                 {selectableTasks.map((task, idx) => {
                   const isSelected = newBlockedBy.includes(task.id);
                   const isCursor = idx === blockedByIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <text key={task.id} bg={isCursor ? themeColor('primary') : undefined} fg={isCursor ? themeColor('text') : undefined}>
+                    <Text key={task.id} bg={isCursor ? themeColor('primary') : undefined} fg={isCursor ? themeColor('text') : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
-                    </text>
+                    </Text>
                   );
                 })}
-                <text fg={themeColor('muted')}>↑/↓ navigate, Space to toggle</text>
-              </box>
+                <Text fg={themeColor('muted')}>↑/↓ navigate, Space to toggle</Text>
+              </Box>
             )}
             {isFieldActive('blockedBy') && selectableTasks.length === 0 && (
-              <box marginLeft={2}><text fg={themeColor('muted')}>No tasks available to select</text></box>
+              <Box marginLeft={2}><Text fg={themeColor('muted')}>No tasks available to select</Text></Box>
             )}
-          </box>
+          </Box>
 
           {/* Blocks field */}
-          <box marginTop={0} flexDirection="column">
-            <box flexDirection="row">
-              <text bg={isFieldActive('blocks') ? themeColor('primary') : undefined} fg={isFieldActive('blocks') ? themeColor('text') : undefined}>
+          <Box marginTop={0} flexDirection="column">
+            <Box flexDirection="row">
+              <Text bg={isFieldActive('blocks') ? themeColor('primary') : undefined} fg={isFieldActive('blocks') ? themeColor('text') : undefined}>
                 Blocks:{' '}
-              </text>
+              </Text>
               {newBlocks.length > 0 ? (
-                <text>{newBlocks.map((id) => getTaskLabel(id)).join(', ')}</text>
+                <Text>{newBlocks.map((id) => getTaskLabel(id)).join(', ')}</Text>
               ) : (
-                <text fg={themeColor('muted')}>(none)</text>
+                <Text fg={themeColor('muted')}>(none)</Text>
               )}
-            </box>
+            </Box>
             {isFieldActive('blocks') && selectableTasks.length > 0 && (
-              <box flexDirection="column" marginLeft={2}>
+              <Box flexDirection="column" marginLeft={2}>
                 {selectableTasks.map((task, idx) => {
                   const isSelected = newBlocks.includes(task.id);
                   const isCursor = idx === blocksIndex;
                   const desc = task.description.slice(0, 35) + (task.description.length > 35 ? '...' : '');
                   return (
-                    <text key={task.id} bg={isCursor ? themeColor('primary') : undefined} fg={isCursor ? themeColor('text') : undefined}>
+                    <Text key={task.id} bg={isCursor ? themeColor('primary') : undefined} fg={isCursor ? themeColor('text') : undefined}>
                       {isSelected ? '[x]' : '[ ]'} {desc}
-                    </text>
+                    </Text>
                   );
                 })}
-                <text fg={themeColor('muted')}>↑/↓ navigate, Space to toggle</text>
-              </box>
+                <Text fg={themeColor('muted')}>↑/↓ navigate, Space to toggle</Text>
+              </Box>
             )}
             {isFieldActive('blocks') && selectableTasks.length === 0 && (
-              <box marginLeft={2}><text fg={themeColor('muted')}>No tasks available to select</text></box>
+              <Box marginLeft={2}><Text fg={themeColor('muted')}>No tasks available to select</Text></Box>
             )}
-          </box>
+          </Box>
 
           {/* Assignee field */}
-          <box flexDirection="row" marginTop={0}>
-            <text bg={isFieldActive('assignee') ? themeColor('primary') : undefined} fg={isFieldActive('assignee') ? themeColor('text') : undefined}>
+          <Box flexDirection="row" marginTop={0}>
+            <Text bg={isFieldActive('assignee') ? themeColor('primary') : undefined} fg={isFieldActive('assignee') ? themeColor('text') : undefined}>
               Assignee:{' '}
-            </text>
+            </Text>
             {isFieldActive('assignee') ? (
-              <input
+              <TextInput
                 value={newAssignee}
                 onChange={setNewAssignee}
                 onSubmit={handleCreateSubmit}
-                focused
+                focus
                 placeholder="assistant name or leave empty"
               />
             ) : (
-              <text fg={!newAssignee ? "gray" : undefined}>{newAssignee || '(unassigned)'}</text>
+              <Text fg={!newAssignee ? "gray" : undefined}>{newAssignee || '(unassigned)'}</Text>
             )}
-          </box>
+          </Box>
 
           {/* Submit button hint */}
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}>
               {createField === 'assignee'
                 ? 'Enter: save task | Tab: cycle fields | Esc: cancel'
                 : 'Enter: next field | Tab: cycle fields | Esc: cancel'}
-            </text>
-          </box>
-        </box>
+            </Text>
+          </Box>
+        </Box>
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Adding task...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Adding task...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -524,26 +522,25 @@ export function TasksPanel({
   if (mode === 'delete-confirm') {
     const task = tasks[selectedIndex];
     if (!task) {
-      setMode('list');
       return null;
     }
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Task</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Task</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Delete task: &quot;{task.description.slice(0, 50)}{task.description.length > 50 ? '...' : ''}&quot;?
-          </text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Inline fg={themeColor('success')} bold>y</Inline> to confirm or{' '}
+            <Inline fg={themeColor('error')} bold>n</Inline> to cancel
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -551,28 +548,28 @@ export function TasksPanel({
   if (mode === 'priority-select') {
     const task = tasks[selectedIndex];
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Change Priority</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>Task: {task?.description.slice(0, 50)}{(task?.description.length || 0) > 50 ? '...' : ''}</text>
-        </box>
-        <box marginTop={1} flexDirection="column">
-          <text>
-            <span fg={themeColor('error')}><b>h</b></span> High priority
-          </text>
-          <text>
-            <span><b>n</b></span> Normal priority
-          </text>
-          <text>
-            <span fg={themeColor('muted')}><b>l</b></span> Low priority
-          </text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Press letter to select | Esc to cancel</text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Change Priority</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>Task: {task?.description.slice(0, 50)}{(task?.description.length || 0) > 50 ? '...' : ''}</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text>
+            <Inline fg={themeColor('error')} bold>h</Inline> High priority
+          </Text>
+          <Text>
+            <Inline bold>n</Inline> Normal priority
+          </Text>
+          <Text>
+            <Inline fg={themeColor('muted')} bold>l</Inline> Low priority
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Press letter to select | Esc to cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -584,34 +581,34 @@ export function TasksPanel({
 
   // List mode UI
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <box flexDirection="row">
-          <text><b>Tasks </b></text>
-          <text fg={paused ? themeColor('yellow') : themeColor('success')}>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Box flexDirection="row">
+          <Text bold>Tasks </Text>
+          <Text fg={paused ? themeColor('yellow') : themeColor('success')}>
             {paused ? '(Paused)' : '(Active)'}
-          </text>
-        </box>
-        <text fg={themeColor('muted')}>[n]ew [Space]pause</text>
-      </box>
+          </Text>
+        </Box>
+        <Text fg={themeColor('muted')}>[n]ew [Space]pause</Text>
+      </Box>
 
       {/* Status summary */}
-      <box marginBottom={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('muted')}>
           {pendingCount} pending, {inProgressCount} running, {completedCount} done, {failedCount} failed
-        </text>
-      </box>
+        </Text>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {tasks.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No tasks yet. Press n to add one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No tasks yet. Press n to add one.</Text>
+          </Box>
         ) : (
           tasks.map((task, index) => {
             const isSelected = index === selectedIndex;
@@ -623,29 +620,29 @@ export function TasksPanel({
             const desc = task.description.slice(0, 40) + (task.description.length > 40 ? '...' : '');
 
             return (
-              <box key={task.id} paddingY={0}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : task.status === 'completed' ? "gray" : undefined}>
-                  <span fg={statusColor}>{statusIcon}</span>
+              <Box key={task.id} paddingY={0}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : task.status === 'completed' ? "gray" : undefined}>
+                  <Inline fg={statusColor}>{statusIcon}</Inline>
                   {' '}
-                  <span fg={priorityColor}>[{priorityIcon}]</span>
+                  <Inline fg={priorityColor}>[{priorityIcon}]</Inline>
                   {' '}
                   {index + 1}. {desc.padEnd(42)} {time}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New task option */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={selectedIndex === tasks.length ? themeColor('primary') : undefined}
             fg={selectedIndex === tasks.length ? themeColor('text') : "gray"}
           >
             + Add task (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {/* Selected task details */}
       {tasks.length > 0 && selectedIndex < tasks.length && (() => {
@@ -664,51 +661,51 @@ export function TasksPanel({
         const elapsed = getElapsed();
 
         return (
-          <box marginTop={1} flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
-            <text wrapMode="word"><b>{task.description}</b></text>
+          <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+            <Text wrapMode="word" bold>{task.description}</Text>
 
             {/* Timestamps and elapsed time */}
-            <box marginTop={0}>
-              <text fg={themeColor('muted')}>Created: {formatTime(task.createdAt)}</text>
-              {elapsed && <text fg={themeColor('warning')}> | {elapsed}</text>}
-            </box>
+            <Box marginTop={0}>
+              <Text fg={themeColor('muted')}>Created: {formatTime(task.createdAt)}</Text>
+              {elapsed && <Text fg={themeColor('warning')}> | {elapsed}</Text>}
+            </Box>
             {task.startedAt && (
-              <text fg={themeColor('muted')}>Started: {formatTime(task.startedAt)}</text>
+              <Text fg={themeColor('muted')}>Started: {formatTime(task.startedAt)}</Text>
             )}
             {task.completedAt && (
-              <text fg={themeColor('muted')}>Completed: {formatTime(task.completedAt)}</text>
+              <Text fg={themeColor('muted')}>Completed: {formatTime(task.completedAt)}</Text>
             )}
 
             {/* Dependencies and assignment */}
             {task.blockedBy && task.blockedBy.length > 0 && (
-              <text fg={themeColor('muted')}>Blocked by: {task.blockedBy.map(id => getTaskLabel(id)).join(', ')}</text>
+              <Text fg={themeColor('muted')}>Blocked by: {task.blockedBy.map(id => getTaskLabel(id)).join(', ')}</Text>
             )}
             {task.blocks && task.blocks.length > 0 && (
-              <text fg={themeColor('muted')}>Blocks: {task.blocks.map(id => getTaskLabel(id)).join(', ')}</text>
+              <Text fg={themeColor('muted')}>Blocks: {task.blocks.map(id => getTaskLabel(id)).join(', ')}</Text>
             )}
             {task.assignee && (
-              <text fg={themeColor('muted')}>Assignee: {task.assignee}</text>
+              <Text fg={themeColor('muted')}>Assignee: {task.assignee}</Text>
             )}
             {task.projectId && (
-              <text fg={themeColor('muted')}>Project: {task.projectId}</text>
+              <Text fg={themeColor('muted')}>Project: {task.projectId}</Text>
             )}
 
             {/* Result/Error */}
             {task.error && (
-              <text fg={themeColor('error')}>Error: {task.error}</text>
+              <Text fg={themeColor('error')}>Error: {task.error}</Text>
             )}
             {task.result && (
-              <text fg={themeColor('success')}>Result: {task.result}</text>
+              <Text fg={themeColor('success')}>Result: {task.result}</Text>
             )}
-          </box>
+          </Box>
         );
       })()}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           Enter/r run | p priority | d delete | c clear done | Esc close
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

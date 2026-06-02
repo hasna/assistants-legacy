@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 const DOTS = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -20,9 +21,9 @@ export function Spinner({ label }: SpinnerProps) {
   const muted = themeColor('muted');
 
   return (
-    <box>
-      <text fg={muted}>{DOTS[frame]}</text>
-      {label && <text fg={muted}> {label}</text>}
-    </box>
+    <Box>
+      <Text fg={muted}>{DOTS[frame]}</Text>
+      {label ? <Text fg={muted}> {label}</Text> : null}
+    </Box>
   );
 }

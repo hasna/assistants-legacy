@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { takeNextQueuedMessage } from '../src/components/queueUtils';
 import type { QueuedMessage } from '../src/components/appTypes';
 

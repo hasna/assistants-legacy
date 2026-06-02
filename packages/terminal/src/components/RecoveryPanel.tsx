@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { RecoverableSession } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface RecoveryPanelProps {
@@ -66,7 +66,7 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
       return;
     }
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       onStartFresh();
       return;
     }
@@ -106,43 +106,43 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
   const selectedSessionIndex = selectedIndex - 1;
 
   return (
-    <box flexDirection="column" paddingX={1} paddingY={1}>
-      <box marginBottom={1}>
-        <text fg={themeColor('warning')}><b>
+    <Box flexDirection="column" paddingX={1} paddingY={1}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('warning')} bold>
           Session Recovery
-        </b></text>
-      </box>
+        </Text>
+      </Box>
 
-      <box marginBottom={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('muted')}>
           {sessions.length} recoverable session{sessions.length !== 1 ? 's' : ''} found.
-        </text>
-      </box>
+        </Text>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
         marginBottom={1}
       >
         {/* Start fresh option — always on top */}
-        <box paddingY={0}>
-          <text bg={selectedIndex === 0 ? themeColor('primary') : undefined} fg={selectedIndex === 0 ? themeColor('text') : undefined}>
+        <Box paddingY={0}>
+          <Text bg={selectedIndex === 0 ? themeColor('primary') : undefined} fg={selectedIndex === 0 ? themeColor('text') : undefined}>
             {selectedIndex === 0 ? '▶' : ' '} Start fresh (new session)
-          </text>
-        </box>
+          </Text>
+        </Box>
 
         {/* Separator */}
-        <box marginY={0}>
-          <text fg={themeColor('muted')}>────────────────────────────────────</text>
-        </box>
+        <Box marginY={0}>
+          <Text fg={themeColor('muted')}>────────────────────────────────────</Text>
+        </Box>
 
         {/* Scroll up indicator */}
         {showUpArrow && (
-          <box>
-            <text fg={themeColor('muted')}>  ↑ {startIdx} more above</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>  ↑ {startIdx} more above</Text>
+          </Box>
         )}
 
         {/* Visible sessions */}
@@ -156,25 +156,34 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
           const meta = [msgCount, modelName].filter(Boolean).join(', ');
 
           return (
-            <box key={session.sessionId} flexDirection="column" paddingY={0}>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
-                {isSelected ? '▶' : ' '} {displayName} <span fg={themeColor('muted')}>({timeAgo})</span>
-                {meta ? <span fg={themeColor('muted')}> — {meta}</span> : null}
-              </text>
+            <Box key={session.sessionId} flexDirection="column" paddingY={0}>
+              <Box>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+                  {isSelected ? '▶' : ' '} {displayName}{' '}
+                </Text>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : themeColor('muted')}>
+                  ({timeAgo})
+                </Text>
+                {meta ? (
+                  <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : themeColor('muted')}>
+                    {' - '}{meta}
+                  </Text>
+                ) : null}
+              </Box>
               {session.lastMessage && (
-                <text fg={themeColor('muted')}>    {'\u2018'}{session.lastMessage}{'\u2019'}</text>
+                <Text fg={themeColor('muted')}>    {'\u2018'}{session.lastMessage}{'\u2019'}</Text>
               )}
-            </box>
+            </Box>
           );
         })}
 
         {/* Scroll down indicator */}
         {showDownArrow && (
-          <box>
-            <text fg={themeColor('muted')}>  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>  ↓ {sessions.length - startIdx - VISIBLE_COUNT} more below</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
       {/* Details of selected session */}
       {selectedSessionIndex >= 0 && selectedSessionIndex < sessions.length && (() => {
@@ -186,22 +195,25 @@ export function RecoveryPanel({ sessions, onRecover, onStartFresh }: RecoveryPan
           s.model || null,
         ].filter(Boolean).join(' · ');
         return (
-          <box flexDirection="column" marginBottom={1}>
-            <text fg={themeColor('muted')}>Selected:</text>
-            <text>  <span fg={themeColor('info')}>{s.cwd}</span></text>
-            <text>  {details}</text>
+          <Box flexDirection="column" marginBottom={1}>
+            <Text fg={themeColor('muted')}>Selected:</Text>
+            <Box>
+              <Text>  </Text>
+              <Text fg={themeColor('info')}>{s.cwd}</Text>
+            </Box>
+            <Text>  {details}</Text>
             {s.lastMessage && (
-              <text fg={themeColor('muted')}>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</text>
+              <Text fg={themeColor('muted')}>  Last: {'\u2018'}{s.lastMessage}{'\u2019'}</Text>
             )}
-          </box>
+          </Box>
         );
       })()}
 
-      <box>
-        <text fg={themeColor('muted')}>
+      <Box>
+        <Text fg={themeColor('muted')}>
           ↑/↓ navigate · Enter select · Esc fresh start
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

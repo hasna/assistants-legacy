@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { usePanelVisibility } from '../state/usePanelVisibility';
 import { loadUserKeymap, resolveAction, generateHelp } from '../keybindings';
-import { useAppContext, useTerminalDimensions } from '@opentui/react';
-import { useDetectTheme, ThemeProvider } from '../hooks/useThemeColor';
+import { useApp, useWindowSize } from '../ui/ink';
 import { join } from 'path';
 import { SessionRegistry, SessionStorage, findRecoverableSessions, clearRecoveryState, ConnectorBridge, AudioRecorder, ElevenLabsSTT, WhisperSTT, readHeartbeatHistoryBySession, type SessionInfo, type RecoverableSession, type CreateSessionOptions, type Identity, type Memory, type MemoryStats, type Heartbeat, type SavedSessionInfo } from '@hasna/assistants-core';
 import type { StreamChunk, Message, ToolCall, ToolResult, TokenUsage, VoiceState, HeartbeatState, ActiveIdentityInfo, AskUserRequest, AskUserResponse, InterviewRequest, InterviewResponse, Connector, HookConfig, HookEvent, ScheduledCommand, Skill } from '@hasna/assistants-shared';
@@ -10,7 +9,7 @@ import { InterviewStore } from '@hasna/assistants-core';
 import { generateId, now } from '@hasna/assistants-shared';
 import { Input, type InputHandle } from './Input';
 import { CommandPalette, buildDefaultCommands } from './CommandPalette';
-import { Messages, type FinishInfo } from './Messages';
+import { Transcript, type FinishInfo } from './Transcript';
 import { buildDisplayMessages } from './messageRender';
 import { estimateDisplayMessagesLines, trimActivityLogByLines, trimDisplayMessagesByLines, type DisplayMessage } from './messageLines';
 import { Status } from './Status';
@@ -18,6 +17,7 @@ import { ProcessingIndicator } from './ProcessingIndicator';
 import { WelcomeBanner } from './WelcomeBanner';
 import { ErrorBanner } from './ErrorBanner';
 import { QueueIndicator } from './QueueIndicator';
+import { AppShell, calculateAppShellLayout, calculateTranscriptRenderWidth } from './AppShell';
 import { AskUserPanel } from './AskUserPanel';
 import { InterviewPanel } from './InterviewPanel';
 import { Sidebar } from './Sidebar';
@@ -30,7 +30,7 @@ import type { EmailListItem } from '@hasna/assistants-shared';
 import { CLEAR_SCREEN_TOKEN } from '../output/sanitize';
 import { handleExport, handleUndo, handleUndoConfirm, handlePin, handlePins, handleReplay, handleHistory, handleTemplates } from '../commands/qolCommands';
 import { setExitStats } from '../exit-summary';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { useAppInput as useInput } from '../hooks/useAppInput';
 import {
   getTasks,
   isPaused,
@@ -89,8 +89,8 @@ import {
   formatElapsedDuration,
   deepMerge,
   isUnrecognizedSlashCommand,
+  chunkStartsVisibleOutput,
 } from './appHelpers';
-import { themeColor } from '../theme/colors';
 import { applyThemeSetting, getThemeMode, type ThemeSetting } from '../theme/setup';
 import {
   applyThemeName,
@@ -100,12 +100,18 @@ import {
   type ThemeSettingName,
 } from '../theme/colors';
 
-export function App({ cwd, version, permissionMode: initialPermissionMode }: AppProps) {
-  const appCtx = useAppContext();
-  const exit = () => appCtx.renderer?.destroy();
-  const dims = useTerminalDimensions();
-  const rows = dims.height || 24;
-  const columns = dims.width || 80;
+export function App({ cwd, version, permissionMode: initialPermissionMode, onExit }: AppProps) {
+  const inkApp = useApp();
+  const exit = () => {
+    if (onExit) {
+      onExit();
+      return;
+    }
+    inkApp.exit();
+  };
+  const dims = useWindowSize();
+  const rows = dims.rows || 24;
+  const columns = dims.columns || 80;
 
   const initialWorkspaceRef = useRef<{ id: string | null; baseDir: string } | null>(null);
   if (!initialWorkspaceRef.current) {
@@ -496,7 +502,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     setInlinePending((prev) => prev.filter((msg) => msg.id !== id));
   }, []);
 
-  // Scrolling is handled by the <scrollbox> component — no manual scroll tracking needed
+  // Scrolling is handled by the transcript viewport — no manual scroll tracking needed.
 
   const beginAskUser = useCallback((sessionId: string, request: AskUserRequest) => {
     return new Promise<AskUserResponse>((resolve, reject) => {
@@ -1523,7 +1529,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
   // Handle chunk from registry
   const handleChunk = useCallback((chunk: StreamChunk) => {
-    const isStartChunk = chunk.type === 'text' || chunk.type === 'tool_use';
+    const isStartChunk = chunkStartsVisibleOutput(chunk.type);
     const isTerminalChunk = chunk.type === 'error' || chunk.type === 'done';
     if (chunk.type === 'text' || chunk.type === 'partial_transcript') {
       const activeForVoice = registryRef.current.getActiveSession();
@@ -1536,7 +1542,12 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       if (active) {
         turnIdRef.current += 1;
         resetTurnState();
-        setError(null);
+        // Only clear a surfaced error when genuine output begins. A bare
+        // terminal chunk (a 'done' trailing an immediate 'error') must not wipe
+        // the just-set error banner — otherwise an API failure shows as dead air.
+        if (isStartChunk) {
+          setError(null);
+        }
         registryRef.current.setProcessing(active.id, true);
         setIsProcessing(true);
         isProcessingRef.current = true;
@@ -2309,8 +2320,19 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
 
   // Show welcome banner only when no messages
   const showWelcome = messages.length === 0 && !isProcessing;
+  const prevShowWelcomeRef = useRef(showWelcome);
+  useEffect(() => {
+    if (prevShowWelcomeRef.current === showWelcome) return;
+    prevShowWelcomeRef.current = showWelcome;
+    clearSessionWindow();
+  }, [clearSessionWindow, showWelcome]);
 
-  const renderWidth = columns ? Math.max(1, columns - 2) : undefined;
+  const shellLayout = calculateAppShellLayout({
+    rows,
+    columns,
+    hasActiveSession: Boolean(activeSessionId),
+  });
+  const renderWidth = calculateTranscriptRenderWidth(shellLayout);
   const wrapChars = renderWidth ?? MESSAGE_WRAP_CHARS;
 
   const displayMessages = useMemo(() => {
@@ -2348,7 +2370,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return result;
   }, [messages, wrapChars, renderWidth]);
 
-  // All messages render inside a <scrollbox> which handles overflow natively.
+  // All messages render inside the transcript viewport, which owns overflow.
 
   const reservedLines = 12;
   const dynamicBudget = Math.max(6, rows - reservedLines);
@@ -2377,8 +2399,8 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return trimActivityLogByLines(activityLog, wrapChars, renderWidth, activityBudget);
   }, [activityLog, wrapChars, renderWidth, dynamicBudget, streamingLineCount]);
 
-  // Historical message trimming is no longer needed — the <scrollbox> component
-  // handles overflow natively with scroll, so all messages are rendered.
+  // Historical message trimming is no longer needed; the transcript viewport
+  // handles overflow with scroll, so all messages are rendered.
 
   // Process queue when not busy (not processing and no pending tools)
   // queueFlushTrigger forces re-evaluation when processing completes (done/error)
@@ -2388,7 +2410,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     }
   }, [isBusy, activeQueue.length, activeInline.length, processQueue, queueFlushTrigger]);
 
-  // Scroll position is managed by the <scrollbox> component (stickyScroll)
+  // Scroll position is managed by the transcript viewport.
 
   // Handle session switch
   const handleSessionSwitch = useCallback(async (sessionId: string) => {
@@ -2606,7 +2628,7 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         return;
 
       default:
-        // Scrolling is handled by the <scrollbox> component via mouse wheel and arrow keys
+        // Scrolling is handled by the transcript viewport via mouse wheel and arrow keys.
         return;
     }
   }, { isActive: !showSessionSelector && !isPanelOpen });
@@ -2637,6 +2659,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
         const skillInput = '/' + trimmedInput.slice(1);
         // Continue with the converted input
         return handleSubmit(skillInput, mode);
+      }
+
+      if (showWelcome && mode === 'normal') {
+        clearSessionWindow();
       }
 
       // Shell passthrough: !<command> runs locally and reports output to the assistant
@@ -3159,7 +3185,9 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
       resetTurnState,
       activeSessionId,
       submitAskAnswer,
+      clearSessionWindow,
       clearPendingSend,
+      showWelcome,
       stopActiveProcessing,
     ]
   );
@@ -3260,21 +3288,31 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     return undefined;
   })();
 
-  // OpenCode layout: status bar = 1 row at bottom, split pane gets the rest
-  const statusHeight = 1;
-  const splitPaneHeight = rows - statusHeight;
-  // Sidebar visible only when session active AND terminal wide enough
-  const showSidebar = Boolean(activeSessionId) && columns >= 100;
-  // 70/30 horizontal split per OpenCode spec
-  const leftWidth = showSidebar ? Math.floor(columns * 0.7) : columns;
-  const rightWidth = showSidebar ? columns - leftWidth : 0;
-  // 90/10 vertical split: 90% messages, 10% editor (min 3 lines)
-  const editorHeight = Math.max(3, Math.floor(splitPaneHeight * 0.1));
-  const messagesHeight = splitPaneHeight - editorHeight;
+  const commandPaletteElement = (
+    <CommandPalette
+      visible={showCommandPalette}
+      commands={paletteCommands}
+      onClose={() => setShowCommandPalette(false)}
+    />
+  );
+
+  const recentTools = activityLog
+    .filter((e) => e.type === 'tool_call' && e.toolCall)
+    .slice(-8)
+    .map((e) => {
+      const hasResult = activityLog.some(
+        (r) => r.type === 'tool_result' && r.toolResult?.toolCallId === e.toolCall!.id
+      );
+      return {
+        name: e.toolCall!.name,
+        status: hasResult ? ('succeeded' as const) : ('running' as const),
+        durationMs: 0,
+        startedAt: e.timestamp,
+      };
+    });
 
   // --- Welcome / empty state: centered layout like OpenCode ---
   if (showWelcome) {
-    const welcomeInputWidth = Math.min(80, columns - 4);
     const tips = [
       'Set any keybind to none to disable it completely',
       'Use /help to see all available commands',
@@ -3285,49 +3323,33 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
     const tipText = tips[Math.floor(Date.now() / 60000) % tips.length];
 
     return (
-      <box flexDirection="column" height={rows} width={columns}>
-        {/* Centered content area */}
-        <box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-          {/* ASCII Logo */}
-          <WelcomeBanner />
-
-          {/* Input box — light gray bg, no borders */}
-          <box flexDirection="column" width={welcomeInputWidth} marginTop={2}>
-            <box flexDirection="row" backgroundColor={themeColor('surface')} paddingX={1} paddingY={0}>
-              <Input
-                ref={inputRef}
-                onSubmit={handleSubmit}
-                onStopProcessing={() => { stopActiveProcessing('stopped'); }}
-                isProcessing={isBusy}
-                queueLength={activeQueue.length + inlineCount}
-                commands={commands}
-                skills={skills}
-                isAskingUser={false}
-                isActive={!showCommandPalette}
-                onFileSearch={searchFiles}
-                pasteConfig={currentConfig?.input?.paste ? {
-                  enabled: currentConfig.input.paste.enabled,
-                  thresholds: currentConfig.input.paste.thresholds,
-                  mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
-                } : undefined}
-              />
-            </box>
-
-            {/* Keyboard shortcuts hint */}
-            <box flexDirection="row" justifyContent="center" marginTop={1}>
-              <text fg={themeColor('muted')}><b>tab</b> agents  <b>ctrl+p</b> commands</text>
-            </box>
-
-            {/* Tip */}
-            <box flexDirection="row" justifyContent="center" marginTop={1}>
-              <text fg={themeColor('warning')}>● </text>
-              <text fg={themeColor('muted')}>Tip  {tipText}</text>
-            </box>
-          </box>
-        </box>
-
-        {/* Status bar at bottom — welcome mode */}
-        <box height={1} width={columns}>
+      <AppShell
+        mode="welcome"
+        rows={rows}
+        columns={columns}
+        hasActiveSession={Boolean(activeSessionId)}
+        welcomeBanner={<WelcomeBanner />}
+        welcomeInput={(
+          <Input
+            ref={inputRef}
+            onSubmit={handleSubmit}
+            onStopProcessing={() => { stopActiveProcessing('stopped'); }}
+            isProcessing={isBusy}
+            queueLength={activeQueue.length + inlineCount}
+            commands={commands}
+            skills={skills}
+            isAskingUser={false}
+            isActive={!showCommandPalette}
+            onFileSearch={searchFiles}
+            pasteConfig={currentConfig?.input?.paste ? {
+              enabled: currentConfig.input.paste.enabled,
+              thresholds: currentConfig.input.paste.thresholds,
+              mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+            } : undefined}
+          />
+        )}
+        welcomeTip={tipText}
+        status={(
           <Status
             isProcessing={false}
             cwd={cwd}
@@ -3335,155 +3357,111 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
             version={version}
             welcomeMode={true}
           />
-        </box>
-        <CommandPalette
-          visible={showCommandPalette}
-          commands={paletteCommands}
-          onClose={() => setShowCommandPalette(false)}
-        />
-      </box>
+        )}
+        commandPalette={commandPaletteElement}
+      />
     );
   }
 
   return (
-    <box flexDirection="column" height={rows} width={columns}>
-      {/* Split pane area (everything except status bar) */}
-      <box flexDirection="column" height={splitPaneHeight} width={columns}>
-        {/* Top section: horizontal split (messages + sidebar) */}
-        <box flexDirection="row" height={messagesHeight} width={columns}>
-          {/* Left panel: Messages — padding: top=1, right=1, bottom=0, left=1 */}
-          <box flexDirection="column" width={leftWidth} paddingTop={1} paddingRight={1} paddingBottom={0} paddingLeft={1}>
-            {/* Welcome banner — not shown here; handled by early return above */}
-
-            {/* Background processing indicator */}
-            {backgroundProcessingCount > 0 && (
-              <box marginBottom={1}>
-                <text fg={themeColor('warning')}>
-                  {backgroundProcessingCount} session{backgroundProcessingCount > 1 ? 's' : ''} processing in background (Ctrl+] to switch)
-                </text>
-              </box>
-            )}
-
-            {/* Messages area — scrollbox enables scroll with mouse wheel, arrow keys, and stickyScroll auto-scrolls to bottom on new content */}
-            <scrollbox flexGrow={1} stickyScroll={true} focused={!isPanelOpen && !askUserState && !interviewState}>
-              {/* All messages rendered in a scrollable container */}
-              <Messages
-                key="all-messages"
-                messages={displayMessages}
-                currentResponse={undefined}
-                streamingMessages={isProcessing ? streamingMessages : []}
-                currentToolCall={undefined}
-                lastToolResult={undefined}
-                activityLog={isProcessing ? activityTrim.entries : []}
-                queuedMessageIds={queuedMessageIds}
-                verboseTools={verboseTools}
-                finishInfo={finishInfo}
-              />
-            </scrollbox>
-
-            {/* Ask-user simple interview */}
-            {askUserState && activeAskQuestion && !interviewState && (
-              <AskUserPanel
-                sessionId={askUserState.sessionId}
-                request={askUserState.request}
-                question={activeAskQuestion}
-                index={askUserState.index}
-                total={askUserState.request.questions.length}
-              />
-            )}
-
-            {/* Rich interview wizard */}
-            {interviewState && interviewState.sessionId === activeSessionId && (
-              <InterviewPanel
-                request={interviewState.request}
-                onComplete={completeInterview}
-                onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
-                isActive={!isPanelOpen}
-              />
-            )}
-
-            {/* Error */}
-            {error && <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} />}
-
-            {/* Processing indicator */}
-            <ProcessingIndicator
-              isProcessing={isProcessing}
-              startTime={processingStartTime}
-              tokenCount={currentTurnTokens}
-              isThinking={isThinking}
-            />
-
-            {/* Finish line now rendered inside <Messages> as ■ Build · model · duration */}
-
-            {/* Exit hint for double Ctrl+C */}
-            {showExitHint && (
-              <box marginLeft={2} marginBottom={0}>
-                <text fg={themeColor('warning')}>(Press Ctrl+C again to exit)</text>
-              </box>
-            )}
-
-            {/* Queue indicator - sticky above input */}
-            <QueueIndicator
-              messages={[...activeInline, ...activeQueue]}
-              maxPreview={MAX_QUEUED_PREVIEW}
-            />
-
-            {stopHint && (
-              <box marginLeft={2}>
-                <text fg={themeColor('muted')}>{stopHint}</text>
-              </box>
-            )}
-          </box>
-
-          {/* Right panel: Sidebar (30%) — gray bg, only when session active AND terminal >= 100 cols */}
-          {showSidebar && (
-            <box flexDirection="column" width={rightWidth} paddingTop={1} paddingRight={1} paddingBottom={1} paddingLeft={1} backgroundColor={themeColor('surface')}>
-              <Sidebar
-                title={sidebarTitle}
-                modelId={activeSession?.client.getModel() ?? undefined}
-                cwd={activeSession?.cwd || cwd}
-                modifiedFiles={modifiedFiles}
-                tokenUsage={tokenUsage}
-                gitBranch={gitBranch}
-                appVersion={version}
-              />
-            </box>
-          )}
-        </box>
-
-        {/* Bottom panel: Editor/Input — no border, bg matches main, never shrinks */}
-        <box flexDirection="column" height={editorHeight} width={columns} flexShrink={0}>
-          <Input
-            ref={inputRef}
-            onSubmit={handleSubmit}
-            onStopProcessing={() => {
-              stopActiveProcessing('stopped');
-            }}
-            isProcessing={isBusy}
-            queueLength={activeQueue.length + inlineCount}
-            commands={commands}
-            skills={skills}
-            isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
-            askPlaceholder={askPlaceholder}
-            allowBlankAnswer={activeAskQuestion?.required === false}
-            isActive={!showCommandPalette}
-            assistantName={identityInfo?.assistant?.name || undefined}
-            isRecording={pttRecording}
-            recordingStatus={pttStatus}
-            onStopRecording={togglePushToTalk}
-            onFileSearch={searchFiles}
-            partialTranscript={partialTranscript}
-            pasteConfig={currentConfig?.input?.paste ? {
-              enabled: currentConfig.input.paste.enabled,
-              thresholds: currentConfig.input.paste.thresholds,
-              mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
-            } : undefined}
-          />
-        </box>
-      </box>
-
-      {/* Status bar: exactly 1 row at bottom, OUTSIDE the split pane */}
-      <box height={statusHeight} width={columns}>
+    <AppShell
+      mode="chat"
+      rows={rows}
+      columns={columns}
+      hasActiveSession={Boolean(activeSessionId)}
+      backgroundProcessingCount={backgroundProcessingCount}
+      isTranscriptFocused={!isPanelOpen && !askUserState && !interviewState}
+      transcript={(
+        <Transcript
+          key="all-messages"
+          height={shellLayout.messagesHeight}
+          messages={displayMessages}
+          currentResponse={undefined}
+          streamingMessages={isProcessing ? streamingMessages : []}
+          activityLog={isProcessing ? activityTrim.entries : []}
+          queuedMessageIds={queuedMessageIds}
+          verboseTools={verboseTools}
+          finishInfo={finishInfo}
+          focused={!isPanelOpen && !askUserState && !interviewState}
+          stickyScroll={true}
+          wrapWidth={wrapChars}
+          renderWidth={renderWidth}
+        />
+      )}
+      askUserPanel={askUserState && activeAskQuestion && !interviewState ? (
+        <AskUserPanel
+          sessionId={askUserState.sessionId}
+          request={askUserState.request}
+          question={activeAskQuestion}
+          index={askUserState.index}
+          total={askUserState.request.questions.length}
+        />
+      ) : null}
+      interviewPanel={interviewState && interviewState.sessionId === activeSessionId ? (
+        <InterviewPanel
+          request={interviewState.request}
+          onComplete={completeInterview}
+          onCancel={() => cancelInterview('Cancelled by user', activeSessionId)}
+          isActive={!isPanelOpen}
+        />
+      ) : null}
+      errorBanner={error ? <ErrorBanner error={error} showErrorCodes={SHOW_ERROR_CODES} /> : null}
+      processingIndicator={(
+        <ProcessingIndicator
+          isProcessing={isProcessing}
+          startTime={processingStartTime}
+          tokenCount={currentTurnTokens}
+          isThinking={isThinking}
+        />
+      )}
+      showExitHint={showExitHint}
+      queueIndicator={(
+        <QueueIndicator
+          messages={[...activeInline, ...activeQueue]}
+          maxPreview={MAX_QUEUED_PREVIEW}
+        />
+      )}
+      stopHint={stopHint}
+      sidebar={shellLayout.showSidebar ? (
+        <Sidebar
+          title={sidebarTitle}
+          modelId={activeSession?.client.getModel() ?? undefined}
+          cwd={activeSession?.cwd || cwd}
+          modifiedFiles={modifiedFiles}
+          tokenUsage={tokenUsage}
+          gitBranch={gitBranch}
+          appVersion={version}
+        />
+      ) : null}
+      editor={(
+        <Input
+          ref={inputRef}
+          onSubmit={handleSubmit}
+          onStopProcessing={() => {
+            stopActiveProcessing('stopped');
+          }}
+          isProcessing={isBusy}
+          queueLength={activeQueue.length + inlineCount}
+          commands={commands}
+          skills={skills}
+          isAskingUser={Boolean(activeAskQuestion) || Boolean(interviewState && interviewState.sessionId === activeSessionId)}
+          askPlaceholder={askPlaceholder}
+          allowBlankAnswer={activeAskQuestion?.required === false}
+          isActive={!showCommandPalette}
+          assistantName={identityInfo?.assistant?.name || undefined}
+          isRecording={pttRecording}
+          recordingStatus={pttStatus}
+          onStopRecording={togglePushToTalk}
+          onFileSearch={searchFiles}
+          partialTranscript={partialTranscript}
+          pasteConfig={currentConfig?.input?.paste ? {
+            enabled: currentConfig.input.paste.enabled,
+            thresholds: currentConfig.input.paste.thresholds,
+            mode: currentConfig.input.paste.mode as 'placeholder' | 'preview' | 'confirm' | 'inline' | undefined,
+          } : undefined}
+        />
+      )}
+      status={(
         <Status
           isProcessing={isBusy}
           cwd={activeSession?.cwd || cwd}
@@ -3500,27 +3478,10 @@ export function App({ cwd, version, permissionMode: initialPermissionMode }: App
           processingStartTime={processingStartTime}
           verboseTools={verboseTools}
           gitBranch={gitBranch}
-          recentTools={activityLog
-            .filter((e) => e.type === 'tool_call' && e.toolCall)
-            .slice(-8)
-            .map((e) => {
-              const hasResult = activityLog.some(
-                (r) => r.type === 'tool_result' && r.toolResult?.toolCallId === e.toolCall!.id
-              );
-              return {
-                name: e.toolCall!.name,
-                status: hasResult ? ('succeeded' as const) : ('running' as const),
-                durationMs: 0,
-                startedAt: e.timestamp,
-              };
-            })}
+          recentTools={recentTools}
         />
-      </box>
-      <CommandPalette
-        visible={showCommandPalette}
-        commands={paletteCommands}
-        onClose={() => setShowCommandPalette(false)}
-      />
-    </box>
+      )}
+      commandPalette={commandPaletteElement}
+    />
   );
 }

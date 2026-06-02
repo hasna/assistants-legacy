@@ -11,8 +11,8 @@ source module name 1:1.
   reducers, formatters, state machines, helpers) must have a direct unit test
   importing it by name. New pure modules are not "done" without one.
 - **Hooks and components get a `tests/<name>.test.tsx`** that renders through the
-  real opentui test renderer (`@opentui/react/test-utils` → `testRender`) and
-  asserts on `captureCharFrame()` output or exposed hook state via a probe.
+  Ink-oriented test harness and asserts on visible frame output or exposed hook
+  state via a probe.
 - **Bug fixes ship with a regression test first** — reproduce, then fix (see the
   linewise-paste fix in `vim.test.ts`, the cell-bleed and adjacency fixes, etc.).
 - **Never weaken a test to make it pass.** Async renders (e.g. markdown
@@ -21,10 +21,7 @@ source module name 1:1.
 ## What is in scope
 
 The active terminal app under `src/` — components, hooks, `theme/`,
-`keybindings/`, `vim/`, `state/`, `commands/`, and the pure helpers. The vendored
-`src/ink/` fork is **excluded from the build** (`tsconfig.json`) and tracked
-separately under P0.2; it carries its own upstream tests and is not part of this
-parity backfill.
+`keybindings/`, `vim/`, `state/`, `commands/`, and the pure helpers.
 
 ## Current coverage (parity backfill)
 
@@ -43,7 +40,7 @@ Pure/logic modules in the active app with direct tests include:
 | `hooks/useListNavigation` | `use-list-navigation.test.tsx` |
 | `exit-summary` | `exit-summary.test.ts` |
 | `commands/qolCommands` (pure cmds) | `qol-commands.test.ts` |
-| `renderer-selection`, `PanelHeader`, inline-span, onboarding-layout | respective `*.test.*` |
+| `PanelHeader`, inline text composition, onboarding layout | respective `*.test.*` |
 
 When adding a module, add its test in the same change. When you touch a module
 that lacks one, backfill it.

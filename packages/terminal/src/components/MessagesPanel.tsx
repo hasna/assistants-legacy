@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { InboxPanel } from './InboxPanel';
 import type { Email, EmailListItem } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
@@ -110,15 +110,15 @@ function formatRelativeTime(isoDate: string): string {
 function getPriorityColor(priority: MessageEntry['priority']): string {
   switch (priority) {
     case 'urgent':
-      return 'red';
+      return themeColor('error');
     case 'high':
-      return 'yellow';
+      return themeColor('warning');
     case 'normal':
-      return 'white';
+      return themeColor('text');
     case 'low':
       return themeColor('muted');
     default:
-      return 'white';
+      return themeColor('text');
   }
 }
 
@@ -147,22 +147,24 @@ function TabBar({ activeTab, inboxEnabled }: { activeTab: ActiveTab; inboxEnable
   if (!inboxEnabled) return null;
 
   return (
-    <box marginBottom={1}>
-      <text
-        fg={activeTab === 'assistant' ? themeColor('cyan') : themeColor('muted')}
+    <Box marginBottom={1}>
+      <Text
+        fg={activeTab === 'assistant' ? themeColor('info') : themeColor('muted')}
         attributes={activeTab === 'assistant' ? 33 : undefined}
-      ><b>
+        bold
+      >
         {' Assistant Messages '}
-      </b></text>
-      <text fg={themeColor('muted')}> | </text>
-      <text
-        fg={activeTab === 'email' ? themeColor('cyan') : themeColor('muted')}
+      </Text>
+      <Text fg={themeColor('muted')}> | </Text>
+      <Text
+        fg={activeTab === 'email' ? themeColor('info') : themeColor('muted')}
         attributes={activeTab === 'email' ? 33 : undefined}
-      ><b>
+        bold
+      >
         {' Email Inbox '}
-      </b></text>
-      <text fg={themeColor('muted')}>  [Tab] switch</text>
-    </box>
+      </Text>
+      <Text fg={themeColor('muted')}>  [Tab] switch</Text>
+    </Box>
   );
 }
 
@@ -268,15 +270,16 @@ function AssistantMessagesContent({
   // Keyboard navigation (Tab is handled by parent)
   useInput((input, key) => {
     if (isProcessing) return;
+    const isEscape = key.escape || input === '\x1b';
 
     // Exit with q or Escape at top level
-    if (input === 'q' || (key.escape && mode === 'list')) {
+    if (input === 'q' || (isEscape && mode === 'list')) {
       onClose();
       return;
     }
 
     // Escape to go back
-    if (key.escape) {
+    if (isEscape) {
       if (mode === 'detail') {
         setMode('list');
         setDetailMessage(null);
@@ -364,133 +367,133 @@ function AssistantMessagesContent({
   // Empty state
   if (messages.length === 0) {
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         {!showTabBar && (
-          <box marginBottom={1}>
-            <text fg={themeColor('info')}><b>Messages</b></text>
-          </box>
+          <Box marginBottom={1}>
+            <Text fg={themeColor('info')} bold>Messages</Text>
+          </Box>
         )}
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg={themeColor('muted')}>No messages in inbox.</text>
-          <text fg={themeColor('muted')}>Use the messages_send tool to send messages to other assistants.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>q quit</text>
-        </box>
-      </box>
+          <Text fg={themeColor('muted')}>No messages in inbox.</Text>
+          <Text fg={themeColor('muted')}>Use the messages_send tool to send messages to other assistants.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <box flexDirection="column">
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Message</b></text>
-        </box>
-        <box
+      <Box flexDirection="column">
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Message</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Are you sure you want to delete this message?</text>
-          <text fg={themeColor('muted')}>From: {deleteTarget.fromAssistantName}</text>
-          {deleteTarget.subject && <text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</text>}
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+          <Text>Are you sure you want to delete this message?</Text>
+          <Text fg={themeColor('muted')}>From: {deleteTarget.fromAssistantName}</Text>
+          {deleteTarget.subject && <Text fg={themeColor('muted')}>Subject: {deleteTarget.subject}</Text>}
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Inject confirmation
   if (mode === 'inject-confirm' && injectTarget) {
     return (
-      <box flexDirection="column">
-        <box marginBottom={1}>
-          <text fg={themeColor('success')}><b>Inject Message</b></text>
-        </box>
-        <box
+      <Box flexDirection="column">
+        <Box marginBottom={1}>
+          <Text fg={themeColor('success')} bold>Inject Message</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Inject this message into the current conversation?</text>
-          <text fg={themeColor('muted')}>From: {injectTarget.fromAssistantName}</text>
-          {injectTarget.subject && <text fg={themeColor('muted')}>Subject: {injectTarget.subject}</text>}
-          <text fg={themeColor('muted')}>The message will be added to the context.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+          <Text>Inject this message into the current conversation?</Text>
+          <Text fg={themeColor('muted')}>From: {injectTarget.fromAssistantName}</Text>
+          {injectTarget.subject && <Text fg={themeColor('muted')}>Subject: {injectTarget.subject}</Text>}
+          <Text fg={themeColor('muted')}>The message will be added to the context.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Detail view
   if (mode === 'detail' && detailMessage) {
     return (
-      <box flexDirection="column">
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>{getStatusIcon(detailMessage.status)} Message</b></text>
-          <text fg={getPriorityColor(detailMessage.priority)}> [{detailMessage.priority}]</text>
-        </box>
+      <Box flexDirection="column">
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>{getStatusIcon(detailMessage.status)} Message</Text>
+          <Text fg={getPriorityColor(detailMessage.priority)}> [{detailMessage.priority}]</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <box>
-            <text fg={themeColor('muted')}>From: </text>
-            <text>{detailMessage.fromAssistantName}</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>From: </Text>
+            <Text>{detailMessage.fromAssistantName}</Text>
+          </Box>
 
           {detailMessage.subject && (
-            <box>
-              <text fg={themeColor('muted')}>Subject: </text>
-              <text><b>{detailMessage.subject}</b></text>
-            </box>
+            <Box>
+              <Text fg={themeColor('muted')}>Subject: </Text>
+              <Text bold>{detailMessage.subject}</Text>
+            </Box>
           )}
 
-          <box>
-            <text fg={themeColor('muted')}>Received: </text>
-            <text>{formatRelativeTime(detailMessage.createdAt)}</text>
-            <text fg={themeColor('muted')}> ({new Date(detailMessage.createdAt).toLocaleString()})</text>
-          </box>
+          <Box>
+            <Text fg={themeColor('muted')}>Received: </Text>
+            <Text>{formatRelativeTime(detailMessage.createdAt)}</Text>
+            <Text fg={themeColor('muted')}> ({new Date(detailMessage.createdAt).toLocaleString()})</Text>
+          </Box>
 
-          <box marginTop={1} flexDirection="column">
-            <text fg={themeColor('muted')}>Message:</text>
-            <text>{detailMessage.body || detailMessage.preview}</text>
-          </box>
-        </box>
+          <Box marginTop={1} flexDirection="column">
+            <Text fg={themeColor('muted')}>Message:</Text>
+            <Text>{detailMessage.body || detailMessage.preview}</Text>
+          </Box>
+        </Box>
 
         {error && (
-          <box marginTop={1}>
-            <text fg={themeColor('error')}>{error}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('error')}>{error}</Text>
+          </Box>
         )}
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             i inject | x delete | Esc back
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -498,26 +501,26 @@ function AssistantMessagesContent({
   const visibleMessages = messages.slice(messageRange.start, messageRange.end);
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {!showTabBar && (
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Messages</b></text>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Messages</Text>
           {messages.length > MAX_VISIBLE_ITEMS && (
-            <text fg={themeColor('muted')}> ({messageIndex + 1}/{messages.length})</text>
+            <Text fg={themeColor('muted')}> ({messageIndex + 1}/{messages.length})</Text>
           )}
-        </box>
+        </Box>
       )}
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {messageRange.hasMore.above > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↑ {messageRange.hasMore.above} more above</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↑ {messageRange.hasMore.above} more above</Text>
+          </Box>
         )}
 
         {visibleMessages.map((msg, visibleIdx) => {
@@ -526,53 +529,54 @@ function AssistantMessagesContent({
           const prefix = isSelected ? '> ' : '  ';
           const statusIcon = getStatusIcon(msg.status);
           const priorityColor = getPriorityColor(msg.priority);
+          const secondaryColor = themeColor('muted');
           const fromName = msg.fromAssistantName.slice(0, 12).padEnd(12);
           const subject = (msg.subject || msg.preview.slice(0, 25)).padEnd(25);
 
           return (
-            <box key={msg.id} paddingY={0}>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+            <Box key={msg.id} paddingY={0}>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : secondaryColor}>
                 {prefix}{statusIcon}{' '}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : priorityColor}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : priorityColor}>
                 {msg.priority === 'urgent' ? '!' : msg.priority === 'high' ? '↑' : ' '}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? "gray" : undefined}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? secondaryColor : undefined}>
                 {' '}{fromName}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? "gray" : undefined}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : msg.status === 'read' ? secondaryColor : undefined}>
                 {' '}{subject}
-              </text>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+              </Text>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : secondaryColor}>
                 {' '}{formatRelativeTime(msg.createdAt)}
-              </text>
-            </box>
+              </Text>
+            </Box>
           );
         })}
 
         {messageRange.hasMore.below > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↓ {messageRange.hasMore.below} more below</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↓ {messageRange.hasMore.below} more below</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: </text>
-        <text>📬</text>
-        <text fg={themeColor('muted')}> unread | </text>
-        <text>📖</text>
-        <text fg={themeColor('muted')}> read | </text>
-        <text>👁️</text>
-        <text fg={themeColor('muted')}> injected</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Legend: </Text>
+        <Text>📬</Text>
+        <Text fg={themeColor('muted')}> unread | </Text>
+        <Text>📖</Text>
+        <Text fg={themeColor('muted')}> read | </Text>
+        <Text>👁️</Text>
+        <Text fg={themeColor('muted')}> injected</Text>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ select | Enter view | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }
 
@@ -603,7 +607,7 @@ export function MessagesPanel({
   const hasInbox = inboxEnabled && onInboxRead && onInboxFetch;
 
   // Tab switching with Tab key (only at top level of each sub-panel)
-  useInput((input, key) => {
+  useInput((_input, key) => {
     if (!hasInbox) return;
     if (key.tab) {
       setActiveTab((prev) => (prev === 'assistant' ? 'email' : 'assistant'));
@@ -613,7 +617,7 @@ export function MessagesPanel({
   // Single-tab mode (no inbox) - render assistant messages directly
   if (!hasInbox) {
     return (
-      <box flexDirection="column" paddingY={1}>
+      <Box flexDirection="column" paddingY={1}>
         <AssistantMessagesContent
           messages={messages}
           onRead={onRead}
@@ -623,13 +627,13 @@ export function MessagesPanel({
           error={error}
           showTabBar={false}
         />
-      </box>
+      </Box>
     );
   }
 
   // Dual-tab mode - render tab bar + active tab content
   return (
-    <box flexDirection="column" paddingY={1}>
+    <Box flexDirection="column" paddingY={1}>
       <TabBar activeTab={activeTab} inboxEnabled={true} />
 
       {activeTab === 'assistant' ? (
@@ -655,6 +659,6 @@ export function MessagesPanel({
           error={inboxError}
         />
       )}
-    </box>
+    </Box>
   );
 }

@@ -1,4 +1,5 @@
 import React, { Component, type ReactNode } from 'react';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface Props {
@@ -30,20 +31,20 @@ export class PanelErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <box flexDirection="column" padding={1}>
-          <box borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
-            <text fg={themeColor('error')}><b>
+        <Box flexDirection="column" padding={1}>
+          <Box borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} marginBottom={1}>
+            <Text fg={themeColor('error')} bold>
               {this.props.panelName || 'Panel'} Error
-            </b></text>
-          </box>
-          <box paddingX={1} flexDirection="column">
-            <text fg={themeColor('error')}>An error occurred while rendering this panel.</text>
-            <text> </text>
-            <text fg={themeColor('muted')}>{this.state.error?.message || 'Unknown error'}</text>
-            <text> </text>
-            <text fg={themeColor('muted')}>Press 'q' or Escape to close.</text>
-          </box>
-        </box>
+            </Text>
+          </Box>
+          <Box paddingX={1} flexDirection="column">
+            <Text fg={themeColor('error')}>An error occurred while rendering this panel.</Text>
+            <Box height={1} />
+            <Text fg={themeColor('muted')}>{this.state.error?.message || 'Unknown error'}</Text>
+            <Box height={1} />
+            <Text fg={themeColor('muted')}>Press 'q' or Escape to close.</Text>
+          </Box>
+        </Box>
       );
     }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface ToolCallEntry {
@@ -29,35 +29,35 @@ export function ToolCallBox({
   const hiddenCount = entries.length - visibleEntries.length;
 
   return (
-    <box
+    <Box
       flexDirection="column"
-      borderStyle="rounded"
+      borderStyle="round"
       borderColor={themeColor('border')} border={["top", "bottom"]}
       paddingX={1}
       marginY={1}
     >
       {/* Header with expand hint */}
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={themeColor('muted')}><b>
+      <Box flexDirection="row" justifyContent="space-between">
+        <Text fg={themeColor('muted')} bold>
           Tools ({entries.length})
-        </b></text>
+        </Text>
         {entries.length > maxVisible && (
-          <text fg={themeColor('muted')}>
+          <Text fg={themeColor('muted')}>
             {isExpanded ? 'Ctrl+O to collapse' : 'Ctrl+O to expand'}
-          </text>
+          </Text>
         )}
-      </box>
+      </Box>
 
       {/* Hidden count indicator */}
       {hiddenCount > 0 && !isExpanded && (
-        <text fg={themeColor('muted')}>  +{hiddenCount} more above...</text>
+        <Text fg={themeColor('muted')}>  +{hiddenCount} more above...</Text>
       )}
 
       {/* Visible tool calls */}
       {visibleEntries.map((entry, index) => (
         <ToolCallRow key={entry.toolCall.id} entry={entry} />
       ))}
-    </box>
+    </Box>
   );
 }
 
@@ -71,10 +71,10 @@ function ToolCallRow({ entry }: ToolCallRowProps) {
   const statusColor = result ? (result.isError ? themeColor('error') : themeColor('success')) : themeColor('muted');
 
   return (
-    <box flexDirection="row">
-      <text fg={statusColor}>{statusIcon} </text>
-      <text fg={themeColor('muted')}>{formatToolCall(toolCall)}</text>
-    </box>
+    <Box flexDirection="row">
+      <Text fg={statusColor}>{statusIcon} </Text>
+      <Text fg={themeColor('muted')}>{formatToolCall(toolCall)}</Text>
+    </Box>
   );
 }
 

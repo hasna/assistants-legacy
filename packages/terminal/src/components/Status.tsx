@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import type { VoiceState, ActiveIdentityInfo, HeartbeatState } from '@hasna/assistants-shared';
 import { getModelById } from '@hasna/assistants-shared';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface TokenUsage {
@@ -105,10 +106,10 @@ export function Status({
   if (welcomeMode) {
     const cwdDisplay = gitBranch ? `${cwd}:${gitBranch}` : cwd;
     return (
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={themeColor('muted')}>{cwdDisplay}</text>
-        {version ? <text fg={themeColor('muted')}>v{version}</text> : null}
-      </box>
+      <Box flexDirection="row" justifyContent="space-between">
+        <Text fg={themeColor('muted')}>{cwdDisplay}</Text>
+        {version ? <Text fg={themeColor('muted')}>v{version}</Text> : null}
+      </Box>
     );
   }
 
@@ -133,7 +134,7 @@ export function Status({
 
   // --- LEFT: Help widget "[?]" in textMuted ---
   const helpWidget = (
-    <text key="help" fg={themeColor('muted')}>[?]</text>
+    <Text key="help" fg={themeColor('muted')}>[?]</Text>
   );
 
   // --- CENTER-LEFT: Token info "14,413  5% ($0.00)" in textMuted ---
@@ -149,11 +150,11 @@ export function Status({
     const costStr = costInfo || '$0.00';
 
     tokenInfo = (
-      <box key="tokens" flexDirection="row">
-        <text fg={themeColor('muted')}>  {tokenStr}  </text>
-        <text fg={percentColor}>{contextPercent}%</text>
-        <text fg={themeColor('muted')}> ({costStr})</text>
-      </box>
+      <Box key="tokens" flexDirection="row">
+        <Text fg={themeColor('muted')}>  {tokenStr}  </Text>
+        <Text fg={percentColor}>{contextPercent}%</Text>
+        <Text fg={themeColor('muted')}> ({costStr})</Text>
+      </Box>
     );
   }
 
@@ -161,7 +162,7 @@ export function Status({
   let statusMessage: React.ReactNode = null;
   if (isProcessing && processingStartTime) {
     statusMessage = (
-      <text key="status" fg={themeColor('muted')}>  {formatDuration(elapsed)}</text>
+      <Text key="status" fg={themeColor('muted')}>  {formatDuration(elapsed)}</Text>
     );
   }
 
@@ -172,23 +173,23 @@ export function Status({
 
   // Single row — agent info on the right, keyboard shortcuts centered
   return (
-    <box flexDirection="row" justifyContent="space-between">
-      <box flexDirection="row">
+    <Box flexDirection="row" justifyContent="space-between">
+      <Box flexDirection="row">
         {helpWidget}
         {tokenInfo}
         {statusMessage}
-      </box>
-      <box flexDirection="row">
+      </Box>
+      <Box flexDirection="row">
         {modelName ? (
-          <text fg={themeColor('muted')}>{displayAgent} · {modelName}  </text>
+          <Text fg={themeColor('muted')}>{displayAgent} · {modelName}  </Text>
         ) : (
-          <text fg={themeColor('muted')}>{displayAgent}  </text>
+          <Text fg={themeColor('muted')}>{displayAgent}  </Text>
         )}
-        <text fg={themeColor('muted')}><b>tab</b></text>
-        <text fg={themeColor('muted')}> agents  </text>
-        <text fg={themeColor('muted')}><b>ctrl+p</b></text>
-        <text fg={themeColor('muted')}> commands</text>
-      </box>
-    </box>
+        <Text fg={themeColor('muted')} bold>tab</Text>
+        <Text fg={themeColor('muted')}> agents  </Text>
+        <Text fg={themeColor('muted')} bold>ctrl+p</Text>
+        <Text fg={themeColor('muted')}> commands</Text>
+      </Box>
+    </Box>
   );
 }

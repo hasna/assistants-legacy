@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { Identity, CreateIdentityOptions } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 // Maximum visible items in lists before pagination kicks in
@@ -27,6 +26,10 @@ type FormStep =
 
 const COMMUNICATION_STYLES = ['formal', 'casual', 'professional'] as const;
 const RESPONSE_LENGTHS = ['concise', 'detailed', 'balanced'] as const;
+
+type FinalFormOverrides = {
+  context?: string;
+};
 
 interface IdentityPanelProps {
   identities: Identity[];
@@ -103,7 +106,6 @@ export function IdentityPanel({
   error,
 }: IdentityPanelProps) {
   const [mode, setMode] = useState<ViewMode>('list');
-  useClearOnChange(mode);
   const [identityIndex, setIdentityIndex] = useState(0);
   const [templateIndex, setTemplateIndex] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<Identity | null>(null);
@@ -300,8 +302,10 @@ export function IdentityPanel({
   }, [templateIndex, templates, onCreateFromTemplate]);
 
   // Handle create from form
-  const handleCreateFromForm = useCallback(async () => {
+  const handleCreateFromForm = useCallback(async (overrides: FinalFormOverrides = {}) => {
     if (!formName.trim()) return;
+
+    const context = (overrides.context ?? formContext).trim();
 
     setIsProcessing(true);
     try {
@@ -317,7 +321,7 @@ export function IdentityPanel({
           communicationStyle: COMMUNICATION_STYLES[formStyleIndex],
           responseLength: RESPONSE_LENGTHS[formLengthIndex],
         },
-        context: formContext.trim() || undefined,
+        context: context || undefined,
       });
       resetForm();
       setMode('list');
@@ -338,8 +342,10 @@ export function IdentityPanel({
   ]);
 
   // Handle edit form submit
-  const handleEditSubmit = useCallback(async () => {
+  const handleEditSubmit = useCallback(async (overrides: FinalFormOverrides = {}) => {
     if (!editingIdentity || !formName.trim()) return;
+
+    const context = (overrides.context ?? formContext).trim();
 
     setIsProcessing(true);
     try {
@@ -355,7 +361,7 @@ export function IdentityPanel({
           communicationStyle: COMMUNICATION_STYLES[formStyleIndex],
           responseLength: RESPONSE_LENGTHS[formLengthIndex],
         },
-        context: formContext.trim() || undefined,
+        context: context || undefined,
       });
       resetForm();
       setMode('list');
@@ -473,13 +479,13 @@ export function IdentityPanel({
     if (isProcessing || isFormMode) return;
 
     // Exit with q or Escape at top level
-    if (input === 'q' || (key.escape && mode === 'list')) {
+    if (input === 'q' || ((key.escape || input === '\x1b') && mode === 'list')) {
       onClose();
       return;
     }
 
     // Escape to go back
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       if (mode === 'detail' || mode === 'create') {
         setMode('list');
       } else if (mode === 'delete-confirm') {
@@ -491,6 +497,11 @@ export function IdentityPanel({
 
     // List mode navigation
     if (mode === 'list') {
+      if (input === 'n' || input === 'c') {
+        setMode('create');
+        setTemplateIndex(0);
+        return;
+      }
       if (identities.length === 0) {
         return;
       }
@@ -504,11 +515,6 @@ export function IdentityPanel({
       }
       if (key.return && currentIdentity) {
         setMode('detail');
-        return;
-      }
-      if (input === 'n' || input === 'c') {
-        setMode('create');
-        setTemplateIndex(0);
         return;
       }
       // Number keys for quick selection
@@ -588,7 +594,7 @@ export function IdentityPanel({
   useInput((_input, key) => {
     if (!isFormMode || !isTextStep) return;
 
-    if (key.escape) {
+    if (key.escape || _input === '\x1b') {
       if (formStep === 'name') {
         resetForm();
         setMode(mode === 'edit-form' ? 'detail' : 'create');
@@ -629,67 +635,82 @@ export function IdentityPanel({
       return;
     }
 
-    if (key.escape) {
+    if (key.escape || input === '\x1b') {
       goToPrevStep();
       return;
     }
   }, { isActive: isFormMode && isSelectorStep });
 
   // Form text submit handlers
-  const handleFormNameSubmit = () => {
-    if (!formName.trim()) return;
+  const handleFormNameSubmit = (value: string) => {
+    const nextValue = value.trim();
+    if (!nextValue) return;
+    setFormName(nextValue);
     goToNextStep();
   };
 
-  const handleFormDisplayNameSubmit = () => {
+  const handleFormDisplayNameSubmit = (value: string) => {
+    setFormDisplayName(value.trim());
     goToNextStep();
   };
 
-  const handleFormTitleSubmit = () => {
+  const handleFormTitleSubmit = (value: string) => {
+    setFormTitle(value.trim());
     goToNextStep();
   };
 
-  const handleFormCompanySubmit = () => {
+  const handleFormCompanySubmit = (value: string) => {
+    setFormCompany(value.trim());
     goToNextStep();
   };
 
-  const handleFormEmailSubmit = () => {
+  const handleFormEmailSubmit = (value: string) => {
+    setFormEmail(value.trim());
     goToNextStep();
   };
 
-  const handleFormPhoneSubmit = () => {
+  const handleFormPhoneSubmit = (value: string) => {
+    setFormPhone(value.trim());
     goToNextStep();
   };
 
-  const handleFormAddressStreetSubmit = () => {
+  const handleFormAddressStreetSubmit = (value: string) => {
+    setFormAddressStreet(value.trim());
     goToNextStep();
   };
 
-  const handleFormAddressCitySubmit = () => {
+  const handleFormAddressCitySubmit = (value: string) => {
+    setFormAddressCity(value.trim());
     goToNextStep();
   };
 
-  const handleFormAddressStateSubmit = () => {
+  const handleFormAddressStateSubmit = (value: string) => {
+    setFormAddressState(value.trim());
     goToNextStep();
   };
 
-  const handleFormAddressPostalSubmit = () => {
+  const handleFormAddressPostalSubmit = (value: string) => {
+    setFormAddressPostal(value.trim());
     goToNextStep();
   };
 
-  const handleFormAddressCountrySubmit = () => {
+  const handleFormAddressCountrySubmit = (value: string) => {
+    setFormAddressCountry(value.trim());
     goToNextStep();
   };
 
-  const handleFormVirtualAddressSubmit = () => {
+  const handleFormVirtualAddressSubmit = (value: string) => {
+    setFormVirtualAddress(value.trim());
     goToNextStep();
   };
 
-  const handleFormContextSubmit = () => {
+  const handleFormContextSubmit = (value: string) => {
+    const context = value.trim();
+    setFormContext(context);
     if (mode === 'create-form') {
-      handleCreateFromForm();
+      handleCreateFromForm({ context });
     } else {
-      handleEditSubmit();
+      handleEditSubmit({ context });
     }
   };
 
@@ -732,59 +753,59 @@ export function IdentityPanel({
     if (completedFields.length === 0) return null;
 
     return (
-      <box marginBottom={1} flexDirection="column">
+      <Box marginBottom={1} flexDirection="column">
         {completedFields.map((field) => (
-          <text key={field.label} fg={themeColor('muted')}>{field.label}: {field.value}</text>
+          <Text key={field.label} fg={themeColor('muted')}>{field.label}: {field.value}</Text>
         ))}
-      </box>
+      </Box>
     );
   };
 
   // Empty state
   if (identities.length === 0 && mode === 'list') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>Identities</text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>Identities</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text fg={themeColor('muted')}>No identities found.</text>
-          <text fg={themeColor('muted')}>Press n to create a new identity.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>n new | q quit</text>
-        </box>
-      </box>
+          <Text fg={themeColor('muted')}>No identities found.</Text>
+          <Text fg={themeColor('muted')}>Press n to create a new identity.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>n new | q quit</Text>
+        </Box>
+      </Box>
     );
   }
 
   // Delete confirmation
   if (mode === 'delete-confirm' && deleteTarget) {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}>Delete Identity</text>
-        </box>
-        <box
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')}>Delete Identity</Text>
+        </Box>
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <text>Are you sure you want to delete "{deleteTarget.name}"?</text>
-          <text fg={themeColor('muted')}>This action cannot be undone.</text>
-        </box>
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>y confirm | n cancel</text>
-        </box>
-      </box>
+          <Text>Are you sure you want to delete "{deleteTarget.name}"?</Text>
+          <Text fg={themeColor('muted')}>This action cannot be undone.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>y confirm | n cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -797,52 +818,51 @@ export function IdentityPanel({
     const visibleOptions = allOptions.slice(templateRange.start, templateRange.end);
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>Create Identity{totalCreateOptions > MAX_VISIBLE_ITEMS ? ` (${templateIndex + 1}/${totalCreateOptions})` : ''}</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>Create Identity{totalCreateOptions > MAX_VISIBLE_ITEMS ? ` (${templateIndex + 1}/${totalCreateOptions})` : ''}</Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
         >
           {templateRange.hasMore.above > 0 && (
-            <box paddingY={0}>
-              <text fg={themeColor('muted')}>  ↑ {templateRange.hasMore.above} more above</text>
-            </box>
+            <Box paddingY={0}>
+              <Text fg={themeColor('muted')}>  ↑ {templateRange.hasMore.above} more above</Text>
+            </Box>
           )}
 
           {visibleOptions.map((option, visibleIdx) => {
             const actualIdx = templateRange.start + visibleIdx;
             const isSelected = actualIdx === templateIndex;
             const prefix = isSelected ? '> ' : '  ';
-            const isCustom = actualIdx === 0;
 
             return (
-              <box key={option.name} paddingY={0}>
-                <text
+              <Box key={option.name} paddingY={0}>
+                <Text
                   bg={isSelected ? themeColor('primary') : undefined}
                   fg={isSelected ? themeColor('text') : undefined}
                 >
                   {prefix}{option.name.padEnd(24)} {option.description}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })}
 
           {templateRange.hasMore.below > 0 && (
-            <box paddingY={0}>
-              <text fg={themeColor('muted')}>  ↓ {templateRange.hasMore.below} more below</text>
-            </box>
+            <Box paddingY={0}>
+              <Text fg={themeColor('muted')}>  ↓ {templateRange.hasMore.below} more below</Text>
+            </Box>
           )}
-        </box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>↑↓ select | Enter create | Esc back</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>↑↓ select | Enter create | Esc back</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -853,299 +873,312 @@ export function IdentityPanel({
     const stepLabel = `Step ${stepIdx + 1}/${FORM_STEPS.length}`;
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>{isEdit ? 'Edit Identity' : 'Create Custom Identity'} - {stepLabel}</text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>{isEdit ? 'Edit Identity' : 'Create Custom Identity'} - {stepLabel}</Text>
+        </Box>
 
         {renderFormSummary()}
 
         {formStep === 'name' && (
-          <box flexDirection="column">
-            <box>
-              <text>Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Name: </Text>
+              <TextInput
                 value={formName}
                 onChange={setFormName}
                 onSubmit={handleFormNameSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Identity name (required)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc to {isEdit ? 'cancel' : 'go back'}</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'displayName' && (
-          <box flexDirection="column">
-            <box>
-              <text>Display Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Display Name: </Text>
+              <TextInput
                 value={formDisplayName}
                 onChange={setFormDisplayName}
                 onSubmit={handleFormDisplayNameSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder={`Display name (default: ${formName})...`}
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'title' && (
-          <box flexDirection="column">
-            <box>
-              <text>Role: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Role: </Text>
+              <TextInput
                 value={formTitle}
                 onChange={setFormTitle}
                 onSubmit={handleFormTitleSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Role or title (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'company' && (
-          <box flexDirection="column">
-            <box>
-              <text>Company: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Company: </Text>
+              <TextInput
                 value={formCompany}
                 onChange={setFormCompany}
                 onSubmit={handleFormCompanySubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Company name (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'email' && (
-          <box flexDirection="column">
-            <box>
-              <text>Email: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Email: </Text>
+              <TextInput
                 value={formEmail}
                 onChange={setFormEmail}
                 onSubmit={handleFormEmailSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Primary email (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'phone' && (
-          <box flexDirection="column">
-            <box>
-              <text>Phone: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Phone: </Text>
+              <TextInput
                 value={formPhone}
                 onChange={setFormPhone}
                 onSubmit={handleFormPhoneSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Primary phone (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'addressStreet' && (
-          <box flexDirection="column">
-            <box>
-              <text>Address (Street): </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Address (Street): </Text>
+              <TextInput
                 value={formAddressStreet}
                 onChange={setFormAddressStreet}
                 onSubmit={handleFormAddressStreetSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="123 Main St (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'addressCity' && (
-          <box flexDirection="column">
-            <box>
-              <text>Address (City): </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Address (City): </Text>
+              <TextInput
                 value={formAddressCity}
                 onChange={setFormAddressCity}
                 onSubmit={handleFormAddressCitySubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="City (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'addressState' && (
-          <box flexDirection="column">
-            <box>
-              <text>Address (State): </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Address (State): </Text>
+              <TextInput
                 value={formAddressState}
                 onChange={setFormAddressState}
                 onSubmit={handleFormAddressStateSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="State/Region (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'addressPostal' && (
-          <box flexDirection="column">
-            <box>
-              <text>Address (Postal): </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Address (Postal): </Text>
+              <TextInput
                 value={formAddressPostal}
                 onChange={setFormAddressPostal}
                 onSubmit={handleFormAddressPostalSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Postal code (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'addressCountry' && (
-          <box flexDirection="column">
-            <box>
-              <text>Address (Country): </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Address (Country): </Text>
+              <TextInput
                 value={formAddressCountry}
                 onChange={setFormAddressCountry}
                 onSubmit={handleFormAddressCountrySubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Country (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'virtualAddress' && (
-          <box flexDirection="column">
-            <box>
-              <text>Virtual Address: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Virtual Address: </Text>
+              <TextInput
                 value={formVirtualAddress}
                 onChange={setFormVirtualAddress}
                 onSubmit={handleFormVirtualAddressSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Handle, URL, or DID (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'communicationStyle' && (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text>Communication Style:</text>
-            </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text>Communication Style:</Text>
+            </Box>
+            <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
               {COMMUNICATION_STYLES.map((style, index) => (
-                <box key={style} paddingY={0}>
-                  <text
+                <Box key={style} paddingY={0}>
+                  <Text
                     bg={index === formStyleIndex ? themeColor('primary') : undefined}
                     fg={index === formStyleIndex ? themeColor('text') : undefined}
                   >
                     {index === formStyleIndex ? '>' : ' '} {style}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               ))}
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'responseLength' && (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text>Response Length:</text>
-            </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text>Response Length:</Text>
+            </Box>
+            <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
               {RESPONSE_LENGTHS.map((length, index) => (
-                <box key={length} paddingY={0}>
-                  <text
+                <Box key={length} paddingY={0}>
+                  <Text
                     bg={index === formLengthIndex ? themeColor('primary') : undefined}
                     fg={index === formLengthIndex ? themeColor('text') : undefined}
                   >
                     {index === formLengthIndex ? '>' : ' '} {length}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               ))}
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>↑↓ select | Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {formStep === 'context' && (
-          <box flexDirection="column">
-            <box>
-              <text>Context: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Context: </Text>
+              <TextInput
                 value={formContext}
                 onChange={setFormContext}
                 onSubmit={handleFormContextSubmit}
-                focused
+                focus
+                allowEmptySubmit
                 placeholder="Custom personality notes (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to {isEdit ? 'save' : 'create'} | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to {isEdit ? 'save' : 'create'} | Esc back</Text>
+            </Box>
+          </Box>
         )}
 
         {isProcessing && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>{isEdit ? 'Saving...' : 'Creating...'}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>{isEdit ? 'Saving...' : 'Creating...'}</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -1154,74 +1187,74 @@ export function IdentityPanel({
     const isActive = currentIdentity.id === activeIdentityId;
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')}>
             {currentIdentity.name}{currentIdentity.isDefault ? ' (default)' : ''}{isActive ? ' (active)' : ''}
-          </text>
-        </box>
+          </Text>
+        </Box>
 
-        <box
+        <Box
           flexDirection="column"
-          borderStyle="rounded"
+          borderStyle="round"
           borderColor={themeColor('border')} border={["top", "bottom"]}
           paddingX={1}
           paddingY={1}
         >
-          <box marginBottom={1}>
-            <text>Profile</text>
-          </box>
-          <box marginLeft={2}>
-            <text>{`Display Name: ${currentIdentity.profile.displayName}`}</text>
-          </box>
+          <Box marginBottom={1}>
+            <Text>Profile</Text>
+          </Box>
+          <Box marginLeft={2}>
+            <Text>{`Display Name: ${currentIdentity.profile.displayName}`}</Text>
+          </Box>
           {currentIdentity.profile.title && (
-            <box marginLeft={2}>
-              <text>{`Role: ${currentIdentity.profile.title}`}</text>
-            </box>
+            <Box marginLeft={2}>
+              <Text>{`Role: ${currentIdentity.profile.title}`}</Text>
+            </Box>
           )}
           {currentIdentity.profile.company && (
-            <box marginLeft={2}>
-              <text>{`Company: ${currentIdentity.profile.company}`}</text>
-            </box>
+            <Box marginLeft={2}>
+              <Text>{`Company: ${currentIdentity.profile.company}`}</Text>
+            </Box>
           )}
-          <box marginLeft={2}>
-            <text>{`Timezone: ${currentIdentity.profile.timezone}`}</text>
-          </box>
+          <Box marginLeft={2}>
+            <Text>{`Timezone: ${currentIdentity.profile.timezone}`}</Text>
+          </Box>
 
-          <box marginTop={1} marginBottom={1}>
-            <text>Preferences</text>
-          </box>
-          <box marginLeft={2}>
-            <text>{`Language: ${currentIdentity.preferences.language}`}</text>
-          </box>
-          <box marginLeft={2}>
-            <text>{`Style: ${currentIdentity.preferences.communicationStyle}`}</text>
-          </box>
-          <box marginLeft={2}>
-            <text>{`Response: ${currentIdentity.preferences.responseLength}`}</text>
-          </box>
+          <Box marginTop={1} marginBottom={1}>
+            <Text>Preferences</Text>
+          </Box>
+          <Box marginLeft={2}>
+            <Text>{`Language: ${currentIdentity.preferences.language}`}</Text>
+          </Box>
+          <Box marginLeft={2}>
+            <Text>{`Style: ${currentIdentity.preferences.communicationStyle}`}</Text>
+          </Box>
+          <Box marginLeft={2}>
+            <Text>{`Response: ${currentIdentity.preferences.responseLength}`}</Text>
+          </Box>
 
           {(currentIdentity.contacts.emails.length > 0 ||
             currentIdentity.contacts.phones.length > 0 ||
             currentIdentity.contacts.addresses.length > 0 ||
             (currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0)) && (
             <>
-              <box marginTop={1} marginBottom={1}>
-                <text>Contacts</text>
-              </box>
+              <Box marginTop={1} marginBottom={1}>
+                <Text>Contacts</Text>
+              </Box>
               {currentIdentity.contacts.emails.length > 0 && (
-                <box marginLeft={2}>
-                  <text>{`Email: ${currentIdentity.contacts.emails[0].value}`}</text>
-                </box>
+                <Box marginLeft={2}>
+                  <Text>{`Email: ${currentIdentity.contacts.emails[0].value}`}</Text>
+                </Box>
               )}
               {currentIdentity.contacts.phones.length > 0 && (
-                <box marginLeft={2}>
-                  <text>{`Phone: ${currentIdentity.contacts.phones[0].value}`}</text>
-                </box>
+                <Box marginLeft={2}>
+                  <Text>{`Phone: ${currentIdentity.contacts.phones[0].value}`}</Text>
+                </Box>
               )}
               {currentIdentity.contacts.addresses.length > 0 && (
-                <box marginLeft={2}>
-                  <text>
+                <Box marginLeft={2}>
+                  <Text>
                     {`Address: ${[
                       currentIdentity.contacts.addresses[0].street,
                       currentIdentity.contacts.addresses[0].city,
@@ -1229,44 +1262,44 @@ export function IdentityPanel({
                       currentIdentity.contacts.addresses[0].postalCode,
                       currentIdentity.contacts.addresses[0].country,
                     ].filter(Boolean).join(', ')}`}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               )}
               {currentIdentity.contacts.virtualAddresses && currentIdentity.contacts.virtualAddresses.length > 0 && (
-                <box marginLeft={2}>
-                  <text>{`Virtual: ${currentIdentity.contacts.virtualAddresses[0].value}`}</text>
-                </box>
+                <Box marginLeft={2}>
+                  <Text>{`Virtual: ${currentIdentity.contacts.virtualAddresses[0].value}`}</Text>
+                </Box>
               )}
             </>
           )}
 
           {currentIdentity.context && (
             <>
-              <box marginTop={1} marginBottom={1}>
-                <text>Context</text>
-              </box>
-              <box marginLeft={2}>
-                <text fg={themeColor('muted')}>{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</text>
-              </box>
+              <Box marginTop={1} marginBottom={1}>
+                <Text>Context</Text>
+              </Box>
+              <Box marginLeft={2}>
+                <Text fg={themeColor('muted')}>{currentIdentity.context.slice(0, 200)}{currentIdentity.context.length > 200 ? '...' : ''}</Text>
+              </Box>
             </>
           )}
-        </box>
+        </Box>
 
         {error && (
-          <box marginTop={1}>
-            <text fg={themeColor('error')}>{error}</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('error')}>{error}</Text>
+          </Box>
         )}
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {!isActive && 's switch | '}
             e edit |{' '}
             {!currentIdentity.isDefault && 'd set default | '}
             x delete | Esc back
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -1274,21 +1307,21 @@ export function IdentityPanel({
   const visibleIdentities = identities.slice(identityRange.start, identityRange.end);
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text fg={themeColor('info')}>Identities{identities.length > MAX_VISIBLE_ITEMS ? ` (${identityIndex + 1}/${identities.length})` : ''}</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text fg={themeColor('info')}>Identities{identities.length > MAX_VISIBLE_ITEMS ? ` (${identityIndex + 1}/${identities.length})` : ''}</Text>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {identityRange.hasMore.above > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↑ {identityRange.hasMore.above} more above</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↑ {identityRange.hasMore.above} more above</Text>
+          </Box>
         )}
 
         {visibleIdentities.map((identity, visibleIdx) => {
@@ -1298,33 +1331,32 @@ export function IdentityPanel({
           const prefix = isSelected ? '> ' : '  ';
           const nameDisplay = identity.name.padEnd(20);
           const statusIcon = identity.isDefault ? '★' : isActive ? '●' : '○';
-          const statusColor = identity.isDefault ? 'yellow' : isActive ? themeColor('success') : themeColor('muted');
 
           return (
-            <box key={identity.id} paddingY={0}>
-              <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
+            <Box key={identity.id} paddingY={0}>
+              <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : "gray"}>
                 {`${prefix}${statusIcon} ${nameDisplay} ${identity.profile.displayName}`}
-              </text>
-            </box>
+              </Text>
+            </Box>
           );
         })}
 
         {identityRange.hasMore.below > 0 && (
-          <box paddingY={0}>
-            <text fg={themeColor('muted')}>  ↓ {identityRange.hasMore.below} more below</text>
-          </box>
+          <Box paddingY={0}>
+            <Text fg={themeColor('muted')}>  ↓ {identityRange.hasMore.below} more below</Text>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Legend: ★ default | ● active | ○ inactive</text>
-      </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Legend: ★ default | ● active | ○ inactive</Text>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ select | Enter view | n new | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

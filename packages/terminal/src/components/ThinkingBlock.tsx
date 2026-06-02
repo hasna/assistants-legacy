@@ -1,4 +1,5 @@
 import React from 'react';
+import { Box, Inline, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 /**
@@ -6,9 +7,6 @@ import { themeColor } from '../theme/colors';
  * - "Thinking:" prefix in warning color (orange)
  * - Content in italic
  * - Left border using borderDim color
- *
- * [brutus] Updated to match OpenCode spec colors exactly.
- * [cassius] Replaced border={['left']} with row-based pipe char for OpenTUI compat.
  */
 
 interface ThinkingBlockProps {
@@ -25,31 +23,31 @@ export function ThinkingBlock({ content, isActive = false }: ThinkingBlockProps)
 
   if (!content && !isActive) {
     return (
-      <box flexDirection="row" width="100%">
-        <text fg={accentCol}>{'\u2502'} </text>
-        <text fg={warningCol}><i>Thinking</i></text>
-      </box>
+      <Box flexDirection="row" width="100%">
+        <Text fg={accentCol}>{'\u2502'} </Text>
+        <Text fg={warningCol} italic>Thinking</Text>
+      </Box>
     );
   }
 
   if (!content) {
     return (
-      <box flexDirection="row" width="100%">
-        <text fg={accentCol}>{'\u2502'} </text>
-        <text fg={warningCol}><i>Thinking...</i></text>
-      </box>
+      <Box flexDirection="row" width="100%">
+        <Text fg={accentCol}>{'\u2502'} </Text>
+        <Text fg={warningCol} italic>Thinking...</Text>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="row" width="100%">
-      <text fg={accentCol}>{'\u2502'} </text>
-      <box flexDirection="column" flexGrow={1} flexShrink={1}>
-        <text>
-          <span fg={warningCol}><i>Thinking: </i></span>
-          <span fg={mutedCol}><i>{content}</i></span>
-        </text>
-      </box>
-    </box>
+    <Box flexDirection="row" width="100%">
+      <Text fg={accentCol}>{'\u2502'} </Text>
+      <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+        <Text>
+          <Inline fg={warningCol} italic>Thinking: </Inline>
+          <Inline fg={mutedCol} italic>{content}</Inline>
+        </Text>
+      </Box>
+    </Box>
   );
 }

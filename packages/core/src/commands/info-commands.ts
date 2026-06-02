@@ -125,7 +125,7 @@ export function helpCommand(loader: CommandLoader): Command {
       let message = '\n**Available Slash Commands**\n\n';
 
       if (builtinNames.length > 0) {
-        message += '**Built-in Commands:**\n';
+        message += '**Built-in Commands (registered locally in this session):**\n';
         for (const name of builtinNames) {
           const cmd = builtinByName.get(name);
           if (!cmd) continue;

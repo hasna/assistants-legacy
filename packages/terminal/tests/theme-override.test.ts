@@ -2,12 +2,20 @@
  * Regression tests for explicit theme override.
  *
  * Bug: on terminals that don't answer the OSC 11 background query (ttyd, some
- * CI PTYs), OpenTUI's probe could report 'light' on a dark terminal, making the
- * light-palette (dark) text invisible. HASNA_THEME gives users an authoritative
+ * CI PTYs), renderer probes can report 'light' on a dark terminal, making the
+ * light-palette text invisible. HASNA_THEME gives users an authoritative
  * override that wins over all detection.
  */
 import { describe, expect, test, afterEach } from 'bun:test';
-import { explicitThemeOverride, applyThemeSetting, getThemeMode } from '../src/theme/setup';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import {
+  explicitThemeOverride,
+  applyThemeSetting,
+  getThemeFg,
+  getThemeMode,
+  setupThemeDefaults,
+} from '../src/theme/setup';
 
 const KEYS = ['HASNA_THEME', 'HASNA_ASSISTANTS_THEME'] as const;
 function clear() {
@@ -76,5 +84,39 @@ describe('applyThemeSetting (used by /theme)', () => {
     process.env.HASNA_THEME = 'light';
     expect(applyThemeSetting('dark')).toBe('light');
     expect(getThemeMode()).toBe('light');
+  });
+});
+
+describe('Ink theme bootstrap', () => {
+  const retiredPackageScope = ['@open', 'tui'].join('');
+  const retiredRenderableMarker = ['Text', 'Renderable'].join('');
+  const retiredColorType = ['R', 'G', 'B', 'A'].join('');
+
+  test('theme setup has no renderer-specific imports or patching', () => {
+    const source = readFileSync(join(import.meta.dir, '../src/theme/setup.ts'), 'utf8');
+
+    expect(source).not.toContain(retiredPackageScope);
+    expect(source).not.toContain(retiredRenderableMarker);
+    expect(source).not.toContain('extend(');
+    expect(source).not.toContain(retiredColorType);
+  });
+
+  test('setupThemeDefaults accepts renderer mode without importing renderer internals', async () => {
+    clear();
+    const handlers: Array<(mode: 'dark' | 'light') => void> = [];
+    await setupThemeDefaults({
+      themeMode: 'light',
+      destroy: () => {},
+      on: (event, handler) => {
+        if (event === 'theme_mode') handlers.push(handler);
+      },
+    });
+
+    expect(getThemeMode()).toBe('light');
+    expect(getThemeFg()).toBe('#2a2a2a');
+
+    handlers[0]?.('dark');
+    expect(getThemeMode()).toBe('dark');
+    expect(getThemeFg()).toBe('#e0e0e0');
   });
 });

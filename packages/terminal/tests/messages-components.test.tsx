@@ -4,21 +4,17 @@
  */
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { stripAnsi, normalizeUserDisplay, startsWithListOrTable } from '../src/components/message-parts/helpers';
 import { MessageBubble, UserMessage, AssistantMessage } from '../src/components/message-parts';
 import type { DisplayMessage } from '../src/components/messageLines';
+import { renderInk } from './utils/ink-test-harness';
 
-const wait = (ms = 60) => new Promise((r) => setTimeout(r, ms));
 async function frame(node: React.ReactElement, width = 60, height = 8): Promise<string> {
-  const { captureCharFrame, renderOnce } = await testRender(node, { width, height });
-  // Markdown content renders via an async tree-sitter wasm load; poll a few
-  // frames so the assertion isn't racing the first-time wasm initialization.
-  for (let i = 0; i < 6; i++) {
-    await renderOnce();
-    await wait(80);
-  }
-  return captureCharFrame();
+  const harness = await renderInk(node, { width, height });
+  await harness.renderOnce();
+  const output = harness.captureFrame();
+  await harness.cleanup();
+  return output;
 }
 
 const msg = (over: Partial<DisplayMessage>): DisplayMessage =>

@@ -1,6 +1,6 @@
 /**
  * Keystroke matching (plan 8d98da29 P3.1) — does a parsed binding keystroke
- * match an actual (input, key) event from useSafeInput? Pure and synchronous.
+ * match an actual (input, key) event from the app input hook? Pure and synchronous.
  */
 import type { Key, ParsedKeystroke } from './types';
 
@@ -23,7 +23,7 @@ const NAMED_KEY_FIELD: Record<string, keyof Key> = {
 
 /**
  * True when `ks` matches the given event. ctrl and meta must match exactly
- * (alt folds into meta, matching useSafeInput which sets meta from meta||option).
+ * (alt folds into meta, matching the app input hook which sets meta from meta||option).
  * shift is enforced only when the binding requests it.
  */
 export function matchesKeystroke(ks: ParsedKeystroke, input: string, key: Key): boolean {

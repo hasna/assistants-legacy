@@ -1,4 +1,5 @@
 import React from 'react';
+import { Inline } from '../../ui/ink';
 import { color } from './color';
 
 export type Status = 'success' | 'error' | 'warning' | 'info' | 'pending' | 'loading';
@@ -20,13 +21,12 @@ export const STATUS_CONFIG: Record<Status, { icon: string; token: string }> = {
 };
 
 /**
- * An inline status glyph colored by semantic meaning. Renders a `<span>`, so it
- * must live inside a `<text>` (compose multiple inline runs in one `<text>`).
+ * An inline status glyph colored by semantic meaning.
  *
  * @example
- * <text><StatusIcon status="success" withSpace /><span>Done</span></text>
+ * <Text><StatusIcon status="success" withSpace />Done</Text>
  */
 export function StatusIcon({ status, withSpace = false }: StatusIconProps) {
   const cfg = STATUS_CONFIG[status];
-  return <span fg={color(cfg.token)}>{cfg.icon}{withSpace ? ' ' : ''}</span>;
+  return <Inline fg={color(cfg.token)}>{cfg.icon}{withSpace ? ' ' : ''}</Inline>;
 }

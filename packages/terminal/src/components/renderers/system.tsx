@@ -32,6 +32,7 @@ import { ConfigPanel } from '../ConfigPanel';
 import type { WalletAddInput, WalletCardEntry } from '../appHelpers';
 import { deepMerge } from '../appHelpers';
 import { themeColor } from '../../theme/colors';
+import { Box } from '../../ui/ink';
 import type { PanelRenderContext } from './context';
 
 export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactNode {
@@ -109,7 +110,7 @@ export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactNode 
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <GuardrailsPanel
         config={ctx.guardrailsConfig!}
         policies={ctx.guardrailsPolicies}
@@ -121,7 +122,7 @@ export function renderGuardrailsPanel(ctx: PanelRenderContext): React.ReactNode 
         onUpdatePolicy={handleUpdatePolicy}
         onCancel={() => ctx.setShowGuardrailsPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -202,7 +203,7 @@ export function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <BudgetsPanel
         profiles={ctx.budgetProfiles}
         activeProfileId={activeProfileId}
@@ -215,7 +216,7 @@ export function renderBudgetsPanel(ctx: PanelRenderContext): React.ReactNode {
         onReset={handleBudgetReset}
         onCancel={() => ctx.setShowBudgetPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -233,7 +234,7 @@ export function renderModelPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <ModelPanel
         currentModelId={currentModelId}
         agentName={agentName}
@@ -241,7 +242,7 @@ export function renderModelPanel(ctx: PanelRenderContext): React.ReactNode {
         onOpenAgents={handleOpenAgents}
         onCancel={() => ctx.setShowModelPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -255,14 +256,14 @@ export function renderAssistantsRegistryPanel(ctx: PanelRenderContext): React.Re
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <AssistantsRegistryPanel
         assistants={ctx.assistantsList}
         stats={ctx.registryStats!}
         onRefresh={handleAssistantsRefresh}
         onCancel={() => ctx.setShowAssistantsRegistryPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -305,7 +306,7 @@ export function renderProjectsPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <ProjectsPanel
         projects={ctx.projectsList}
         activeProjectId={ctx.activeProjectId}
@@ -315,7 +316,7 @@ export function renderProjectsPanel(ctx: PanelRenderContext): React.ReactNode {
         onViewPlans={handleViewPlans}
         onCancel={() => ctx.setShowProjectsPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -392,7 +393,7 @@ export function renderPlansPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <PlansPanel
         project={plansProject}
         onCreatePlan={handleCreatePlan}
@@ -403,7 +404,7 @@ export function renderPlansPanel(ctx: PanelRenderContext): React.ReactNode {
         onBack={() => ctx.setShowPlansPanel(false)}
         onClose={() => ctx.setShowPlansPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -436,7 +437,7 @@ export function renderWalletPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <WalletPanel
         cards={ctx.walletCards}
         initialMode={ctx.walletPanelInitialMode}
@@ -446,7 +447,7 @@ export function renderWalletPanel(ctx: PanelRenderContext): React.ReactNode {
         onClose={() => ctx.setShowWalletPanel(false)}
         error={ctx.walletError}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -483,7 +484,7 @@ export function renderSecretsPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <SecretsPanel
         secrets={ctx.secretsList}
         initialMode={ctx.secretsPanelInitialMode}
@@ -493,7 +494,7 @@ export function renderSecretsPanel(ctx: PanelRenderContext): React.ReactNode {
         onClose={() => ctx.setShowSecretsPanel(false)}
         error={ctx.secretsError}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -523,7 +524,7 @@ export function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactN
     : null;
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <AssistantsDashboard
         sessions={sessionEntries}
         projectBudget={projectBudgetStatus || undefined}
@@ -549,7 +550,7 @@ export function renderAssistantsDashboard(ctx: PanelRenderContext): React.ReactN
         }}
         onCancel={() => ctx.setShowAssistantsDashboard(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -561,7 +562,7 @@ export function renderSwarmPanel(ctx: PanelRenderContext): React.ReactNode {
   const memoryStats = swarmMemory ? swarmMemory.getStats() : null;
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <SwarmPanel
         state={swarmState}
         config={swarmConfig}
@@ -571,7 +572,7 @@ export function renderSwarmPanel(ctx: PanelRenderContext): React.ReactNode {
         }}
         onCancel={() => ctx.setShowSwarmPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -591,7 +592,7 @@ export function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <WorkspacePanel
         workspaces={ctx.workspacesList}
         activeWorkspaceId={ctx.activeWorkspaceId}
@@ -600,7 +601,7 @@ export function renderWorkspacePanel(ctx: PanelRenderContext): React.ReactNode {
         onSelect={ctx.switchWorkspace}
         onClose={() => ctx.setShowWorkspacePanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -620,14 +621,14 @@ export function renderHeartbeatPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <HeartbeatPanel
         runs={ctx.heartbeatRuns}
         heartbeatState={ctx.heartbeatState}
         onRefresh={handleRefresh}
         onClose={() => ctx.setShowHeartbeatPanel(false)}
       />
-    </box>
+    </Box>
   );
 }
 
@@ -664,7 +665,7 @@ export function renderConfigPanel(ctx: PanelRenderContext): React.ReactNode {
   };
 
   return (
-    <box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1}>
       <ConfigPanel
         config={ctx.currentConfig!}
         userConfig={ctx.userConfig}
@@ -673,6 +674,6 @@ export function renderConfigPanel(ctx: PanelRenderContext): React.ReactNode {
         onSave={handleConfigSave}
         onCancel={() => ctx.setShowConfigPanel(false)}
       />
-    </box>
+    </Box>
   );
 }

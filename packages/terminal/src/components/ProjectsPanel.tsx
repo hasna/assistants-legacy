@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ProjectRecord } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface ProjectsPanelProps {
@@ -64,13 +64,19 @@ export function ProjectsPanel({
   }, [mode, projects, selectedIndex]);
 
   useInput((input, key) => {
+    const isEscape = key.escape || input === '\x1b';
+
     // In create mode, handle text input
     if (mode === 'create') {
-      if (key.escape) {
+      if (isEscape) {
         setMode('list');
         setNewName('');
         setNewDescription('');
         setCreateStep('name');
+        return;
+      }
+      if (createStep === 'description' && key.tab) {
+        void handleSkipDescription();
         return;
       }
       // Text input handled by TextInput component
@@ -90,7 +96,7 @@ export function ProjectsPanel({
         }
         return;
       }
-      if (input === 'n' || input === 'N' || key.escape) {
+      if (input === 'n' || input === 'N' || isEscape) {
         setMode('list');
         return;
       }
@@ -119,7 +125,7 @@ export function ProjectsPanel({
     }
 
     // Escape or q: cancel
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (isEscape || input === 'q' || input === 'Q') {
       onCancel();
       return;
     }
@@ -153,18 +159,26 @@ export function ProjectsPanel({
       setSelectedIndex(num - 1);
       return;
     }
-  }, { isActive: mode === 'list' || mode === 'delete-confirm' });
+  }, { isActive: true });
 
-  const handleNameSubmit = () => {
-    if (!newName.trim()) return;
+  const handleNameSubmit = (submittedName?: string) => {
+    const nextName = submittedName ?? newName;
+    if (!nextName.trim()) return;
+    if (submittedName !== undefined) {
+      setNewName(submittedName);
+    }
     setCreateStep('description');
   };
 
-  const handleDescriptionSubmit = async () => {
+  const handleDescriptionSubmit = async (submittedDescription?: string) => {
+    const nextDescription = submittedDescription ?? newDescription;
     if (!newName.trim()) return;
+    if (submittedDescription !== undefined) {
+      setNewDescription(submittedDescription);
+    }
     setIsSubmitting(true);
     try {
-      await onCreate(newName.trim(), newDescription.trim() || undefined);
+      await onCreate(newName.trim(), nextDescription.trim() || undefined);
       setNewName('');
       setNewDescription('');
       setCreateStep('name');
@@ -191,57 +205,57 @@ export function ProjectsPanel({
   // Create mode UI
   if (mode === 'create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Create New Project</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Create New Project</Text>
+        </Box>
 
         {createStep === 'name' && (
-          <box flexDirection="column">
-            <box>
-              <text>Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Name: </Text>
+              <TextInput
                 value={newName}
                 onChange={setNewName}
                 onSubmit={handleNameSubmit}
-                focused
+                focus
                 placeholder="Enter project name..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc to cancel</Text>
+            </Box>
+          </Box>
         )}
 
         {createStep === 'description' && (
-          <box flexDirection="column">
-            <box>
-              <text fg={themeColor('muted')}>Name: </text>
-              <text>{newName}</text>
-            </box>
-            <box marginTop={1}>
-              <text>Description: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text fg={themeColor('muted')}>Name: </Text>
+              <Text>{newName}</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text>Description: </Text>
+              <TextInput
                 value={newDescription}
                 onChange={setNewDescription}
                 onSubmit={handleDescriptionSubmit}
-                focused
+                focus
                 placeholder="Enter description (optional)..."
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to create | Tab to skip | Esc to cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to create | Tab to skip | Esc to cancel</Text>
+            </Box>
+          </Box>
         )}
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Creating project...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Creating project...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
@@ -249,46 +263,47 @@ export function ProjectsPanel({
   if (mode === 'delete-confirm') {
     const project = projects[selectedIndex];
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Project</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Project</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
             Are you sure you want to delete &quot;{project?.name}&quot;?
-          </text>
-        </box>
-        <box>
-          <text fg={themeColor('muted')}>This will delete all plans in this project.</text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+        <Box>
+          <Text fg={themeColor('muted')}>This will delete all plans in this project.</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>Press </Text>
+          <Text fg={themeColor('success')} bold>y</Text>
+          <Text> to confirm or </Text>
+          <Text fg={themeColor('error')} bold>n</Text>
+          <Text> to cancel</Text>
+        </Box>
+      </Box>
     );
   }
 
   // List mode UI
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Projects</b></text>
-        <text fg={themeColor('muted')}>[n]ew</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Projects</Text>
+        <Text fg={themeColor('muted')}>[n]ew</Text>
+      </Box>
 
-      <box
+      <Box
         flexDirection="column"
-        borderStyle="rounded"
+        borderStyle="round"
         borderColor={themeColor('border')} border={["top", "bottom"]}
         paddingX={1}
       >
         {projects.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No projects yet. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No projects yet. Press n to create one.</Text>
+          </Box>
         ) : (
           projects.map((project, index) => {
             const isActive = project.id === activeProjectId;
@@ -298,43 +313,43 @@ export function ProjectsPanel({
             const time = formatProjectTime(project.updatedAt);
 
             return (
-              <box key={project.id} paddingY={0}>
-                <text
+              <Box key={project.id} paddingY={0}>
+                <Text
                   bg={isSelected ? themeColor('primary') : undefined}
                   fg={isSelected ? themeColor('text') : undefined}
                 >
                   {isActive ? '*' : ' '} {index + 1}. {project.name.padEnd(20)} {planCount} plan{planCount !== 1 ? 's' : ''} {contextCount > 0 ? `${contextCount} ctx` : ''} {time}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New project option */}
-        <box marginTop={1} paddingY={0}>
-          <text
+        <Box marginTop={1} paddingY={0}>
+          <Text
             bg={selectedIndex === projects.length ? themeColor('primary') : undefined}
             fg={selectedIndex === projects.length ? themeColor('text') : undefined}
           >
             + New project (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {/* Selected project details */}
       {projects.length > 0 && selectedIndex < projects.length && (
-        <box marginTop={1} flexDirection="column">
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1} flexDirection="column">
+          <Text fg={themeColor('muted')}>
             {projects[selectedIndex].description || 'No description'}
-          </text>
-        </box>
+          </Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           Enter select | p plans | d delete | Esc close | 1-{Math.max(1, projects.length)} jump
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

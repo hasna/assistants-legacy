@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { HookEvent, HookHandler } from '@hasna/assistants-shared';
 import type { HookLocation } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Inline, Text, TextInput, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface HookWizardInitial {
@@ -44,6 +44,11 @@ type HookType = typeof HOOK_TYPES[number];
 const HOOK_LOCATIONS: HookLocation[] = ['project', 'user', 'local'];
 
 type Step = 'event' | 'matcher' | 'type' | 'command' | 'timeout' | 'async' | 'name' | 'description' | 'location' | 'confirm';
+type HookWizardKey = {
+  upArrow?: boolean;
+  downArrow?: boolean;
+  return?: boolean;
+};
 
 export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardProps) {
   // Form state
@@ -124,7 +129,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     }
   };
 
-  const handleEventInput = (input: string, key: { upArrow: boolean; downArrow: boolean; return: boolean }) => {
+  const handleEventInput = (input: string, key: HookWizardKey) => {
     if (key.upArrow) {
       setEventIndex((prev) => (prev === 0 ? HOOK_EVENTS.length - 1 : prev - 1));
     } else if (key.downArrow) {
@@ -140,7 +145,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     }
   };
 
-  const handleTypeInput = (input: string, key: { upArrow: boolean; downArrow: boolean; return: boolean }) => {
+  const handleTypeInput = (input: string, key: HookWizardKey) => {
     if (key.upArrow || input === 'k') {
       setTypeIndex((prev) => (prev === 0 ? HOOK_TYPES.length - 1 : prev - 1));
     } else if (key.downArrow || input === 'j') {
@@ -151,7 +156,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     }
   };
 
-  const handleAsyncInput = (input: string, key: { return: boolean }) => {
+  const handleAsyncInput = (input: string, key: HookWizardKey) => {
     if (input === 'y' || input === 'Y') {
       setIsAsync(true);
       setStep('name');
@@ -163,7 +168,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     }
   };
 
-  const handleLocationInput = (input: string, key: { upArrow: boolean; downArrow: boolean; return: boolean }) => {
+  const handleLocationInput = (input: string, key: HookWizardKey) => {
     if (key.upArrow) {
       setLocationIndex((prev) => (prev === 0 ? HOOK_LOCATIONS.length - 1 : prev - 1));
     } else if (key.downArrow) {
@@ -179,7 +184,7 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     }
   };
 
-  const handleConfirmInput = async (input: string, _key: { return: boolean }) => {
+  const handleConfirmInput = async (input: string, _key: HookWizardKey) => {
     if (input === 'y' || input === 'Y') {
       await saveHook();
     } else if (input === 'n' || input === 'N') {
@@ -273,281 +278,281 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
     switch (step) {
       case 'event':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 1/9: Select Event</b></text>
-            </box>
-            <text fg={themeColor('muted')}>When should this hook run?</text>
-            <box
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 1/9: Select Event</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>When should this hook run?</Text>
+            <Box
               flexDirection="column"
               marginTop={1}
-              borderStyle="rounded"
+              borderStyle="round"
               borderColor={themeColor('border')} border={["top", "bottom"]}
               paddingX={1}
               height={Math.min(10, HOOK_EVENTS.length + 2)}
             >
               {HOOK_EVENTS.map((ev, index) => (
-                <box key={ev}>
-                  <text
+                <Box key={ev}>
+                  <Text
                     bg={index === eventIndex ? themeColor('primary') : undefined}
                     fg={index === eventIndex ? themeColor('text') : undefined}
                   >
                     {index === eventIndex ? '>' : ' '} {index + 1}. {ev}
-                  </text>
-                </box>
+                  </Text>
+                </Box>
               ))}
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc cancel</Text>
+            </Box>
+          </Box>
         );
 
       case 'matcher':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 2/9: Matcher Pattern</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Filter which {event} events trigger this hook (regex or exact match)</text>
-            <text fg={themeColor('muted')}>Leave empty or use * to match all</text>
-            <box marginTop={1}>
-              <text>Pattern: </text>
-              <input
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 2/9: Matcher Pattern</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Filter which {event} events trigger this hook (regex or exact match)</Text>
+            <Text fg={themeColor('muted')}>Leave empty or use * to match all</Text>
+            <Box marginTop={1}>
+              <Text>Pattern: </Text>
+              <TextInput
                 value={matcher}
                 onChange={setMatcher}
                 onSubmit={handleMatcherSubmit}
-                focused
+                focus
                 placeholder="Bash|Edit|Write (regex) or * for all"
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'type':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 3/9: Hook Type</b></text>
-            </box>
-            <text fg={themeColor('muted')}>How should the hook execute?</text>
-            <box flexDirection="column" marginTop={1}>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 3/9: Hook Type</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>How should the hook execute?</Text>
+            <Box flexDirection="column" marginTop={1}>
               {HOOK_TYPES.map((type, index) => (
-                <box key={type}>
-                  <text
+                <Box key={type}>
+                  <Text
                     bg={index === typeIndex ? themeColor('primary') : undefined}
                     fg={index === typeIndex ? themeColor('text') : undefined}
                   >
                     {index === typeIndex ? '>' : ' '} {type === 'command' ? 'command  ' : type === 'prompt' ? 'prompt   ' : 'assistant'}
-                    <span fg={themeColor('muted')}>
+                    <Inline fg={themeColor('muted')}>
                       {type === 'command' && ' - Run a shell command'}
                       {type === 'prompt' && ' - Single-turn LLM decision'}
                       {type === 'assistant' && ' - Multi-turn assistant with tools'}
-                    </span>
-                  </text>
-                </box>
+                    </Inline>
+                  </Text>
+                </Box>
               ))}
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'command':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</b></text>
-            </box>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 4/9: {hookType === 'command' ? 'Command' : 'Prompt'}</Text>
+            </Box>
             {hookType === 'command' ? (
               <>
-                <text fg={themeColor('muted')}>Shell command to run. Input is passed as JSON via stdin.</text>
-                <text fg={themeColor('muted')}>Exit 0 = allow, Exit 2 = block, other = error</text>
+                <Text fg={themeColor('muted')}>Shell command to run. Input is passed as JSON via stdin.</Text>
+                <Text fg={themeColor('muted')}>Exit 0 = allow, Exit 2 = block, other = error</Text>
               </>
             ) : (
               <>
-                <text fg={themeColor('muted')}>Prompt to send to the LLM. Context will be appended.</text>
-                <text fg={themeColor('muted')}>LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</text>
+                <Text fg={themeColor('muted')}>Prompt to send to the LLM. Context will be appended.</Text>
+                <Text fg={themeColor('muted')}>LLM should respond with {"{"}&quot;allow&quot;: boolean, &quot;reason&quot;: string{"}"}</Text>
               </>
             )}
-            <box marginTop={1}>
-              <text>{hookType === 'command' ? 'Command' : 'Prompt'}: </text>
-              <input
+            <Box marginTop={1}>
+              <Text>{hookType === 'command' ? 'Command' : 'Prompt'}: </Text>
+              <TextInput
                 value={command}
                 onChange={(v) => { setCommand(v); setError(null); }}
                 onSubmit={handleCommandSubmit}
-                focused
+                focus
                 placeholder={hookType === 'command' ? './scripts/validate.sh' : 'Should this action be allowed?'}
               />
-            </box>
+            </Box>
             {error && (
-              <box marginTop={1}>
-                <text fg={themeColor('error')}>{error}</text>
-              </box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('error')}>{error}</Text>
+              </Box>
             )}
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
-            </box>
-          </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'timeout':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 5/9: Timeout</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Maximum time to wait for hook to complete (milliseconds)</text>
-            <box marginTop={1}>
-              <text>Timeout: </text>
-              <input
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 5/9: Timeout</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Maximum time to wait for hook to complete (milliseconds)</Text>
+            <Box marginTop={1}>
+              <Text>Timeout: </Text>
+              <TextInput
                 value={timeout}
                 onChange={(v) => { setTimeout(v); setError(null); }}
                 onSubmit={handleTimeoutSubmit}
-                focused
+                focus
                 placeholder="30000"
               />
-              <text fg={themeColor('muted')}> ms</text>
-            </box>
+              <Text fg={themeColor('muted')}> ms</Text>
+            </Box>
             {error && (
-              <box marginTop={1}>
-                <text fg={themeColor('error')}>{error}</text>
-              </box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('error')}>{error}</Text>
+              </Box>
             )}
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
-            </box>
-          </box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'async':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 6/9: Async Execution</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Run in background without blocking?</text>
-            <box marginTop={1}>
-              <text>Run async: </text>
-              <text fg={isAsync ? themeColor('success') : themeColor('muted')}>[{isAsync ? 'Yes' : 'No '}]</text>
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>y yes | n no | Space toggle | Enter continue | Esc back</text>
-            </box>
-          </box>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 6/9: Async Execution</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Run in background without blocking?</Text>
+            <Box marginTop={1}>
+              <Text>Run async: </Text>
+              <Text fg={isAsync ? themeColor('success') : themeColor('muted')}>[{isAsync ? 'Yes' : 'No '}]</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>y yes | n no | Space toggle | Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'name':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 7/9: Name (optional)</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Give your hook a friendly name</text>
-            <box marginTop={1}>
-              <text>Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 7/9: Name (optional)</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Give your hook a friendly name</Text>
+            <Box marginTop={1}>
+              <Text>Name: </Text>
+              <TextInput
                 value={name}
                 onChange={setName}
                 onSubmit={handleNameSubmit}
-                focused
+                focus
                 placeholder="Validate dangerous commands"
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'description':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 8/9: Description (optional)</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Short note about why this hook exists</text>
-            <box marginTop={1}>
-              <text>Description: </text>
-              <input
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 8/9: Description (optional)</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Short note about why this hook exists</Text>
+            <Box marginTop={1}>
+              <Text>Description: </Text>
+              <TextInput
                 value={description}
                 onChange={setDescription}
                 onSubmit={handleDescriptionSubmit}
-                focused
+                focus
                 placeholder="Block risky commands before they run"
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter continue | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter continue | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'location':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Step 9/9: Save Location</b></text>
-            </box>
-            <text fg={themeColor('muted')}>Where should this hook be stored?</text>
-            <box flexDirection="column" marginTop={1}>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Step 9/9: Save Location</Text>
+            </Box>
+            <Text fg={themeColor('muted')}>Where should this hook be stored?</Text>
+            <Box flexDirection="column" marginTop={1}>
               {HOOK_LOCATIONS.map((loc, index) => (
-                <box key={loc}>
-                  <text
+                <Box key={loc}>
+                  <Text
                     bg={index === locationIndex ? themeColor('primary') : undefined}
                     fg={index === locationIndex ? themeColor('text') : undefined}
                   >
                     {index === locationIndex ? '>' : ' '} {loc.padEnd(8)}
-                    <span fg={themeColor('muted')}> {getLocationDescription(loc)}</span>
-                  </text>
-                </box>
+                    <Inline fg={themeColor('muted')}> {getLocationDescription(loc)}</Inline>
+                  </Text>
+                </Box>
               ))}
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>↑↓ navigate | Enter select | Esc back</Text>
+            </Box>
+          </Box>
         );
 
       case 'confirm':
         return (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('info')}><b>Confirm Hook</b></text>
-            </box>
-            <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
-              <box><text fg={themeColor('muted')}>Event:   </text><text><b>{event}</b></text></box>
-              <box><text fg={themeColor('muted')}>Matcher: </text><text>{matcher || '*'}</text></box>
-              <box><text fg={themeColor('muted')}>Type:    </text><text>{hookType}</text></box>
-              <box><text fg={themeColor('muted')}>{hookType === 'command' ? 'Command' : 'Prompt'}:</text><text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</text></box>
-              <box><text fg={themeColor('muted')}>Timeout: </text><text>{timeout}ms</text></box>
-              <box><text fg={themeColor('muted')}>Async:   </text><text>{isAsync ? 'Yes' : 'No'}</text></box>
-              {name && <box><text fg={themeColor('muted')}>Name:    </text><text>{name}</text></box>}
-              {description && <box><text fg={themeColor('muted')}>Desc:    </text><text>{description}</text></box>}
-              <box><text fg={themeColor('muted')}>Location:</text><text> {location}</text></box>
-            </box>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('info')} bold>Confirm Hook</Text>
+            </Box>
+            <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+              <Box><Text fg={themeColor('muted')}>Event:   </Text><Text bold>{event}</Text></Box>
+              <Box><Text fg={themeColor('muted')}>Matcher: </Text><Text>{matcher || '*'}</Text></Box>
+              <Box><Text fg={themeColor('muted')}>Type:    </Text><Text>{hookType}</Text></Box>
+              <Box><Text fg={themeColor('muted')}>{hookType === 'command' ? 'Command' : 'Prompt'}:</Text><Text> {command.slice(0, 40)}{command.length > 40 ? '...' : ''}</Text></Box>
+              <Box><Text fg={themeColor('muted')}>Timeout: </Text><Text>{timeout}ms</Text></Box>
+              <Box><Text fg={themeColor('muted')}>Async:   </Text><Text>{isAsync ? 'Yes' : 'No'}</Text></Box>
+              {name && <Box><Text fg={themeColor('muted')}>Name:    </Text><Text>{name}</Text></Box>}
+              {description && <Box><Text fg={themeColor('muted')}>Desc:    </Text><Text>{description}</Text></Box>}
+              <Box><Text fg={themeColor('muted')}>Location:</Text><Text> {location}</Text></Box>
+            </Box>
             {error && (
-              <box marginTop={1}>
-                <text fg={themeColor('error')}>{error}</text>
-              </box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('error')}>{error}</Text>
+              </Box>
             )}
             {isSubmitting ? (
-              <box marginTop={1}>
-                <text fg={themeColor('warning')}>Saving hook...</text>
-              </box>
+              <Box marginTop={1}>
+                <Text fg={themeColor('warning')}>Saving hook...</Text>
+              </Box>
             ) : (
-              <box marginTop={1}>
-                <text>
-                  Press <span fg={themeColor('success')}><b>y</b></span> to save or{' '}
-                  <span fg={themeColor('error')}><b>n</b></span> to cancel
-                </text>
-              </box>
+              <Box marginTop={1}>
+                <Text>
+                  Press <Inline fg={themeColor('success')} bold>y</Inline> to save or{' '}
+                  <Inline fg={themeColor('error')} bold>n</Inline> to cancel
+                </Text>
+              </Box>
             )}
-          </box>
+          </Box>
         );
       default:
         return null;
@@ -555,11 +560,11 @@ export function HookWizard({ onSave, onCancel, initial, startStep }: HookWizardP
   };
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text><b>Add Hook</b></text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text bold>Add Hook</Text>
+      </Box>
       {renderStep()}
-    </box>
+    </Box>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface EmptyStateProps {
@@ -13,13 +14,13 @@ export function EmptyState({ message, hint }: EmptyStateProps) {
   const muted = themeColor('muted');
 
   return (
-    <box paddingX={1} flexDirection="column">
-      <text fg={muted}>{message}</text>
+    <Box paddingX={1} flexDirection="column">
+      <Text fg={muted}>{message}</Text>
       {hint && (
-        <box marginTop={1}>
-          <text fg={muted}>{hint}</text>
-        </box>
+        <Box marginTop={1}>
+          <Text fg={muted}>{hint}</Text>
+        </Box>
       )}
-    </box>
+    </Box>
   );
 }

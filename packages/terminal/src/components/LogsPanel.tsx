@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getSecurityLogger, SecurityLogger } from '@hasna/assistants-core';
 import type { SecurityEvent, Severity } from '@hasna/assistants-core';
-import type { SelectOption } from '@opentui/core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, useInput } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 interface LogsPanelProps {
@@ -21,12 +20,13 @@ const SEVERITY_ICONS: Record<Severity, string> = {
 };
 
 const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: 'red',
-  high: 'yellow',
-  medium: 'cyan',
+  critical: themeColor('error'),
+  high: themeColor('warning'),
+  medium: themeColor('info'),
   low: themeColor('muted'),
 };
 
+const MAX_VISIBLE_LOG_ROWS = 12;
 const SEVERITY_CYCLE: SeverityFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
 const EVENT_TYPE_CYCLE: EventTypeFilter[] = ['all', 'blocked_command', 'path_violation', 'validation_failure'];
 
@@ -58,6 +58,33 @@ function truncate(text: string, maxLen: number): string {
 
 function eventKey(event: SecurityEvent): string {
   return `${event.timestamp}|${event.eventType}|${event.severity}|${event.sessionId}|${JSON.stringify(event.details)}`;
+}
+
+function visibleWindow(selectedIndex: number, total: number): { start: number; end: number; above: number; below: number } {
+  if (total <= MAX_VISIBLE_LOG_ROWS) {
+    return { start: 0, end: total, above: 0, below: 0 };
+  }
+
+  const half = Math.floor(MAX_VISIBLE_LOG_ROWS / 2);
+  let start = selectedIndex - half;
+  let end = start + MAX_VISIBLE_LOG_ROWS;
+
+  if (start < 0) {
+    start = 0;
+    end = MAX_VISIBLE_LOG_ROWS;
+  }
+
+  if (end > total) {
+    end = total;
+    start = Math.max(0, end - MAX_VISIBLE_LOG_ROWS);
+  }
+
+  return {
+    start,
+    end,
+    above: start,
+    below: total - end,
+  };
 }
 
 function readAllEvents(): SecurityEvent[] {
@@ -103,40 +130,21 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
   const selectedEvent = filteredEvents[selectedIndex];
 
   useEffect(() => {
+    setSelectedIndex((prev) => Math.min(prev, Math.max(0, filteredEvents.length - 1)));
+  }, [filteredEvents.length]);
+
+  useEffect(() => {
     if (mode === 'detail' && !selectedEvent) {
       setMode('list');
     }
   }, [mode, selectedEvent]);
 
-  // Build options for <select>
-  const selectOptions: SelectOption[] = useMemo(() => {
-    return filteredEvents.map((event) => {
-      const icon = SEVERITY_ICONS[event.severity];
-      const time = formatRelativeTime(event.timestamp);
-      const reason = event.details?.reason || event.details?.command || event.details?.path || 'n/a';
-      return {
-        name: `${icon.padEnd(2)} ${time.padEnd(8)} ${event.eventType.padEnd(20)} ${truncate(reason, 40)}`,
-        description: `${event.severity} | ${EVENT_TYPE_LABELS[event.eventType] || event.eventType} | ${event.sessionId}`,
-        value: event,
-      };
-    });
-  }, [filteredEvents]);
-
-  const handleSelectChange = useCallback((_index: number, _option: SelectOption | null) => {
-    setSelectedIndex(_index);
-  }, []);
-
-  const handleSelectConfirm = useCallback((_index: number, _option: SelectOption | null) => {
-    if (_option) {
-      setSelectedIndex(_index);
-      setMode('detail');
-    }
-  }, []);
-
   // Handle non-navigation keys (escape, filters, refresh)
   useInput((input, key) => {
+    const isEscape = key.escape || input === '\x1b';
+
     if (mode === 'detail') {
-      if (key.escape || input === 'q' || input === 'Q') {
+      if (isEscape || input === 'q' || input === 'Q') {
         setMode('list');
         return;
       }
@@ -144,8 +152,25 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     }
 
     // List mode
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (isEscape || input === 'q' || input === 'Q') {
       onCancel();
+      return;
+    }
+
+    if (key.upArrow || input === 'k' || input === 'K') {
+      if (filteredEvents.length === 0) return;
+      setSelectedIndex((prev) => (prev === 0 ? filteredEvents.length - 1 : prev - 1));
+      return;
+    }
+
+    if (key.downArrow || input === 'j' || input === 'J') {
+      if (filteredEvents.length === 0) return;
+      setSelectedIndex((prev) => (prev >= filteredEvents.length - 1 ? 0 : prev + 1));
+      return;
+    }
+
+    if (key.return) {
+      if (selectedEvent) setMode('detail');
       return;
     }
 
@@ -183,88 +208,107 @@ export function LogsPanel({ onCancel }: LogsPanelProps) {
     const severityColor = SEVERITY_COLORS[e.severity];
 
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Log Entry Details</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Log Entry Details</Text>
+        </Box>
 
-        <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
-          <box><text><b>Timestamp: </b></text><text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</text></box>
-          <box><text><b>Severity: </b></text><text fg={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</text></box>
-          <box><text><b>Event Type: </b></text><text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</text></box>
-          <box><text><b>Session: </b></text><text fg={themeColor('muted')}>{e.sessionId}</text></box>
+        <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={0}>
+          <Box><Text bold>Timestamp: </Text><Text>{new Date(e.timestamp).toLocaleString()} ({formatRelativeTime(e.timestamp)})</Text></Box>
+          <Box><Text bold>Severity: </Text><Text fg={severityColor}>{SEVERITY_ICONS[e.severity]} {e.severity}</Text></Box>
+          <Box><Text bold>Event Type: </Text><Text>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</Text></Box>
+          <Box><Text bold>Session: </Text><Text fg={themeColor('muted')}>{e.sessionId}</Text></Box>
 
-          <box marginTop={1}><text><b>Details:</b></text></box>
+          <Box marginTop={1}><Text bold>Details:</Text></Box>
           {e.details.tool && (
-            <box marginLeft={2}><text><b>Tool: </b></text><text>{e.details.tool}</text></box>
+            <Box marginLeft={2}><Text bold>Tool: </Text><Text>{e.details.tool}</Text></Box>
           )}
           {e.details.command && (
-            <box marginLeft={2}><text><b>Command: </b></text><text fg={themeColor('info')} wrapMode="word">{e.details.command}</text></box>
+            <Box marginLeft={2}><Text bold>Command: </Text><Text fg={themeColor('info')} wrapMode="word">{e.details.command}</Text></Box>
           )}
           {e.details.path && (
-            <box marginLeft={2}><text><b>Path: </b></text><text wrapMode="word">{e.details.path}</text></box>
+            <Box marginLeft={2}><Text bold>Path: </Text><Text wrapMode="word">{e.details.path}</Text></Box>
           )}
-          <box marginLeft={2}><text><b>Reason: </b></text><text wrapMode="word">{e.details.reason}</text></box>
-        </box>
+          <Box marginLeft={2}><Text bold>Reason: </Text><Text wrapMode="word">{e.details.reason}</Text></Box>
+        </Box>
 
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>Esc/q back</text>
-        </box>
-      </box>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>Esc/q back</Text>
+        </Box>
+      </Box>
     );
   }
 
   // ── List View ─────────────────────────────────────────────────────
 
   const hasFilters = severityFilter !== 'all' || eventTypeFilter !== 'all';
+  const tableWindow = visibleWindow(selectedIndex, filteredEvents.length);
+  const visibleEvents = filteredEvents.slice(tableWindow.start, tableWindow.end);
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Security Logs</b></text>
-        <text fg={themeColor('muted')}>{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Security Logs</Text>
+        <Text fg={themeColor('muted')}>{String(filteredEvents.length)}{' event'}{filteredEvents.length !== 1 ? 's' : ''}</Text>
+      </Box>
 
       {hasFilters && (
-        <box marginBottom={1}>
-          <text fg={themeColor('muted')}>Filters: </text>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('muted')}>Filters: </Text>
           {severityFilter !== 'all' && (
-            <text fg={SEVERITY_COLORS[severityFilter]}>[severity: {severityFilter}] </text>
+            <Text fg={SEVERITY_COLORS[severityFilter]}>[severity: {severityFilter}] </Text>
           )}
           {eventTypeFilter !== 'all' && (
-            <text fg={themeColor('info')}>[type: {eventTypeFilter}] </text>
+            <Text fg={themeColor('info')}>[type: {eventTypeFilter}] </Text>
           )}
-        </box>
+        </Box>
       )}
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {filteredEvents.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>
               {allEvents.length === 0
                 ? 'No security events recorded.'
                 : 'No events match current filters.'}
-            </text>
-          </box>
+            </Text>
+          </Box>
         ) : (
-          <select
-            options={selectOptions}
-            focused={mode === 'list'}
-            wrapSelection={true}
-            showDescription={false}
-            showScrollIndicator={true}
-            selectedIndex={selectedIndex}
-            onChange={handleSelectChange}
-            onSelect={handleSelectConfirm}
-          />
-        )}
-      </box>
+          <>
+            {tableWindow.above > 0 ? (
+              <Text fg={themeColor('muted')}>{`... ${tableWindow.above} more above`}</Text>
+            ) : null}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+            {visibleEvents.map((event, visibleIndex) => {
+              const actualIndex = tableWindow.start + visibleIndex;
+              const isSelected = actualIndex === selectedIndex;
+              const icon = SEVERITY_ICONS[event.severity];
+              const time = formatRelativeTime(event.timestamp);
+              const reason = event.details?.reason || event.details?.command || event.details?.path || 'n/a';
+              const row = `${isSelected ? '> ' : '  '}${icon.padEnd(2)} ${time.padEnd(8)} ${event.eventType.padEnd(20)} ${truncate(reason, 40)}`;
+              return (
+                <Text
+                  key={eventKey(event)}
+                  bg={isSelected ? themeColor('primary') : undefined}
+                  fg={isSelected ? themeColor('text') : SEVERITY_COLORS[event.severity]}
+                >
+                  {row}
+                </Text>
+              );
+            })}
+
+            {tableWindow.below > 0 ? (
+              <Text fg={themeColor('muted')}>{`... ${tableWindow.below} more below`}</Text>
+            ) : null}
+          </>
+        )}
+      </Box>
+
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ navigate | Enter details | [s]everity filter | [t]ype filter | [r]efresh | q quit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

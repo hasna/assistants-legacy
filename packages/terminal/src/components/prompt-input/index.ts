@@ -15,11 +15,15 @@ export {
   type PasteThresholds,
 } from './helpers';
 export {
-  applyNormalKey,
-  emptyPending,
-  type VimTextarea,
+  applyVimTextareaInkInput,
+  applyVimTextareaKey,
+  createVimTextareaAdapterState,
+  vimKeyFromInkInput,
+  type VimTextareaAdapterState,
+  type VimTextareaApplyResult,
+  type VimTextareaModel,
   type VimMode,
   type VimPending,
-  type VimApplyResult,
 } from './vimTextareaAdapter';
 export { VimStatusIndicator } from './VimStatusIndicator';
+export { VimTextarea, type VimTextareaProps } from './VimTextarea';

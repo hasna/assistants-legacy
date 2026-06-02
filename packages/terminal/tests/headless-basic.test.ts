@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 
 let mockChunks: any[] = [];
 let mockClientError: Error | null = null;
@@ -10,6 +9,8 @@ let mockHasLatestSession = true;
 let capturedClientCwd: string | null = null;
 let capturedClientOptions: any = null;
 let mockResumeSessionData: { cwd: string; messages: any[]; startedAt: number } | null = null;
+let mockAllSessions: Array<{ id: string; assistantId: string | null }> = [];
+let loadSessionCalls: Array<{ id: string; assistantId?: string | null }> = [];
 
 class MockCommandHistory {
   async load() {
@@ -95,15 +96,20 @@ mock.module('@hasna/assistants-core', () => ({
     }
   },
   SessionStorage: {
-    loadSession: (id: string) => {
+    loadSession: (id: string, assistantId?: string | null) => {
+      loadSessionCalls.push({ id, assistantId });
       if (id === 'exists') {
         return { cwd: '/tmp/session-cwd', messages: [{ role: 'user', content: 'previous' }], startedAt: 12345 };
       }
       if (id === 'resume-session' && mockResumeSessionData) {
         return mockResumeSessionData;
       }
+      if (id === 'assistant-scoped' && assistantId === 'system-marcus' && mockResumeSessionData) {
+        return mockResumeSessionData;
+      }
       return null;
     },
+    listAllSessions: () => mockAllSessions,
     getLatestSession: () => (mockHasLatestSession ? { id: 'exists' } : null),
   },
 }));
@@ -120,6 +126,8 @@ describe('runHeadless', () => {
     capturedClientCwd = null;
     capturedClientOptions = null;
     mockResumeSessionData = null;
+    mockAllSessions = [];
+    loadSessionCalls = [];
   });
 
   test('outputs JSON with tool calls and structured output', async () => {
@@ -193,6 +201,40 @@ describe('runHeadless', () => {
       outputFormat: 'text',
       resume: 'missing',
     })).rejects.toThrow('Session "missing" not found (tried ID and label lookup)');
+  });
+
+  test('resumes assistant-scoped sessions by exact id', async () => {
+    mockResumeSessionData = {
+      cwd: '/assistant/session-cwd',
+      messages: [{ role: 'user', content: 'assistant scoped previous' }],
+      startedAt: 12345,
+    };
+    mockAllSessions = [{ id: 'assistant-scoped', assistantId: 'system-marcus' }];
+    mockChunks = [
+      { type: 'text', content: 'continued' },
+      { type: 'done' },
+    ];
+
+    const originalWrite = process.stdout.write;
+    (process.stdout as any).write = () => true;
+
+    await runHeadless({
+      prompt: 'Resume assistant scoped prompt',
+      cwd: '/fallback/cwd',
+      outputFormat: 'text',
+      resume: 'assistant-scoped',
+      cwdProvided: false,
+    });
+
+    process.stdout.write = originalWrite;
+
+    expect(loadSessionCalls).toContainEqual({ id: 'assistant-scoped', assistantId: undefined });
+    expect(loadSessionCalls).toContainEqual({ id: 'assistant-scoped', assistantId: 'system-marcus' });
+    expect(capturedClientCwd).toBe('/assistant/session-cwd');
+    expect(capturedClientOptions.sessionId).toBe('assistant-scoped');
+    expect(capturedClientOptions.initialMessages).toEqual([
+      { role: 'user', content: 'assistant scoped previous' },
+    ]);
   });
 
   describe('--continue with no sessions', () => {

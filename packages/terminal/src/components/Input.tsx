@@ -1,8 +1,7 @@
+/** @jsxImportSource react */
 import React, { useEffect, useMemo, useState, useRef, useCallback, useImperativeHandle } from 'react';
-import { useTerminalDimensions } from '@opentui/react';
-import type { TextareaRenderable } from '@opentui/core';
 import { CommandHistory, getCommandHistory } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, Textarea, useInput, useWindowSize } from '../ui/ink';
 import {
   normalizeLineEndings,
   countWords,
@@ -13,6 +12,7 @@ import {
   type PasteThresholds,
 } from './prompt-input/helpers';
 import { themeColor } from '../theme/colors';
+import type { Key } from '../keybindings';
 
 // Deterministic color palette for assistant badges (white text on colored bg)
 const ASSISTANT_COLORS = [
@@ -163,6 +163,37 @@ export interface InputHandle {
   getValue: () => string;
 }
 
+export function normalizePromptInputKey(input: string, key: Partial<Key>): Key {
+  const isRawReturn = input === '\r' || input === '\n' || input === '\r\n';
+  const isCtrlMReturn = input.toLowerCase() === 'm' && Boolean(key.ctrl) && !key.return;
+  const isRawEscape = input === '\x1b';
+  const isRawTab = input === '\t';
+
+  return {
+    upArrow: Boolean(key.upArrow),
+    downArrow: Boolean(key.downArrow),
+    leftArrow: Boolean(key.leftArrow),
+    rightArrow: Boolean(key.rightArrow),
+    pageDown: Boolean(key.pageDown),
+    pageUp: Boolean(key.pageUp),
+    home: Boolean(key.home),
+    end: Boolean(key.end),
+    return: Boolean(key.return) || isRawReturn || isCtrlMReturn,
+    escape: Boolean(key.escape) || isRawEscape,
+    ctrl: isCtrlMReturn ? false : Boolean(key.ctrl),
+    shift: Boolean(key.shift),
+    tab: Boolean(key.tab) || isRawTab,
+    backspace: Boolean(key.backspace),
+    delete: Boolean(key.delete),
+    meta: Boolean(key.meta),
+    super: key.super,
+    hyper: key.hyper,
+    capsLock: key.capsLock,
+    numLock: key.numLock,
+    eventType: key.eventType,
+  };
+}
+
 export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   onSubmit,
   onStopProcessing,
@@ -191,10 +222,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const pasteThresholds = pasteConfig?.thresholds ?? DEFAULT_PASTE_THRESHOLDS;
   const pasteMode = pasteConfig?.mode ?? 'placeholder';
 
-  // The OpenTUI <textarea> handles all text editing (cursor, insert, delete, undo/redo, etc.)
-  // We track `value` in React state purely for autocomplete/history logic.
-  const textareaRef = useRef<TextareaRenderable>(null);
+  const preserveHistoryNavigationRef = useRef(false);
+  const savedInputRef = useRef('');
+  const valueRef = useRef('');
   const [value, setValue] = useState('');
+  const [cursorOffset, setCursorOffset] = useState(0);
 
   // Large paste handling - when a large paste is detected, we show a placeholder
   // but keep the actual content stored for submission
@@ -202,6 +234,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     content: string;
     placeholder: string;
   } | null>(null);
+  const largePasteRef = useRef<typeof largePaste>(null);
   const [showPastePreview, setShowPastePreview] = useState(false);
 
   // Command history - use prop or global singleton
@@ -219,8 +252,8 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   }, []);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const termDims = useTerminalDimensions();
-  const screenWidth = termDims.width || 80;
+  const { columns: terminalWidth } = useWindowSize();
+  const screenWidth = terminalWidth || 80;
   const textWidth = Math.max(10, screenWidth - 4);
 
   // Merge built-in commands with passed commands
@@ -287,6 +320,23 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     : autocompleteMode === 'file'
       ? filteredFiles.map(f => ({ name: f }))
       : filteredCommands;
+  const autocompleteRef = useRef<{
+    mode: typeof autocompleteMode;
+    items: Array<{ name: string }>;
+    selectedIndex: number;
+  }>({
+    mode: null,
+    items: [],
+    selectedIndex: 0,
+  });
+
+  useEffect(() => {
+    autocompleteRef.current = {
+      mode: autocompleteMode,
+      items: autocompleteItems,
+      selectedIndex,
+    };
+  }, [autocompleteItems, autocompleteMode, selectedIndex]);
 
   // Keep selected index in range when list size changes
   useEffect(() => {
@@ -297,19 +347,13 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     setSelectedIndex((prev) => Math.min(prev, autocompleteItems.length - 1));
   }, [autocompleteItems.length]);
 
-  // Helper to set the textarea text and sync React state
-  const setTextareaValue = useCallback((nextValue: string, resetHistory: boolean = true) => {
+  // Helper to set the controlled textarea text and sync refs used by key handlers.
+  const setTextareaValue = useCallback((nextValue: string, resetHistory: boolean = true, nextCursorOffset?: number) => {
     const normalized = normalizeLineEndings(nextValue);
-    const ta = textareaRef.current;
-    if (ta) {
-      if (normalized === '') {
-        // Use clear() for empty values — ensures placeholder re-renders correctly
-        ta.clear();
-      } else {
-        ta.setText(normalized);
-      }
-    }
+    preserveHistoryNavigationRef.current = !resetHistory;
+    valueRef.current = normalized;
     setValue(normalized);
+    setCursorOffset(Math.max(0, Math.min(nextCursorOffset ?? normalized.length, normalized.length)));
     setSelectedIndex(0);
     if (resetHistory) {
       historyRef.current.resetIndex(normalized);
@@ -317,21 +361,28 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   }, []);
 
   const clearLargePaste = useCallback(() => {
+    largePasteRef.current = null;
     setLargePaste(null);
     setShowPastePreview(false);
   }, []);
 
+  const getCurrentTextareaValue = useCallback(() => valueRef.current, []);
+
+  const saveHistoryDraft = useCallback((nextValue: string) => {
+    savedInputRef.current = nextValue;
+    setSavedInput(nextValue);
+  }, []);
+
   useImperativeHandle(ref, () => ({
-    setValue: (nextValue: string, _nextCursor?: number, resetHistory = true) => {
+    setValue: (nextValue: string, nextCursor, resetHistory = true) => {
       clearLargePaste();
-      setTextareaValue(nextValue, resetHistory);
+      setTextareaValue(nextValue, resetHistory, nextCursor);
     },
     appendValue: (text: string) => {
       const cleaned = normalizeLineEndings(text);
       if (!cleaned) return;
       clearLargePaste();
-      const ta = textareaRef.current;
-      const current = ta ? ta.plainText : value;
+      const current = valueRef.current;
       const newValue = current + cleaned;
       setTextareaValue(newValue);
     },
@@ -339,13 +390,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       clearLargePaste();
       setTextareaValue('');
     },
-    getValue: () => textareaRef.current ? textareaRef.current.plainText : value,
-  }), [clearLargePaste, setTextareaValue, value]);
+    getValue: () => valueRef.current,
+  }), [clearLargePaste, setTextareaValue]);
 
 
   const handleSubmit = useCallback((submittedValue: string) => {
+    const pendingLargePaste = largePasteRef.current;
     // If there's a large paste pending, use that content instead
-    const rawValue = largePaste ? largePaste.content : submittedValue;
+    const rawValue = pendingLargePaste ? pendingLargePaste.content : submittedValue;
     const actualValue = normalizeLineEndings(rawValue);
 
     // Allow blank submission only for optional ask-user questions
@@ -354,16 +406,15 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     // Add to history before submitting (use truncated version for history)
     const valueToAdd = actualValue.trim();
     if (valueToAdd && !isAskingUser) {
-      const historyEntry = largePaste
+      const historyEntry = pendingLargePaste
         ? `[Pasted ${countWords(valueToAdd)} words]`
         : valueToAdd;
       historyRef.current.add(historyEntry);
     }
 
     // Clear large paste state before submitting
-    if (largePaste) {
-      setLargePaste(null);
-      setShowPastePreview(false);
+    if (pendingLargePaste) {
+      clearLargePaste();
     }
 
     if (
@@ -377,15 +428,15 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       const exactMatch = allCommands.find(cmd => cmd.name.toLowerCase() === freshSearch);
       if (exactMatch) {
         historyRef.current.add(exactMatch.name);
-        onSubmit(exactMatch.name, isProcessing ? 'inline' : 'normal');
         setTextareaValue('');
+        onSubmit(exactMatch.name, isProcessing ? 'inline' : 'normal');
         return;
       }
       const selected = filteredCommands[selectedIndex] || filteredCommands[0];
       if (selected) {
         historyRef.current.add(selected.name);
-        onSubmit(selected.name, isProcessing ? 'inline' : 'normal');
         setTextareaValue('');
+        onSubmit(selected.name, isProcessing ? 'inline' : 'normal');
         return;
       }
     }
@@ -396,33 +447,68 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       onSubmit(actualValue, 'normal');
     }
     setTextareaValue('');
-  }, [largePaste, allowBlankAnswer, isAskingUser, autocompleteMode, filteredCommands, selectedIndex, isProcessing, onSubmit, setTextareaValue, allCommands]);
+  }, [allowBlankAnswer, isAskingUser, autocompleteMode, filteredCommands, selectedIndex, isProcessing, onSubmit, setTextareaValue, allCommands, clearLargePaste]);
 
   // Sync textarea content changes to React state (for autocomplete logic)
-  const handleContentChange = useCallback(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const newValue = ta.plainText;
+  const handleContentChange = useCallback((nextValue: string) => {
+    const newValue = normalizeLineEndings(nextValue);
 
     // Clear any pending large paste if user types normally
-    if (largePaste && newValue !== value) {
-      setLargePaste(null);
-      setShowPastePreview(false);
+    if (largePaste && newValue !== valueRef.current) {
+      clearLargePaste();
     }
 
+    valueRef.current = newValue;
     setValue(newValue);
+    setCursorOffset((current) => Math.max(0, Math.min(current, newValue.length)));
     setSelectedIndex(0);
+    if (preserveHistoryNavigationRef.current) {
+      preserveHistoryNavigationRef.current = false;
+      return;
+    }
     historyRef.current.resetIndex(newValue);
-  }, [value, largePaste]);
+  }, [clearLargePaste, largePaste]);
+
+  const handlePasteFilter = useCallback((rawText: string) => {
+    const pastedText = normalizeLineEndings(rawText);
+    if (!pasteEnabled || !isLargePaste(pastedText, pasteThresholds)) {
+      clearLargePaste();
+      return pastedText;
+    }
+
+    if (pasteMode === 'inline') {
+      clearLargePaste();
+      return pastedText;
+    }
+
+    const nextLargePaste = {
+      content: pastedText,
+      placeholder: formatPastePlaceholder(pastedText),
+    };
+    largePasteRef.current = nextLargePaste;
+    setLargePaste(nextLargePaste);
+    setShowPastePreview(pasteMode === 'preview' || pasteMode === 'confirm');
+    return '';
+  }, [clearLargePaste, pasteEnabled, pasteMode, pasteThresholds]);
+
+  const handleTextareaInputFilter = useCallback((input: string, rawKey: Key) => {
+    const key = normalizePromptInputKey(input, rawKey);
+    if (key.return || key.tab || key.escape) return '';
+    if (key.ctrl && input === 'c') return '';
+    return input;
+  }, []);
 
   // Handle keyboard input for control keys that override textarea behavior
-  useInput((input, key) => {
+  useInput((input, rawKey) => {
+    const key = normalizePromptInputKey(input, rawKey as Partial<Key>);
+    const currentValue = getCurrentTextareaValue();
+
     if (key.ctrl && input === 'c') {
       if (isProcessing && onStopProcessing) {
         onStopProcessing();
         return;
       }
-      if (value.length > 0) {
+      if (currentValue.length > 0) {
         setTextareaValue('');
       }
       return;
@@ -436,23 +522,22 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
     // Escape: clear large paste, clear input, or exit history mode
     if (key.escape && !isAskingUser) {
-      if (largePaste) {
-        setLargePaste(null);
-        setShowPastePreview(false);
+      if (largePasteRef.current) {
+        clearLargePaste();
         return;
       }
       if (historyRef.current.isNavigating()) {
-        setTextareaValue(savedInput);
-        setSavedInput('');
-      } else if (value.length > 0) {
+        setTextareaValue(savedInputRef.current || savedInput);
+        saveHistoryDraft('');
+      } else if (currentValue.length > 0) {
         setTextareaValue('');
       }
       return;
     }
 
     // Tab during processing: queue the message
-    if (key.tab && isProcessing && value.trim()) {
-      onSubmit(value, 'queue');
+    if (key.tab && isProcessing && currentValue.trim()) {
+      onSubmit(currentValue, 'queue');
       setTextareaValue('');
       return;
     }
@@ -460,15 +545,16 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
     if (!isAskingUser) {
       // Tab: autocomplete when idle
       if (key.tab) {
-        if (autocompleteItems.length > 0) {
-          const selected = autocompleteItems[selectedIndex] || autocompleteItems[0];
-          if (autocompleteMode === 'file') {
-            const atMatch = value.match(/^(.*(?:^|\s))@[^\s]*$/);
+        const autocomplete = autocompleteRef.current;
+        if (autocomplete.items.length > 0) {
+          const selected = autocomplete.items[autocomplete.selectedIndex] || autocomplete.items[0];
+          if (autocomplete.mode === 'file') {
+            const atMatch = currentValue.match(/^(.*(?:^|\s))@[^\s]*$/);
             const prefix = atMatch ? atMatch[1] : '';
             const nextValue = prefix + selected.name + ' ';
             setTextareaValue(nextValue);
           } else {
-            const nextValue = autocompleteMode === 'skill'
+            const nextValue = autocomplete.mode === 'skill'
               ? `$${selected.name} `
               : `${selected.name} `;
             setTextareaValue(nextValue);
@@ -478,13 +564,14 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       }
 
       // Arrow keys for autocomplete navigation (circular, single-line only)
-      if (autocompleteItems.length > 0 && !value.includes('\n')) {
+      const autocomplete = autocompleteRef.current;
+      if (autocomplete.items.length > 0 && !currentValue.includes('\n')) {
         if (key.downArrow) {
-          setSelectedIndex((prev) => (prev + 1) % autocompleteItems.length);
+          setSelectedIndex((prev) => (prev + 1) % autocomplete.items.length);
           return;
         }
         if (key.upArrow) {
-          setSelectedIndex((prev) => (prev - 1 + autocompleteItems.length) % autocompleteItems.length);
+          setSelectedIndex((prev) => (prev - 1 + autocomplete.items.length) % autocomplete.items.length);
           return;
         }
       }
@@ -492,11 +579,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
 
     // Arrow up: history navigation
     if (key.upArrow) {
-      const shouldNavigateHistory = value.length === 0 || historyRef.current.isNavigating() || !value.includes('\n');
+      const shouldNavigateHistory = currentValue.length === 0 || historyRef.current.isNavigating() || !currentValue.includes('\n');
       if (shouldNavigateHistory && !isAskingUser) {
         if (!historyRef.current.isNavigating()) {
-          setSavedInput(value);
-          historyRef.current.resetIndex(value);
+          saveHistoryDraft(currentValue);
+          historyRef.current.resetIndex(currentValue);
         }
         const prev = historyRef.current.previous();
         if (prev !== null) {
@@ -526,19 +613,17 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
         onStopRecording();
         return;
       }
-      // Read fresh value from textarea DOM to avoid stale React state when typing fast
-      const freshValue = textareaRef.current?.plainText ?? value;
-      if ((key.shift || key.ctrl) && freshValue.trim()) {
-        onSubmit(freshValue, 'interrupt');
+      if ((key.shift || key.ctrl) && currentValue.trim()) {
+        onSubmit(currentValue, 'interrupt');
         setTextareaValue('');
         return;
       }
-      if (key.meta && freshValue.trim() && input !== '\x1b\r' && input !== '\x1b\n') {
-        onSubmit(freshValue, 'queue');
+      if (key.meta && currentValue.trim() && input !== '\x1b\r' && input !== '\x1b\n') {
+        onSubmit(currentValue, 'queue');
         setTextareaValue('');
         return;
       }
-      handleSubmit(freshValue);
+      handleSubmit(currentValue);
       setTextareaValue('');
       return;
     }
@@ -601,11 +686,7 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   const autocompleteDropdown = (() => {
     if (autocompleteMode === 'skill' && filteredSkills.length > 0) {
       return (
-        <box
-          position="absolute"
-          bottom="100%"
-          left={0}
-          zIndex={50}
+        <Box
           width={menuWidth}
           flexDirection="column"
           backgroundColor={menuBg}
@@ -613,38 +694,34 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           paddingY={0}
         >
           {visibleSkills.startIndex > 0 && (
-            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleSkills.startIndex} more above</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↑ {visibleSkills.startIndex} more above</Text>
           )}
           {visibleSkills.items.map((skill, i) => {
             const actualIndex = visibleSkills.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : menuBg;
             return (
-              <box flexDirection="row" key={skill.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
+              <Box flexDirection="row" key={skill.name} backgroundColor={rowBg}>
+                <Text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
-                  <b>{skill.name.padEnd(18)}</b>
-                </text>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
+                  <Text bold>{skill.name.padEnd(18)}</Text>
+                </Text>
+                <Text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
                   {truncateDescription(skill.description)}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })}
           {visibleSkills.startIndex + maxVisible < filteredSkills.length && (
-            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↓ {filteredSkills.length - visibleSkills.startIndex - maxVisible} more below</Text>
           )}
-        </box>
+        </Box>
       );
     }
 
     if (autocompleteMode === 'command' && filteredCommands.length > 0) {
       return (
-        <box
-          position="absolute"
-          bottom="100%"
-          left={0}
-          zIndex={50}
+        <Box
           width={menuWidth}
           flexDirection="column"
           backgroundColor={menuBg}
@@ -652,38 +729,34 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           paddingY={0}
         >
           {visibleCommands.startIndex > 0 && (
-            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleCommands.startIndex} more above</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↑ {visibleCommands.startIndex} more above</Text>
           )}
           {visibleCommands.items.map((cmd, i) => {
             const actualIndex = visibleCommands.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : menuBg;
             return (
-              <box flexDirection="row" key={cmd.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
+              <Box flexDirection="row" key={cmd.name} backgroundColor={rowBg}>
+                <Text fg={isSelected ? themeColor('bgDarker') : themeColor('primary')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
-                  <b>{cmd.name.padEnd(18)}</b>
-                </text>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
+                  <Text bold>{cmd.name.padEnd(18)}</Text>
+                </Text>
+                <Text fg={isSelected ? themeColor('bgDarker') : themeColor('text')} bg={rowBg}>
                   {cmd.description}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })}
           {visibleCommands.startIndex + maxVisible < filteredCommands.length && (
-            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↓ {filteredCommands.length - visibleCommands.startIndex - maxVisible} more below</Text>
           )}
-        </box>
+        </Box>
       );
     }
 
     if (autocompleteMode === 'file' && filteredFiles.length > 0) {
       return (
-        <box
-          position="absolute"
-          bottom="100%"
-          left={0}
-          zIndex={50}
+        <Box
           width={menuWidth}
           flexDirection="column"
           backgroundColor={menuBg}
@@ -691,25 +764,25 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
           paddingY={0}
         >
           {visibleFiles.startIndex > 0 && (
-            <text fg={mutedColor} bg={menuBg}>  ↑ {visibleFiles.startIndex} more above</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↑ {visibleFiles.startIndex} more above</Text>
           )}
           {visibleFiles.items.map((file, i) => {
             const actualIndex = visibleFiles.startIndex + i;
             const isSelected = actualIndex === selectedIndex;
             const rowBg = isSelected ? themeColor('primary') : menuBg;
             return (
-              <box flexDirection="row" key={file.name} backgroundColor={rowBg}>
-                <text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
+              <Box flexDirection="row" key={file.name} backgroundColor={rowBg}>
+                <Text fg={isSelected ? themeColor('bgDarker') : themeColor('info')} bg={rowBg}>
                   {isSelected ? '▸ ' : '  '}
                   {file.name}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })}
           {visibleFiles.startIndex + maxVisible < filteredFiles.length && (
-            <text fg={mutedColor} bg={menuBg}>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</text>
+            <Text fg={mutedColor} bg={menuBg}>  ↓ {filteredFiles.length - visibleFiles.startIndex - maxVisible} more below</Text>
           )}
-        </box>
+        </Box>
       );
     }
 
@@ -717,11 +790,11 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
   })();
 
   return (
-    <box flexDirection="column" marginTop={0} position="relative">
+    <Box flexDirection="column" marginTop={0}>
       {autocompleteDropdown}
 
       {/* Editor area — OpenCode uses Background color, no borders */}
-      <box
+      <Box
         flexDirection="column"
         flexGrow={1}
         backgroundColor={bgColor}
@@ -730,88 +803,88 @@ export const Input = React.forwardRef<InputHandle, InputProps>(function Input({
       >
         {/* Recording indicator */}
         {recordingStatus === 'recording' && (
-          <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('error')} bg={bgColor}><b>Recording... </b></text>
-            <text fg={textMuted} bg={bgColor}>[Ctrl+R or Enter to stop]</text>
-          </box>
+          <Box flexDirection="row" paddingY={0}>
+            <Text fg={themeColor('error')} bg={bgColor} bold>Recording... </Text>
+            <Text fg={textMuted} bg={bgColor}>[Ctrl+R or Enter to stop]</Text>
+          </Box>
         )}
         {recordingStatus === 'transcribing' && (
-          <box flexDirection="row" paddingY={0}>
-            <text fg={themeColor('warning')} bg={bgColor}><b>Transcribing...</b></text>
-          </box>
+          <Box flexDirection="row" paddingY={0}>
+            <Text fg={themeColor('warning')} bg={bgColor} bold>Transcribing...</Text>
+          </Box>
         )}
         {recordingStatus === 'talking' && (
-          <box paddingY={0} flexDirection="column">
-            <box flexDirection="row">
-              <text fg={themeColor('success')} bg={bgColor}><b>Talk mode </b></text>
-              <text fg={textMuted} bg={bgColor}>[listening... Ctrl+C to stop]</text>
-            </box>
+          <Box paddingY={0} flexDirection="column">
+            <Box flexDirection="row">
+              <Text fg={themeColor('success')} bg={bgColor} bold>Talk mode </Text>
+              <Text fg={textMuted} bg={bgColor}>[listening... Ctrl+C to stop]</Text>
+            </Box>
             {partialTranscript ? (
-              <box flexDirection="row">
-                <text fg={textMuted} bg={bgColor}>{'> '}</text>
-                <text bg={bgColor}><i>{partialTranscript}</i></text>
-              </box>
+              <Box flexDirection="row">
+                <Text fg={textMuted} bg={bgColor}>{'> '}</Text>
+                <Text bg={bgColor} italic>{partialTranscript}</Text>
+              </Box>
             ) : null}
-          </box>
+          </Box>
         )}
 
-        {/* Input area - OpenTUI <textarea> handles all editing natively */}
+        {/* Input area - Ink Textarea handles editing while this component owns app-level submit modes. */}
         {/* No prompt character — per spec OpenCode has no ">" prompt */}
         {largePaste ? (
           /* Large paste placeholder view */
-          <box flexDirection="row">
-            <box flexDirection="row" flexGrow={1}>
-              <text fg={themeColor('warning')} bg={bgColor}>{largePaste.placeholder}</text>
-              <text fg={textMuted} bg={bgColor}> [Enter to send, Esc to cancel]</text>
-            </box>
-          </box>
+          <Box flexDirection="row">
+            <Box flexDirection="row" flexGrow={1}>
+              <Text fg={themeColor('warning')} bg={bgColor}>{largePaste.placeholder}</Text>
+              <Text fg={textMuted} bg={bgColor}> [Enter to send, Esc to cancel]</Text>
+            </Box>
+          </Box>
         ) : (
-          <box flexDirection="row">
-            <textarea
-              ref={textareaRef}
+          <Box flexDirection="row">
+            <Textarea
               placeholder={placeholder}
-              placeholderColor={textMuted}
-              wrapMode="word"
-              focused={isActive}
-              flexGrow={1}
-              height={Math.max(1, lineCount)}
-              textColor={textColor}
-              focusedTextColor={textColor}
-              backgroundColor="transparent"
-              focusedBackgroundColor="transparent"
-              onContentChange={handleContentChange}
-              onSubmit={() => handleSubmit(value)}
+              value={value}
+              onChange={handleContentChange}
+              cursorOffset={cursorOffset}
+              onCursorOffsetChange={setCursorOffset}
+              columns={textWidth}
+              maxVisibleLines={Math.max(1, Math.min(6, lineCount))}
+              isActive={isActive}
+              cursorChar="|"
+              showCursor={isActive}
+              inputFilter={handleTextareaInputFilter}
+              pasteFilter={handlePasteFilter}
+              dimColor={false}
             />
-          </box>
+          </Box>
         )}
 
         {/* Show line count if multiline */}
         {lineCount > 1 && (
-          <box>
-            <text fg={textMuted} bg={bgColor}>({lineCount} lines)</text>
-          </box>
+          <Box>
+            <Text fg={textMuted} bg={bgColor}>({lineCount} lines)</Text>
+          </Box>
         )}
 
         {/* Model variants bar: "Build MiMo V2 Omni Free ... · low" */}
         {modelVariants.length > 0 && (
-          <box flexDirection="row" backgroundColor={bgColor}>
+          <Box flexDirection="row" backgroundColor={bgColor}>
             {modelVariants.map((variant, i) => (
-              <text
+              <Text
                 key={variant}
                 fg={i === activeVariant ? secondaryCol : textMuted}
                 bg={bgColor}
               >
                 {i === activeVariant ? variant : variant}
                 {i < modelVariants.length - 1 ? ' ' : ''}
-              </text>
+              </Text>
             ))}
             {reasoningEffort && (
-              <text fg={themeColor('warning')} bg={bgColor}> {'\u00B7'} {reasoningEffort}</text>
+              <Text fg={themeColor('warning')} bg={bgColor}> {'\u00B7'} {reasoningEffort}</Text>
             )}
-          </box>
+          </Box>
         )}
-      </box>
-    </box>
+      </Box>
+    </Box>
   );
 });
 

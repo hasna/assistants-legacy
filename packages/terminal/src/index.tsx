@@ -9,16 +9,53 @@ import { runHeadless } from './headless';
 import { sanitizeTerminalOutput } from './output/sanitize';
 import { parseArgs, main } from './cli/main';
 import { printExitSummary, getExitStats } from './exit-summary';
+import type { TerminalRendererHandle } from './types/terminal-controls';
 
 // --- Graceful shutdown handling ---
 
 // Forward reference for worktree cleanup (initialized after arg parsing)
 let _worktreeCleanup: (() => void) | null = null;
 
-// Forward reference for the renderer — once set, signal handlers delegate to
-// renderer.destroy() so that OpenTUI can properly restore terminal state
-// (cursor visibility, raw mode, alternate screen) before we exit.
-let _renderer: import('@opentui/core').CliRenderer | null = null;
+// Forward reference for the renderer. Once set, signal handlers delegate to
+// renderer.destroy() so terminal state is restored before we exit.
+let _renderer: TerminalRendererHandle | null = null;
+
+type InkInstanceHandle = {
+  unmount: () => void;
+  waitUntilExit?: () => Promise<unknown>;
+};
+
+function createInkRendererHandle(instance: InkInstanceHandle): TerminalRendererHandle {
+  const destroyHandlers = new Set<() => void>();
+  let destroyed = false;
+  let emitted = false;
+
+  const emitDestroy = () => {
+    if (emitted) return;
+    emitted = true;
+    for (const handler of destroyHandlers) {
+      handler();
+    }
+  };
+
+  return {
+    get isDestroyed() {
+      return destroyed;
+    },
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      instance.unmount();
+      const exitPromise = instance.waitUntilExit?.() ?? Promise.resolve();
+      void exitPromise.catch(() => undefined).finally(emitDestroy);
+    },
+    on: (event, handler) => {
+      if (event === 'destroy') {
+        destroyHandlers.add(handler as () => void);
+      }
+    },
+  };
+}
 
 function cleanup(): void {
   if (_worktreeCleanup) _worktreeCleanup();
@@ -323,12 +360,14 @@ if (subcommand === 'sessions') {
     }
   } else {
     // Treat as session ID
-    const data = SessionStorage.loadSession(sub);
-    if (!data) {
+    const { loadSessionById } = await import('./session-lookup');
+    const loaded = loadSessionById(sub);
+    if (!loaded) {
       console.error(`Session "${sub}" not found.`);
       process.exit(1);
     }
-    console.log(`Session: ${sub}`);
+    const data = loaded.data;
+    console.log(`Session: ${loaded.id}`);
     console.log(`Started: ${data.startedAt || 'unknown'}`);
     console.log(`CWD: ${data.cwd || 'unknown'}`);
     const messages = (data.messages || []) as Array<{ role: string; content: unknown }>;
@@ -878,10 +917,8 @@ if (options.print !== null) {
     });
 } else {
   const React = await import('react');
-  const { createCliRenderer } = await import('@opentui/core');
-  const { createRoot } = await import('@opentui/react');
+  const { InkThemeProvider, render } = await import('./ui/ink');
   const { App } = await import('./components/App');
-  const { setupThemeDefaults } = await import('./theme/setup');
 
   // Interactive mode
   // Enable synchronized output for terminals that support DEC 2026 (Ghostty, WezTerm, etc.)
@@ -890,33 +927,6 @@ if (options.print !== null) {
   const useSyncOutput = process.env.ASSISTANTS_NO_SYNC !== '1';
   const disableSyncOutput = useSyncOutput ? enableSynchronizedOutput() : () => {};
 
-  const appElement = React.createElement(App, {
-    cwd: options.cwd,
-    version: VERSION,
-    permissionMode: options.permissionMode ?? undefined,
-  });
-
-  // Renderer selection (plan P0.2): TUI_RENDERER=ink will opt into the forked-ink
-  // renderer once it lands; for now it falls back to opentui with a notice.
-  const { selectRenderer } = await import('./renderer-selection');
-  const rendererSelection = selectRenderer();
-  if (rendererSelection.notice) {
-    console.error(rendererSelection.notice);
-  }
-
-  const renderer = await createCliRenderer({
-    exitOnCtrlC: false,
-    // Disable renderer's built-in signal handling — our process-level handlers
-    // (above) delegate to renderer.destroy() which gives us control over the
-    // shutdown order: unmount React tree -> restore terminal -> cleanup -> exit.
-    exitSignals: [],
-  });
-
-  // Store renderer reference so signal handlers can delegate to it
-  _renderer = renderer;
-
-  // [cassius] Patch default text fg color based on terminal theme (light/dark).
-  // Must run BEFORE root.render() so all <text> elements get the correct default.
   // Honor the persisted `theme` setting (overridden by HASNA_THEME at runtime).
   let persistedTheme: string | undefined;
   try {
@@ -925,31 +935,47 @@ if (options.print !== null) {
   } catch {
     // Non-fatal — fall back to detection.
   }
-  // setupThemeDefaults handles the renderer fg + listeners on the dark/light axis,
-  // so feed it the mode the persisted theme is built on (variants share a mode).
-  const modeSetting: 'auto' | 'dark' | 'light' | undefined =
-    persistedTheme === 'auto' || persistedTheme === 'dark' || persistedTheme === 'light'
-      ? persistedTheme
-      : persistedTheme
-        ? persistedTheme.startsWith('light')
-          ? 'light'
-          : 'dark'
-        : undefined;
-  await setupThemeDefaults(renderer, modeSetting);
-  // Activate the full theme variant palette (daltonized/ansi) when persisted.
-  if (persistedTheme) {
-    try {
-      const { applyThemeName, THEME_SETTINGS } = await import('./theme/colors');
-      if ((THEME_SETTINGS as readonly string[]).includes(persistedTheme)) {
-        applyThemeName(persistedTheme as (typeof THEME_SETTINGS)[number]);
-      }
-    } catch {
-      // Non-fatal — the mode-level theme is already applied.
-    }
+
+  // Resolve the initial Ink theme before first render. This handles persisted
+  // variants and also lets HASNA_THEME / env detection affect the default "auto"
+  // path when no persisted config exists.
+  let initialTheme: React.ComponentProps<typeof InkThemeProvider>['initialTheme'] = 'auto';
+  try {
+    const { applyThemeName, THEME_SETTINGS } = await import('./theme/colors');
+    const requestedTheme = (THEME_SETTINGS as readonly string[]).includes(persistedTheme ?? '')
+      ? persistedTheme as (typeof THEME_SETTINGS)[number]
+      : 'auto';
+    initialTheme = applyThemeName(requestedTheme);
+  } catch {
+    // Non-fatal — the provider will fall back to the current default theme mode.
   }
 
-  const root = createRoot(renderer);
-  root.render(appElement);
+  const appElement = React.createElement(
+    InkThemeProvider,
+    { initialTheme },
+    React.createElement(App, {
+      cwd: options.cwd,
+      version: VERSION,
+      permissionMode: options.permissionMode ?? undefined,
+      onExit: () => {
+        if (_renderer && !_renderer.isDestroyed) {
+          _renderer.destroy();
+          return;
+        }
+        process.exit(0);
+      },
+    })
+  );
+
+  const instance = render(appElement, {
+    exitOnCtrlC: false,
+    patchConsole: false,
+  });
+
+  const renderer = createInkRendererHandle(instance);
+
+  // Store renderer reference so signal handlers can delegate to it.
+  _renderer = renderer;
 
   renderer.on('destroy', () => {
     disableSyncOutput();

@@ -1,5 +1,6 @@
 import React from 'react';
 import { getModelDisplayName, getModelById } from '@hasna/assistants-shared';
+import { Box, Text } from '../ui/ink';
 import { themeColor } from '../theme/colors';
 
 export interface ModifiedFile {
@@ -91,48 +92,48 @@ export function Sidebar({ title, modelId, cwd, modifiedFiles, diagnosticsCount, 
     : displayCwd;
 
   return (
-    <box flexDirection="column" flexGrow={1} paddingLeft={2} paddingRight={1}>
+    <Box flexDirection="column" flexGrow={1} paddingLeft={2} paddingRight={1}>
       {/* Session title — bold at top */}
       {title && (
-        <text fg={textColor}><b>{title}</b></text>
+        <Text fg={textColor} bold>{title}</Text>
       )}
 
       {/* Empty line */}
-      <box height={1} />
+      <Box height={1} />
 
       {/* Context section */}
-      <text fg={textColor}><b>Context</b></text>
-      <text fg={mutedColor}>{tokenStr} tokens</text>
-      <text fg={mutedColor}>{contextPercent}% used</text>
-      <text fg={mutedColor}>{costStr} spent</text>
+      <Text fg={textColor} bold>Context</Text>
+      <Text fg={mutedColor}>{tokenStr} tokens</Text>
+      <Text fg={mutedColor}>{contextPercent}% used</Text>
+      <Text fg={mutedColor}>{costStr} spent</Text>
 
       {/* Empty line */}
-      <box height={1} />
+      <Box height={1} />
 
       {/* LSP section */}
-      <text fg={textColor}><b>LSP</b></text>
+      <Text fg={textColor} bold>LSP</Text>
       {diagnosticsCount !== undefined && diagnosticsCount > 0 ? (
-        <text fg={themeColor('warning')}>{diagnosticsCount} diagnostic{diagnosticsCount !== 1 ? 's' : ''}</text>
+        <Text fg={themeColor('warning')}>{diagnosticsCount} diagnostic{diagnosticsCount !== 1 ? 's' : ''}</Text>
       ) : (
-        <text fg={mutedColor}>LSPs will activate as files are read</text>
+        <Text fg={mutedColor}>LSPs will activate as files are read</Text>
       )}
 
       {/* Spacer to push bottom content down */}
-      <box flexGrow={1} />
+      <Box flexGrow={1} />
 
       {/* Path:branch near bottom */}
-      <text fg={mutedColor}>{pathWithBranch}</text>
+      <Text fg={mutedColor}>{pathWithBranch}</Text>
 
       {/* Empty line */}
-      <box height={1} />
+      <Box height={1} />
 
       {/* App name + version at very bottom */}
-      <box flexDirection="row">
-        <text fg={mutedColor}>{'\u2022'} </text>
-        <text fg={textColor}><b>Open</b></text>
-        <text fg={textColor}>Assistants</text>
-        <text fg={mutedColor}> {appVersion || '1.0.0'}</text>
-      </box>
-    </box>
+      <Box flexDirection="row">
+        <Text fg={mutedColor}>{'\u2022'} </Text>
+        <Text fg={textColor} bold>Open</Text>
+        <Text fg={textColor}>Assistants</Text>
+        <Text fg={mutedColor}> {appVersion || '1.0.0'}</Text>
+      </Box>
+    </Box>
   );
 }

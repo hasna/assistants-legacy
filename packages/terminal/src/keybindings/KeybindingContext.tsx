@@ -7,7 +7,7 @@
  * the resolution logic itself is the pure engine (resolver.ts).
  */
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
-import { useSafeInput, type Key } from '../hooks/useSafeInput';
+import { useAppInput, type Key } from '../hooks/useAppInput';
 import { KeybindingMatcher } from './resolver';
 import { defaultKeymap } from './defaults';
 import type { Keymap } from './types';
@@ -44,7 +44,7 @@ export function KeybindingProvider({ keymap, isActive = true, children }: Provid
     [],
   );
 
-  useSafeInput(
+  useAppInput(
     (input: string, key: Key) => {
       const result = matcher.resolve(input, key);
       if (result.type === 'match') {

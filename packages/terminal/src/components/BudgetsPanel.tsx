@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClearOnChange } from '../hooks/useClearOnChange';
 import type { BudgetConfig, BudgetLimits, BudgetUsage } from '@hasna/assistants-shared';
 import type { BudgetStatus, BudgetScope } from '@hasna/assistants-core';
 import { BudgetPanel } from './BudgetPanel';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { Box, Text, TextInput, useInput } from '../ui/ink';
 import type { BudgetProfile } from '../lib/budgets';
 import { themeColor } from '../theme/colors';
 
@@ -66,7 +65,6 @@ export function BudgetsPanel({
 }: BudgetsPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('list');
-  useClearOnChange(mode);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -138,9 +136,14 @@ export function BudgetsPanel({
     }
   };
 
+  const cancelCreateForm = () => {
+    resetCreateForm(activeProfile?.config);
+    setMode('list');
+  };
+
   useInput((input, key) => {
     if (mode === 'create') {
-      if (key.escape) {
+      if (key.escape || input === '\x1b') {
         if (createStep === 'configure') {
           setCreateStep('description');
           return;
@@ -164,7 +167,7 @@ export function BudgetsPanel({
         }
         return;
       }
-      if (input === 'n' || input === 'N' || key.escape) {
+      if (input === 'n' || input === 'N' || key.escape || input === '\x1b') {
         setMode('list');
         return;
       }
@@ -205,7 +208,7 @@ export function BudgetsPanel({
       return;
     }
 
-    if (key.escape || input === 'q' || input === 'Q') {
+    if (key.escape || input === '\x1b' || input === 'q' || input === 'Q') {
       onCancel();
       return;
     }
@@ -219,7 +222,7 @@ export function BudgetsPanel({
       setSelectedIndex((prev) => (prev === profiles.length ? 0 : prev + 1));
       return;
     }
-  }, { isActive: true });
+  }, { isActive: mode === 'list' || mode === 'delete-confirm' });
 
   if (mode === 'edit' && activeOrDraftProfileForEdit) {
     const profile = activeOrDraftProfileForEdit;
@@ -258,67 +261,71 @@ export function BudgetsPanel({
 
   if (mode === 'create') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('info')}><b>Create Budget Profile</b></text>
-        </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('info')} bold>Create Budget Profile</Text>
+        </Box>
 
         {createStep === 'name' && (
-          <box flexDirection="column">
-            <box>
-              <text>Name: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text>Name: </Text>
+              <TextInput
                 value={newName}
                 onChange={setNewName}
-                onSubmit={() => {
-                  if (newName.trim()) setCreateStep('description');
+                onSubmit={(nextName) => {
+                  setNewName(nextName);
+                  if (nextName.trim()) setCreateStep('description');
                 }}
-                focused
+                onCancel={cancelCreateForm}
+                focus
                 placeholder="e.g. Deep Work"
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to continue | Esc to cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to continue | Esc to cancel</Text>
+            </Box>
+          </Box>
         )}
 
         {createStep === 'description' && (
-          <box flexDirection="column">
-            <box>
-              <text fg={themeColor('muted')}>Name: </text>
-              <text>{newName}</text>
-            </box>
-            <box marginTop={1}>
-              <text>Description: </text>
-              <input
+          <Box flexDirection="column">
+            <Box>
+              <Text fg={themeColor('muted')}>Name: </Text>
+              <Text>{newName}</Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text>Description: </Text>
+              <TextInput
                 value={newDescription}
                 onChange={setNewDescription}
-                onSubmit={() => {
+                onSubmit={(nextDescription) => {
+                  setNewDescription(nextDescription);
                   if (!newName.trim()) return;
                   setCreateStep('configure');
                 }}
-                focused
+                onCancel={cancelCreateForm}
+                focus
                 placeholder="Optional"
               />
-            </box>
-            <box marginTop={1}>
-              <text fg={themeColor('muted')}>Enter to configure limits | Esc to cancel</text>
-            </box>
-          </box>
+            </Box>
+            <Box marginTop={1}>
+              <Text fg={themeColor('muted')}>Enter to configure limits | Esc to cancel</Text>
+            </Box>
+          </Box>
         )}
 
         {createStep === 'configure' && (
-          <box flexDirection="column">
-            <box marginBottom={1}>
-              <text fg={themeColor('muted')}>Name: </text>
-              <text>{newName}</text>
-            </box>
+          <Box flexDirection="column">
+            <Box marginBottom={1}>
+              <Text fg={themeColor('muted')}>Name: </Text>
+              <Text>{newName}</Text>
+            </Box>
             {newDescription.trim() && (
-              <box marginBottom={1}>
-                <text fg={themeColor('muted')}>Description: </text>
-                <text>{newDescription.trim()}</text>
-              </box>
+              <Box marginBottom={1}>
+                <Text fg={themeColor('muted')}>Description: </Text>
+                <Text>{newDescription.trim()}</Text>
+              </Box>
             )}
             <BudgetPanel
               config={draftConfig}
@@ -347,87 +354,87 @@ export function BudgetsPanel({
                 setCreateStep('description');
               }}
             />
-          </box>
+          </Box>
         )}
 
         {isSubmitting && (
-          <box marginTop={1}>
-            <text fg={themeColor('warning')}>Creating profile...</text>
-          </box>
+          <Box marginTop={1}>
+            <Text fg={themeColor('warning')}>Creating profile...</Text>
+          </Box>
         )}
-      </box>
+      </Box>
     );
   }
 
   if (mode === 'delete-confirm') {
     return (
-      <box flexDirection="column" paddingY={1}>
-        <box marginBottom={1}>
-          <text fg={themeColor('error')}><b>Delete Budget Profile</b></text>
-        </box>
-        <box marginBottom={1}>
-          <text>
-            Delete profile &quot;{selectedProfile?.name || ''}&quot;?
-          </text>
-        </box>
-        <box marginTop={1}>
-          <text>
-            Press <span fg={themeColor('success')}><b>y</b></span> to confirm or{' '}
-            <span fg={themeColor('error')}><b>n</b></span> to cancel
-          </text>
-        </box>
-      </box>
+      <Box flexDirection="column" paddingY={1}>
+        <Box marginBottom={1}>
+          <Text fg={themeColor('error')} bold>Delete Budget Profile</Text>
+        </Box>
+        <Box marginBottom={1}>
+          <Text>
+            Delete profile "{selectedProfile?.name || ''}"?
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text>
+            Press <Text fg={themeColor('success')} bold>y</Text> to confirm or{' '}
+            <Text fg={themeColor('error')} bold>n</Text> to cancel
+          </Text>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box flexDirection="row" marginBottom={1} justifyContent="space-between">
-        <text><b>Budgets</b></text>
-        <text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box flexDirection="row" marginBottom={1} justifyContent="space-between">
+        <Text bold>Budgets</Text>
+        <Text fg={themeColor('muted')}>[n]ew [e]dit [d]elete</Text>
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1}>
         {profiles.length === 0 ? (
-          <box paddingY={1}>
-            <text fg={themeColor('muted')}>No budget profiles. Press n to create one.</text>
-          </box>
+          <Box paddingY={1}>
+            <Text fg={themeColor('muted')}>No budget profiles. Press n to create one.</Text>
+          </Box>
         ) : (
           profiles.map((profile, index) => {
             const isSelected = index === selectedIndex;
             const isActive = profile.id === activeProfileId;
             return (
-              <box key={profile.id} paddingY={0}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : isActive ? themeColor('success') : "gray"}>
+              <Box key={profile.id} paddingY={0}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : isActive ? themeColor('success') : themeColor('muted')}>
                   {isActive ? '*' : ' '} {index + 1}. {profile.name.padEnd(22)} {profile.description || ''}
-                </text>
-              </box>
+                </Text>
+              </Box>
             );
           })
         )}
 
         {/* New profile option */}
-        <box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
-          <text
+        <Box marginTop={profiles.length > 0 ? 1 : 0} paddingY={0}>
+          <Text
             bg={selectedIndex === profiles.length ? themeColor('primary') : undefined}
             fg={selectedIndex === profiles.length ? themeColor('text') : undefined}
           >
             + New profile (n)
-          </text>
-        </box>
-      </box>
+          </Text>
+        </Box>
+      </Box>
 
       {selectedProfile && (
-        <box marginTop={1}>
-          <text fg={themeColor('muted')}>
+        <Box marginTop={1}>
+          <Text fg={themeColor('muted')}>
             {selectedProfile.id === activeProfileId ? 'Active for this session' : 'Enter to activate'}
-          </text>
-        </box>
+          </Text>
+        </Box>
       )}
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</text>
-      </box>
-    </box>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>Enter activate | ↑↓ navigate | [n]ew | [e]dit | [d]elete | q quit</Text>
+      </Box>
+    </Box>
   );
 }

@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Tool-rendering message parts (plan 8d98da29 P4.2) — extracted from Messages.tsx.
  * Renders tool calls and tool results (inline, grouped, and streaming/active).
@@ -6,6 +7,7 @@ import React, { useMemo } from 'react';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { basename } from 'path';
 import { themeColor } from '../../theme/colors';
+import { Box, Text } from '../../ui/ink';
 import { truncateToolResultWithInfo } from '../toolDisplay';
 import { TerminalImage } from '../TerminalImage';
 import { CodeBlock, shouldHighlightToolResult } from '../CodeBlock';
@@ -13,7 +15,6 @@ import {
   ToolCallDisplay,
   ToolCallSummary,
   capitalizeToolName,
-  linkifyText,
 } from '../ToolCallDisplay';
 
 /** An entry in the streaming activity log (text / tool call / tool result). */
@@ -63,7 +64,7 @@ export function ToolCallsBlock({
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {toolCalls.map((toolCall) => {
         const result = resultMap.get(toolCall.id);
         return (
@@ -76,7 +77,7 @@ export function ToolCallsBlock({
           />
         );
       })}
-    </box>
+    </Box>
   );
 }
 
@@ -153,7 +154,7 @@ export function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveTools
   }
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {toolCalls.map((call) => {
         const elapsedMs = (call.endTime ?? now) - call.startTime;
         return (
@@ -167,7 +168,7 @@ export function ActiveToolsPanel({ activityLog, now, verboseTools }: ActiveTools
           />
         );
       })}
-    </box>
+    </Box>
   );
 }
 
@@ -189,7 +190,7 @@ export function ToolResultPanel({
   const errorCol = themeColor('error');
 
   return (
-    <box flexDirection="column">
+    <Box flexDirection="column">
       {toolResults.map((result, index) => {
         const isError = result.isError;
         const title = result.toolName
@@ -202,13 +203,13 @@ export function ToolResultPanel({
             const data = JSON.parse(result.content);
             if (data.path) {
               return (
-                <box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
-                  <text fg={borderDimCol}>{'│'} </text>
-                  <box flexDirection="column" flexGrow={1} flexShrink={1}>
-                    <text fg={mutedCol}>{title}</text>
+                <Box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
+                  <Text fg={borderDimCol}>{'\u2502'} </Text>
+                  <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+                    <Text fg={mutedCol}>{title}</Text>
                     <TerminalImage src={data.path} width={data.width} height={data.height} alt={data.alt || basename(data.path)} />
-                  </box>
-                </box>
+                  </Box>
+                </Box>
               );
             }
           } catch { /* fall through to text display */ }
@@ -222,27 +223,27 @@ export function ToolResultPanel({
         const useHighlight = shouldHighlightToolResult(result.toolName, resultText, result.isError);
 
         return (
-          <box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
-            <text fg={borderDimCol}>{'│'} </text>
-            <box flexDirection="column" flexGrow={1} flexShrink={1}>
-              <text fg={mutedCol}>{title}</text>
+          <Box key={`${result.toolCallId}-${index}`} flexDirection="row" width="100%">
+            <Text fg={borderDimCol}>{'\u2502'} </Text>
+            <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+              <Text fg={mutedCol}>{title}</Text>
               {isError ? (
-                <text fg={errorCol}>Error: {resultText}</text>
+                <Text fg={errorCol}>Error: {resultText}</Text>
               ) : useHighlight ? (
                 <CodeBlock
                   content={resultText}
                   filetype={result.toolName === 'bash' ? 'bash' : undefined}
                 />
               ) : (
-                <text fg={mutedCol}>{linkifyText(resultText)}</text>
+                <Text fg={mutedCol}>{resultText}</Text>
               )}
               {showMoreHint && moreLines > 0 && (
-                <text fg={mutedCol}>[{moreLines} more lines]</text>
+                <Text fg={mutedCol}>[{moreLines} more lines]</Text>
               )}
-            </box>
-          </box>
+            </Box>
+          </Box>
         );
       })}
-    </box>
+    </Box>
   );
 }

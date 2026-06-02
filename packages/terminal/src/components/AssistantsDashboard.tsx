@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { BudgetStatus } from '@hasna/assistants-core';
-import { useSafeInput as useInput } from '../hooks/useSafeInput';
+import { useAppInput as useInput } from '../hooks/useAppInput';
 import { themeColor } from '../theme/colors';
+import { Box, Bold, Text } from '../ui/ink';
 
 interface SessionEntry {
   id: string;
@@ -37,9 +38,9 @@ function formatElapsed(startedAt: number): string {
 }
 
 function StateIndicator({ isProcessing, isPaused }: { isProcessing: boolean; isPaused: boolean }) {
-  if (isPaused) return <text fg={themeColor('warning')}><b>PAUSED</b></text>;
-  if (isProcessing) return <text fg={themeColor('success')}>active</text>;
-  return <text fg={themeColor('muted')}>idle</text>;
+  if (isPaused) return <Text fg={themeColor('warning')}><Bold>PAUSED</Bold></Text>;
+  if (isProcessing) return <Text fg={themeColor('success')}>active</Text>;
+  return <Text fg={themeColor('muted')}>idle</Text>;
 }
 
 export function AssistantsDashboard({
@@ -114,80 +115,80 @@ export function AssistantsDashboard({
   }, { isActive: true });
 
   return (
-    <box flexDirection="column" paddingY={1}>
-      <box marginBottom={1}>
-        <text><b>Assistants Dashboard</b></text>
-      </box>
+    <Box flexDirection="column" paddingY={1}>
+      <Box marginBottom={1}>
+        <Text><Bold>Assistants Dashboard</Bold></Text>
+      </Box>
 
-      <box flexDirection="column" borderStyle="rounded" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={themeColor('border')} border={["top", "bottom"]} paddingX={1} paddingY={1}>
         {/* Sessions */}
-        <text fg={themeColor('muted')}><b>Sessions ({sessions.length}):</b></text>
+        <Text fg={themeColor('muted')}><Bold>Sessions ({sessions.length}):</Bold></Text>
         {sessions.length === 0 ? (
-          <box marginTop={1}><text fg={themeColor('muted')}>No active sessions.</text></box>
+          <Box marginTop={1}><Text fg={themeColor('muted')}>No active sessions.</Text></Box>
         ) : (
-        <box flexDirection="column" marginTop={1}>
+        <Box flexDirection="column" marginTop={1}>
           {sessions.map((session, i) => {
             const isSelected = i === selectedIndex;
             const label = session.label || session.assistantName || `Session ${i + 1}`;
 
             return (
-              <box key={session.id} gap={1}>
-                <text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
+              <Box key={session.id} gap={1}>
+                <Text bg={isSelected ? themeColor('primary') : undefined} fg={isSelected ? themeColor('text') : undefined}>
                   {isSelected ? '>' : ' '} {String(i + 1)}
-                </text>
-                <text attributes={isSelected ? 1 : undefined} fg={session.isActive ? themeColor('success') : undefined}><b>
+                </Text>
+                <Text attributes={isSelected ? 1 : undefined} fg={session.isActive ? themeColor('success') : undefined}><Bold>
                   {label.slice(0, 20).padEnd(20)}
-                </b></text>
+                </Bold></Text>
                 <StateIndicator isProcessing={session.isProcessing} isPaused={session.isPaused} />
-                <text fg={themeColor('muted')}> {formatElapsed(session.startedAt)}</text>
+                <Text fg={themeColor('muted')}> {formatElapsed(session.startedAt)}</Text>
                 {session.unreadMessages > 0 && (
-                  <text fg={themeColor('warning')}> [{session.unreadMessages} msg]</text>
+                  <Text fg={themeColor('warning')}> [{session.unreadMessages} msg]</Text>
                 )}
                 {session.budgetStatus?.overallExceeded && (
-                  <text fg={themeColor('error')}> [budget!]</text>
+                  <Text fg={themeColor('error')}> [budget!]</Text>
                 )}
-              </box>
+              </Box>
             );
           })}
-        </box>
+        </Box>
         )}
 
         {/* Project Budget */}
         {projectBudget && (
-          <box marginTop={1} flexDirection="column">
-            <text fg={themeColor('muted')}><b>Project Budget{projectName ? `: ${projectName}` : ''}:</b></text>
-            <box paddingLeft={1}>
-              <text fg={themeColor('muted')}>Tokens: </text>
-              <text>{projectBudget.usage.totalTokens.toLocaleString()}</text>
+          <Box marginTop={1} flexDirection="column">
+            <Text fg={themeColor('muted')}><Bold>Project Budget{projectName ? `: ${projectName}` : ''}:</Bold></Text>
+            <Box paddingLeft={1}>
+              <Text fg={themeColor('muted')}>Tokens: </Text>
+              <Text>{projectBudget.usage.totalTokens.toLocaleString()}</Text>
               {projectBudget.limits.maxTotalTokens && (
-                <text fg={themeColor('muted')}> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</text>
+                <Text fg={themeColor('muted')}> / {projectBudget.limits.maxTotalTokens.toLocaleString()}</Text>
               )}
               {projectBudget.overallExceeded && (
-                <text fg={themeColor('error')}><b> EXCEEDED</b></text>
+                <Text fg={themeColor('error')}><Bold> EXCEEDED</Bold></Text>
               )}
-            </box>
-          </box>
+            </Box>
+          </Box>
         )}
 
         {/* Swarm Status */}
         {swarmStatus && (
-          <box marginTop={1}>
-            <text fg={themeColor('muted')}><b>Swarm: </b></text>
-            <text fg={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? themeColor('success') : themeColor('muted')}>
+          <Box marginTop={1}>
+            <Text fg={themeColor('muted')}><Bold>Swarm: </Bold></Text>
+            <Text fg={swarmStatus === 'executing' ? 'blue' : swarmStatus === 'completed' ? themeColor('success') : themeColor('muted')}>
               {swarmStatus}
-            </text>
+            </Text>
             {swarmTaskProgress && (
-              <text fg={themeColor('muted')}> ({swarmTaskProgress})</text>
+              <Text fg={themeColor('muted')}> ({swarmTaskProgress})</Text>
             )}
-          </box>
+          </Box>
         )}
-      </box>
+      </Box>
 
-      <box marginTop={1}>
-        <text fg={themeColor('muted')}>
+      <Box marginTop={1}>
+        <Text fg={themeColor('muted')}>
           ↑↓ navigate | Enter switch | [m]essage | [p]ause/resume | [q]uit
-        </text>
-      </box>
-    </box>
+        </Text>
+      </Box>
+    </Box>
   );
 }

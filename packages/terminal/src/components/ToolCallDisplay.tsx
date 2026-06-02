@@ -1,7 +1,9 @@
+/** @jsxImportSource react */
 import React, { useMemo, useState } from 'react';
 import type { ToolCall, ToolResult } from '@hasna/assistants-shared';
 import { basename } from 'path';
 import { themeColor } from '../theme/colors';
+import { Box, Text } from '../ui/ink';
 import { CodeBlock, getFiletypeForToolResult, getFiletypeFromPath, shouldHighlightToolResult } from './CodeBlock';
 import { truncateToolResult, truncateToolResultWithInfo } from './toolDisplay';
 import { TerminalImage } from './TerminalImage';
@@ -10,7 +12,7 @@ import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 /**
  * ToolCallDisplay renders a single tool call in OpenCode style:
  *   -> ToolName params
- * with expandable results using <code>/<diff> components.
+ * with expandable results using Ink text/code blocks.
  *
  * [brutus] Created for OpenCode-style tool call rendering.
  */
@@ -57,24 +59,8 @@ function isEditToolCall(toolCall: ToolCall): boolean {
 const URL_PATTERN = /https?:\/\/[^\s<>"\])\u0000-\u001F]+/g;
 
 function linkifyText(text: string): React.ReactNode {
-  if (!text) return text;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
   URL_PATTERN.lastIndex = 0;
-  while ((match = URL_PATTERN.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-    const url = match[0];
-    parts.push(<link key={match.index} href={url}>{url}</link>);
-    lastIndex = match.index + url.length;
-  }
-  if (lastIndex === 0) return text;
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  return <>{parts}</>;
+  return text;
 }
 
 function indentMultiline(text: string, padding: string): string {
@@ -278,24 +264,24 @@ export function ToolCallDisplay({
       const imgData = JSON.parse(result.content);
       if (imgData.path) {
         return (
-          <box flexDirection="row" width="100%">
-            <text fg={borderDimCol}>{'\u2502'} </text>
-            <box flexDirection="column" flexGrow={1} flexShrink={1}>
-              <text fg={mutedCol}>{headerText}</text>
+          <Box flexDirection="row" width="100%">
+            <Text fg={borderDimCol}>{'\u2502'} </Text>
+            <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+              <Text fg={mutedCol}>{headerText}</Text>
               <TerminalImage src={imgData.path} width={imgData.width} height={imgData.height} alt={imgData.alt || 'image'} />
-            </box>
-          </box>
+            </Box>
+          </Box>
         );
       }
     } catch { /* fall through */ }
   }
 
   return (
-    <box flexDirection="row" width="100%">
-      <text fg={borderDimCol}>{'\u2502'} </text>
-      <box flexDirection="column" flexGrow={1} flexShrink={1}>
+    <Box flexDirection="row" width="100%">
+      <Text fg={borderDimCol}>{'\u2502'} </Text>
+      <Box flexDirection="column" flexGrow={1} flexShrink={1}>
         {/* Tool call header: "ToolName: params" in muted */}
-        <text fg={mutedCol}>{headerText}</text>
+        <Text fg={mutedCol}>{headerText}</Text>
 
         {/* Result content — truncated to 10 lines per spec */}
         {result && !isRunning && (
@@ -305,15 +291,15 @@ export function ToolCallDisplay({
             verboseTools={verboseTools}
           />
         )}
-      </box>
-    </box>
+      </Box>
+    </Box>
   );
 }
 
 /**
  * Renders tool result content below the header line.
  * Per OpenCode spec: max 10 lines, "[N more lines]" truncation indicator,
- * error results in error color. Uses <diff> for edits, <code> for file/code.
+ * error results in error color. Uses Ink code blocks for edits and file/code.
  *
  * [brutus] Updated to match OpenCode spec — 10 line max, "[N more lines]" hint.
  */
@@ -332,10 +318,10 @@ function ToolCallResultContent({
   // Error results shown in error color
   if (result.isError) {
     const errorText = result.content || 'Unknown error';
-    return <text fg={errorCol}>Error: {errorText}</text>;
+    return <Text fg={errorCol}>Error: {errorText}</Text>;
   }
 
-  // Show <diff> for edit tool calls
+  // Show a unified diff for edit tool calls.
   if (isEditToolCall(toolCall)) {
     return <EditDiffView toolCall={toolCall} />;
   }
@@ -351,22 +337,22 @@ function ToolCallResultContent({
   if (shouldHighlightToolResult(toolCall.name, resultText, result.isError)) {
     const filetype = getFiletypeForToolResult(toolCall);
     return (
-      <box flexDirection="column">
+      <Box flexDirection="column">
         <CopyableCodeBlock content={resultText} filetype={filetype} />
         {wasTruncated && moreLines > 0 && (
-          <text fg={mutedCol}>[{moreLines} more lines]</text>
+          <Text fg={mutedCol}>[{moreLines} more lines]</Text>
         )}
-      </box>
+      </Box>
     );
   }
 
   return (
-    <box flexDirection="column">
-      <text fg={mutedCol}>{linkifyText(resultText)}</text>
+    <Box flexDirection="column">
+      <Text fg={mutedCol}>{linkifyText(resultText)}</Text>
       {wasTruncated && moreLines > 0 && (
-        <text fg={mutedCol}>[{moreLines} more lines]</text>
+        <Text fg={mutedCol}>[{moreLines} more lines]</Text>
       )}
-    </box>
+    </Box>
   );
 }
 
@@ -403,32 +389,24 @@ function EditDiffView({ toolCall }: { toolCall: ToolCall }) {
   );
 
   return (
-    <box marginLeft={3}>
-      <diff
-        diff={diffText}
-        view="unified"
-        showLineNumbers={false}
-        filetype={filetype}
-        width="100%"
-      />
-    </box>
+    <Box marginLeft={3}>
+      <CodeBlock content={diffText} filetype={filetype} />
+    </Box>
   );
 }
 
 function CopyableCodeBlock({ content, filetype }: { content: string; filetype?: string }) {
-  const { copy, justCopied } = useCopyToClipboard();
+  const { justCopied } = useCopyToClipboard();
 
   return (
-    <box flexDirection="column">
-      <box flexDirection="row" justifyContent="flex-end">
-        <box onMouseUp={() => copy(content)}>
-          <text fg={justCopied ? themeColor('success') : '#636d83'}>
-            {justCopied ? '[copied]' : '[copy]'}
-          </text>
-        </box>
-      </box>
+    <Box flexDirection="column">
+      <Box flexDirection="row" justifyContent="flex-end">
+        <Text fg={justCopied ? themeColor('success') : '#636d83'}>
+          {justCopied ? '[copied]' : '[copy]'}
+        </Text>
+      </Box>
       <CodeBlock content={content} filetype={filetype} />
-    </box>
+    </Box>
   );
 }
 
@@ -456,12 +434,12 @@ export function ToolCallSummary({ toolCalls, toolResults = [], isRunning = false
   const suffix = isRunning ? '\u2026' : '';
 
   return (
-    <box flexDirection="row" width="100%">
-      <text fg={borderDimCol}>{'\u2502'} </text>
-      <box flexGrow={1} flexShrink={1}>
-        <text fg={mutedCol}>{summary}{suffix}</text>
-      </box>
-    </box>
+    <Box flexDirection="row" width="100%">
+      <Text fg={borderDimCol}>{'\u2502'} </Text>
+      <Box flexGrow={1} flexShrink={1}>
+        <Text fg={mutedCol}>{summary}{suffix}</Text>
+      </Box>
+    </Box>
   );
 }
 

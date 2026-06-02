@@ -1,6 +1,6 @@
 /**
  * Tests for the PromptInput suite (plan 8d98da29 P5.1):
- * pure paste/text helpers + the vim→textarea adapter.
+ * pure paste/text helpers + the vim -> Ink Textarea adapter.
  */
 import { describe, expect, test } from 'bun:test';
 import {
@@ -9,11 +9,12 @@ import {
   countLines,
   formatPastePlaceholder,
   isLargePaste,
-  applyNormalKey,
-  emptyPending,
-  type VimTextarea,
-  type VimPending,
+  applyVimTextareaInkInput,
+  applyVimTextareaKey,
+  createVimTextareaAdapterState,
+  vimKeyFromInkInput,
 } from '../src/components/prompt-input';
+import type { Key } from '../src/keybindings';
 
 describe('paste/text helpers', () => {
   test('normalizeLineEndings unifies CRLF/CR to LF', () => {
@@ -37,104 +38,118 @@ describe('paste/text helpers', () => {
   });
 });
 
-/** A VimTextarea mock that records the method names it received. */
-function mockTextarea(): VimTextarea & { calls: string[] } {
-  const calls: string[] = [];
-  const rec = (name: string) => () => { calls.push(name); return true; };
-  return {
-    calls,
-    moveCursorLeft: rec('moveCursorLeft'),
-    moveCursorRight: rec('moveCursorRight'),
-    moveCursorUp: rec('moveCursorUp'),
-    moveCursorDown: rec('moveCursorDown'),
-    gotoLineHome: rec('gotoLineHome'),
-    gotoLineEnd: rec('gotoLineEnd'),
-    gotoBufferHome: rec('gotoBufferHome'),
-    gotoBufferEnd: rec('gotoBufferEnd'),
-    moveWordForward: rec('moveWordForward'),
-    moveWordBackward: rec('moveWordBackward'),
-    deleteChar: rec('deleteChar'),
-    deleteToLineEnd: rec('deleteToLineEnd'),
-    deleteLine: rec('deleteLine'),
-    deleteWordForward: rec('deleteWordForward'),
-    deleteWordBackward: rec('deleteWordBackward'),
-    newLine: rec('newLine'),
-  };
-}
+describe('vim -> Ink textarea adapter: motions', () => {
+  test('hjkl and word/buffer motions update the controlled cursor', () => {
+    const state = createVimTextareaAdapterState('NORMAL');
 
-describe('vim → textarea adapter: motions', () => {
-  test('hjkl and line/word/buffer motions call the right methods', () => {
-    const cases: Array<[string, string]> = [
-      ['h', 'moveCursorLeft'], ['l', 'moveCursorRight'],
-      ['j', 'moveCursorDown'], ['k', 'moveCursorUp'],
-      ['0', 'gotoLineHome'], ['$', 'gotoLineEnd'],
-      ['w', 'moveWordForward'], ['b', 'moveWordBackward'],
-      ['G', 'gotoBufferEnd'],
-    ];
-    for (const [key, method] of cases) {
-      const ta = mockTextarea();
-      const r = applyNormalKey(ta, key);
-      expect(ta.calls).toEqual([method]);
-      expect(r.mode).toBe('NORMAL');
-      expect(r.handled).toBe(true);
-    }
+    expect(applyVimTextareaKey({ value: 'hello world', cursorOffset: 0 }, state, 'l').model.cursorOffset).toBe(1);
+    expect(applyVimTextareaKey({ value: 'hello world', cursorOffset: 1 }, state, 'h').model.cursorOffset).toBe(0);
+    expect(applyVimTextareaKey({ value: 'hello world', cursorOffset: 0 }, state, 'w').model.cursorOffset).toBe(6);
+    expect(applyVimTextareaKey({ value: 'hello world', cursorOffset: 6 }, state, 'b').model.cursorOffset).toBe(0);
+    expect(applyVimTextareaKey({ value: 'hello\nworld', cursorOffset: 0 }, state, 'G').model.cursorOffset).toBe(6);
   });
 
-  test('gg goes to buffer home (two-key prefix)', () => {
-    const ta = mockTextarea();
-    let r = applyNormalKey(ta, 'g');
-    expect(r.pending.g).toBe(true);
-    r = applyNormalKey(ta, 'g', r.pending);
-    expect(ta.calls).toEqual(['gotoBufferHome']);
+  test('gg goes to buffer home through pending state', () => {
+    let state = createVimTextareaAdapterState('NORMAL');
+    let result = applyVimTextareaKey({ value: 'one\ntwo', cursorOffset: 5 }, state, 'g');
+    expect(result.state.gPrefix).toBe(true);
+
+    state = result.state;
+    result = applyVimTextareaKey(result.model, state, 'g');
+    expect(result.model.cursorOffset).toBe(0);
   });
 });
 
-describe('vim → textarea adapter: insert entries', () => {
-  test('i/a/I/A/o/O enter INSERT with the right cursor setup', () => {
-    expect(applyNormalKey(mockTextarea(), 'i').mode).toBe('INSERT');
-    const a = mockTextarea(); applyNormalKey(a, 'a'); expect(a.calls).toEqual(['moveCursorRight']);
-    const big = mockTextarea(); applyNormalKey(big, 'A'); expect(big.calls).toEqual(['gotoLineEnd']);
-    const o = mockTextarea(); const ro = applyNormalKey(o, 'o');
-    expect(o.calls).toEqual(['gotoLineEnd', 'newLine']);
-    expect(ro.mode).toBe('INSERT');
+describe('vim -> Ink textarea adapter: insert entries', () => {
+  test('i/a/I/A/o/O enter INSERT with the right controlled model', () => {
+    const state = createVimTextareaAdapterState('NORMAL');
+
+    expect(applyVimTextareaKey({ value: 'abc', cursorOffset: 1 }, state, 'i').state.mode).toBe('INSERT');
+    expect(applyVimTextareaKey({ value: 'abc', cursorOffset: 1 }, state, 'a').model.cursorOffset).toBe(2);
+    expect(applyVimTextareaKey({ value: 'abc', cursorOffset: 1 }, state, 'A').model.cursorOffset).toBe(3);
+
+    const openedBelow = applyVimTextareaKey({ value: 'abc', cursorOffset: 0 }, state, 'o');
+    expect(openedBelow.model.value).toBe('abc\n');
+    expect(openedBelow.model.cursorOffset).toBe(4);
+    expect(openedBelow.state.mode).toBe('INSERT');
+
+    const openedAbove = applyVimTextareaKey({ value: 'abc', cursorOffset: 2 }, state, 'O');
+    expect(openedAbove.model.value).toBe('\nabc');
+    expect(openedAbove.model.cursorOffset).toBe(0);
+    expect(openedAbove.state.mode).toBe('INSERT');
   });
 });
 
-describe('vim → textarea adapter: edits + operators', () => {
-  test('x and D edit in place', () => {
-    const x = mockTextarea(); applyNormalKey(x, 'x'); expect(x.calls).toEqual(['deleteChar']);
-    const d = mockTextarea(); applyNormalKey(d, 'D'); expect(d.calls).toEqual(['deleteToLineEnd']);
+describe('vim -> Ink textarea adapter: edits + operators', () => {
+  test('x and D edit the controlled value', () => {
+    const state = createVimTextareaAdapterState('NORMAL');
+
+    expect(applyVimTextareaKey({ value: 'abc', cursorOffset: 1 }, state, 'x').model.value).toBe('ac');
+    expect(applyVimTextareaKey({ value: 'hello world', cursorOffset: 5 }, state, 'D').model.value).toBe('hello');
   });
+
   test('dw deletes a word; dd deletes the line; cw deletes word then INSERT', () => {
-    let ta = mockTextarea();
-    let r = applyNormalKey(ta, 'd');
-    expect(r.pending.operator).toBe('d');
-    r = applyNormalKey(ta, 'w', r.pending);
-    expect(ta.calls).toEqual(['deleteWordForward']);
-    expect(r.mode).toBe('NORMAL');
+    let result = applyVimTextareaKey(
+      { value: 'hello world', cursorOffset: 0 },
+      createVimTextareaAdapterState('NORMAL'),
+      'd',
+    );
+    expect(result.state.pending.operator).toBe('d');
+    result = applyVimTextareaKey(result.model, result.state, 'w');
+    expect(result.model.value).toBe('world');
+    expect(result.state.mode).toBe('NORMAL');
 
-    ta = mockTextarea();
-    r = applyNormalKey(ta, 'd');
-    r = applyNormalKey(ta, 'd', r.pending);
-    expect(ta.calls).toEqual(['deleteLine']);
+    result = applyVimTextareaKey(
+      { value: 'line1\nline2', cursorOffset: 0 },
+      createVimTextareaAdapterState('NORMAL'),
+      'd',
+    );
+    result = applyVimTextareaKey(result.model, result.state, 'd');
+    expect(result.model.value).toBe('line2');
 
-    ta = mockTextarea();
-    r = applyNormalKey(ta, 'c');
-    r = applyNormalKey(ta, 'w', r.pending);
-    expect(ta.calls).toEqual(['deleteWordForward']);
-    expect(r.mode).toBe('INSERT');
+    result = applyVimTextareaKey(
+      { value: 'hello world', cursorOffset: 0 },
+      createVimTextareaAdapterState('NORMAL'),
+      'c',
+    );
+    result = applyVimTextareaKey(result.model, result.state, 'w');
+    expect(result.model.value).toBe('world');
+    expect(result.state.mode).toBe('INSERT');
   });
-  test('an unknown motion cancels a pending operator without editing', () => {
-    const ta = mockTextarea();
-    let r = applyNormalKey(ta, 'd');
-    r = applyNormalKey(ta, 'z', r.pending);
-    expect(ta.calls).toEqual([]);
-    expect(r.pending).toEqual(emptyPending);
+
+  test('insert mode delegates printable text to Textarea but handles Escape', () => {
+    let result = applyVimTextareaKey(
+      { value: 'abc', cursorOffset: 3 },
+      createVimTextareaAdapterState('INSERT'),
+      'x',
+    );
+    expect(result.handled).toBe(false);
+    expect(result.model.value).toBe('abc');
+
+    result = applyVimTextareaKey(result.model, result.state, 'Escape');
+    expect(result.handled).toBe(true);
+    expect(result.state.mode).toBe('NORMAL');
   });
-  test('unknown keys are swallowed in NORMAL mode (no typing through)', () => {
-    const ta = mockTextarea();
-    const r = applyNormalKey(ta, 'z');
-    expect(ta.calls).toEqual([]);
-    expect(r.handled).toBe(true);
+
+  test('Ink key translation maps terminal keys to Vim keys', () => {
+    const plainKey = {} as Key;
+
+    expect(vimKeyFromInkInput('x', plainKey)).toBe('x');
+    expect(vimKeyFromInkInput('', { escape: true } as Key)).toBe('Escape');
+    expect(vimKeyFromInkInput('', { return: true } as Key)).toBe('Enter');
+    expect(vimKeyFromInkInput('', { leftArrow: true } as Key)).toBe('h');
+    expect(vimKeyFromInkInput('', { eventType: 'release' } as Key)).toBe(null);
+  });
+
+  test('Ink input application returns handled=false for delegated INSERT keys', () => {
+    const result = applyVimTextareaInkInput(
+      { value: 'abc', cursorOffset: 3 },
+      createVimTextareaAdapterState('INSERT'),
+      'z',
+      {} as Key,
+    );
+
+    expect(result.handled).toBe(false);
+    expect(result.model.value).toBe('abc');
   });
 });

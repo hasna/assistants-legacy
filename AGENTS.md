@@ -58,6 +58,7 @@ pnpm typecheck
 - **Single-file distribution**: The build bundles all workspace packages into one `dist/index.js`. Zero runtime npm dependencies.
 - **Skills over plugins**: Extensibility is through SKILL.md files (declarative prompts), not code plugins.
 - **Hooks for safety**: Lifecycle hooks validate tool usage, block dangerous commands, inject context.
+- **Terminal UI is Ink-only in the target architecture**: New or migrated terminal UI must use the local upstream Ink wrappers in `packages/terminal/src/ui/ink`. Do not add retired renderer imports, lowercase terminal intrinsics, renderer fallbacks, or legacy renderer test coverage for migrated components.
 
 ## What We're Building
 
@@ -76,6 +77,7 @@ This is the open-source version of the assistant. The goal is to make it:
 - Keep the single-file build working — if you add a dependency, make sure it bundles
 - Don't break the standalone experience — the assistant must work with just `ANTHROPIC_API_KEY`
 - UI components go in `packages/terminal/src/components/`
+- Terminal UI tests for migrated components use `packages/terminal/tests/utils/ink-test-harness.tsx` and `renderInk`; do not add legacy renderer test utilities.
 - Core logic goes in `packages/core/src/`
 - Shared types go in `packages/shared/src/`
 

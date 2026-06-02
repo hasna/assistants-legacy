@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, expect, test } from 'bun:test';
-import { testRender } from '@opentui/react/test-utils';
 import { Markdown, renderMarkdown } from '../src/components/Markdown';
+import { renderInk } from './utils/ink-test-harness';
 
 describe('terminal Markdown renderer', () => {
   test('Markdown component returns null for empty content', () => {
@@ -9,14 +9,17 @@ describe('terminal Markdown renderer', () => {
     expect(result).toBeNull();
   });
 
-  test('Markdown component renders with OpenTUI intrinsic', async () => {
-    const { captureCharFrame, renderOnce } = await testRender(
+  test('Markdown component renders with upstream Ink', async () => {
+    const harness = await renderInk(
       React.createElement(Markdown, { content: 'hello' }),
       { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(typeof frame).toBe('string');
+    try {
+      const frame = await harness.waitForText('hello');
+      expect(frame).toContain('hello');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
   test('Markdown component handles complex markdown content', async () => {
@@ -33,23 +36,31 @@ describe('terminal Markdown renderer', () => {
 | --- | --- |
 | Alpha | 1 |
 `;
-    const { captureCharFrame, renderOnce } = await testRender(
+    const harness = await renderInk(
       React.createElement(Markdown, { content }),
       { width: 80, height: 24 }
     );
-    await renderOnce();
-    const frame = captureCharFrame();
-    expect(typeof frame).toBe('string');
+    try {
+      const frame = await harness.waitForText('Header');
+      expect(frame).toContain('# Header');
+      expect(frame).toContain('Bold');
+      expect(frame).toContain('italic');
+      expect(frame).toContain('- bullet one');
+      expect(frame).toContain('inline code');
+      expect(frame).toContain('| Name');
+    } finally {
+      await harness.cleanup();
+    }
   });
 
-  test('renderMarkdown returns trimmed raw text for sizing', () => {
+  test('renderMarkdown returns formatted plain text for sizing', () => {
     const output = renderMarkdown('# Header\n\n**Bold** text  \n', { maxWidth: 50 });
-    expect(output).toBe('# Header\n\n**Bold** text');
+    expect(output).toBe('# Header\n\nBold text');
   });
 
-  test('renderMarkdown preserves markdown syntax', () => {
+  test('renderMarkdown emits code and inline-code text', () => {
     const output = renderMarkdown('```js\nconsole.log("x");\n```\nInline `code`');
     expect(output).toContain('console.log');
-    expect(output).toContain('`code`');
+    expect(output).toContain('Inline code');
   });
 });
