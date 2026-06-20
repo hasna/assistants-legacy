@@ -21,6 +21,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
+const UNSAFE_MERGE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Deep merge two objects. Override values take precedence over base values.
  *
@@ -36,6 +38,10 @@ export function deepMerge<T extends Record<string, unknown>>(base: T, override?:
   const result = { ...base } as Record<string, unknown>;
 
   for (const key of Object.keys(override)) {
+    if (UNSAFE_MERGE_KEYS.has(key)) {
+      continue;
+    }
+
     const overrideValue = (override as Record<string, unknown>)[key];
     const baseValue = result[key];
 

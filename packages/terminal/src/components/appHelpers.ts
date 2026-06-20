@@ -216,12 +216,18 @@ export function formatElapsedDuration(ms: number): string {
 /**
  * Deep merge two objects
  */
+const UNSAFE_MERGE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export function deepMerge<T extends Record<string, unknown>>(
   target: T,
   source: Partial<T>
 ): T {
   const output = { ...target };
   for (const key of Object.keys(source) as (keyof T)[]) {
+    if (UNSAFE_MERGE_KEYS.has(String(key))) {
+      continue;
+    }
+
     const sourceValue = source[key];
     const targetValue = target[key];
     if (

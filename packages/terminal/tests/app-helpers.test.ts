@@ -77,6 +77,17 @@ describe('deepMerge', () => {
     deepMerge(target, { a: { b: 2 } } as any);
     expect(target).toEqual({ a: { b: 1 } });
   });
+  test('ignores prototype pollution keys from parsed config input', () => {
+    const source = JSON.parse(
+      '{"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"prototype":{"polluted":true},"safe":true}',
+    ) as Record<string, unknown>;
+
+    const result = deepMerge({}, source);
+
+    expect(result).toEqual({ safe: true });
+    expect('polluted' in result).toBe(false);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
 });
 
 describe('formatShellResult', () => {

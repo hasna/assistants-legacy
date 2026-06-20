@@ -104,6 +104,18 @@ describe('deepMerge', () => {
     expect(result).toEqual({ a: 1, b: { nested: true } });
   });
 
+  test('should ignore prototype pollution keys from parsed config input', () => {
+    const override = JSON.parse(
+      '{"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"prototype":{"polluted":true},"safe":true}',
+    ) as Record<string, unknown>;
+
+    const result = deepMerge({}, override);
+
+    expect(result).toEqual({ safe: true });
+    expect('polluted' in result).toBe(false);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
   // --- Array replacement ---
 
   test('should replace arrays entirely instead of merging elements', () => {
