@@ -437,6 +437,48 @@ describe('runHeadless', () => {
     });
   });
 
+  describe('timeouts', () => {
+    test('clears the timeout timer after a successful send', async () => {
+      const originalWrite = process.stdout.write;
+      const originalSetTimeout = globalThis.setTimeout;
+      const originalClearTimeout = globalThis.clearTimeout;
+      const timeoutHandles: Array<{ timeout: number }> = [];
+      const clearedHandles: unknown[] = [];
+
+      (process.stdout as any).write = () => true;
+      globalThis.setTimeout = ((handler: TimerHandler, timeout?: number) => {
+        const handle = { timeout: Number(timeout) };
+        timeoutHandles.push(handle);
+        return handle as unknown as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout;
+      globalThis.clearTimeout = ((handle?: ReturnType<typeof setTimeout>) => {
+        clearedHandles.push(handle);
+      }) as typeof clearTimeout;
+
+      mockChunks = [
+        { type: 'text', content: 'ok' },
+        { type: 'done' },
+      ];
+
+      try {
+        const result = await runHeadless({
+          prompt: 'Test',
+          cwd: '/tmp',
+          outputFormat: 'text',
+          timeoutMs: 10_000,
+        });
+
+        expect(result.success).toBe(true);
+        expect(timeoutHandles).toEqual([{ timeout: 10_000 }]);
+        expect(clearedHandles).toEqual(timeoutHandles);
+      } finally {
+        process.stdout.write = originalWrite;
+        globalThis.setTimeout = originalSetTimeout;
+        globalThis.clearTimeout = originalClearTimeout;
+      }
+    });
+  });
+
   describe('--resume overrides --continue', () => {
     test('uses resume session when both resume and continue are provided', async () => {
       mockHasLatestSession = true;

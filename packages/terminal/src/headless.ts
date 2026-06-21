@@ -160,14 +160,19 @@ export async function runHeadless(options: HeadlessOptions): Promise<HeadlessRes
     message = `${prompt}\n\nIMPORTANT: Your response MUST be valid JSON conforming to this schema:\n${jsonSchema}`;
   }
 
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
   try {
     // Send the message and wait for completion
     if (timeoutMs && timeoutMs > 0) {
       await Promise.race([
         client.send(message),
-        new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error(`Headless run timed out after ${timeoutMs}ms`)), timeoutMs)
-        ),
+        new Promise<void>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            timeoutId = null;
+            reject(new Error(`Headless run timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
       ]);
     } else {
       await client.send(message);
@@ -180,6 +185,9 @@ export async function runHeadless(options: HeadlessOptions): Promise<HeadlessRes
       process.stderr.write(`Error: ${errorMessage}\n`);
     }
   } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
     // Always disconnect the client to clean up resources
     client.disconnect();
   }
