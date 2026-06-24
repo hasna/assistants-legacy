@@ -1,7 +1,7 @@
 {
   "name": "@hasna/assistants",
   "version": "1.1.150",
-  "description": "Personal AI assistant that runs in your terminal — powered by the AI SDK",
+  "description": "Legacy CLI distribution for Hasna Assistants; use @hasna/assistants-sdk for typed SDK imports",
   "type": "module",
   "bin": {
     "assistants": "dist/index.js"
@@ -53,7 +53,9 @@
     "terminal",
     "ai-sdk",
     "bun",
-    "open-source"
+    "open-source",
+    "legacy",
+    "cli-only"
   ],
   "author": "Hasna",
   "license": "Apache-2.0",
