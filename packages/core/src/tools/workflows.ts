@@ -9,6 +9,7 @@ import type { ToolExecutor, ToolRegistry } from './registry';
 import { ErrorCodes, ToolExecutionError } from '../errors';
 import { WorkflowLoader, WorkflowStore, WorkflowExecutor } from '../workflows';
 import type { StepExecutor } from '../workflows';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 let workflowLoader: WorkflowLoader | null = null;
 let workflowStore: WorkflowStore | null = null;
@@ -36,11 +37,16 @@ const workflowListTool: Tool = {
   description: 'List all available workflow templates and their descriptions.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: { type: 'number', description: 'Maximum workflows to return (default 20, max 100)' },
+      cursor: { type: 'number', description: 'Zero-based offset for pagination' },
+      verbose: { type: 'boolean', description: 'Include longer descriptions and source paths' },
+      full: { type: 'boolean', description: 'Return all workflows without compact truncation' },
+    },
   },
 };
 
-const workflowListExecutor: ToolExecutor = async () => {
+const workflowListExecutor: ToolExecutor = async (input) => {
   const loader = getLoader();
   await loader.loadAll();
   const workflows = loader.list();
@@ -49,15 +55,33 @@ const workflowListExecutor: ToolExecutor = async () => {
     return 'No workflows found. Create workflow YAML files in ~/.hasna/assistants/workflows/ or .assistants/workflows/';
   }
 
-  const list = workflows.map(w => ({
-    name: w.name,
-    description: w.description,
+  const full = input.full === true;
+  const verbose = full || input.verbose === true;
+  const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+  const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+  const limit = full ? Math.max(workflows.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+  const cursor = Math.max(Math.floor(cursorInput), 0);
+  const page = pageItems(workflows, { limit, cursor });
+
+  const list = page.items.map(w => ({
+    name: truncateText(w.name, verbose ? 120 : 56),
+    description: truncateText(w.description, verbose ? 240 : 96),
     steps: w.steps.length,
     tags: w.tags || [],
-    source: w.filePath,
+    source: verbose ? w.filePath : undefined,
   }));
 
-  return JSON.stringify({ workflows: list, count: list.length });
+  return JSON.stringify({
+    workflows: list,
+    count: list.length,
+    total: workflows.length,
+    limit,
+    cursor,
+    nextCursor: page.nextCursor,
+    hint: page.nextCursor !== null
+      ? `Pass cursor=${page.nextCursor} for more. Pass full=true for all workflows.`
+      : 'Pass verbose=true for source paths, or full=true for all workflows.',
+  });
 };
 
 // ============================================

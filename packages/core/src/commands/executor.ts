@@ -4,8 +4,8 @@ import { getRuntime } from '../runtime';
 import { validateBashCommand } from '../security/bash-validator';
 import { getSecurityLogger } from '../security/logger';
 
-/** Maximum output length for shell commands (64KB) */
-const MAX_SHELL_OUTPUT_LENGTH = 64 * 1024;
+/** Maximum output injected into custom command prompts. */
+const MAX_SHELL_OUTPUT_LENGTH = 8 * 1024;
 
 /**
  * CommandExecutor - executes slash commands
@@ -197,13 +197,13 @@ export class CommandExecutor {
         const truncatedStderr = stderr.length > MAX_SHELL_OUTPUT_LENGTH
           ? `${stderr.slice(0, MAX_SHELL_OUTPUT_LENGTH)}...(truncated)`
           : stderr;
-        return `Error (exit ${exitCode}):\n${truncatedStderr}`;
+        return `Error (exit ${exitCode}):\n${truncatedStderr}${stderr.length > MAX_SHELL_OUTPUT_LENGTH ? '\nUse the shell directly if you need the complete stderr output.' : ''}`;
       }
 
       // Cap output length to prevent excessive content
       const trimmedOutput = stdout.trim();
       if (trimmedOutput.length > MAX_SHELL_OUTPUT_LENGTH) {
-        return `${trimmedOutput.slice(0, MAX_SHELL_OUTPUT_LENGTH)}...(output truncated at ${MAX_SHELL_OUTPUT_LENGTH} bytes)`;
+        return `${trimmedOutput.slice(0, MAX_SHELL_OUTPUT_LENGTH)}...(output truncated at ${MAX_SHELL_OUTPUT_LENGTH} bytes)\nUse the shell directly if you need the complete output.`;
       }
 
       return trimmedOutput || '(no output)';

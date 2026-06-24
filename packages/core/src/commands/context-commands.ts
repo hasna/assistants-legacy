@@ -1,5 +1,5 @@
 import type { Command, CommandContext, TokenUsage } from './types';
-import { splitArgs, singleLine } from './helpers';
+import { splitArgs, singleLine, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { getConfigDir } from '../config';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -60,7 +60,7 @@ export function contextCommand(): Command {
         const usage = [
           'Usage:',
           '  /context status',
-          '  /context list',
+          '  /context list [--limit n] [--cursor n] [--verbose] [--json]',
           '  /context add file <path>',
           '  /context add connector <name>',
           '  /context add database <name>',
@@ -120,16 +120,35 @@ export function contextCommand(): Command {
       }
 
       if (sub === 'list') {
+        const outputOptions = parseDisclosureOptions(parts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         if (project.context.length === 0) {
           context.emit('text', `\nNo context entries for project "${project.name}".\n`);
           context.emit('done');
           return { handled: true };
         }
-        let output = `\n**Context Entries (${singleLine(project.name)})**\n\n`;
-        for (const entry of project.context) {
-          const label = entry.label ? ` (${singleLine(entry.label)})` : '';
-          output += `- ${entry.id} [${entry.type}] ${singleLine(entry.value)}${label}\n`;
+        const page = pageItems(project.context, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            entries: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
         }
+        let output = `\n**Context Entries (${truncateText(project.name, 56)})** (${page.shown}/${page.total})\n\n`;
+        for (const entry of page.items) {
+          const label = entry.label ? ` (${truncateText(entry.label, 40)})` : '';
+          output += `- ${entry.id} [${entry.type}] ${truncateText(entry.value, outputOptions.verbose ? 160 : 80)}${label}\n`;
+        }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/context remove <id>');
         context.emit('text', output);
         context.emit('done');
         return { handled: true };
@@ -441,7 +460,7 @@ export function memoryCommand(): Command {
         context.emit('text', `  By category: preference=${stats.byCategory.preference}, fact=${stats.byCategory.fact}, knowledge=${stats.byCategory.knowledge}, history=${stats.byCategory.history}\n\n`);
         context.emit('text', 'Commands:\n');
         context.emit('text', '  /memory                         Open interactive memory panel\n');
-        context.emit('text', '  /memory list [cat] [opts]     List memories (filter by category/scope/tags)\n');
+        context.emit('text', '  /memory list [cat] [opts]     List memories compactly\n');
         context.emit('text', '  /memory get <key>             Get a specific memory\n');
         context.emit('text', '  /memory set <key> <value>     Save a memory (supports --scope, --scopeId)\n');
         context.emit('text', '  /memory update <key> [opts]   Update memory metadata\n');
@@ -454,6 +473,9 @@ export function memoryCommand(): Command {
         context.emit('text', '  --scope <global|shared|private>  Filter by scope\n');
         context.emit('text', '  --tags <tag1,tag2>               Filter by tags\n');
         context.emit('text', '  --importance <n>                 Minimum importance (1-10)\n');
+        context.emit('text', '  --limit <n> --cursor <n>         Page results (default 20)\n');
+        context.emit('text', '  --verbose                        Wider previews\n');
+        context.emit('text', '  --json                           Structured page output\n');
         context.emit('text', '\nCategories: preference | fact | knowledge | history\n');
         context.emit('text', '  preference - User settings and choices (timezone, language, etc.)\n');
         context.emit('text', '  fact       - Known truths about the user or environment\n');
@@ -465,40 +487,47 @@ export function memoryCommand(): Command {
 
       // /memory list [category] [--scope global|shared|private] [--tags tag1,tag2] [--importance n]
       if (action === 'list') {
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const VALID_CATEGORIES = new Set(['preference', 'fact', 'knowledge', 'history']);
         const VALID_SCOPES = new Set(['global', 'shared', 'private']);
         let category: 'preference' | 'fact' | 'knowledge' | 'history' | undefined;
         let scope: 'global' | 'shared' | 'private' | undefined;
         let tags: string[] | undefined;
         let minImportance: number | undefined;
+        const filterArgs = outputOptions.args;
 
         // Parse args
         let i = 0;
-        while (i < rest.length) {
-          if (rest[i] === '--scope' && rest[i + 1]) {
-            const scopeInput = rest[i + 1].toLowerCase();
+        while (i < filterArgs.length) {
+          if (filterArgs[i] === '--scope' && filterArgs[i + 1]) {
+            const scopeInput = filterArgs[i + 1].toLowerCase();
             if (!VALID_SCOPES.has(scopeInput)) {
-              context.emit('text', `Error: Invalid scope "${rest[i + 1]}". Must be one of: global, shared, private\n`);
+              context.emit('text', `Error: Invalid scope "${filterArgs[i + 1]}". Must be one of: global, shared, private\n`);
               context.emit('done');
               return { handled: true };
             }
             scope = scopeInput as 'global' | 'shared' | 'private';
             i += 2;
-          } else if (rest[i] === '--tags' && rest[i + 1]) {
-            tags = rest[i + 1].split(',').map(t => t.trim()).filter(Boolean);
+          } else if (filterArgs[i] === '--tags' && filterArgs[i + 1]) {
+            tags = filterArgs[i + 1].split(',').map(t => t.trim()).filter(Boolean);
             i += 2;
-          } else if (rest[i] === '--importance' && rest[i + 1]) {
-            const impInput = parseInt(rest[i + 1], 10);
+          } else if (filterArgs[i] === '--importance' && filterArgs[i + 1]) {
+            const impInput = parseInt(filterArgs[i + 1], 10);
             if (isNaN(impInput) || impInput < 1 || impInput > 10) {
-              context.emit('text', `Error: Invalid importance "${rest[i + 1]}". Must be a number between 1 and 10.\n`);
+              context.emit('text', `Error: Invalid importance "${filterArgs[i + 1]}". Must be a number between 1 and 10.\n`);
               context.emit('done');
               return { handled: true };
             }
             minImportance = impInput;
             i += 2;
-          } else if (!rest[i].startsWith('--')) {
+          } else if (!filterArgs[i].startsWith('--')) {
             // Positional argument - category
-            const catInput = rest[i].toLowerCase();
+            const catInput = filterArgs[i].toLowerCase();
             if (VALID_CATEGORIES.has(catInput)) {
               category = catInput as 'preference' | 'fact' | 'knowledge' | 'history';
             }
@@ -513,20 +542,30 @@ export function memoryCommand(): Command {
           scope,
           tags: tags && tags.length > 0 ? tags : undefined,
           minImportance,
-          limit: 50,
+          limit: outputOptions.limit,
+          offset: outputOptions.cursor,
           orderBy: 'importance',
           orderDir: 'desc',
         });
 
         if (result.memories.length === 0) {
           context.emit('text', 'No memories found.\n');
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            memories: result.memories,
+            total: result.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: result.hasMore ? outputOptions.cursor + result.memories.length : null,
+          }, null, 2));
         } else {
           context.emit('text', `\nMemories (${result.memories.length}/${result.total}):\n`);
           for (const memory of result.memories) {
             const scopeTag = memory.scope === 'global' ? '[G]' : memory.scope === 'shared' ? '[S]' : '[P]';
-            const summary = memory.summary || (typeof memory.value === 'string' ? memory.value.slice(0, 40) : JSON.stringify(memory.value).slice(0, 40));
-            context.emit('text', `  ${scopeTag} ${memory.key}: ${summary}${summary.length >= 40 ? '...' : ''} (${memory.category}, imp=${memory.importance})\n`);
+            const summary = memory.summary || (typeof memory.value === 'string' ? memory.value : JSON.stringify(memory.value));
+            context.emit('text', `  ${scopeTag} ${truncateText(memory.key, 48)}: ${truncateText(summary, outputOptions.verbose ? 160 : 56)} (${memory.category}, imp=${memory.importance})\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, result.total, result.memories.length, '/memory get <key>'));
         }
         context.emit('done');
         return { handled: true };
@@ -674,22 +713,37 @@ export function memoryCommand(): Command {
 
       // /memory search <query>
       if (action === 'search') {
-        const query = rest.join(' ');
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+        const query = outputOptions.args.join(' ');
         if (!query) {
-          context.emit('text', 'Usage: /memory search <query>\n');
+          context.emit('text', 'Usage: /memory search <query> [--limit n] [--cursor n] [--verbose] [--json]\n');
           context.emit('done');
           return { handled: true };
         }
 
-        const result = await manager.query({ search: query, limit: 20 });
+        const result = await manager.query({ search: query, limit: outputOptions.limit, offset: outputOptions.cursor });
         if (result.memories.length === 0) {
           context.emit('text', `No memories found matching: ${query}\n`);
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            memories: result.memories,
+            total: result.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: result.hasMore ? outputOptions.cursor + result.memories.length : null,
+          }, null, 2));
         } else {
-          context.emit('text', `\nSearch results for "${query}" (${result.memories.length} found):\n`);
+          context.emit('text', `\nSearch results for "${truncateText(query, 80)}" (${result.memories.length}/${result.total}):\n`);
           for (const memory of result.memories) {
-            const summary = memory.summary || (typeof memory.value === 'string' ? memory.value.slice(0, 50) : JSON.stringify(memory.value).slice(0, 50));
-            context.emit('text', `  ${memory.key}: ${summary}${summary.length >= 50 ? '...' : ''}\n`);
+            const summary = memory.summary || (typeof memory.value === 'string' ? memory.value : JSON.stringify(memory.value));
+            context.emit('text', `  ${truncateText(memory.key, 48)}: ${truncateText(summary, outputOptions.verbose ? 160 : 64)}\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, result.total, result.memories.length, '/memory get <key>'));
         }
         context.emit('done');
         return { handled: true };

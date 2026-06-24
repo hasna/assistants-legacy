@@ -14,6 +14,7 @@ import {
   type Task,
   type TaskPriority,
 } from '../tasks';
+import { disclosureHint, pageItems, truncateText } from '../commands/helpers';
 
 export interface TasksToolContext {
   cwd: string;
@@ -34,6 +35,22 @@ export const tasksListTool: Tool = {
         description: 'Filter by status: pending, in_progress, completed, failed, or all (default: all)',
         enum: ['pending', 'in_progress', 'completed', 'failed', 'all'],
       },
+      limit: {
+        type: 'number',
+        description: 'Maximum rows to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based row offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Show wider task previews while still respecting limit',
+      },
+      json: {
+        type: 'boolean',
+        description: 'Return a structured JSON page instead of a human table',
+      },
     },
   },
 };
@@ -50,6 +67,18 @@ export const tasksGetTool: Tool = {
       id: {
         type: 'string',
         description: 'The task ID',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Show wider result/error previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Include full result/error fields. Use only when needed.',
+      },
+      json: {
+        type: 'boolean',
+        description: 'Return full structured task JSON',
       },
     },
     required: ['id'],
@@ -159,7 +188,24 @@ export const tasksRecurringListTool: Tool = {
   description: 'List all recurring task templates with their schedule and next run time',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum rows to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based row offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Show wider task previews while still respecting limit',
+      },
+      json: {
+        type: 'boolean',
+        description: 'Return a structured JSON page instead of a human table',
+      },
+    },
   },
 };
 
@@ -245,6 +291,17 @@ export const taskTools: Tool[] = [
  * Create tool executors for task management
  */
 export function createTaskToolExecutors(context: TasksToolContext) {
+  const getOutputOptions = (input: { limit?: number; cursor?: number; verbose?: boolean; json?: boolean }) => {
+    const rawLimit = Number.isFinite(input.limit) ? Math.trunc(input.limit as number) : 20;
+    const rawCursor = Number.isFinite(input.cursor) ? Math.trunc(input.cursor as number) : 0;
+    return {
+      limit: Math.max(1, Math.min(rawLimit, 100)),
+      cursor: Math.max(0, rawCursor),
+      verbose: input.verbose === true,
+      json: input.json === true,
+    };
+  };
+
   const formatTaskMatch = (task: Task): string => {
     const desc = task.description.length > 60
       ? `${task.description.slice(0, 60)}...`
@@ -262,9 +319,10 @@ export function createTaskToolExecutors(context: TasksToolContext) {
   };
 
   return {
-    tasks_list: async (input: { status?: string }) => {
+    tasks_list: async (input: { status?: string; limit?: number; cursor?: number; verbose?: boolean; json?: boolean }) => {
       const tasks = await getTasks(context.cwd);
       const status = input.status || 'all';
+      const outputOptions = getOutputOptions(input);
 
       const filtered = status === 'all'
         ? tasks
@@ -274,27 +332,43 @@ export function createTaskToolExecutors(context: TasksToolContext) {
         return `No ${status === 'all' ? '' : status + ' '}tasks in queue.`;
       }
 
-      const lines = filtered.map((t) => {
+      const page = pageItems(filtered, outputOptions);
+      if (outputOptions.json) {
+        return JSON.stringify({
+          tasks: page.items,
+          total: page.total,
+          limit: outputOptions.limit,
+          cursor: outputOptions.cursor,
+          nextCursor: page.nextCursor,
+        }, null, 2);
+      }
+
+      const lines = page.items.map((t) => {
         const statusIcon = t.status === 'pending' ? '○' :
                           t.status === 'in_progress' ? '◐' :
                           t.status === 'completed' ? '●' : '✗';
         const priorityIcon = t.priority === 'high' ? '↑' :
                             t.priority === 'low' ? '↓' : '-';
-        return `${statusIcon} [${priorityIcon}] ${t.id} - ${t.description}`;
+        return `${statusIcon} [${priorityIcon}] ${t.id} - ${truncateText(t.description, outputOptions.verbose ? 120 : 64)}`;
       });
 
-      return `Tasks (${filtered.length}):\n${lines.join('\n')}`;
+      return `Tasks (${page.shown}/${page.total}):\n${lines.join('\n')}${disclosureHint(outputOptions, page.total, page.shown, 'tasks_get')}`;
     },
 
-    tasks_get: async (input: { id: string }) => {
+    tasks_get: async (input: { id: string; verbose?: boolean; full?: boolean; json?: boolean }) => {
       const { task, matches } = await resolveTaskId(context.cwd, input.id);
       if (!task) {
         return handleResolveError(input.id, matches, 'Task');
       }
 
+      if (input.json) {
+        return JSON.stringify(task, null, 2);
+      }
+
+      const resultLimit = input.full ? Number.MAX_SAFE_INTEGER : input.verbose ? 1000 : 240;
       const lines = [
         `ID: ${task.id}`,
-        `Description: ${task.description}`,
+        `Description: ${input.full ? task.description : truncateText(task.description, input.verbose ? 1000 : 240)}`,
         `Status: ${task.status}`,
         `Priority: ${task.priority}`,
         `Created: ${new Date(task.createdAt).toISOString()}`,
@@ -307,10 +381,13 @@ export function createTaskToolExecutors(context: TasksToolContext) {
         lines.push(`Completed: ${new Date(task.completedAt).toISOString()}`);
       }
       if (task.result) {
-        lines.push(`Result: ${task.result}`);
+        lines.push(`Result: ${input.full ? task.result : truncateText(task.result, resultLimit)}`);
       }
       if (task.error) {
-        lines.push(`Error: ${task.error}`);
+        lines.push(`Error: ${input.full ? task.error : truncateText(task.error, resultLimit)}`);
+      }
+      if (!input.full && ((task.result && task.result.length > resultLimit) || (task.error && task.error.length > resultLimit))) {
+        lines.push('Use full=true for complete result/error fields.');
       }
 
       return lines.join('\n');
@@ -388,14 +465,25 @@ export function createTaskToolExecutors(context: TasksToolContext) {
       return lines.join('\n');
     },
 
-    tasks_recurring_list: async () => {
+    tasks_recurring_list: async (input: { limit?: number; cursor?: number; verbose?: boolean; json?: boolean } = {}) => {
       const recurring = await getRecurringTasks(context.cwd);
 
       if (recurring.length === 0) {
         return 'No recurring tasks configured.';
       }
 
-      const lines = recurring.map((t) => {
+      const outputOptions = getOutputOptions(input);
+      const page = pageItems(recurring, outputOptions);
+      if (outputOptions.json) {
+        return JSON.stringify({
+          tasks: page.items,
+          total: page.total,
+          limit: outputOptions.limit,
+          cursor: outputOptions.cursor,
+          nextCursor: page.nextCursor,
+        }, null, 2);
+      }
+      const lines = page.items.map((t) => {
         const schedule = t.recurrence?.kind === 'cron'
           ? `cron: ${t.recurrence.cron}`
           : `interval: ${Math.round((t.recurrence?.intervalMs || 0) / 1000 / 60)}min`;
@@ -404,10 +492,10 @@ export function createTaskToolExecutors(context: TasksToolContext) {
           : 'completed';
         const count = t.recurrence?.occurrenceCount ?? 0;
         const statusIcon = t.status === 'pending' ? '◐' : '●';
-        return `${statusIcon} ${t.id} - ${t.description}\n   ${schedule} | next: ${nextRun} | runs: ${count}`;
+        return `${statusIcon} ${t.id} - ${truncateText(t.description, outputOptions.verbose ? 120 : 64)}\n   ${schedule} | next: ${nextRun} | runs: ${count}`;
       });
 
-      return `Recurring Tasks (${recurring.length}):\n${lines.join('\n')}`;
+      return `Recurring Tasks (${page.shown}/${page.total}):\n${lines.join('\n')}${disclosureHint(outputOptions, page.total, page.shown, 'tasks_get')}`;
     },
 
     tasks_recurring_add: async (input: {

@@ -5,6 +5,7 @@
 
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // Lazily import @hasna/conversations to avoid module-level side effects
 // that can interfere with Anthropic SDK streaming
@@ -19,19 +20,36 @@ export function createMessagesSpacesListTool(): { tool: Tool; executor: ToolExec
     description: 'List available broadcast spaces for agent coordination. Spaces allow one-to-many messaging.',
     parameters: {
       type: 'object',
-      properties: {},
+      properties: {
+        limit: { type: 'number', description: 'Maximum spaces to return (default 20, max 100)' },
+        cursor: { type: 'number', description: 'Zero-based offset for pagination' },
+        verbose: { type: 'boolean', description: 'Include longer descriptions' },
+        full: { type: 'boolean', description: 'Return all spaces without compact truncation' },
+      },
     },
   };
 
-  const executor: ToolExecutor = async () => {
+  const executor: ToolExecutor = async (input) => {
     try {
       const { listSpaces } = await getConversationsLib();
       const spaces = listSpaces({});
       if (spaces.length === 0) return 'No spaces available. Create one with messages_spaces_join.';
-      const lines = spaces.map((s) =>
-        `• ${s.name}${s.description ? ` — ${s.description}` : ''}${s.message_count ? ` (${s.message_count} messages)` : ''}`
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(spaces.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(spaces, { limit, cursor });
+      const lines = page.items.map((s) =>
+        `• ${truncateText(s.name, verbose ? 100 : 48)}${s.description ? ` - ${truncateText(s.description, verbose ? 180 : 80)}` : ''}${s.message_count ? ` (${s.message_count} messages)` : ''}`
       );
-      return `Available spaces (${spaces.length}):\n\n${lines.join('\n')}`;
+      const hint = !full
+        ? (page.nextCursor !== null
+          ? `\nShowing ${page.shown} of ${page.total}. Pass cursor=${page.nextCursor} for more, or full=true for all spaces.`
+          : '\nPass verbose=true for longer descriptions, or full=true for all spaces.')
+        : '';
+      return `Available spaces (${page.shown}/${page.total}):\n\n${lines.join('\n')}${hint}`;
     } catch (err) {
       return `Failed to list spaces: ${err instanceof Error ? err.message : String(err)}`;
     }

@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs, formatAge } from './helpers';
+import { splitArgs, formatAge, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { join } from 'path';
 import type { Heartbeat } from '../heartbeat/types';
 import {
@@ -56,13 +56,21 @@ export function jobsCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const parts = args.trim().split(/\s+/);
-      const subcommand = parts[0]?.toLowerCase() || 'list';
-      const arg = parts[1] || '';
+      const parts = splitArgs(args);
+      const first = parts[0]?.toLowerCase();
+      const subcommand = !first || first.startsWith('--') ? 'list' : first;
+      const subArgs = first && first.startsWith('--') ? parts : parts.slice(1);
+      const arg = subArgs[0] || '';
 
       switch (subcommand) {
         case 'list':
         case '': {
+          const outputOptions = parseDisclosureOptions(subArgs);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const jobs = await listJobsForSession(context.sessionId);
           if (jobs.length === 0) {
             context.emit('text', 'No jobs found for this session.\n');
@@ -72,15 +80,30 @@ export function jobsCommand(): Command {
 
           // Sort by created time, newest first
           jobs.sort((a, b) => b.createdAt - a.createdAt);
+          const page = pageItems(jobs, outputOptions);
 
-          let output = '\n| Status | ID | Connector | Command | Age |\n';
+          if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              jobs: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
+            context.emit('done');
+            return { handled: true };
+          }
+
+          let output = `\n**Jobs** (${page.shown}/${page.total})\n\n`;
+          output += '| Status | ID | Connector | Command | Age |\n';
           output += '|--------|----|-----------|---------|----- |\n';
 
-          for (const job of jobs) {
+          for (const job of page.items) {
             const age = formatAge(Date.now() - job.createdAt);
-            const command = job.command.slice(0, 30);
+            const command = truncateText(job.command, outputOptions.verbose ? 100 : 30);
             output += `| ${job.status.toUpperCase()} | ${job.id} | ${job.connectorName} | ${command} | ${age} |\n`;
           }
+          output += disclosureHint(outputOptions, page.total, page.shown, '/jobs <id>');
 
           context.emit('text', output);
           context.emit('done');
@@ -88,6 +111,12 @@ export function jobsCommand(): Command {
         }
 
         case 'all': {
+          const outputOptions = parseDisclosureOptions(subArgs);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const jobs = await listJobs();
           if (jobs.length === 0) {
             context.emit('text', 'No jobs found.\n');
@@ -96,15 +125,30 @@ export function jobsCommand(): Command {
           }
 
           jobs.sort((a, b) => b.createdAt - a.createdAt);
+          const page = pageItems(jobs, outputOptions);
 
-          let output = '\n| Status | ID | Session | Connector | Command | Age |\n';
+          if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              jobs: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
+            context.emit('done');
+            return { handled: true };
+          }
+
+          let output = `\n**All Jobs** (${page.shown}/${page.total})\n\n`;
+          output += '| Status | ID | Session | Connector | Command | Age |\n';
           output += '|--------|----|---------|-----------|---------|-----|\n';
 
-          for (const job of jobs) {
+          for (const job of page.items) {
             const age = formatAge(Date.now() - job.createdAt);
-            const command = job.command.slice(0, 20);
+            const command = truncateText(job.command, outputOptions.verbose ? 100 : 24);
             output += `| ${job.status.toUpperCase()} | ${job.id} | ${job.sessionId} | ${job.connectorName} | ${command} | ${age} |\n`;
           }
+          output += disclosureHint(outputOptions, page.total, page.shown, '/jobs <id>');
 
           context.emit('text', output);
           context.emit('done');
@@ -321,7 +365,7 @@ export function tasksCommand(): Command {
 
         output += '**Commands:**\n';
         output += '  /tasks                   Open interactive task panel\n';
-        output += '  /tasks list              List all tasks\n';
+        output += '  /tasks list [--limit n] [--cursor n] [--verbose] [--json]\n';
         output += '  /tasks add <desc>        Add a task (normal priority)\n';
         output += '  /tasks add -p high <desc>  Add high priority task\n';
         output += '  /tasks add -p low <desc>   Add low priority task\n';
@@ -343,6 +387,12 @@ export function tasksCommand(): Command {
 
       // List all tasks
       if (sub === 'list') {
+        const outputOptions = parseDisclosureOptions(parts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const tasks = await getTasks(context.cwd);
         if (tasks.length === 0) {
           context.emit('text', 'No tasks in queue.\n');
@@ -351,20 +401,36 @@ export function tasksCommand(): Command {
         }
 
         const paused = await isPaused(context.cwd);
-        let output = `\n**Task Queue** ${paused ? '(Paused)' : ''}\n\n`;
+        const page = pageItems(tasks, outputOptions);
+
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            tasks: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+            paused,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let output = `\n**Task Queue** ${paused ? '(Paused) ' : ''}(${page.shown}/${page.total})\n\n`;
         output += '| Status | Pri | ID | Description | Created |\n';
         output += '|--------|-----|----|-------------|----------|\n';
 
-        for (const task of tasks) {
+        for (const task of page.items) {
           const statusIcon = task.status === 'pending' ? '○' :
                              task.status === 'in_progress' ? '◐' :
                              task.status === 'completed' ? '●' : '✗';
           const priorityIcon = task.priority === 'high' ? '↑' :
                                task.priority === 'low' ? '↓' : '-';
-          const desc = task.description.slice(0, 40) + (task.description.length > 40 ? '...' : '');
+          const desc = truncateText(task.description, outputOptions.verbose ? 120 : 48);
           const created = new Date(task.createdAt).toLocaleDateString();
           output += `| ${statusIcon} | ${priorityIcon} | ${task.id} | ${desc} | ${created} |\n`;
         }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/tasks show <id>');
 
         context.emit('text', output);
         context.emit('done');
@@ -588,18 +654,25 @@ export function schedulesCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim().toLowerCase();
-      const showAll = trimmed.includes('--all');
-      const cleanedArgs = trimmed.replace('--all', '').trim();
+      const parts = splitArgs(args);
+      const showAll = parts.includes('--all');
+      const filteredParts = parts.filter((part) => part !== '--all');
+      const action = filteredParts[0]?.toLowerCase() || '';
+      const outputOptions = parseDisclosureOptions(filteredParts.slice(1));
+      if (outputOptions.error) {
+        context.emit('text', `${outputOptions.error}\n`);
+        context.emit('done');
+        return { handled: true };
+      }
 
       // Show interactive panel for no args or 'ui' command
-      if (!cleanedArgs || cleanedArgs === 'ui') {
+      if (!action || action === 'ui') {
         context.emit('done');
         return { handled: true, showPanel: 'schedules' };
       }
 
       // Text-based list for 'list' or '--list'
-      if (cleanedArgs === 'list' || cleanedArgs === '--list') {
+      if (action === 'list' || action === '--list') {
         // By default only show schedules for current session + global
         const schedules = await listSchedules(context.cwd, showAll ? { global: true } : { sessionId: context.sessionId });
         if (schedules.length === 0) {
@@ -611,13 +684,30 @@ export function schedulesCommand(): Command {
         const escapeCell = (value: string) =>
           value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 
-        let output = '\n| ID | Status | Next Run | Command |\n';
+        const sorted = schedules.sort((a, b) => (a.nextRunAt || 0) - (b.nextRunAt || 0));
+        const page = pageItems(sorted, outputOptions);
+
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            schedules: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let output = `\n**Schedules** (${page.shown}/${page.total})\n\n`;
+        output += '| ID | Status | Next Run | Command |\n';
         output += '|----|--------|----------|---------|\n';
-        for (const schedule of schedules.sort((a, b) => (a.nextRunAt || 0) - (b.nextRunAt || 0))) {
+        for (const schedule of page.items) {
           const next = formatRelativeTime(schedule.nextRunAt);
-          const cmd = escapeCell(schedule.command.slice(0, 40) + (schedule.command.length > 40 ? '...' : ''));
+          const cmd = escapeCell(truncateText(schedule.command, outputOptions.verbose ? 120 : 48));
           output += `| ${schedule.id} | ${schedule.status} | ${next} | ${cmd} |\n`;
         }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/schedules list --verbose');
         context.emit('text', output);
         context.emit('done');
         return { handled: true };
@@ -628,7 +718,7 @@ export function schedulesCommand(): Command {
       context.emit('text', 'Usage:\n');
       context.emit('text', '  /schedules             Open interactive panel (create, delete, pause, resume)\n');
       context.emit('text', '  /schedules ui          Open interactive panel\n');
-      context.emit('text', '  /schedules list        Show text table (this session)\n');
+      context.emit('text', '  /schedules list [--limit n] [--cursor n] [--verbose] [--json]\n');
       context.emit('text', '  /schedules list --all  Show all schedules\n');
       context.emit('done');
       return { handled: true };
@@ -648,9 +738,16 @@ export function heartbeatCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim().toLowerCase();
-      const showAll = trimmed.includes('--all');
-      const cleanedArgs = trimmed.replace('--all', '').trim();
+      const parts = splitArgs(args);
+      const showAll = parts.includes('--all');
+      const filteredParts = parts.filter((part) => part !== '--all');
+      const action = filteredParts[0]?.toLowerCase() || '';
+      const outputOptions = parseDisclosureOptions(filteredParts.slice(1));
+      if (outputOptions.error) {
+        context.emit('text', `${outputOptions.error}\n`);
+        context.emit('done');
+        return { handled: true };
+      }
 
       const heartbeatState = context.getHeartbeatState?.() ?? null;
       const heartbeatConfig = context.getHeartbeatConfig?.() ?? null;
@@ -659,13 +756,13 @@ export function heartbeatCommand(): Command {
       const runsDir = storageDir ? join(storageDir, 'heartbeats', 'runs') : undefined;
 
       // Show interactive panel for no args or 'ui' command
-      if (!cleanedArgs || cleanedArgs === 'ui') {
+      if (!action || action === 'ui') {
         context.emit('done');
         return { handled: true, showPanel: 'heartbeat' };
       }
 
       // Text-based list for 'list' or '--list'
-      if (cleanedArgs === 'list' || cleanedArgs === '--list') {
+      if (action === 'list' || action === '--list') {
         const canEnumerate =
           !historyPathTemplate || historyPathTemplate.includes('{sessionId}');
         const sessionIds = showAll && canEnumerate
@@ -711,7 +808,21 @@ export function heartbeatCommand(): Command {
         const escapeCell = (value: string) =>
           value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 
-        let output = '\n';
+        const page = pageItems(rows, outputOptions);
+
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            runs: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let output = `\n**Heartbeat Runs** (${page.shown}/${page.total})\n\n`;
         if (showAll) {
           output += '| Session | Time | State | Last Activity | Msgs | Tools | Errors |\n';
           output += '|--------|------|-------|---------------|------|-------|--------|\n';
@@ -720,7 +831,7 @@ export function heartbeatCommand(): Command {
           output += '|------|-------|---------------|------|-------|--------|\n';
         }
 
-        for (const { sessionId, run } of rows) {
+        for (const { sessionId, run } of page.items) {
           const time = rel(run.timestamp);
           const activity = rel(run.lastActivity);
           const stats = run.stats || { messagesProcessed: 0, toolCallsExecuted: 0, errorsEncountered: 0 };
@@ -730,6 +841,7 @@ export function heartbeatCommand(): Command {
             output += `| ${time} | ${run.state} | ${activity} | ${stats.messagesProcessed} | ${stats.toolCallsExecuted} | ${stats.errorsEncountered} |\n`;
           }
         }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/heartbeat status');
 
         context.emit('text', output);
         if (showAll && historyPathTemplate && !historyPathTemplate.includes('{sessionId}')) {
@@ -739,7 +851,7 @@ export function heartbeatCommand(): Command {
         return { handled: true };
       }
 
-      if (cleanedArgs === 'status') {
+      if (action === 'status') {
         if (!heartbeatState) {
           context.emit('text', 'Heartbeat status unavailable.\n');
           context.emit('done');
@@ -783,8 +895,9 @@ export function ordersCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim();
-      const [subcommand, ...rest] = trimmed.split(/\s+/);
+      const parts = splitArgs(args);
+      const subcommand = parts[0]?.toLowerCase() || '';
+      const rest = parts.slice(1);
       const subArgs = rest.join(' ');
 
       // /orders (no args) → open interactive panel
@@ -803,18 +916,42 @@ export function ordersCommand(): Command {
       // /orders list [--status X]
       if (subcommand === 'list') {
         try {
-          const statusMatch = subArgs.match(/--status\s+(\S+)/);
-          const status = statusMatch?.[1];
-          const orders = manager.listOrders({ status: status as any, limit: 20 });
+          let status: string | undefined;
+          const optionParts: string[] = [];
+          for (let i = 0; i < rest.length; i += 1) {
+            if (rest[i] === '--status' && rest[i + 1]) {
+              status = rest[i + 1];
+              i += 1;
+            } else {
+              optionParts.push(rest[i]);
+            }
+          }
+          const outputOptions = parseDisclosureOptions(optionParts);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
+          const orders = manager.listOrders({ status: status as any, limit: 100 });
+          const page = pageItems(orders, outputOptions);
           if (orders.length === 0) {
             context.emit('text', 'No orders found.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              orders: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `Orders (${orders.length}):\n\n`);
-            for (const order of orders) {
+            context.emit('text', `Orders (${page.shown}/${page.total}):\n\n`);
+            for (const order of page.items) {
               const amount = order.totalAmount != null ? ` | ${order.currency} ${order.totalAmount.toFixed(2)}` : '';
-              const desc = order.description ? ` — ${order.description}` : '';
+              const desc = order.description ? ` - ${truncateText(order.description, outputOptions.verbose ? 120 : 48)}` : '';
               context.emit('text', `  ${order.id}: ${order.storeName} [${order.status}]${amount}${desc}\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/orders get <id>'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -946,15 +1083,31 @@ export function ordersCommand(): Command {
 
         // /orders stores (list)
         try {
+          const outputOptions = parseDisclosureOptions(rest);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const stores = manager.listStores();
+          const page = pageItems(stores, outputOptions);
           if (stores.length === 0) {
             context.emit('text', 'No stores registered. Use /orders stores add <name> to add one.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              stores: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `Stores (${stores.length}):\n\n`);
-            for (const store of stores) {
+            context.emit('text', `Stores (${page.shown}/${page.total}):\n\n`);
+            for (const store of page.items) {
               const orders = store.orderCount > 0 ? ` | ${store.orderCount} orders` : '';
-              context.emit('text', `  ${store.name} [${store.category}]${orders}\n`);
+              context.emit('text', `  ${truncateText(store.name, outputOptions.verbose ? 120 : 48)} [${store.category}]${orders}\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/orders stores --verbose'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -967,12 +1120,12 @@ export function ordersCommand(): Command {
       if (subcommand === 'help') {
         context.emit('text', 'Order Commands:\n\n');
         context.emit('text', '/orders                        Open orders panel\n');
-        context.emit('text', '/orders list [--status X]      List orders\n');
+        context.emit('text', '/orders list [--status X] [--limit n] [--cursor n] [--verbose] [--json]\n');
         context.emit('text', '/orders create <store> [desc]  Create order\n');
         context.emit('text', '/orders get <id>               Get order details\n');
         context.emit('text', '/orders cancel <id>            Cancel order\n');
         context.emit('text', '/orders track <id>             Get tracking info\n');
-        context.emit('text', '/orders stores                 List stores\n');
+        context.emit('text', '/orders stores [--limit n] [--cursor n] [--verbose] [--json]\n');
         context.emit('text', '/orders stores add <name>      Add store\n');
         context.emit('text', '/orders help                   Show this help\n');
         context.emit('done');

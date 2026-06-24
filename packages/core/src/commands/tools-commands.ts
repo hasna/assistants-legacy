@@ -1,6 +1,15 @@
 import type { Command } from './types';
 import type { CommandLoader } from './loader';
-import { splitArgs, resolveAuthTimeout, VERSION, type ConnectorAuthTimeoutResolve } from './helpers';
+import {
+  splitArgs,
+  resolveAuthTimeout,
+  VERSION,
+  parseDisclosureOptions,
+  pageItems,
+  disclosureHint,
+  truncateText,
+  type ConnectorAuthTimeoutResolve,
+} from './helpers';
 import { platform, release, arch } from 'os';
 import { nativeHookRegistry, HookStore, HookTester } from '../hooks';
 import { createSkill, type SkillScope } from '../skills/create';
@@ -45,38 +54,72 @@ export function hooksCommand(): Command {
           return { handled: true };
         }
 
-        // Show native hooks first
-        if (nativeHooks.length > 0) {
-          context.emit('text', '\n**Native Hooks**\n\n');
-          for (const { hook, event, enabled } of nativeHooks) {
-            const status = enabled ? '[on]' : '[off]';
-            context.emit('text', `  ${status} ${hook.name || hook.id} (${event})\n`);
-            context.emit('text', `       id: ${hook.id}\n`);
-            if (hook.description) {
-              context.emit('text', `       ${hook.description}\n`);
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const rows: Array<{
+          source: 'native' | 'user';
+          event: string;
+          id?: string;
+          name: string;
+          enabled: boolean;
+          description?: string;
+          matcher?: string;
+        }> = [];
+
+        for (const { hook, event, enabled } of nativeHooks) {
+          rows.push({
+            source: 'native',
+            event,
+            id: hook.id,
+            name: hook.name || hook.id,
+            enabled,
+            description: hook.description,
+          });
+        }
+
+        for (const event of events) {
+          const matchers = hooks[event] ?? [];
+          for (const matcher of matchers) {
+            for (const hook of matcher.hooks) {
+              rows.push({
+                source: 'user',
+                event,
+                id: hook.id,
+                name: hook.name || hook.command?.slice(0, 40) || hook.type,
+                enabled: hook.enabled !== false,
+                matcher: matcher.matcher,
+              });
             }
           }
         }
 
-        // Show user hooks
-        if (events.length > 0) {
-          context.emit('text', '\n**User Hooks**\n\n');
-          for (const event of events) {
-            const matchers = hooks[event] ?? [];
-            const hookCount = matchers.reduce((sum, m) => sum + m.hooks.length, 0);
-            context.emit('text', `**${event}** (${hookCount} hook${hookCount !== 1 ? 's' : ''})\n`);
-            for (const matcher of matchers) {
-              for (const hook of matcher.hooks) {
-                const status = hook.enabled !== false ? '[on]' : '[off]';
-                const name = hook.name || hook.command?.slice(0, 25) || hook.type;
-                const matcherStr = matcher.matcher ? `@${matcher.matcher}` : '';
-                context.emit('text', `  ${status} ${name} ${matcherStr}\n`);
-                if (hook.id) {
-                  context.emit('text', `       id: ${hook.id}\n`);
-                }
-              }
+        const page = pageItems(rows, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            hooks: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+        } else {
+          let output = `\n**Hooks** (${page.shown}/${page.total})\n\n`;
+          for (const row of page.items) {
+            const status = row.enabled ? '[on]' : '[off]';
+            const matcher = row.matcher ? ` @${truncateText(row.matcher, 30)}` : '';
+            const id = row.id ? ` id:${row.id}` : '';
+            output += `  ${status} ${truncateText(row.name, outputOptions.verbose ? 80 : 40)} (${row.source}/${row.event})${matcher}${id}\n`;
+            if (outputOptions.verbose && row.description) {
+              output += `       ${truncateText(row.description, 120)}\n`;
             }
           }
+          output += disclosureHint(outputOptions, page.total, page.shown, '/hooks test <id>');
+          context.emit('text', output);
         }
         context.emit('done');
         return { handled: true };
@@ -225,7 +268,8 @@ export function connectorsCommand(): Command {
     content: '',
     handler: async (args, context) => {
       const trimmedArgs = args.trim();
-      const firstArg = trimmedArgs.split(/\s+/)[0]?.toLowerCase();
+      const tokens = splitArgs(trimmedArgs);
+      const firstArg = tokens[0]?.toLowerCase();
 
       // Handle refresh subcommand
       if (firstArg === 'refresh') {
@@ -252,20 +296,21 @@ export function connectorsCommand(): Command {
       // Handle status subcommand
       if (firstArg === 'status') {
         const count = context.connectors.length;
+        const connectorNames = context.connectors.map((c) => c.name);
+        const shownNames = connectorNames.slice(0, 20);
         context.emit('text', '\n**Connector Status**\n\n');
         context.emit('text', `Loaded: ${count} connector(s)\n`);
         if (count > 0) {
-          context.emit('text', `Names: ${context.connectors.map(c => c.name).join(', ')}\n`);
+          context.emit('text', `Names: ${shownNames.join(', ')}${count > shownNames.length ? `, ... (+${count - shownNames.length} more)` : ''}\n`);
         }
         context.emit('text', '\n**Commands:**\n');
         context.emit('text', '  `/connectors refresh` - Clear cache and re-discover connectors\n');
-        context.emit('text', '  `/connectors --list` - Show detailed connector list\n');
+        context.emit('text', '  `/connectors --list [--limit n --cursor n --verbose --json]` - Show connector list\n');
         context.emit('done');
         return { handled: true };
       }
 
-      const hasListFlag = trimmedArgs.includes('--list');
-      const argWithoutFlag = trimmedArgs.replace('--list', '').trim().toLowerCase();
+      const hasListFlag = tokens.includes('--list');
 
       // Interactive mode (default): open the connectors panel
       if (!hasListFlag) {
@@ -273,12 +318,18 @@ export function connectorsCommand(): Command {
         return {
           handled: true,
           showPanel: 'connectors' as const,
-          panelValue: argWithoutFlag || undefined,
+          panelValue: firstArg && !firstArg.startsWith('--') ? trimmedArgs : undefined,
         };
       }
 
       // Text-based mode with --list flag
-      const connectorName = argWithoutFlag;
+      const outputOptions = parseDisclosureOptions(tokens.filter((token) => token !== '--list'));
+      if (outputOptions.error) {
+        context.emit('text', `${outputOptions.error}\n`);
+        context.emit('done');
+        return { handled: true };
+      }
+      const connectorName = outputOptions.args.join(' ').toLowerCase();
 
       // If a specific connector is requested, show details
       if (connectorName) {
@@ -300,9 +351,27 @@ export function connectorsCommand(): Command {
         // Show detailed info for this connector
         const cli = connector.cli || `connect-${connector.name}`;
         const description = connector.description?.trim() || 'No description provided.';
+        const commands = connector.commands || [];
+        const commandPage = pageItems(commands, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            connector: {
+              ...connector,
+              description,
+            },
+            commands: commandPage.items,
+            totalCommands: commandPage.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: commandPage.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
         let message = `\n**${connector.name}** Connector\n\n`;
         message += `CLI: \`${cli}\`\n`;
-        message += `Description: ${description}\n\n`;
+        message += `Description: ${truncateText(description, outputOptions.verbose ? 200 : 96)}\n\n`;
 
         // Check auth status
         try {
@@ -343,15 +412,15 @@ export function connectorsCommand(): Command {
           message += `**Auth Status:** ? Unable to check\n`;
         }
 
-        message += `\n**Available Commands:**\n`;
-        const commands = connector.commands || [];
+        message += `\n**Available Commands** (${commandPage.shown}/${commandPage.total}):\n`;
         if (commands.length === 0) {
           message += '  (no commands discovered)\n';
         } else {
-          for (const cmd of commands) {
-            message += `  ${cmd.name} - ${cmd.description}\n`;
+          for (const cmd of commandPage.items) {
+            message += `  ${truncateText(cmd.name, 40)} - ${truncateText(cmd.description, outputOptions.verbose ? 140 : 72)}\n`;
           }
         }
+        message += disclosureHint(outputOptions, commandPage.total, commandPage.shown, '/connectors --list <name> --verbose');
 
         message += `\n**Usage:**\n`;
         message += `  Ask the AI to use ${connector.name} (e.g., "list my ${connector.name} items")\n`;
@@ -366,6 +435,11 @@ export function connectorsCommand(): Command {
       let message = '\n**Available Connectors**\n\n';
 
       if (context.connectors.length === 0) {
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({ connectors: [], total: 0, limit: outputOptions.limit, cursor: outputOptions.cursor, nextCursor: null }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
         message += 'No connectors found.\n\n';
         message += 'Install connectors using the `connectors` CLI:\n';
         message += '  `connectors install <name>` (e.g. `connectors install gmail`)\n\n';
@@ -416,24 +490,39 @@ export function connectorsCommand(): Command {
           return status;
         };
 
-        const statuses = await Promise.all(context.connectors.map((connector) => checkAuth(connector)));
+        const page = pageItems(context.connectors, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            connectors: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const statuses = await Promise.all(page.items.map((connector) => checkAuth(connector)));
 
         const escapeCell = (value: string) => value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
         message += '| Status | Connector | Commands |\n';
         message += '|--------|-----------|----------|\n';
 
-        for (let i = 0; i < context.connectors.length; i++) {
-          const connector = context.connectors[i];
+        for (let i = 0; i < page.items.length; i++) {
+          const connector = page.items[i];
           const status = statuses[i];
           const cmdCount = connector.commands?.length ?? 0;
-          message += `| ${status} | ${escapeCell(connector.name)} | ${cmdCount} commands |\n`;
+          message += `| ${status} | ${escapeCell(truncateText(connector.name, outputOptions.verbose ? 80 : 40))} | ${cmdCount} commands |\n`;
         }
 
-        message += `\n${context.connectors.length} connector(s) available.\n\n`;
+        message += `\n${page.shown}/${page.total} connector(s) shown.\n`;
+        message += disclosureHint(outputOptions, page.total, page.shown, '/connectors --list <name>');
         message += '**Legend:** ✓ authenticated | ○ not authenticated | ? unknown\n\n';
         message += '**Commands:**\n';
         message += '  `/connectors` - Open interactive browser\n';
         message += '  `/connectors <name>` - Open browser at specific connector\n';
+        message += '  `/connectors --list <name> --verbose` - Show connector command details\n';
         message += '  `connectors auth <name>` - Authenticate a connector\n';
       }
 
@@ -636,20 +725,42 @@ export function skillsCommand(loader: CommandLoader): Command {
 
       // /skills list
       if (subcommand === 'list' || subcommand === 'ls') {
-        const lines: string[] = ['\n**Installed skills:**\n'];
+        const outputOptions = parseDisclosureOptions(tokens);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+        const installedRows: Array<{ scope: 'project' | 'global'; packageName: string; version: string }> = [];
         for (const scope of ['project', 'global'] as const) {
           const installed = await SkillInstaller.listInstalled(scope, context.cwd);
-          if (installed.length > 0) {
-            lines.push(`\n_${scope} (.skill/)_`);
-            for (const pkg of installed) {
-              lines.push(`  ${pkg.packageName} ${pkg.version}`);
-            }
+          installedRows.push(...installed.map((pkg) => ({
+            scope,
+            packageName: pkg.packageName,
+            version: pkg.version,
+          })));
+        }
+        const page = pageItems(installedRows, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            skills: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+        } else if (installedRows.length === 0) {
+          context.emit('text', '\nNo npm skills installed.\n');
+        } else {
+          const lines: string[] = [`\n**Installed skills** (${page.shown}/${page.total})\n`];
+          for (const pkg of page.items) {
+            lines.push(`  [${pkg.scope}] ${truncateText(pkg.packageName, outputOptions.verbose ? 96 : 48)} ${pkg.version}`);
           }
+          lines.push(disclosureHint(outputOptions, page.total, page.shown, '/skills install <name>'));
+          context.emit('text', lines.join('\n') + '\n');
+          context.emit('done');
+          return { handled: true };
         }
-        if (lines.length === 1) {
-          lines.push('No npm skills installed.');
-        }
-        context.emit('text', lines.join('\n') + '\n');
         context.emit('done');
         return { handled: true };
       }
@@ -661,7 +772,8 @@ export function skillsCommand(loader: CommandLoader): Command {
         message += '/skills create <name>      Create a new skill\n';
         message += '/skills install <name>     Install npm skill (@hasnaxyz/skill-*)\n';
         message += '/skills uninstall <name>   Uninstall npm skill\n';
-        message += '/skills list               List installed npm skills\n';
+        message += '/skills list [flags]       List installed npm skills\n';
+        message += '\nList flags: --limit <n> --cursor <n> --verbose --json\n';
         message += '\nOptions for create:\n';
         message += '  --project            Create in project (.skill/)\n';
         message += '  --global             Create globally (~/.skill/)\n';

@@ -11,6 +11,7 @@ import {
   computeNextRun,
   isValidTimeZone,
 } from '../scheduler/store';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 export interface SchedulerContext {
   sessionId?: string;
@@ -90,6 +91,26 @@ const schedulerTool: Tool = {
         type: 'string',
         description: 'Project working directory (optional)',
       },
+      limit: {
+        type: 'number',
+        description: 'For list: maximum schedules to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'For list: zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'For list: include longer command text',
+      },
+      json: {
+        type: 'boolean',
+        description: 'For list: return structured JSON output',
+      },
+      full: {
+        type: 'boolean',
+        description: 'For list: return all schedules without compact truncation',
+      },
     },
     required: ['action'],
   },
@@ -109,8 +130,28 @@ function createSchedulerExecutor(getContext: () => SchedulerContext): ToolExecut
         global: isGlobal,
       });
       if (schedules.length === 0) return 'No schedules found.';
-      const rows = schedules
-        .sort((a, b) => (a.nextRunAt || 0) - (b.nextRunAt || 0))
+      const sorted = schedules.sort((a, b) => (a.nextRunAt || 0) - (b.nextRunAt || 0));
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(sorted.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(sorted, { limit, cursor });
+      if (input.json === true) {
+        return JSON.stringify({
+          schedules: page.items,
+          total: page.total,
+          shown: page.shown,
+          limit,
+          cursor,
+          nextCursor: page.nextCursor,
+          hint: page.nextCursor !== null
+            ? `Pass cursor=${page.nextCursor} for more. Pass full=true for all schedules.`
+            : `Pass full=true for all schedules.`,
+        }, null, 2);
+      }
+      const rows = page.items
         .map((s) => {
           const next = s.nextRunAt ? new Date(s.nextRunAt).toISOString() : 'n/a';
           let scheduleInfo = '';
@@ -122,9 +163,12 @@ function createSchedulerExecutor(getContext: () => SchedulerContext): ToolExecut
             scheduleInfo = ` (cron: ${s.schedule.cron})`;
           }
           const scope = s.sessionId ? ` [session]` : ' [global]';
-          return `- ${s.id} [${s.status}]${scope} ${s.command}${scheduleInfo} (next: ${next})`;
+          return `- ${s.id} [${s.status}]${scope} ${truncateText(s.command, verbose ? 160 : 72)}${scheduleInfo} (next: ${next})`;
         });
-      return rows.join('\n');
+      const hint = page.nextCursor !== null
+        ? `\nShowing ${page.shown} of ${page.total}. Pass cursor=${page.nextCursor} for more, or full=true for all schedules.`
+        : `\nShowing ${page.shown} of ${page.total}. Pass verbose=true for longer command text or full=true for all schedules.`;
+      return rows.join('\n') + hint;
     }
 
     if (action === 'create') {

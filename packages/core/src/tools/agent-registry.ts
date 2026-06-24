@@ -7,6 +7,7 @@
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolRegistry } from './registry';
 import type { AssistantRegistryService, RegisteredAssistant, AssistantQuery, RegistryAssistantState, AssistantType } from '../registry';
+import { truncateText } from '../commands/helpers';
 
 /**
  * Context required for registry tools
@@ -23,16 +24,18 @@ export interface RegistryToolContext {
 /**
  * Format assistant for display
  */
-function formatAssistant(assistant: RegisteredAssistant): string {
+function formatAssistant(assistant: RegisteredAssistant, options: { verbose?: boolean; full?: boolean } = {}): string {
+  const full = options.full === true;
+  const verbose = full || options.verbose === true;
   const lines: string[] = [];
 
   lines.push(`ID: ${assistant.id}`);
-  lines.push(`Name: ${assistant.name}`);
+  lines.push(`Name: ${truncateText(assistant.name, verbose ? 120 : 56)}`);
   lines.push(`Type: ${assistant.type}`);
   lines.push(`State: ${assistant.status.state}`);
 
   if (assistant.description) {
-    lines.push(`Description: ${assistant.description}`);
+    lines.push(`Description: ${full ? assistant.description : truncateText(assistant.description, verbose ? 240 : 96)}`);
   }
 
   if (assistant.sessionId) {
@@ -44,7 +47,8 @@ function formatAssistant(assistant: RegisteredAssistant): string {
   }
 
   if (assistant.childIds.length > 0) {
-    lines.push(`Children: ${assistant.childIds.join(', ')}`);
+    const childIds = full ? assistant.childIds : assistant.childIds.slice(0, 10);
+    lines.push(`Children: ${childIds.join(', ')}${!full && assistant.childIds.length > childIds.length ? `, ... (+${assistant.childIds.length - childIds.length})` : ''}`);
   }
 
   // Capabilities
@@ -56,7 +60,8 @@ function formatAssistant(assistant: RegisteredAssistant): string {
     caps.push(`skills: ${assistant.capabilities.skills.slice(0, 3).join(', ')}${assistant.capabilities.skills.length > 3 ? '...' : ''}`);
   }
   if (assistant.capabilities.tags.length > 0) {
-    caps.push(`tags: ${assistant.capabilities.tags.join(', ')}`);
+    const tags = full ? assistant.capabilities.tags : assistant.capabilities.tags.slice(0, verbose ? 12 : 5);
+    caps.push(`tags: ${tags.join(', ')}${!full && assistant.capabilities.tags.length > tags.length ? '...' : ''}`);
   }
   if (caps.length > 0) {
     lines.push(`Capabilities: ${caps.join('; ')}`);
@@ -103,6 +108,14 @@ export const registryListTool: Tool = {
         type: 'number',
         description: 'Maximum number of assistants to return (default: 20)',
       },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer names/descriptions and more tags',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return complete registry rows without compact truncation',
+      },
     },
   },
 };
@@ -117,6 +130,8 @@ export function createRegistryListExecutor(context: RegistryToolContext) {
     sessionId?: string;
     includeOffline?: boolean;
     limit?: number;
+    verbose?: boolean;
+    full?: boolean;
   }): Promise<string> => {
     const service = context.getRegistryService?.();
     if (!service) {
@@ -145,7 +160,10 @@ export function createRegistryListExecutor(context: RegistryToolContext) {
 
       for (const assistant of result.assistants) {
         lines.push(`---`);
-        lines.push(formatAssistant(assistant));
+        lines.push(formatAssistant(assistant, { verbose: input.verbose === true || input.full === true, full: input.full === true }));
+      }
+      if (input.full !== true) {
+        lines.push('\nUse full=true for complete registry rows.');
       }
 
       return lines.join('\n');
@@ -197,6 +215,14 @@ export const registryQueryTool: Tool = {
         type: 'number',
         description: 'Maximum number of assistants to return (default: 10)',
       },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer names/descriptions and more tags',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return complete registry rows without compact truncation',
+      },
     },
   },
 };
@@ -213,6 +239,8 @@ export function createRegistryQueryExecutor(context: RegistryToolContext) {
     preferredTags?: string[];
     maxLoadFactor?: number;
     limit?: number;
+    verbose?: boolean;
+    full?: boolean;
   }): Promise<string> => {
     const service = context.getRegistryService?.();
     if (!service) {
@@ -248,7 +276,10 @@ export function createRegistryQueryExecutor(context: RegistryToolContext) {
         const score = result.scores.get(assistant.id) ?? 0;
         lines.push(`---`);
         lines.push(`Match Score: ${(score * 100).toFixed(0)}%`);
-        lines.push(formatAssistant(assistant));
+        lines.push(formatAssistant(assistant, { verbose: input.verbose === true || input.full === true, full: input.full === true }));
+      }
+      if (input.full !== true) {
+        lines.push('\nUse full=true for complete registry rows.');
       }
 
       return lines.join('\n');
@@ -270,6 +301,14 @@ export const registryGetTool: Tool = {
       assistantId: {
         type: 'string',
         description: 'The assistant ID to look up',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer names/descriptions and more tags',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return complete registry details',
       },
     },
     required: ['assistantId'],
@@ -298,7 +337,7 @@ export function createRegistryGetExecutor(context: RegistryToolContext) {
         return `Assistant not found: ${assistantId}`;
       }
 
-      return formatAssistant(assistant);
+      return formatAssistant(assistant, { verbose: input.verbose === true || input.full === true, full: input.full === true });
     } catch (error) {
       return `Failed to get assistant: ${error instanceof Error ? error.message : String(error)}`;
     }

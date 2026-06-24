@@ -9,6 +9,7 @@ import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { getDatabase } from '../database';
 import type { DatabaseConnection } from '../database';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -83,15 +84,17 @@ function parseDate(value: unknown): number | null {
   return null;
 }
 
-function formatEvent(event: CalendarEvent): Record<string, unknown> {
+function formatEvent(event: CalendarEvent, options: { verbose?: boolean; full?: boolean } = {}): Record<string, unknown> {
+  const full = options.full === true;
+  const verbose = full || options.verbose === true;
   return {
     id: event.id,
-    title: event.title,
-    description: event.description,
+    title: full ? event.title : truncateText(event.title, verbose ? 160 : 80),
+    description: full ? event.description : event.description ? truncateText(event.description, verbose ? 240 : 96) : null,
     start: new Date(event.start_time).toISOString(),
     end: event.end_time ? new Date(event.end_time).toISOString() : null,
     allDay: event.all_day === 1,
-    location: event.location,
+    location: full ? event.location : event.location ? truncateText(event.location, verbose ? 180 : 80) : null,
     tags: event.tags ? JSON.parse(event.tags) : [],
     createdAt: new Date(event.created_at).toISOString(),
   };
@@ -183,7 +186,15 @@ export const calendarListTool: Tool = {
       },
       limit: {
         type: 'number',
-        description: 'Maximum number of events to return (default 50)',
+        description: 'Maximum number of events to return (default 20, max 100)',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer title/description/location text',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full event text without compact truncation',
       },
     },
   },
@@ -209,7 +220,20 @@ export const calendarTodayTool: Tool = {
   description: "Shorthand to list today's calendar events.",
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum events to return (default 20, max 100)',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer title/description/location text',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full event text without compact truncation',
+      },
+    },
   },
 };
 
@@ -308,7 +332,11 @@ export function createCalendarToolExecutors(): Record<string, ToolExecutor> {
           toTime = Number.MAX_SAFE_INTEGER;
         }
 
-        const limit = typeof input.limit === 'number' && input.limit > 0 ? Math.min(input.limit, 200) : 50;
+        const limit = input.full === true
+          ? MAX_COMPACT_LIMIT
+          : typeof input.limit === 'number' && input.limit > 0
+            ? Math.min(input.limit, MAX_COMPACT_LIMIT)
+            : DEFAULT_COMPACT_LIMIT;
 
         const events = db.query<CalendarEvent>(
           'SELECT * FROM calendar_events WHERE start_time >= ? AND start_time <= ? ORDER BY start_time ASC LIMIT ?'
@@ -330,8 +358,10 @@ export function createCalendarToolExecutors(): Record<string, ToolExecutor> {
 
         return JSON.stringify({
           count: filtered.length,
+          limit,
           range: range || (input.from || input.to ? 'custom' : 'upcoming'),
-          events: filtered.map(formatEvent),
+          events: filtered.map((event) => formatEvent(event, { verbose: input.verbose === true, full: input.full === true })),
+          hint: input.full === true ? undefined : 'Pass verbose=true for longer text or full=true for full event fields.',
         });
       } catch (error) {
         return JSON.stringify({
@@ -371,21 +401,29 @@ export function createCalendarToolExecutors(): Record<string, ToolExecutor> {
       }
     },
 
-    calendar_today: async (): Promise<string> => {
+    calendar_today: async (input): Promise<string> => {
       try {
         const db = getDb();
         const now = new Date();
         const fromTime = startOfDay(now).getTime();
         const toTime = endOfDay(now).getTime();
 
+        const limit = input.full === true
+          ? MAX_COMPACT_LIMIT
+          : typeof input.limit === 'number' && input.limit > 0
+            ? Math.min(input.limit, MAX_COMPACT_LIMIT)
+            : DEFAULT_COMPACT_LIMIT;
+
         const events = db.query<CalendarEvent>(
-          'SELECT * FROM calendar_events WHERE start_time >= ? AND start_time <= ? ORDER BY start_time ASC'
-        ).all(fromTime, toTime);
+          'SELECT * FROM calendar_events WHERE start_time >= ? AND start_time <= ? ORDER BY start_time ASC LIMIT ?'
+        ).all(fromTime, toTime, limit);
 
         return JSON.stringify({
           count: events.length,
+          limit,
           date: now.toISOString().split('T')[0],
-          events: events.map(formatEvent),
+          events: events.map((event) => formatEvent(event, { verbose: input.verbose === true, full: input.full === true })),
+          hint: input.full === true ? undefined : 'Pass verbose=true for longer text or full=true for full event fields.',
         });
       } catch (error) {
         return JSON.stringify({

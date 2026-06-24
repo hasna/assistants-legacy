@@ -9,6 +9,7 @@ import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import type { IdentityManager } from '../identity';
 import { listTemplates, getTemplate, createIdentityFromTemplate } from '../identity/templates';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -24,10 +25,27 @@ export interface IdentityToolsContext {
 
 export const identityListTool: Tool = {
   name: 'identity_list',
-  description: 'List all identities for the current assistant with their details (id, name, profile, preferences, active status).',
+  description: 'List identities compactly by default. Use limit/cursor for pagination and verbose or full for more detail.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum identities to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer profile fields in each row',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all identities without compact truncation',
+      },
+    },
     required: [],
   },
 };
@@ -41,6 +59,14 @@ export const identityGetTool: Tool = {
       id: {
         type: 'string',
         description: 'The identity ID to retrieve',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Include full contact lists and context',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Alias for full detail output',
       },
     },
     required: ['id'],
@@ -225,10 +251,27 @@ export const identitySwitchTool: Tool = {
 
 export const identityTemplatesListTool: Tool = {
   name: 'identity_templates_list',
-  description: 'List available identity templates that can be used to quickly create new identities.',
+  description: 'List available identity templates compactly by default.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum templates to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer template descriptions and context snippets',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full template objects without compact truncation',
+      },
+    },
     required: [],
   },
 };
@@ -267,7 +310,7 @@ export function createIdentityToolExecutors(
   context: IdentityToolsContext
 ): Record<string, ToolExecutor> {
   return {
-    identity_list: async (): Promise<string> => {
+    identity_list: async (input: Record<string, unknown> = {}): Promise<string> => {
       const manager = context.getIdentityManager();
       if (!manager) {
         return JSON.stringify({
@@ -278,14 +321,21 @@ export function createIdentityToolExecutors(
 
       const identities = manager.listIdentities();
       const active = manager.getActive();
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(identities.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(identities, { limit, cursor });
 
-      const list = identities.map((i) => ({
+      const list = page.items.map((i) => ({
         id: i.id,
-        name: i.name,
+        name: truncateText(i.name, verbose ? 120 : 56),
         isDefault: i.isDefault,
-        displayName: i.profile.displayName,
-        title: i.profile.title || null,
-        company: i.profile.company || null,
+        displayName: truncateText(i.profile.displayName, verbose ? 120 : 56),
+        title: i.profile.title ? truncateText(i.profile.title, verbose ? 120 : 56) : null,
+        company: i.profile.company ? truncateText(i.profile.company, verbose ? 120 : 56) : null,
         communicationStyle: i.preferences.communicationStyle,
         responseLength: i.preferences.responseLength,
         isActive: active?.id === i.id,
@@ -295,14 +345,22 @@ export function createIdentityToolExecutors(
 
       return JSON.stringify({
         success: true,
-        total: list.length,
+        total: identities.length,
+        shown: list.length,
+        limit,
+        cursor,
+        nextCursor: page.nextCursor,
         activeId: active?.id || null,
         identities: list,
+        hint: page.nextCursor !== null
+          ? `Pass cursor=${page.nextCursor} for more. Pass full=true or identity_get(id, full=true) for complete details.`
+          : `Pass full=true or identity_get(id, full=true) for complete details.`,
       });
     },
 
     identity_get: async (input: Record<string, unknown>): Promise<string> => {
       const id = input.id as string;
+      const full = input.full === true || input.verbose === true;
       if (!id) {
         return JSON.stringify({
           success: false,
@@ -340,7 +398,7 @@ export function createIdentityToolExecutors(
             displayName: identity.profile.displayName,
             title: identity.profile.title,
             company: identity.profile.company,
-            bio: identity.profile.bio,
+            bio: full ? identity.profile.bio : identity.profile.bio ? truncateText(identity.profile.bio, 240) : undefined,
             timezone: identity.profile.timezone,
             locale: identity.profile.locale,
           },
@@ -357,11 +415,13 @@ export function createIdentityToolExecutors(
             addresses: identity.contacts.addresses,
             virtualAddresses: identity.contacts.virtualAddresses || [],
           },
-          context: identity.context || null,
+          context: full ? identity.context || null : identity.context ? truncateText(identity.context, 240) : null,
           isActive: active?.id === identity.id,
           createdAt: identity.createdAt,
           updatedAt: identity.updatedAt,
+          compact: !full,
         },
+        hint: full ? undefined : 'Pass full=true for full contacts and context.',
       });
     },
 
@@ -655,13 +715,28 @@ export function createIdentityToolExecutors(
       }
     },
 
-    identity_templates_list: async (): Promise<string> => {
+    identity_templates_list: async (input: Record<string, unknown> = {}): Promise<string> => {
       const templates = listTemplates();
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(templates.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(templates, { limit, cursor });
 
       return JSON.stringify({
         success: true,
         total: templates.length,
-        templates,
+        shown: page.shown,
+        limit,
+        cursor,
+        nextCursor: page.nextCursor,
+        templates: full ? page.items : page.items.map((template) => ({
+          name: template.name,
+          description: truncateText(template.description, verbose ? 200 : 80),
+        })),
+        hint: full ? undefined : 'Pass full=true or identity_template_get(name) for complete template details.',
       });
     },
 
