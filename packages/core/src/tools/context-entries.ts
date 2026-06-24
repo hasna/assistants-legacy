@@ -16,6 +16,7 @@ import {
   type ProjectContextType,
 } from '../projects/store';
 import { buildProjectContext, type ProjectContextConnector } from '../projects/context';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -41,6 +42,22 @@ export const contextEntryListTool: Tool = {
       projectId: {
         type: 'string',
         description: 'Optional: Specific project ID (defaults to active project)',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum entries to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer entry values',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all entries without compact truncation',
       },
     },
     required: [],
@@ -146,36 +163,51 @@ export function createContextEntryToolExecutors(
         });
       }
 
-      const entries = project.context.map((entry) => ({
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(project.context.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(project.context, { limit, cursor });
+
+      const entries = page.items.map((entry) => ({
         id: entry.id,
         type: entry.type,
-        value: entry.value,
-        label: entry.label || null,
+        value: full ? entry.value : truncateText(entry.value, verbose ? 180 : 80),
+        label: entry.label ? truncateText(entry.label, verbose ? 120 : 56) : null,
         addedAt: new Date(entry.addedAt).toISOString(),
       }));
 
       // Group by type
-      const grouped: Record<string, typeof entries> = {};
-      for (const entry of entries) {
+      const grouped: Record<string, number> = {};
+      for (const entry of project.context) {
         if (!grouped[entry.type]) {
-          grouped[entry.type] = [];
+          grouped[entry.type] = 0;
         }
-        grouped[entry.type].push(entry);
+        grouped[entry.type] += 1;
       }
 
       return JSON.stringify({
         success: true,
         projectId: project.id,
         projectName: project.name,
-        total: entries.length,
+        total: project.context.length,
+        shown: entries.length,
+        limit,
+        cursor,
+        nextCursor: page.nextCursor,
         byType: {
-          file: grouped.file?.length || 0,
-          connector: grouped.connector?.length || 0,
-          database: grouped.database?.length || 0,
-          note: grouped.note?.length || 0,
-          entity: grouped.entity?.length || 0,
+          file: grouped.file || 0,
+          connector: grouped.connector || 0,
+          database: grouped.database || 0,
+          note: grouped.note || 0,
+          entity: grouped.entity || 0,
         },
         entries,
+        hint: page.nextCursor !== null
+          ? `Pass cursor=${page.nextCursor} for more. Pass full=true for complete values.`
+          : `Pass full=true for complete values.`,
       });
     },
 

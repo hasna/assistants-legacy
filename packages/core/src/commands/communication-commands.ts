@@ -3,7 +3,7 @@
  * Larger commands are split into domain files and re-exported here for backward compat.
  */
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { parseMentions, resolveNameToKnown } from '../channels/mentions';
 
 export { messagesCommand } from './messages-command';
@@ -37,16 +37,32 @@ export function peopleCommand(): Command {
 
       // /people list
       if (subcommand === 'list') {
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const people = manager.listPeople();
+        const page = pageItems(people, outputOptions);
         if (people.length === 0) {
           context.emit('text', 'No people registered. Use /people create <name> to add one.\n');
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            people: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
         } else {
-          context.emit('text', `People (${people.length}):\n\n`);
-          for (const p of people) {
+          context.emit('text', `People (${page.shown}/${page.total}):\n\n`);
+          for (const p of page.items) {
             const active = p.isActive ? ' (active)' : '';
-            const email = p.email ? ` <${p.email}>` : '';
-            context.emit('text', `  ${p.name}${email}${active}\n`);
+            const email = p.email ? ` <${truncateText(p.email, 48)}>` : '';
+            context.emit('text', `  ${truncateText(p.name, outputOptions.verbose ? 80 : 40)}${email}${active}\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/people whoami'));
         }
         context.emit('done');
         return { handled: true };
@@ -210,19 +226,35 @@ export function communicationCommand(): Command {
 
       // /communication numbers
       if (subcommand === 'numbers') {
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const numbers = manager.listPhoneNumbers();
+        const page = pageItems(numbers, outputOptions);
         if (numbers.length === 0) {
           context.emit('text', 'No phone numbers configured. Use /communication sync to import from Twilio.\n');
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            numbers: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
         } else {
-          context.emit('text', `Phone Numbers (${numbers.length}):\n\n`);
-          for (const num of numbers) {
+          context.emit('text', `Phone Numbers (${page.shown}/${page.total}):\n\n`);
+          for (const num of page.items) {
             const caps: string[] = [];
             if (num.capabilities.voice) caps.push('voice');
             if (num.capabilities.sms) caps.push('sms');
             if (num.capabilities.whatsapp) caps.push('whatsapp');
-            const name = num.friendlyName ? ` (${num.friendlyName})` : '';
+            const name = num.friendlyName ? ` (${truncateText(num.friendlyName, outputOptions.verbose ? 80 : 40)})` : '';
             context.emit('text', `  ${num.number}${name} [${caps.join(', ')}]\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/communication default <number>'));
         }
         context.emit('done');
         return { handled: true };

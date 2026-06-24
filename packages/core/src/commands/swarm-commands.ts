@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import {
   loadAgentDefinitions,
   getAgentDefinition,
@@ -429,7 +429,14 @@ export function agentsCommand(): Command {
 
       // /agents (no args) --- list all
       if (!subcommand || subcommand === 'list' || subcommand === 'ls') {
+        const outputOptions = parseDisclosureOptions(tokens);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const defs = loadAgentDefinitions(context.cwd);
+        const page = pageItems(defs, outputOptions);
         if (defs.length === 0) {
           context.emit('text', '\nNo agent definitions found.\n');
           context.emit('text', 'Create one with: /agents create <name>\n');
@@ -438,13 +445,25 @@ export function agentsCommand(): Command {
           return { handled: true };
         }
 
-        let message = '\n**Agent definitions:**\n\n';
-        for (const def of defs) {
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            agents: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let message = `\n**Agent definitions** (${page.shown}/${page.total})\n\n`;
+        for (const def of page.items) {
           const scopeTag = def.scope === 'global' ? ' (global)' : ' (project)';
           const toolsTag = def.tools && def.tools.length > 0 ? ` [${def.tools.length} tools]` : '';
-          message += `  ${def.name}${scopeTag}${toolsTag} -- ${def.description || '(no description)'}\n`;
+          message += `  ${truncateText(def.name, outputOptions.verbose ? 80 : 40)}${scopeTag}${toolsTag} - ${truncateText(def.description || '(no description)', outputOptions.verbose ? 160 : 72)}\n`;
         }
-        message += `\n${defs.length} agent(s) total. Use /agents show <name> for details.\n`;
+        message += disclosureHint(outputOptions, page.total, page.shown, '/agents show <name>');
         context.emit('text', message);
         context.emit('done');
         return { handled: true };

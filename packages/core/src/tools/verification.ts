@@ -9,6 +9,7 @@ import type { ToolExecutor, ToolRegistry } from './registry';
 import { VerificationSessionStore } from '../sessions/verification';
 import { nativeHookRegistry } from '../hooks';
 import { getConfigDir } from '../config';
+import { truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -36,6 +37,14 @@ export const verificationListTool: Tool = {
         type: 'boolean',
         description: 'Only show sessions from the current parent session (default: false)',
       },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer goal/reason previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full goal/reason fields in list output',
+      },
     },
     required: [],
   },
@@ -50,6 +59,14 @@ export const verificationGetTool: Tool = {
       id: {
         type: 'string',
         description: 'The verification session ID (full or partial match)',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full evidence, reason, and suggestions',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer evidence/reason previews',
       },
     },
     required: ['id'],
@@ -106,6 +123,8 @@ export function createVerificationToolExecutors(
       const store = new VerificationSessionStore(getConfigDir());
       const limit = Math.min(50, Math.max(1, typeof input.limit === 'number' ? input.limit : 10));
       const sessionOnly = input.sessionOnly === true;
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
 
       let sessions: VerificationSession[];
 
@@ -127,10 +146,10 @@ export function createVerificationToolExecutors(
       const formatted = sessions.map((s) => ({
         id: s.id,
         result: s.result,
-        goals: s.goals,
+        goals: full ? s.goals : s.goals.map((goal) => truncateText(goal, verbose ? 200 : 96)),
         goalsMet: s.goals.length > 0 ? s.verificationResult.goalsAnalysis.filter((a) => a.met).length : 0,
         goalsTotal: s.goals.length,
-        reason: s.reason,
+        reason: full ? s.reason : truncateText(s.reason, verbose ? 240 : 120),
         createdAt: s.createdAt,
         parentSessionId: s.parentSessionId,
       }));
@@ -140,11 +159,14 @@ export function createVerificationToolExecutors(
         total: sessions.length,
         sessionOnly,
         sessions: formatted,
+        hint: full ? undefined : 'Pass verbose=true for longer previews or full=true for complete goal/reason text.',
       });
     },
 
     verification_get: async (input: Record<string, unknown>): Promise<string> => {
       const id = input.id as string;
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
       if (!id) {
         return JSON.stringify({
           success: false,
@@ -171,9 +193,9 @@ export function createVerificationToolExecutors(
       }
 
       const goalsAnalysis = session.verificationResult.goalsAnalysis.map((a) => ({
-        goal: a.goal,
+        goal: full ? a.goal : truncateText(a.goal, verbose ? 240 : 120),
         met: a.met,
-        evidence: a.evidence,
+        evidence: full ? a.evidence : truncateText(a.evidence, verbose ? 320 : 160),
       }));
 
       return JSON.stringify({
@@ -184,15 +206,16 @@ export function createVerificationToolExecutors(
           result: session.result,
           parentSessionId: session.parentSessionId,
           createdAt: session.createdAt,
-          goals: session.goals,
+          goals: full ? session.goals : session.goals.map((goal) => truncateText(goal, verbose ? 240 : 120)),
           goalsAnalysis,
-          reason: session.reason,
-          suggestions: session.suggestions,
+          reason: full ? session.reason : truncateText(session.reason, verbose ? 320 : 160),
+          suggestions: full ? session.suggestions : (session.suggestions ?? []).map((suggestion) => truncateText(suggestion, verbose ? 240 : 120)),
           summary: {
             goalsMet: goalsAnalysis.filter((a) => a.met).length,
             goalsTotal: goalsAnalysis.length,
           },
         },
+        hint: full ? undefined : 'Pass full=true for full evidence, reason, and suggestions.',
       });
     },
 

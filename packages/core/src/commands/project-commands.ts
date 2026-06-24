@@ -1,5 +1,5 @@
 import type { Command, CommandContext } from './types';
-import { splitArgs, singleLine } from './helpers';
+import { splitArgs, singleLine, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { generateId } from '@hasna/assistants-shared';
 import {
   createProject,
@@ -79,7 +79,7 @@ export function projectsCommand(): Command {
         let output = '\n📁 **Projects** - Manage projects in this folder\n\n';
         output += '**Commands:**\n';
         output += '  /projects                         Interactive project manager\n';
-        output += '  /projects list                    List all projects\n';
+        output += '  /projects list [--limit n] [--cursor n] [--verbose] [--json]\n';
         output += '  /projects new <name>              Create new project\n';
         output += '  /projects use <id|name>           Select active project\n';
         output += '  /projects show [id|name]          Show project details\n';
@@ -101,6 +101,12 @@ export function projectsCommand(): Command {
       }
 
       if (sub === 'list' || sub === 'ls') {
+        const outputOptions = parseDisclosureOptions(parts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const projects = await listProjects(context.cwd);
         if (projects.length === 0) {
           context.emit('text', '\nNo projects found. Use /projects new <name>.\n');
@@ -108,11 +114,28 @@ export function projectsCommand(): Command {
           return { handled: true };
         }
         const activeId = context.getActiveProjectId?.();
-        let output = '\n**Projects**\n\n';
-        for (const project of projects) {
-          const marker = project.id === activeId ? '*' : ' ';
-          output += `${marker} ${singleLine(project.name)} (${project.id})\n`;
+        const page = pageItems(projects, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            projects: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+            activeId,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
         }
+        let output = `\n**Projects** (${page.shown}/${page.total})\n\n`;
+        for (const project of page.items) {
+          const marker = project.id === activeId ? '*' : ' ';
+          const description = outputOptions.verbose && project.description
+            ? ` - ${truncateText(project.description, 120)}`
+            : '';
+          output += `${marker} ${truncateText(project.name, outputOptions.verbose ? 120 : 56)} (${project.id})${description}\n`;
+        }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/projects show <id|name>');
         context.emit('text', output);
         context.emit('done');
         return { handled: true };
@@ -274,7 +297,7 @@ export function plansCommand(): Command {
         let output = '\n📋 **Plans** - Manage plans for the active project\n\n';
         output += '**Commands:**\n';
         output += '  /plans                                  Interactive plan manager\n';
-        output += '  /plans list                             List all plans\n';
+        output += '  /plans list [--limit n] [--cursor n] [--verbose] [--json]\n';
         output += '  /plans new <title>                      Create new plan\n';
         output += '  /plans show <planId>                    Show plan details\n';
         output += '  /plans add <planId> <step>              Add step to plan\n';
@@ -303,15 +326,38 @@ export function plansCommand(): Command {
       }
 
       if (sub === 'list' || sub === 'ls') {
+        const outputOptions = parseDisclosureOptions(parts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         if (project.plans.length === 0) {
           context.emit('text', `\nNo plans for project "${project.name}".\n`);
           context.emit('done');
           return { handled: true };
         }
-        let output = `\n**Plans (${singleLine(project.name)})**\n\n`;
-        for (const plan of project.plans) {
-          output += `- ${plan.id} ${singleLine(plan.title)} (${plan.steps.length} steps)\n`;
+        const page = pageItems(project.plans, outputOptions);
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            plans: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
         }
+        let output = `\n**Plans (${truncateText(project.name, 56)})** (${page.shown}/${page.total})\n\n`;
+        for (const plan of page.items) {
+          const active = plan.steps.filter((step) => step.status !== 'done').length;
+          const suffix = outputOptions.verbose
+            ? ` (${plan.steps.length} steps, ${active} open, updated ${new Date(plan.updatedAt).toLocaleDateString()})`
+            : ` (${plan.steps.length} steps)`;
+          output += `- ${plan.id} ${truncateText(plan.title, outputOptions.verbose ? 120 : 64)}${suffix}\n`;
+        }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/plans show <planId>');
         context.emit('text', output);
         context.emit('done');
         return { handled: true };
@@ -361,14 +407,31 @@ export function plansCommand(): Command {
           context.emit('done');
           return { handled: true };
         }
+        const outputOptions = parseDisclosureOptions(parts.slice(2));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         let output = `\n**Plan: ${singleLine(plan.title)}**\n\n`;
         output += `ID: ${plan.id}\n`;
         if (plan.steps.length === 0) {
           output += 'No steps yet.\n';
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            plan,
+            total: plan.steps.length,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
         } else {
-          for (const step of plan.steps) {
-            output += `- ${step.id} [${step.status}] ${singleLine(step.text)}\n`;
+          const page = pageItems(plan.steps, outputOptions);
+          for (const step of page.items) {
+            output += `- ${step.id} [${step.status}] ${truncateText(step.text, outputOptions.verbose ? 160 : 80)}\n`;
           }
+          output += disclosureHint(outputOptions, page.total, page.shown, '/plans show <planId> --verbose');
         }
         context.emit('text', output);
         context.emit('done');
@@ -573,7 +636,7 @@ export function workspaceCommand(): Command {
       if (action === 'help') {
         let message = '\n## Workspace Commands\n\n';
         message += '/workspace                       Browse workspaces interactively\n';
-        message += '/workspace list                  List all workspaces\n';
+        message += '/workspace list [--limit n] [--cursor n] [--verbose] [--json]\n';
         message += '/workspace create <name>         Create a new shared workspace\n';
         message += '/workspace use <id|name>         Set active workspace\n';
         message += '/workspace current              Show active workspace\n';
@@ -588,18 +651,38 @@ export function workspaceCommand(): Command {
 
       // /workspace list
       if (action === 'list') {
+        const outputOptions = parseDisclosureOptions(parts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const activeId = getActiveWorkspaceId();
         const workspaces = manager.list();
         if (workspaces.length === 0) {
           context.emit('text', '\nNo shared workspaces. Use /workspace create <name> to create one.\n');
+        } else if (outputOptions.json) {
+          const page = pageItems(workspaces, outputOptions);
+          context.emit('text', JSON.stringify({
+            workspaces: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+            activeId,
+          }, null, 2));
         } else {
-          let message = '\n**Shared Workspaces**\n\n';
-          for (const ws of workspaces) {
+          const page = pageItems(workspaces, outputOptions);
+          let message = `\n**Shared Workspaces** (${page.shown}/${page.total})\n\n`;
+          for (const ws of page.items) {
             const prefix = ws.id === activeId ? '* ' : '- ';
-            message += `${prefix}**${ws.name}** (${ws.id})\n`;
+            message += `${prefix}**${truncateText(ws.name, outputOptions.verbose ? 120 : 56)}** (${ws.id})\n`;
             message += `  Participants: ${ws.participants.length} | Status: ${ws.status}\n`;
-            message += `  Created: ${new Date(ws.createdAt).toLocaleString()}\n`;
+            if (outputOptions.verbose) {
+              message += `  Created: ${new Date(ws.createdAt).toLocaleString()}\n`;
+            }
           }
+          message += disclosureHint(outputOptions, page.total, page.shown, '/workspace info <id>');
           context.emit('text', message);
         }
         context.emit('done');

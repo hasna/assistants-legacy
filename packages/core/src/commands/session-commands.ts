@@ -1,5 +1,5 @@
 import type { Command, TokenUsage } from './types';
-import { splitArgs, singleLine, resetTokenUsage } from './helpers';
+import { splitArgs, singleLine, resetTokenUsage, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { SessionStorage } from '../logger';
 import { formatRelativeTime } from '../scheduler/format';
 
@@ -232,9 +232,10 @@ export function resumeCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim().toLowerCase();
-      const showAll = trimmed.includes('--all');
-      const cleanedArgs = trimmed.replace('--all', '').trim();
+      const parts = splitArgs(args);
+      const showAll = parts.includes('--all');
+      const filteredParts = parts.filter((part) => part !== '--all');
+      const cleanedArgs = filteredParts[0]?.toLowerCase() || '';
 
       if (!cleanedArgs || cleanedArgs === 'ui') {
         context.emit('done');
@@ -246,6 +247,12 @@ export function resumeCommand(): Command {
       }
 
       if (cleanedArgs === 'list' || cleanedArgs === '--list') {
+        const outputOptions = parseDisclosureOptions(filteredParts.slice(1));
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const allSessions = SessionStorage.listAllSessions(context.getStorageDir?.());
         const normalizeCwd = (value: string) => value.replace(/\/+$/, '');
         const targetCwd = normalizeCwd(context.cwd);
@@ -268,13 +275,26 @@ export function resumeCommand(): Command {
         const assistantNames = assistantManager
           ? new Map(assistantManager.listAssistants().map((a) => [a.id, a.name]))
           : null;
+        const page = pageItems(sessions, outputOptions);
 
         const truncate = (value: string, maxLen: number) =>
           value.length > maxLen ? `${value.slice(0, maxLen - 3)}...` : value;
         const escapeCell = (value: string) =>
           value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 
-        let output = '\n';
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            sessions: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let output = `\n**Saved Sessions** (${page.shown}/${page.total})\n\n`;
         if (showAll) {
           output += '| ID | Assistant | Updated | Messages | CWD |\n';
           output += '|----|-----------|---------|----------|-----|\n';
@@ -283,20 +303,21 @@ export function resumeCommand(): Command {
           output += '|----|---------|----------|-----|\n';
         }
 
-        for (const session of sessions) {
+        for (const session of page.items) {
           const updated = formatRelativeTime(new Date(session.updatedAt).getTime());
           const messageCount = session.messageCount ?? 0;
-          const cwd = escapeCell(truncate(singleLine(session.cwd || ''), 48));
+          const cwd = escapeCell(truncateText(session.cwd || '', outputOptions.verbose ? 100 : 48));
           const id = escapeCell(session.id.slice(0, 8));
           if (showAll) {
             const assistantLabel = session.assistantId
               ? assistantNames?.get(session.assistantId) || session.assistantId
               : 'default';
-            output += `| ${id} | ${escapeCell(truncate(assistantLabel, 16))} | ${updated} | ${messageCount} | ${cwd} |\n`;
+            output += `| ${id} | ${escapeCell(truncate(assistantLabel, outputOptions.verbose ? 32 : 16))} | ${updated} | ${messageCount} | ${cwd} |\n`;
           } else {
             output += `| ${id} | ${updated} | ${messageCount} | ${cwd} |\n`;
           }
         }
+        output += disclosureHint(outputOptions, page.total, page.shown, '/resume <id>');
 
         context.emit('text', output);
         context.emit('done');
@@ -307,7 +328,7 @@ export function resumeCommand(): Command {
       context.emit('text', 'Usage:\n');
       context.emit('text', '  /resume             Open interactive panel (current folder)\n');
       context.emit('text', '  /resume --all       Open interactive panel (all sessions)\n');
-      context.emit('text', '  /resume list        Show text table (current folder)\n');
+      context.emit('text', '  /resume list [--limit n] [--cursor n] [--verbose] [--json]\n');
       context.emit('text', '  /resume list --all  Show text table (all sessions)\n');
       context.emit('done');
       return { handled: true };

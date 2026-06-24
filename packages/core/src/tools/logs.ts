@@ -12,6 +12,7 @@ import { SecurityLogger } from '../security/logger';
 import type { Severity } from '../security/types';
 import { Logger, type LogLevel } from '../logger';
 import { HookLogger, type HookLogEntry } from '../hooks/logger';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -186,6 +187,26 @@ function fetchNormalizedEntries(options: {
   return entries.slice(offset, offset + limit);
 }
 
+function compactEntry(entry: NormalizedLogEntry, options: { verbose?: boolean; full?: boolean }): NormalizedLogEntry {
+  if (options.full) return entry;
+  const max = options.verbose ? 240 : 120;
+  const details: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entry.details)) {
+    if (value === undefined || value === null) {
+      details[key] = value;
+    } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      details[key] = truncateText(value, max);
+    } else {
+      details[key] = truncateText(value, max);
+    }
+  }
+  return {
+    ...entry,
+    message: truncateText(entry.message, options.verbose ? 240 : 120),
+    details,
+  };
+}
+
 // ============================================
 // Tool Definitions
 // ============================================
@@ -226,11 +247,19 @@ export const logsQueryTool: Tool = {
       },
       limit: {
         type: 'number',
-        description: 'Maximum entries to return (default: 50, max: 200)',
+        description: 'Maximum entries to return (default: 20, max: 100)',
       },
       offset: {
         type: 'number',
         description: 'Pagination offset',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer messages and detail previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full message/detail payloads',
       },
     },
     required: [],
@@ -278,7 +307,15 @@ export const logsSearchTool: Tool = {
       },
       limit: {
         type: 'number',
-        description: 'Maximum results (default: 50, max: 200)',
+        description: 'Maximum results (default: 20, max: 100)',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer messages and detail previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full message/detail payloads',
       },
     },
     required: ['query'],
@@ -299,6 +336,14 @@ export const logsTailTool: Tool = {
         type: 'string',
         enum: ['security', 'hooks', 'session', 'all'],
         description: 'Log source to tail (default: "all")',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer messages and detail previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full message/detail payloads',
       },
     },
     required: [],
@@ -322,8 +367,10 @@ export function createLogsToolExecutors(
   return {
     logs_query: async (input: Record<string, unknown>): Promise<string> => {
       const sessionOnly = input.sessionOnly !== false;
-      const limit = Math.min(200, Math.max(1, typeof input.limit === 'number' ? input.limit : 50));
+      const limit = Math.min(MAX_COMPACT_LIMIT, Math.max(1, typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT));
       const offset = typeof input.offset === 'number' ? Math.max(0, input.offset) : 0;
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
 
       const entries = fetchNormalizedEntries({
         source: (input.source as LogSource) || 'all',
@@ -342,7 +389,8 @@ export function createLogsToolExecutors(
         offset,
         limit,
         sessionOnly,
-        entries,
+        entries: entries.map((entry) => compactEntry(entry, { verbose, full })),
+        hint: full ? undefined : 'Pass verbose=true for longer messages/details or full=true for full payloads.',
       });
     },
 
@@ -388,7 +436,7 @@ export function createLogsToolExecutors(
           recentErrors.push({
             timestamp: entry.timestamp,
             source: entry.source,
-            message: entry.message,
+            message: truncateText(entry.message, 160),
           });
         }
       }
@@ -422,7 +470,9 @@ export function createLogsToolExecutors(
         return JSON.stringify({ success: false, error: 'query parameter is required' });
       }
 
-      const limit = Math.min(200, Math.max(1, typeof input.limit === 'number' ? input.limit : 50));
+      const limit = Math.min(MAX_COMPACT_LIMIT, Math.max(1, typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT));
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
 
       // Fetch a large set to search through
       const allEntries = fetchNormalizedEntries({
@@ -449,7 +499,8 @@ export function createLogsToolExecutors(
         success: true,
         query: input.query,
         total: matches.length,
-        entries: matches,
+        entries: matches.map((entry) => compactEntry(entry, { verbose, full })),
+        hint: full ? undefined : 'Pass verbose=true for longer messages/details or full=true for full payloads.',
       });
     },
 
@@ -464,7 +515,11 @@ export function createLogsToolExecutors(
       return JSON.stringify({
         success: true,
         count: entries.length,
-        entries,
+        entries: entries.map((entry) => compactEntry(entry, {
+          verbose: input.verbose === true || input.full === true,
+          full: input.full === true,
+        })),
+        hint: input.full === true ? undefined : 'Pass verbose=true for longer messages/details or full=true for full payloads.',
       });
     },
   };

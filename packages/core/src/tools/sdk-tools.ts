@@ -9,22 +9,30 @@
 
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ─── Helper: register a batch of tools ────────────────────────────────────────
 
 function reg(registry: ToolRegistry, tools: Array<{ tool: Tool; executor: ToolExecutor }>) {
   for (const { tool, executor } of tools) {
-    registry.register(tool, executor);
+    registry.register(tool, async (input) => compactSdkOutput(await executor(input), input));
   }
 }
 
 function mkTool(name: string, description: string, params: Record<string, unknown>, required?: string[]): Tool {
+  const outputParams = {
+    ...params,
+    limit: params.limit ?? num('For list/search outputs: maximum rows to return (default 20, max 100)'),
+    cursor: params.cursor ?? num('For list/search outputs: zero-based row offset'),
+    verbose: params.verbose ?? { type: 'boolean', description: 'For list/search outputs: include longer text previews' },
+    full: params.full ?? { type: 'boolean', description: 'For list/search outputs: return full JSON output without compact truncation' },
+  };
   return {
     name,
     description,
     parameters: {
       type: 'object',
-      properties: params as any,
+      properties: outputParams as any,
       ...(required ? { required } : {}),
     },
   };
@@ -32,6 +40,73 @@ function mkTool(name: string, description: string, params: Record<string, unknow
 
 function str(desc: string) { return { type: 'string', description: desc }; }
 function num(desc: string) { return { type: 'number', description: desc }; }
+
+function getOutputOptions(input: Record<string, unknown>) {
+  const full = input.full === true;
+  const verbose = full || input.verbose === true;
+  const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+  const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+  return {
+    full,
+    verbose,
+    limit: Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT),
+    cursor: Math.max(Math.floor(cursorInput), 0),
+  };
+}
+
+function compactJsonValue(value: unknown, options: ReturnType<typeof getOutputOptions>, depth = 0): unknown {
+  if (options.full) return value;
+  if (typeof value === 'string') {
+    return truncateText(value, options.verbose ? 500 : 200);
+  }
+  if (Array.isArray(value)) {
+    const pageOptions = depth <= 1 ? options : { ...options, cursor: 0 };
+    const page = pageItems(value, pageOptions);
+    return {
+      items: page.items.map((item) => compactJsonValue(item, options, depth + 1)),
+      total: page.total,
+      shown: page.shown,
+      cursor: pageOptions.cursor,
+      limit: pageOptions.limit,
+      nextCursor: page.nextCursor,
+    };
+  }
+  if (value && typeof value === 'object' && depth < 6) {
+    const output: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      output[key] = compactJsonValue(child, options, depth + 1);
+    }
+    return output;
+  }
+  return value;
+}
+
+function compactSdkOutput(output: string, input: Record<string, unknown>): string {
+  const options = getOutputOptions(input);
+  if (options.full) return output;
+
+  const trimmed = output.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const compacted = compactJsonValue(parsed, options);
+      const withHint = compacted && typeof compacted === 'object' && !Array.isArray(compacted)
+        ? {
+            ...(compacted as Record<string, unknown>),
+            hint: (compacted as Record<string, unknown>).hint ?? 'Pass full=true for complete SDK output.',
+          }
+        : compacted;
+      return JSON.stringify(withHint, null, 2);
+    } catch {
+      // Fall through to string compaction below.
+    }
+  }
+
+  if (output.length > (options.verbose ? 4000 : 2000)) {
+    return `${truncateText(output, options.verbose ? 4000 : 2000)}\n\nPass full=true for complete SDK output.`;
+  }
+  return output;
+}
 
 // ─── Economy ──────────────────────────────────────────────────────────────────
 

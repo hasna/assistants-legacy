@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 
 /**
  * /exit - Exit assistants
@@ -58,20 +58,36 @@ export function walletCommand(): Command {
       // /wallet list
       if (subcommand === 'list') {
         try {
+          const outputOptions = parseDisclosureOptions(parts.slice(1));
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const cards = await manager.list();
+          const page = pageItems(cards, outputOptions);
 
           if (cards.length === 0) {
             context.emit('text', 'No cards stored in wallet.\n');
             context.emit('text', 'Use /wallet add to add a card.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              cards: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `\n## Wallet (${cards.length} card${cards.length === 1 ? '' : 's'})\n\n`);
-            for (const card of cards) {
-              context.emit('text', `💳 **${card.name}** (${card.id})\n`);
+            context.emit('text', `\n## Wallet (${page.shown}/${page.total} card${page.total === 1 ? '' : 's'})\n\n`);
+            for (const card of page.items) {
+              context.emit('text', `💳 **${truncateText(card.name, outputOptions.verbose ? 80 : 40)}** (${card.id})\n`);
               context.emit('text', `   **** **** **** ${card.last4}\n`);
               context.emit('text', `   Expires: ${card.expiry}\n\n`);
             }
             const status = manager.getRateLimitStatus();
             context.emit('text', `---\nRate limit: ${status.readsUsed}/${status.maxReads} reads this hour\n`);
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/wallet status'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -207,28 +223,46 @@ export function secretsCommand(): Command {
       // /secrets list [scope]
       if (subcommand === 'list') {
         try {
-          const scope = (parts[1]?.toLowerCase() || 'all') as 'global' | 'assistant' | 'all';
+          const maybeScope = parts[1]?.startsWith('--') ? undefined : parts[1]?.toLowerCase();
+          const scope = (maybeScope || 'all') as 'global' | 'assistant' | 'all';
+          const optionStart = maybeScope ? 2 : 1;
+          const outputOptions = parseDisclosureOptions(parts.slice(optionStart));
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const secrets = listSecrets(scope);
+          const page = pageItems(secrets, outputOptions);
 
           if (secrets.length === 0) {
             context.emit('text', 'No secrets stored.\nUse /secrets add to add a secret.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              secrets: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `\n## Secrets (${secrets.length})\n\n`);
-            const globalSecrets = secrets.filter(s => s.namespace === 'global');
-            const assistantSecrets = secrets.filter(s => s.namespace !== 'global');
+            context.emit('text', `\n## Secrets (${page.shown}/${page.total})\n\n`);
+            const globalSecrets = page.items.filter(s => s.namespace === 'global');
+            const assistantSecrets = page.items.filter(s => s.namespace !== 'global');
             if (globalSecrets.length > 0) {
               context.emit('text', '### Global\n');
               for (const s of globalSecrets) {
-                context.emit('text', `- **${s.name}** [${s.type}]${s.label ? ` — ${s.label}` : ''}\n`);
+                context.emit('text', `- **${truncateText(s.name, 48)}** [${s.type}]${s.label ? ` - ${truncateText(s.label, outputOptions.verbose ? 120 : 56)}` : ''}\n`);
               }
               context.emit('text', '\n');
             }
             if (assistantSecrets.length > 0) {
               context.emit('text', '### Assistant\n');
               for (const s of assistantSecrets) {
-                context.emit('text', `- **${s.name}** [${s.type}]${s.label ? ` — ${s.label}` : ''}\n`);
+                context.emit('text', `- **${truncateText(s.name, 48)}** [${s.type}]${s.label ? ` - ${truncateText(s.label, outputOptions.verbose ? 120 : 56)}` : ''}\n`);
               }
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/secrets get <name>'));
           }
         } catch (error) {
           context.emit('text', `Error listing secrets: ${error instanceof Error ? error.message : String(error)}\n`);

@@ -8,6 +8,7 @@
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { MemoryStore } from '../memory/mementos-adapter';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -75,6 +76,22 @@ export const bookmarkListTool: Tool = {
       tag: {
         type: 'string',
         description: 'Filter bookmarks by this tag',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum bookmarks to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer path and URL previews',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all bookmarks without compact truncation',
       },
     },
   },
@@ -260,10 +277,29 @@ export function createBookmarkToolExecutors(
 
         // Sort by creation date, newest first
         bookmarks.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        const full = input.full === true;
+        const verbose = full || input.verbose === true;
+        const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+        const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+        const limit = full ? Math.max(bookmarks.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+        const cursor = Math.max(Math.floor(cursorInput), 0);
+        const page = pageItems(bookmarks, { limit, cursor });
 
         return JSON.stringify({
-          count: bookmarks.length,
-          bookmarks,
+          count: page.shown,
+          total: bookmarks.length,
+          limit,
+          cursor,
+          nextCursor: page.nextCursor,
+          bookmarks: full ? page.items : page.items.map((bookmark) => ({
+            ...bookmark,
+            name: truncateText(bookmark.name, verbose ? 128 : 56),
+            path: bookmark.path ? truncateText(bookmark.path, verbose ? 240 : 96) : undefined,
+            url: bookmark.url ? truncateText(bookmark.url, verbose ? 240 : 96) : undefined,
+          })),
+          hint: page.nextCursor !== null
+            ? `Pass cursor=${page.nextCursor} for more. Pass full=true for complete bookmarks.`
+            : 'Pass verbose=true for longer paths/URLs, or full=true for complete bookmarks.',
         });
       } catch (error) {
         return JSON.stringify({

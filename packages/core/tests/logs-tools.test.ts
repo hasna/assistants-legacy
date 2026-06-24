@@ -228,9 +228,9 @@ describe('Logs Tool Executors', () => {
       expect(result.offset).toBe(0);
     });
 
-    test('clamps limit to max 200', async () => {
+    test('clamps limit to compact max 100', async () => {
       const result = JSON.parse(await executors.logs_query({ limit: 999 }));
-      expect(result.limit).toBe(200);
+      expect(result.limit).toBe(100);
     });
   });
 
@@ -262,7 +262,7 @@ describe('Logs Tool Executors', () => {
       expect(Array.isArray(result.entries)).toBe(true);
     });
 
-    test('clamps limit to max 200', async () => {
+    test('clamps limit to compact max 100', async () => {
       const result = JSON.parse(await executors.logs_search({ query: 'test', limit: 500 }));
       expect(result.total).toBeDefined();
     });
