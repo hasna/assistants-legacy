@@ -4,6 +4,7 @@ import { ToolExecutionError, ErrorCodes } from '../errors';
 import { createSkill, type SkillScope } from '../skills/create';
 import type { SkillLoader } from '../skills/loader';
 import { SkillExecutor } from '../skills/executor';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 // Registry functions moved to tools/skills-registry.ts (loaded dynamically to avoid side effects)
 // Install/uninstall now use the @hasna/skills SDK via registry-adapter (installSkillFromRegistry, removeAgentInstalledSkill)
 // Skill listing augments SkillLoader results with SDK-installed skills from ~/.claude/skills/
@@ -133,6 +134,22 @@ export function createSkillListTool(getLoader: () => SkillLoader | null) {
           type: 'string',
           description: 'Project directory to scan for skills.',
         },
+        limit: {
+          type: 'number',
+          description: 'Maximum skills to return (default 20, max 100)',
+        },
+        cursor: {
+          type: 'number',
+          description: 'Zero-based offset for pagination',
+        },
+        verbose: {
+          type: 'boolean',
+          description: 'Include longer descriptions and argument hints',
+        },
+        full: {
+          type: 'boolean',
+          description: 'Return all skill rows without compact truncation',
+        },
       },
     },
   };
@@ -162,8 +179,35 @@ export function createSkillListTool(getLoader: () => SkillLoader | null) {
       // SDK unavailable — continue with legacy results only
     }
 
-    const descriptions = loader.getSkillDescriptions();
-    return descriptions || 'No skills loaded.';
+    if (typeof (loader as { getSkills?: unknown }).getSkills !== 'function') {
+      const descriptions = typeof (loader as { getSkillDescriptions?: unknown }).getSkillDescriptions === 'function'
+        ? (loader as { getSkillDescriptions: () => string }).getSkillDescriptions()
+        : '';
+      return descriptions || 'No skills loaded.';
+    }
+
+    const skills = loader.getSkills();
+    if (skills.length === 0) return 'No skills loaded.';
+
+    const full = input.full === true;
+    const verbose = full || input.verbose === true;
+    const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+    const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+    const limit = full ? Math.max(skills.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+    const cursor = Math.max(Math.floor(cursorInput), 0);
+    const page = pageItems(skills, { limit, cursor });
+
+    const lines = [`Available skills (${page.shown}/${page.total}, invoke with /skill-name):`];
+    for (const skill of page.items) {
+      const hint = skill.argumentHint ? ` ${truncateText(skill.argumentHint, verbose ? 80 : 32)}` : '';
+      lines.push(`- /${skill.name}${hint}: ${truncateText(skill.description, verbose ? 180 : 80)}`);
+    }
+    if (!full) {
+      lines.push(page.nextCursor !== null
+        ? `Showing ${page.shown} of ${page.total}. Pass cursor=${page.nextCursor} for more, or full=true for all skills.`
+        : 'Pass verbose=true for longer descriptions, or full=true for all skills.');
+    }
+    return lines.join('\n');
   };
 
   return { tool, executor };

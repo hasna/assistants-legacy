@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { existsSync, readFileSync } from 'fs';
-import { registerCloudTools } from '@hasna/cloud';
 import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
@@ -25,6 +24,45 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
   const activeTools = PROFILE_TOOLS[profile] ?? PROFILE_TOOLS.full;
 
   const server = new McpServer({ name: 'assistants', version: MCP_VERSION });
+  const defaultListLimit = 20;
+  const maxListLimit = 100;
+
+  function clampLimit(limit: unknown, fallback = defaultListLimit): number {
+    const parsed = typeof limit === 'number' ? Math.trunc(limit) : Number(limit);
+    if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+    return Math.min(parsed, maxListLimit);
+  }
+
+  function clampCursor(cursor: unknown): number {
+    const parsed = typeof cursor === 'number' ? Math.trunc(cursor) : Number(cursor);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed;
+  }
+
+  function compactText(value: unknown, maxLength = 300): string {
+    const text = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+    const single = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (single.length <= maxLength) return single;
+    return `${single.slice(0, Math.max(0, maxLength - 3))}...`;
+  }
+
+  function pageItems<T>(items: T[], limitInput?: unknown, cursorInput?: unknown, fallback = defaultListLimit) {
+    const limit = clampLimit(limitInput, fallback);
+    const cursor = clampCursor(cursorInput);
+    const start = Math.min(cursor, items.length);
+    const page = items.slice(start, start + limit);
+    const nextCursor = start + page.length < items.length ? start + page.length : null;
+    return { page, total: items.length, shown: page.length, limit, cursor, nextCursor };
+  }
+
+  function hint(shown: number, total: number, nextCursor: number | null, detail: string): string {
+    const parts: string[] = [];
+    if (nextCursor !== null) {
+      parts.push(`Showing ${shown} of ${total}. Use cursor=${nextCursor} or a larger limit for more.`);
+    }
+    parts.push(detail);
+    return `\n\n${parts.join(' ')}`;
+  }
 
   // Wraps a handler with: rate limiting → pre-hooks → execution → post-hooks → audit
   function registerTool(
@@ -205,16 +243,32 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
   registerTool(
     'list_sessions',
     'List resumable assistant sessions.',
-    { limit: z.number().optional() },
-    async ({ limit }) => {
+    {
+      limit: z.number().optional(),
+      cursor: z.number().optional(),
+      verbose: z.boolean().optional(),
+      json: z.boolean().optional(),
+    },
+    async ({ limit, cursor, verbose, json }) => {
       const sessions = SessionStorage.listAllSessions();
-      const recent = sessions.slice(0, limit || 20);
-      if (recent.length === 0) return { content: [{ type: 'text' as const, text: 'No sessions found.' }] };
-      const lines = recent.map((s) => {
+      const result = pageItems(sessions, limit, cursor);
+      if (result.page.length === 0) return { content: [{ type: 'text' as const, text: 'No sessions found.' }] };
+      if (json) {
+        return { content: [{ type: 'text' as const, text: JSON.stringify({
+          sessions: result.page,
+          total: result.total,
+          limit: result.limit,
+          cursor: result.cursor,
+          nextCursor: result.nextCursor,
+        }, null, 2) }] };
+      }
+      const lines = result.page.map((s) => {
         const date = s.startedAt ? new Date(s.startedAt).toLocaleString() : 'unknown';
-        return `- **${s.id}** (${date}, ${s.messageCount ?? 0} messages)${s.assistantId ? ` [${s.assistantId}]` : ''}`;
+        const assistant = s.assistantId ? ` [${s.assistantId}]` : '';
+        const cwd = verbose && s.cwd ? ` — ${compactText(s.cwd, 80)}` : '';
+        return `- **${s.id}** (${date}, ${s.messageCount ?? 0} messages)${assistant}${cwd}`;
       });
-      return { content: [{ type: 'text' as const, text: `## Sessions (${recent.length})\n\n${lines.join('\n')}` }] };
+      return { content: [{ type: 'text' as const, text: `## Sessions (${result.shown}/${result.total})\n\n${lines.join('\n')}${hint(result.shown, result.total, result.nextCursor, 'Use get_session with a session_id for message previews; pass full=true only when you need the complete transcript.')}` }] };
     }
   );
 
@@ -223,15 +277,34 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
   registerTool(
     'list_skills',
     'List available assistant skills.',
-    { cwd: z.string().optional() },
-    async ({ cwd }) => {
+    {
+      cwd: z.string().optional(),
+      limit: z.number().optional(),
+      cursor: z.number().optional(),
+      verbose: z.boolean().optional(),
+      json: z.boolean().optional(),
+    },
+    async ({ cwd, limit, cursor, verbose, json }) => {
       const { SkillLoader } = await import('@hasna/assistants-core');
       const loader = new SkillLoader();
       await loadSkillsWithSdk(loader, cwd || process.cwd());
       const skills = loader.getSkills();
       if (skills.length === 0) return { content: [{ type: 'text' as const, text: 'No skills found.' }] };
-      const lines = skills.map(s => `- **${s.name}**: ${s.description || 'No description'}${s.argumentHint ? ` (args: ${s.argumentHint})` : ''}`);
-      return { content: [{ type: 'text' as const, text: `## Skills (${skills.length})\n\n${lines.join('\n')}` }] };
+      const result = pageItems(skills, limit, cursor, 50);
+      if (json) {
+        return { content: [{ type: 'text' as const, text: JSON.stringify({
+          skills: result.page,
+          total: result.total,
+          limit: result.limit,
+          cursor: result.cursor,
+          nextCursor: result.nextCursor,
+        }, null, 2) }] };
+      }
+      const lines = result.page.map(s => {
+        const desc = compactText(s.description || 'No description', verbose ? 180 : 90);
+        return `- **${s.name}**: ${desc}${s.argumentHint ? ` (args: ${compactText(s.argumentHint, 60)})` : ''}`;
+      });
+      return { content: [{ type: 'text' as const, text: `## Skills (${result.shown}/${result.total})\n\n${lines.join('\n')}${hint(result.shown, result.total, result.nextCursor, 'Use execute_skill for a specific skill, or the skill resource for raw SKILL.md content.')}` }] };
     }
   );
 
@@ -275,19 +348,54 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
 
   registerTool(
     'get_session',
-    'Get messages and details of a session by ID.',
-    { session_id: z.string() },
-    async ({ session_id }) => {
+    'Get messages and details of a session by ID. Defaults to a compact paged preview; pass full=true only when the complete transcript is required.',
+    {
+      session_id: z.string(),
+      limit: z.number().optional(),
+      cursor: z.number().optional(),
+      verbose: z.boolean().optional(),
+      full: z.boolean().optional(),
+      json: z.boolean().optional(),
+    },
+    async ({ session_id, limit, cursor, verbose, full, json }) => {
       const data = SessionStorage.loadSession(session_id);
       if (!data) return { content: [{ type: 'text' as const, text: `Session "${session_id}" not found.` }], isError: true };
       const messages = (data.messages || []) as Message[];
-      const lines = messages.map(m => {
+      const header = [`## Session: ${session_id}`, `Started: ${data.startedAt || 'unknown'}`, `Messages: ${messages.length}`, `CWD: ${data.cwd || 'unknown'}`, ''].join('\n');
+      if (full) {
+        if (json) {
+          return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+        }
+        const lines = messages.map(m => {
+          const role = m.role === 'user' ? 'User' : 'Assistant';
+          const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+          return `**${role}**: ${text}`;
+        });
+        return { content: [{ type: 'text' as const, text: `${header}${lines.join('\n\n')}` }] };
+      }
+
+      const result = pageItems(messages, limit, cursor);
+      if (json) {
+        return { content: [{ type: 'text' as const, text: JSON.stringify({
+          session: {
+            id: session_id,
+            startedAt: data.startedAt,
+            cwd: data.cwd,
+            messageCount: messages.length,
+          },
+          messages: result.page,
+          total: result.total,
+          limit: result.limit,
+          cursor: result.cursor,
+          nextCursor: result.nextCursor,
+        }, null, 2) }] };
+      }
+      const lines = result.page.map(m => {
         const role = m.role === 'user' ? 'User' : 'Assistant';
-        const text = typeof m.content === 'string' ? m.content.slice(0, 500) : JSON.stringify(m.content).slice(0, 500);
+        const text = compactText(m.content, verbose ? 1000 : 300);
         return `**${role}**: ${text}`;
       });
-      const header = [`## Session: ${session_id}`, `Started: ${data.startedAt || 'unknown'}`, `Messages: ${messages.length}`, `CWD: ${data.cwd || 'unknown'}`, ''].join('\n');
-      return { content: [{ type: 'text' as const, text: header + lines.join('\n\n') }] };
+      return { content: [{ type: 'text' as const, text: `${header}Showing messages ${result.cursor + 1}-${result.cursor + result.shown} of ${result.total}.\n\n${lines.join('\n\n')}${hint(result.shown, result.total, result.nextCursor, 'Use cursor/limit for more previews, verbose=true for wider previews, or full=true for the complete transcript.')}` }] };
     }
   );
 
@@ -440,30 +548,43 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
     'sessions',
     'assistants://sessions',
     { description: 'List of all assistant sessions', mimeType: 'text/plain' },
-    async (_uri) => {
-      const sessions = SessionStorage.listAllSessions().slice(0, 50);
-      const lines = sessions.map(s => {
+    async (uri) => {
+      const sessions = SessionStorage.listAllSessions();
+      const result = pageItems(sessions, uri.searchParams.get('limit') ?? undefined, uri.searchParams.get('cursor') ?? undefined);
+      const lines = result.page.map(s => {
         const date = s.startedAt ? new Date(s.startedAt).toLocaleString() : 'unknown';
         return `${s.id}  ${date}  ${s.messageCount ?? 0} messages`;
       });
-      return { contents: [{ uri: 'assistants://sessions', mimeType: 'text/plain', text: lines.length ? lines.join('\n') : '(no sessions)' }] };
+      const text = lines.length
+        ? `Sessions (${result.shown}/${result.total})\n${lines.join('\n')}${hint(result.shown, result.total, result.nextCursor, 'Use assistants://sessions/{id} for message previews, or add ?full=true for a complete transcript.')}`
+        : '(no sessions)';
+      return { contents: [{ uri: 'assistants://sessions', mimeType: 'text/plain', text }] };
     }
   );
 
   server.resource(
     'session',
     new ResourceTemplate('assistants://sessions/{id}', { list: undefined }),
-    { description: 'Full message history for a session', mimeType: 'text/plain' },
+    { description: 'Compact message preview for a session. Add ?full=true for complete message history.', mimeType: 'text/plain' },
     async (uri, { id }) => {
       const sessionId = Array.isArray(id) ? id[0] : id;
       const data = SessionStorage.loadSession(sessionId);
       if (!data) return { contents: [{ uri: uri.href, mimeType: 'text/plain', text: `Session "${sessionId}" not found.` }] };
       const messages = (data.messages || []) as Message[];
-      const lines = messages.map(m => {
+      const full = uri.searchParams.get('full') === 'true';
+      const verbose = uri.searchParams.get('verbose') === 'true';
+      const selected = full
+        ? { page: messages, shown: messages.length, total: messages.length, nextCursor: null, cursor: 0 }
+        : pageItems(messages, uri.searchParams.get('limit') ?? undefined, uri.searchParams.get('cursor') ?? undefined);
+      const lines = selected.page.map(m => {
         const role = m.role === 'user' ? 'User' : 'Assistant';
-        return `[${role}]\n${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`;
+        const text = full
+          ? (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))
+          : compactText(m.content, verbose ? 1000 : 300);
+        return `[${role}]\n${text}`;
       });
-      return { contents: [{ uri: uri.href, mimeType: 'text/plain', text: `Session: ${sessionId}\nStarted: ${data.startedAt}\nCWD: ${data.cwd}\n\n${lines.join('\n\n---\n\n')}` }] };
+      const footer = full ? '' : hint(selected.shown, selected.total, selected.nextCursor, 'Add ?cursor=N&limit=M for more previews, ?verbose=true for wider previews, or ?full=true for the complete transcript.');
+      return { contents: [{ uri: uri.href, mimeType: 'text/plain', text: `Session: ${sessionId}\nStarted: ${data.startedAt}\nCWD: ${data.cwd}\nMessages: ${messages.length}\nShowing: ${selected.shown}/${selected.total}\n\n${lines.join('\n\n---\n\n')}${footer}` }] };
     }
   );
 
@@ -471,13 +592,18 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
     'skills',
     'assistants://skills',
     { description: 'List of all available assistant skills', mimeType: 'text/plain' },
-    async (_uri) => {
+    async (uri) => {
       const { SkillLoader } = await import('@hasna/assistants-core');
       const loader = new SkillLoader();
       await loadSkillsWithSdk(loader, process.cwd());
       const skills = loader.getSkills();
-      const lines = skills.map(s => `${s.name}  ${s.description || ''}${s.argumentHint ? `  (args: ${s.argumentHint})` : ''}`);
-      return { contents: [{ uri: 'assistants://skills', mimeType: 'text/plain', text: lines.length ? lines.join('\n') : '(no skills)' }] };
+      const verbose = uri.searchParams.get('verbose') === 'true';
+      const result = pageItems(skills, uri.searchParams.get('limit') ?? undefined, uri.searchParams.get('cursor') ?? undefined, 50);
+      const lines = result.page.map(s => `${s.name}  ${compactText(s.description || '', verbose ? 180 : 90)}${s.argumentHint ? `  (args: ${compactText(s.argumentHint, 60)})` : ''}`);
+      const text = lines.length
+        ? `Skills (${result.shown}/${result.total})\n${lines.join('\n')}${hint(result.shown, result.total, result.nextCursor, 'Use assistants://skills/{name} for raw skill content.')}`
+        : '(no skills)';
+      return { contents: [{ uri: 'assistants://skills', mimeType: 'text/plain', text }] };
     }
   );
 
@@ -563,9 +689,6 @@ export async function createServer(opts: ServerOptions = {}): Promise<McpServer>
       );
     }
   }
-
-  // ─── Cloud ───────────────────────────────────────────────────────────────────
-  registerCloudTools(server, "assistants");
 
   // ─── Agent lifecycle ──────────────────────────────────────────────────────────
 

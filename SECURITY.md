@@ -59,3 +59,10 @@ The `@hasna/assistants` project includes the following built-in protections:
 - **Bash command validation** -- Destructive and dangerous shell commands are blocked, including fork bombs, disk formatting (mkfs, dd), direct device writes, eval, command substitution, and piping to shells. A blocklist prevents catastrophic commands like `rm -rf /`.
 - **Input validation types** -- Typed severity levels and structured security events ensure consistent handling of threats across the system.
 - **Security audit logging** -- All blocked operations are logged with timestamps, severity levels, session IDs, and details. Critical and high-severity events produce immediate console warnings. Logs are persisted to disk in JSONL format for cross-session review.
+
+## Storage Sync
+
+Assistant state is local-first in `~/.hasna/assistants/assistants.db`. Optional
+S3 sync is only active when `HASNA_ASSISTANTS_S3_BUCKET` or
+`ASSISTANTS_S3_BUCKET` is configured, and it uploads/downloads a SQLite database
+snapshot owned by this package. It does not depend on the shared cloud package.

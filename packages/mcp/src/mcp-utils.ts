@@ -8,7 +8,6 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { setRuntime, hasRuntime } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
-import { registerCloudTools } from '@hasna/cloud';
 import { setProjectRole, removeProjectRole, getEffectiveSystemPrompt, loadAgentDefinitions, setAgentModelConfig, syncToClaudeAgents, syncFromClaudeAgents } from '@hasna/assistants-core';
 import { EmbeddedClient, SessionStorage } from '@hasna/assistants-core';
 import type { StreamChunk, Message } from '@hasna/assistants-shared';
@@ -237,13 +236,13 @@ export const TOOL_DOCS: Record<string, { description: string; params: string; ve
     version: '1.0',
   },
   list_sessions: {
-    description: 'List previous assistant sessions that can be resumed with the chat tool.',
-    params: 'limit?: number — max sessions to return (default 20)',
+    description: 'List previous assistant sessions compactly. Use pagination flags for gradual disclosure.',
+    params: 'limit?: number — max sessions to return (default 20, max 100)\ncursor?: number — zero-based row offset\nverbose?: boolean — include compact cwd details\njson?: boolean — return structured page JSON',
     version: '1.0',
   },
   list_skills: {
-    description: 'List available assistant skills (SKILL.md files) from built-in and project-level skill directories.',
-    params: 'cwd?: string — working directory to search for project-level skills',
+    description: 'List available assistant skills (SKILL.md files) compactly from built-in and project-level skill directories.',
+    params: 'cwd?: string — working directory to search for project-level skills\nlimit?: number — max skills to return (default 50, max 100)\ncursor?: number — zero-based row offset\nverbose?: boolean — wider descriptions\njson?: boolean — return structured page JSON',
     version: '1.0',
   },
   execute_skill: {
@@ -252,8 +251,8 @@ export const TOOL_DOCS: Record<string, { description: string; params: string; ve
     version: '1.0',
   },
   get_session: {
-    description: 'Get the messages and details of a specific session by ID.',
-    params: 'session_id: string — the session ID to retrieve',
+    description: 'Get a compact paged preview of a specific session by ID. Pass full=true only when the complete transcript is required.',
+    params: 'session_id: string — the session ID to retrieve\nlimit?: number — max messages to preview (default 20, max 100)\ncursor?: number — zero-based message offset\nverbose?: boolean — wider message previews\nfull?: boolean — include the complete transcript\njson?: boolean — return structured JSON',
     version: '1.0',
   },
   describe_tools: {
@@ -310,4 +309,3 @@ export interface ServerOptions {
   hooksFilePaths?: string[];
   dynamicToolsFile?: string;
 }
-

@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { listTemplates, createIdentityFromTemplate } from '../identity/templates';
 
 /**
@@ -20,7 +20,7 @@ export function assistantCommand(): Command {
         return { handled: true };
       }
 
-      const [action, ...rest] = args.trim().split(/\s+/).filter(Boolean);
+      const [action, ...rest] = splitArgs(args);
       const target = rest.join(' ');
       const switchAssistantInContext = async (assistantId: string) => {
         if (context.switchAssistant) {
@@ -56,15 +56,34 @@ export function assistantCommand(): Command {
       }
 
       if (action === 'list') {
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const assistants = manager.listAssistants();
+        const page = pageItems(assistants, outputOptions);
         if (assistants.length === 0) {
           context.emit('text', 'No assistants found.\n');
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            assistants: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
         } else {
-          context.emit('text', '\nAssistants:\n');
-          for (const assistant of assistants) {
+          context.emit('text', `\nAssistants (${page.shown}/${page.total}):\n`);
+          for (const assistant of page.items) {
             const marker = manager.getActiveId() === assistant.id ? '*' : ' ';
-            context.emit('text', ` ${marker} ${assistant.name} (${assistant.id})\n`);
+            const desc = outputOptions.verbose && assistant.description
+              ? ` - ${truncateText(assistant.description, 100)}`
+              : '';
+            context.emit('text', ` ${marker} ${truncateText(assistant.name, outputOptions.verbose ? 80 : 40)} (${assistant.id})${desc}\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/assistants show'));
         }
         context.emit('done');
         return { handled: true };
@@ -255,7 +274,7 @@ export function identityCommand(): Command {
         return { handled: true };
       }
 
-      const [action, ...rest] = args.trim().split(/\s+/).filter(Boolean);
+      const [action, ...rest] = splitArgs(args);
       const target = rest.join(' ');
 
       if (!action || action === 'ui') {
@@ -264,15 +283,31 @@ export function identityCommand(): Command {
       }
 
       if (action === 'list') {
+        const outputOptions = parseDisclosureOptions(rest);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
         const identities = manager.listIdentities();
+        const page = pageItems(identities, outputOptions);
         if (identities.length === 0) {
           context.emit('text', 'No identities found.\n');
+        } else if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            identities: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
         } else {
-          context.emit('text', '\nIdentities:\n');
-          for (const identity of identities) {
+          context.emit('text', `\nIdentities (${page.shown}/${page.total}):\n`);
+          for (const identity of page.items) {
             const marker = manager.getActive()?.id === identity.id ? '*' : ' ';
-            context.emit('text', ` ${marker} ${identity.name} (${identity.id})\n`);
+            context.emit('text', ` ${marker} ${truncateText(identity.name, outputOptions.verbose ? 80 : 40)} (${identity.id})\n`);
           }
+          context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/identity show'));
         }
         context.emit('done');
         return { handled: true };
@@ -479,17 +514,69 @@ export function assistantsCommand(): Command {
       // Import registry service
       const { getGlobalRegistry } = await import('../registry');
 
-      const action = args.trim().toLowerCase();
+      const parts = splitArgs(args);
+      const action = parts[0]?.toLowerCase() ?? '';
+      const actionArgs = parts.slice(1);
       const registry = getGlobalRegistry();
+
+      const renderRegistryList = (listArgs: string[]) => {
+        const outputOptions = parseDisclosureOptions(listArgs);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
+
+        const assistants = registry.list();
+        const page = pageItems(assistants, outputOptions);
+        if (assistants.length === 0) {
+          context.emit('text', '\nNo assistants currently registered.\n');
+          context.emit('done');
+          return { handled: true };
+        }
+
+        if (outputOptions.json) {
+          context.emit('text', JSON.stringify({
+            assistants: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2));
+          context.emit('done');
+          return { handled: true };
+        }
+
+        let message = `\n**Registered Assistants** (${page.shown}/${page.total})\n\n`;
+        for (const entry of page.items) {
+          const state = entry.status.state;
+          const stateIcon = state === 'idle' ? '●' :
+            state === 'processing' ? '◐' :
+            state === 'error' ? '✗' :
+            state === 'offline' ? '○' : '◌';
+          message += `${stateIcon} **${truncateText(entry.name, outputOptions.verbose ? 80 : 40)}** (${entry.type}) `;
+          message += `${entry.id.slice(0, 16)}...`;
+          message += ` | ${state} | tools ${entry.capabilities.tools.length} | skills ${entry.capabilities.skills.length}`;
+          message += ` | load ${entry.load.activeTasks}/${entry.load.queuedTasks}\n`;
+          if (entry.status.currentTask) {
+            message += `   task: ${truncateText(entry.status.currentTask, outputOptions.verbose ? 160 : 72)}\n`;
+          }
+        }
+        message += disclosureHint(outputOptions, page.total, page.shown, '/registry status');
+        context.emit('text', message);
+        context.emit('done');
+        return { handled: true };
+      };
 
       // /registry help
       if (action === 'help') {
         let message = '\n## Registry Commands\n\n';
         message += '/registry                         List all registered assistants\n';
-        message += '/registry list                    List all registered assistants\n';
+        message += '/registry list [flags]            List all registered assistants\n';
         message += '/registry status                  Show registry statistics\n';
         message += '/registry cleanup                 Remove stale/offline assistants\n';
         message += '/registry help                    Show this help\n';
+        message += '\nList flags: --limit <n> --cursor <n> --verbose --json\n';
         context.emit('text', message);
         context.emit('done');
         return { handled: true };
@@ -497,36 +584,7 @@ export function assistantsCommand(): Command {
 
       // /assistants list - Show all assistants
       if (action === 'list') {
-        const assistants = registry.list();
-        if (assistants.length === 0) {
-          context.emit('text', '\nNo assistants currently registered.\n');
-          context.emit('done');
-          return { handled: true };
-        }
-
-        let message = '\n**Registered Assistants**\n\n';
-        for (const entry of assistants) {
-          const state = entry.status.state;
-          const stateIcon = state === 'idle' ? '●' :
-            state === 'processing' ? '◐' :
-            state === 'error' ? '✗' :
-            state === 'offline' ? '○' : '◌';
-          const stateColor = state === 'idle' ? 'green' :
-            state === 'processing' ? 'yellow' :
-            state === 'error' ? 'red' : 'gray';
-
-          message += `${stateIcon} **${entry.name}** (${entry.type})\n`;
-          message += `   ID: ${entry.id.slice(0, 16)}...\n`;
-          message += `   State: ${state}\n`;
-          if (entry.status.currentTask) {
-            message += `   Task: ${entry.status.currentTask}\n`;
-          }
-          message += `   Tools: ${entry.capabilities.tools.length} | Skills: ${entry.capabilities.skills.length}\n`;
-          message += `   Load: ${entry.load.activeTasks} active, ${entry.load.queuedTasks} queued\n\n`;
-        }
-        context.emit('text', message);
-        context.emit('done');
-        return { handled: true };
+        return renderRegistryList(actionArgs);
       }
 
       // /assistants status - Show registry stats
@@ -574,31 +632,7 @@ export function assistantsCommand(): Command {
 
       // /registry with no args - show list
       if (!action) {
-        // Fall through to list
-        const assistantsList = registry.list();
-        if (assistantsList.length === 0) {
-          context.emit('text', '\nNo assistants currently registered.\n');
-        } else {
-          let message = '\n**Registered Assistants**\n\n';
-          for (const entry of assistantsList) {
-            const state = entry.status.state;
-            const stateIcon = state === 'idle' ? '●' :
-              state === 'processing' ? '◐' :
-              state === 'error' ? '✗' :
-              state === 'offline' ? '○' : '◌';
-            message += `${stateIcon} **${entry.name}** (${entry.type})\n`;
-            message += `   ID: ${entry.id.slice(0, 16)}...\n`;
-            message += `   State: ${state}\n`;
-            if (entry.status.currentTask) {
-              message += `   Task: ${entry.status.currentTask}\n`;
-            }
-            message += `   Tools: ${entry.capabilities.tools.length} | Skills: ${entry.capabilities.skills.length}\n`;
-            message += `   Load: ${entry.load.activeTasks} active, ${entry.load.queuedTasks} queued\n\n`;
-          }
-          context.emit('text', message);
-        }
-        context.emit('done');
-        return { handled: true };
+        return renderRegistryList([]);
       }
 
       // Unknown subcommand

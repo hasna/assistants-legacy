@@ -61,7 +61,7 @@ import {
 import { CommandLoader, CommandExecutor, BuiltinCommands, type TokenUsage, type CommandContext, type CommandResult } from '../commands';
 import { createLLMClient, type AISDKExecutableTool, type LLMClient } from '../llm/client';
 import { loadConfig, loadSystemPrompt, ensureConfigDir, getConfigDir } from '../config';
-import { getDatabase, getDatabasePath, closeDatabase } from '../database';
+import { getDatabase, closeDatabase } from '../database';
 import { backupIfNeeded } from '../database/backup';
 import { migrateIfNeeded } from '../database/migrate';
 import {
@@ -362,14 +362,6 @@ export class AssistantLoop {
 
     // Initialize the unified SQLite database (creates ~/.hasna/assistants/assistants.db on first run)
     const db = getDatabase();
-    // Ensure cloud feedback table is initialized (best-effort, fire-and-forget)
-    import('@hasna/cloud').then(({ SqliteAdapter, ensureFeedbackTable }) => {
-      try {
-        const adapter = new SqliteAdapter(getDatabasePath());
-        ensureFeedbackTable(adapter);
-        adapter.close();
-      } catch { /* optional */ }
-    }).catch(() => { /* cloud integration is not required */ });
     // Run one-time migration from old stores if needed
     migrateIfNeeded(db, this.storageDir);
     // Create daily backup if none exists for today

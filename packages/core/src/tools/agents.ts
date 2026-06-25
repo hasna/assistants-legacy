@@ -10,6 +10,7 @@ import type { ToolExecutor, ToolRegistry } from './registry';
 import type { SubassistantManager, SubassistantConfig, SubassistantJob, SubassistantInfo } from '../agent/subagent-manager';
 import type { AssistantManager } from '../identity';
 import { getAgentDefinition, loadAgentDefinitions, type AgentDefinition } from '../agents';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -93,6 +94,22 @@ export const assistantListTool: Tool = {
         type: 'boolean',
         description: 'Include async subassistant jobs (default: true)',
       },
+      limit: {
+        type: 'number',
+        description: 'Maximum rows per section to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset applied to each listed section',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer task and description text',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all rows without compact truncation',
+      },
     },
     required: [],
   },
@@ -145,6 +162,14 @@ export const assistantJobStatusTool: Tool = {
         type: 'number',
         description: 'Max wait time in milliseconds (default: 30000)',
       },
+      full: {
+        type: 'boolean',
+        description: 'Return full result/error text instead of compact previews',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Alias for full result/error text',
+      },
     },
     required: ['jobId'],
   },
@@ -176,6 +201,14 @@ export const subagentHistoryTool: Tool = {
       id: {
         type: 'string',
         description: 'Get a specific subagent entry by ID (ignores other filters)',
+      },
+      full: {
+        type: 'boolean',
+        description: 'With id: return the full audit entry including tool calls and result',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer task/result text in compact history',
       },
     },
     required: [],
@@ -352,6 +385,8 @@ export function createAssistantToolExecutors(
 
       const includeActive = input.includeActive !== false;
       const includeJobs = input.includeJobs !== false;
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
 
       // Get assistants
       const assistants = assistantManager?.listAssistants() ?? [];
@@ -359,20 +394,27 @@ export function createAssistantToolExecutors(
 
       // Also load file-based agent definitions
       const agentDefs = loadAgentDefinitions(context.getCwd());
+      const maxSectionTotal = Math.max(assistants.length, agentDefs.length, manager?.listActive().length ?? 0, manager?.listJobs().length ?? 0);
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(maxSectionTotal, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const assistantPage = pageItems(assistants, { limit, cursor });
+      const agentDefPage = pageItems(agentDefs, { limit, cursor });
 
       const response: AssistantListResponse = {
-        assistants: assistants.map((a) => ({
+        assistants: assistantPage.items.map((a) => ({
           id: a.id,
-          name: a.name,
-          description: a.description,
+          name: truncateText(a.name, verbose ? 120 : 56),
+          description: a.description ? truncateText(a.description, verbose ? 200 : 80) : undefined,
           isActive: a.id === activeAssistantId,
         })),
         agentDefinitions: agentDefs.length > 0
-          ? agentDefs.map((d) => ({
-              name: d.name,
-              description: d.description,
+          ? agentDefPage.items.map((d) => ({
+              name: truncateText(d.name, verbose ? 120 : 56),
+              description: truncateText(d.description, verbose ? 200 : 80),
               scope: d.scope,
-              tools: d.tools,
+              tools: full ? d.tools : d.tools?.slice(0, 20),
             }))
           : undefined,
         activeSubassistants: [],
@@ -382,9 +424,10 @@ export function createAssistantToolExecutors(
       if (manager) {
         if (includeActive) {
           const now = Date.now();
-          response.activeSubassistants = manager.listActive().map((info) => ({
+          const activePage = pageItems(manager.listActive(), { limit, cursor });
+          response.activeSubassistants = activePage.items.map((info) => ({
             id: info.id,
-            task: info.task.slice(0, 100) + (info.task.length > 100 ? '...' : ''),
+            task: truncateText(info.task, verbose ? 200 : 100),
             status: info.status,
             depth: info.depth,
             runningForMs: now - info.startedAt,
@@ -392,9 +435,10 @@ export function createAssistantToolExecutors(
         }
 
         if (includeJobs) {
-          response.asyncJobs = manager.listJobs().map((job) => ({
+          const jobPage = pageItems(manager.listJobs(), { limit, cursor });
+          response.asyncJobs = jobPage.items.map((job) => ({
             id: job.id,
-            task: job.config.task.slice(0, 100) + (job.config.task.length > 100 ? '...' : ''),
+            task: truncateText(job.config.task, verbose ? 200 : 100),
             status: job.status,
             startedAt: job.startedAt,
             completedAt: job.completedAt,
@@ -402,7 +446,20 @@ export function createAssistantToolExecutors(
         }
       }
 
-      return JSON.stringify(response, null, 2);
+      return JSON.stringify({
+        ...response,
+        pagination: {
+          limit,
+          cursor,
+          totals: {
+            assistants: assistants.length,
+            agentDefinitions: agentDefs.length,
+            activeSubassistants: manager?.listActive().length ?? 0,
+            asyncJobs: manager?.listJobs().length ?? 0,
+          },
+        },
+        hint: full ? undefined : 'Pass cursor for more rows in each section, verbose=true for longer text, or full=true for all rows.',
+      }, null, 2);
     },
 
     assistant_delegate: async (input: Record<string, unknown>): Promise<string> => {
@@ -572,7 +629,24 @@ export function createAssistantToolExecutors(
         if (!entry) {
           return JSON.stringify({ error: `No subagent entry found with ID: ${input.id}` }, null, 2);
         }
-        return JSON.stringify(entry, null, 2);
+        if (input.full === true) {
+          return JSON.stringify(entry, null, 2);
+        }
+        return JSON.stringify({
+          id: entry.id,
+          parentSessionId: entry.parentSessionId,
+          task: truncateText(entry.task, input.verbose === true ? 240 : 120),
+          status: entry.status,
+          turns: entry.turns,
+          toolCallCount: entry.toolCalls.length,
+          duration: entry.duration,
+          startedAt: entry.startedAt,
+          completedAt: entry.completedAt,
+          result: entry.result ? truncateText(entry.result, input.verbose === true ? 400 : 200) : undefined,
+          errors: (entry.errors ?? []).map((error) => truncateText(error, input.verbose === true ? 240 : 120)),
+          compact: true,
+          hint: 'Pass full=true with this id for full tool calls and result.',
+        }, null, 2);
       }
 
       // Query with filters
@@ -594,29 +668,32 @@ export function createAssistantToolExecutors(
       });
 
       // Return a summary view (omit full tool call details for brevity)
+      const verbose = input.verbose === true || input.full === true;
       const summary = entries.map((e) => ({
         id: e.id,
         parentSessionId: e.parentSessionId,
-        task: e.task.length > 120 ? e.task.slice(0, 117) + '...' : e.task,
+        task: truncateText(e.task, verbose ? 240 : 120),
         status: e.status,
         turns: e.turns,
         toolCallCount: e.toolCalls.length,
         duration: e.duration,
         startedAt: e.startedAt,
         completedAt: e.completedAt,
-        result: e.result
-          ? e.result.length > 200
-            ? e.result.slice(0, 197) + '...'
-            : e.result
-          : undefined,
-        errors: e.errors,
+        result: e.result ? truncateText(e.result, verbose ? 400 : 200) : undefined,
+        errors: (e.errors ?? []).map((error) => truncateText(error, verbose ? 240 : 120)),
       }));
 
-      return JSON.stringify({ count: summary.length, entries: summary }, null, 2);
+      return JSON.stringify({
+        count: summary.length,
+        limit,
+        entries: summary,
+        hint: 'Pass id for one entry, or id plus full=true for full tool calls and result.',
+      }, null, 2);
     },
 
     assistant_job_status: async (input: Record<string, unknown>): Promise<string> => {
       const manager = context.getSubassistantManager();
+      const full = input.full === true || input.verbose === true;
 
       if (!manager) {
         const response: AssistantJobStatusResponse = {
@@ -658,14 +735,18 @@ export function createAssistantToolExecutors(
           found: true,
           jobId,
           status: job.status,
-          result: result?.result,
-          error: result?.error,
+          result: full ? result?.result : result?.result ? truncateText(result.result, 400) : undefined,
+          error: full ? result?.error : result?.error ? truncateText(result.error, 240) : undefined,
           turns: result?.turns,
           toolCalls: result?.toolCalls,
           startedAt: job.startedAt,
           completedAt: job.completedAt,
         };
-        return JSON.stringify(response, null, 2);
+        return JSON.stringify({
+          ...response,
+          compact: !full,
+          hint: full ? undefined : 'Pass full=true for complete result/error text.',
+        }, null, 2);
       } else {
         // Just check status
         const job = manager.getJobStatus(jobId);
@@ -683,14 +764,18 @@ export function createAssistantToolExecutors(
           found: true,
           jobId,
           status: job.status,
-          result: job.result?.result,
-          error: job.result?.error,
+          result: full ? job.result?.result : job.result?.result ? truncateText(job.result.result, 400) : undefined,
+          error: full ? job.result?.error : job.result?.error ? truncateText(job.result.error, 240) : undefined,
           turns: job.result?.turns,
           toolCalls: job.result?.toolCalls,
           startedAt: job.startedAt,
           completedAt: job.completedAt,
         };
-        return JSON.stringify(response, null, 2);
+        return JSON.stringify({
+          ...response,
+          compact: !full,
+          hint: full ? undefined : 'Pass full=true for complete result/error text.',
+        }, null, 2);
       }
     },
   };

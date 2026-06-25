@@ -54,7 +54,6 @@ const external = [
   '@hasna/testers',
   '@hasna/telephony',
   // '@hasna/todos' — has static imports in core, must be bundled
-  '@hasna/wallets',
 
   // Playwright optional peer deps (not installed)
   'chromium-bidi',

@@ -17,15 +17,46 @@ npm install -g @hasna/assistants
 assistants --help
 ```
 
-## Cloud Sync
+List, search, status, and history commands are compact by default so they stay safe for agent terminals. Use `--limit <n>` and `--cursor <n>` to page through rows, `--verbose` for wider previews, `--json` for machine-readable output, and the matching `show`/`read`/`get` command or `--full` when you need complete detail.
 
-This package supports cloud sync via `@hasna/cloud`:
+Examples:
 
 ```bash
-cloud setup
-cloud sync push --service assistants
-cloud sync pull --service assistants
+assistants sessions list --limit 10
+assistants sessions <session-id> --verbose
+assistants sessions <session-id> --full
+assistants search "auth bug" --limit 5 --json
 ```
+
+## Storage
+
+This package stores assistant data locally under the Hasna data directory. It does not require the shared cloud package.
+
+Programmatic storage helpers are exported from `@hasna/assistants/storage`:
+
+```ts
+import { getAssistantsStorageStatus, storagePush } from "@hasna/assistants/storage";
+
+console.log(getAssistantsStorageStatus().local.dbPath);
+await storagePush();
+```
+
+The CLI exposes the same surface:
+
+```bash
+assistants storage status --json
+assistants storage push
+assistants storage pull
+assistants storage sync
+```
+
+Remote sync is optional and uses a package-owned SQLite snapshot in S3:
+
+- `HASNA_ASSISTANTS_STORAGE_MODE=local|remote|hybrid`
+- `HASNA_ASSISTANTS_S3_BUCKET=hasna-xyz-opensource-assistants-prod`
+- `HASNA_ASSISTANTS_S3_PREFIX=assistants/`
+- `HASNA_ASSISTANTS_AWS_REGION=us-east-1`
+- `HASNA_ASSISTANTS_DB_PATH=/path/to/assistants.db`
 
 ## Data Directory
 

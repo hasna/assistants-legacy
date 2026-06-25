@@ -23,7 +23,7 @@ const stubUnresolvablePlugin = {
       path: 'react-devtools-core',
       namespace: 'stub',
     }));
-    build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs|telephony)$/ }, (args: { path: string }) => ({
+    build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|logs|telephony)$/ }, (args: { path: string }) => ({
       path: args.path,
       namespace: 'stub',
     }));

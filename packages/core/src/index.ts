@@ -31,6 +31,7 @@ export type { Runtime, FileHandle, SpawnOptions, SpawnResult, ShellResult, Shell
 export { getDatabase, closeDatabase, getDatabasePath, getSchemaVersion, resetDatabaseSingleton } from './database';
 export { backupIfNeeded, createBackup, rotateBackups, listBackups } from './database/backup';
 export { migrateIfNeeded, isMigrated } from './database/migrate';
+export * from './storage';
 
 // Assistant
 export { AssistantLoop } from './agent/loop';

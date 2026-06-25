@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { parseMentions, resolveNameToKnown } from '../channels/mentions';
 
 /**
@@ -192,16 +192,35 @@ export function messagesCommand(): Command {
         }
 
         const unreadOnly = parts.includes('--unread') || parts.includes('-u');
-        const limitArg = parts.find((p) => p.match(/^\d+$/));
-        const limit = limitArg ? parseInt(limitArg, 10) : 20;
+        const optionParts: string[] = [];
+        for (const part of parts.slice(1)) {
+          if (part === '--unread' || part === '-u') continue;
+          if (/^\d+$/.test(part)) optionParts.push('--limit', part);
+          else optionParts.push(part);
+        }
+        const outputOptions = parseDisclosureOptions(optionParts);
+        if (outputOptions.error) {
+          context.emit('text', `${outputOptions.error}\n`);
+          context.emit('done');
+          return { handled: true };
+        }
 
         try {
-          const messages = await manager.list({ limit, unreadOnly });
+          const messages = await manager.list({ limit: Math.min(100, outputOptions.cursor + outputOptions.limit), unreadOnly });
+          const page = pageItems(messages, outputOptions);
           if (messages.length === 0) {
             context.emit('text', unreadOnly ? 'No unread messages.\n' : 'Inbox is empty.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              messages: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `\n## Messages (${messages.length} message${messages.length === 1 ? '' : 's'})\n\n`);
-            for (const msg of messages) {
+            context.emit('text', `\n## Messages (${page.shown}/${page.total} message${page.total === 1 ? '' : 's'})\n\n`);
+            for (const msg of page.items) {
               const statusIcon = msg.status === 'read' ? '📖' : msg.status === 'injected' ? '👁️' : '📬';
               const priorityIcon =
                 msg.priority === 'urgent'
@@ -211,13 +230,14 @@ export function messagesCommand(): Command {
                   : '';
               const date = new Date(msg.createdAt).toLocaleDateString();
               context.emit('text', `${statusIcon}${priorityIcon} **${msg.id}**\n`);
-              context.emit('text', `   From: ${msg.fromAssistantName}\n`);
+              context.emit('text', `   From: ${truncateText(msg.fromAssistantName, 48)}\n`);
               if (msg.subject) {
-                context.emit('text', `   Subject: ${msg.subject}\n`);
+                context.emit('text', `   Subject: ${truncateText(msg.subject, outputOptions.verbose ? 120 : 60)}\n`);
               }
-              context.emit('text', `   Preview: ${msg.preview}\n`);
+              context.emit('text', `   Preview: ${truncateText(msg.preview, outputOptions.verbose ? 180 : 80)}\n`);
               context.emit('text', `   Date: ${date}${msg.replyCount > 0 ? ` | ${msg.replyCount} replies` : ''}\n\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/messages read <id>'));
           }
         } catch (error) {
           context.emit('text', `Error listing messages: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -235,22 +255,38 @@ export function messagesCommand(): Command {
         }
 
         try {
+          const outputOptions = parseDisclosureOptions(parts.slice(1));
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const threads = await manager.listThreads();
+          const page = pageItems(threads, outputOptions);
           if (threads.length === 0) {
             context.emit('text', 'No conversation threads found.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              threads: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `\n## Threads (${threads.length})\n\n`);
-            for (const thread of threads) {
-              const participants = thread.participants.map((p) => p.assistantName).join(', ');
+            context.emit('text', `\n## Threads (${page.shown}/${page.total})\n\n`);
+            for (const thread of page.items) {
+              const participants = truncateText(thread.participants.map((p) => p.assistantName).join(', '), outputOptions.verbose ? 160 : 80);
               const updated = new Date(thread.updatedAt).toLocaleDateString();
               context.emit('text', `**${thread.threadId}**\n`);
               if (thread.subject) {
-                context.emit('text', `   Subject: ${thread.subject}\n`);
+                context.emit('text', `   Subject: ${truncateText(thread.subject, outputOptions.verbose ? 120 : 60)}\n`);
               }
               context.emit('text', `   Participants: ${participants}\n`);
               context.emit('text', `   Messages: ${thread.messageCount} (${thread.unreadCount} unread)\n`);
               context.emit('text', `   Updated: ${updated}\n\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/messages thread <id>'));
           }
         } catch (error) {
           context.emit('text', `Error listing threads: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -275,9 +311,18 @@ export function messagesCommand(): Command {
         }
 
         try {
+          const outputOptions = parseDisclosureOptions(parts.slice(2));
+          const full = outputOptions.args.includes('--full');
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const message = await manager.read(messageId);
           if (!message) {
             context.emit('text', `Message ${messageId} not found.\n`);
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify(message, null, 2));
           } else {
             context.emit('text', `\n## Message: ${message.id}\n\n`);
             context.emit('text', `**From:** ${message.fromAssistantName} (${message.fromAssistantId})\n`);
@@ -295,7 +340,10 @@ export function messagesCommand(): Command {
               context.emit('text', `**In reply to:** ${message.parentId}\n`);
             }
             context.emit('text', '\n---\n\n');
-            context.emit('text', message.body + '\n');
+            context.emit('text', `${full ? message.body : truncateText(message.body, outputOptions.verbose ? 1000 : 400)}\n`);
+            if (!full) {
+              context.emit('text', '\nUse --verbose for a longer preview or --full for the full body.\n');
+            }
           }
         } catch (error) {
           context.emit('text', `Error reading message: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -320,22 +368,39 @@ export function messagesCommand(): Command {
         }
 
         try {
+          const outputOptions = parseDisclosureOptions(parts.slice(2));
+          const full = outputOptions.args.includes('--full');
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const messages = await manager.readThread(threadId);
+          const page = pageItems(messages, outputOptions);
           if (messages.length === 0) {
             context.emit('text', `Thread ${threadId} not found or empty.\n`);
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              messages: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
             context.emit('text', `\n## Thread: ${threadId}\n`);
-            context.emit('text', `**${messages.length} message(s)**\n\n`);
-            for (const msg of messages) {
+            context.emit('text', `**${page.shown}/${page.total} message(s)**\n\n`);
+            for (const msg of page.items) {
               context.emit('text', '---\n');
               context.emit('text', `### From: ${msg.fromAssistantName} → ${msg.toAssistantName}\n`);
               if (msg.subject) {
-                context.emit('text', `**Subject:** ${msg.subject}\n`);
+                context.emit('text', `**Subject:** ${truncateText(msg.subject, outputOptions.verbose ? 120 : 60)}\n`);
               }
               context.emit('text', `**Sent:** ${new Date(msg.createdAt).toLocaleString()}\n\n`);
-              context.emit('text', msg.body + '\n');
+              context.emit('text', `${full ? msg.body : truncateText(msg.body, outputOptions.verbose ? 1000 : 300)}\n`);
               context.emit('text', `*ID: ${msg.id}*\n\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/messages read <id> --full'));
           }
         } catch (error) {
           context.emit('text', `Error reading thread: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -426,16 +491,32 @@ export function messagesCommand(): Command {
         }
 
         try {
+          const outputOptions = parseDisclosureOptions(parts.slice(1));
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const assistants = await manager.listAssistants();
+          const page = pageItems(assistants, outputOptions);
           if (assistants.length === 0) {
             context.emit('text', 'No other assistants found. Assistants appear here after sending or receiving messages.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              assistants: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `\n## Known Assistants (${assistants.length})\n\n`);
-            for (const assistant of assistants) {
+            context.emit('text', `\n## Known Assistants (${page.shown}/${page.total})\n\n`);
+            for (const assistant of page.items) {
               const lastSeen = new Date(assistant.lastSeen).toLocaleDateString();
-              context.emit('text', `- **${assistant.name}** (ID: ${assistant.id})\n`);
+              context.emit('text', `- **${truncateText(assistant.name, outputOptions.verbose ? 80 : 40)}** (ID: ${assistant.id})\n`);
               context.emit('text', `  Last seen: ${lastSeen}\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/messages send'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);

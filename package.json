@@ -1,10 +1,16 @@
 {
   "name": "@hasna/assistants",
-  "version": "1.1.147",
+  "version": "1.1.148",
   "description": "Personal AI assistant that runs in your terminal — powered by the AI SDK",
   "type": "module",
   "bin": {
     "assistants": "dist/index.js"
+  },
+  "exports": {
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.js"
+    }
   },
   "files": [
     "dist",
@@ -69,7 +75,10 @@
     "packages/*"
   ],
   "dependencies": {
-    "@hasna/cloud": "^0.1.24",
+    "@aws-sdk/client-s3": "^3.985.0",
+    "@hasna/logs": "^0.3.24",
+    "@hasna/skills": "^0.1.41",
+    "@hasna/todos": "^0.11.52",
     "ink": "7.0.3"
   }
 }

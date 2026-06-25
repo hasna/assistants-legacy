@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 import { parseMentions, resolveNameToKnown } from '../channels/mentions';
 
 export function channelsCommand(): Command {
@@ -10,8 +10,8 @@ export function channelsCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim();
-      const [subcommand, ...rest] = trimmed.split(/\s+/);
+      const parts = splitArgs(args);
+      const [subcommand, ...rest] = parts;
       const subArgs = rest.join(' ');
 
       // /channels (no args) or /channels ui → open interactive panel
@@ -30,19 +30,35 @@ export function channelsCommand(): Command {
       // /channels list
       if (subcommand === 'list') {
         try {
+          const outputOptions = parseDisclosureOptions(rest);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const channels = manager.listChannels();
+          const page = pageItems(channels, outputOptions);
           if (channels.length === 0) {
             context.emit('text', 'No channels exist. Use /channels create <name> to create one.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              channels: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `Channels (${channels.length}):\n\n`);
-            for (const ch of channels) {
+            context.emit('text', `Channels (${page.shown}/${page.total}):\n\n`);
+            for (const ch of page.items) {
               const unread = ch.unreadCount > 0 ? ` (${ch.unreadCount} unread)` : '';
-              context.emit('text', `  #${ch.name}${unread}\n`);
-              if (ch.description) {
-                context.emit('text', `    ${ch.description}\n`);
+              context.emit('text', `  #${truncateText(ch.name, outputOptions.verbose ? 80 : 40)}${unread}\n`);
+              if (ch.description && outputOptions.verbose) {
+                context.emit('text', `    ${truncateText(ch.description, 120)}\n`);
               }
-              context.emit('text', `    Members: ${ch.memberCount} | Last: ${ch.lastMessagePreview || 'no messages'}\n`);
+              context.emit('text', `    Members: ${ch.memberCount} | Last: ${truncateText(ch.lastMessagePreview || 'no messages', outputOptions.verbose ? 120 : 60)}\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/channels read <name>'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);

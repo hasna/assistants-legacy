@@ -132,18 +132,6 @@ export class FeedbackTool {
       const entry = buildEntry(input, { source: (input.source as string) || 'tool' });
       const { path } = saveFeedbackEntry(entry, typeof input.cwd === 'string' ? input.cwd : undefined);
 
-      // Also send to cloud endpoint (best-effort, never throws)
-      try {
-        const { sendFeedback } = await import('@hasna/cloud');
-        await sendFeedback({
-          service: 'open-assistants',
-          version: process.env.ASSISTANTS_VERSION,
-          message: `[${entry.type}] ${entry.title}: ${entry.description}`,
-        });
-      } catch {
-        // Cloud send is optional — local save already succeeded
-      }
-
       return `Feedback saved locally.\nID: ${entry.id}\nPath: ${path}`;
     } catch (error) {
       return `Error: ${error instanceof Error ? error.message : String(error)}`;

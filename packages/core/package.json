@@ -82,7 +82,6 @@
     "@hasna/sessions": "^0.11.6",
     "@hasna/skills": "^0.1.8",
     "@hasna/todos": "^0.9.23",
-    "@hasna/wallets": "^0.1.1",
     "ai": "^6.0.191",
     "ajv": "^8.17.1",
     "fast-glob": "^3.3.3",

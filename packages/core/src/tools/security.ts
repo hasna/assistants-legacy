@@ -8,6 +8,7 @@ import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import type { SecurityLogger } from '../security/logger';
 import type { Severity } from '../security/types';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -44,7 +45,15 @@ export const securityLogListTool: Tool = {
       },
       limit: {
         type: 'number',
-        description: 'Maximum number of events to return (default: 50)',
+        description: 'Maximum number of events to return (default: 20, max 100)',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer reason, command, and path text',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return full event text without compact truncation',
       },
     },
     required: [],
@@ -93,7 +102,11 @@ export function createSecurityToolExecutors(
     security_log_list: async (input: Record<string, unknown>): Promise<string> => {
       const logger = context.getSecurityLogger();
       const sessionOnly = input.sessionOnly !== false; // Default true
-      const limit = typeof input.limit === 'number' ? Math.min(100, Math.max(1, input.limit)) : 50;
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limit = typeof input.limit === 'number'
+        ? Math.min(MAX_COMPACT_LIMIT, Math.max(1, input.limit))
+        : DEFAULT_COMPACT_LIMIT;
 
       // Build filter
       type EventType = 'blocked_command' | 'path_violation' | 'validation_failure';
@@ -125,9 +138,9 @@ export function createSecurityToolExecutors(
         eventType: event.eventType,
         severity: event.severity,
         tool: event.details.tool || null,
-        reason: event.details.reason,
-        command: event.details.command || null,
-        path: event.details.path || null,
+        reason: full ? event.details.reason : truncateText(event.details.reason, verbose ? 200 : 96),
+        command: full ? event.details.command || null : event.details.command ? truncateText(event.details.command, verbose ? 240 : 96) : null,
+        path: full ? event.details.path || null : event.details.path ? truncateText(event.details.path, verbose ? 200 : 96) : null,
       }));
 
       return JSON.stringify({
@@ -136,6 +149,7 @@ export function createSecurityToolExecutors(
         showing: formattedEvents.length,
         sessionOnly,
         events: formattedEvents,
+        hint: full ? undefined : 'Pass verbose=true for longer text or full=true for full event fields.',
       });
     },
 

@@ -20,6 +20,7 @@ import {
   type PlanStepStatus,
 } from '../projects/store';
 import { generateId } from '@hasna/assistants-shared';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ==================== PROJECT TOOLS ====================
 
@@ -28,10 +29,15 @@ import { generateId } from '@hasna/assistants-shared';
  */
 export const projectListTool: Tool = {
   name: 'project_list',
-  description: 'List all projects in the current working directory. Returns project names, descriptions, and summary statistics.',
+  description: 'List projects compactly by default. Use limit/cursor for pagination and verbose or full for more detail.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: { type: 'number', description: 'Maximum projects to return (default 20, max 100)' },
+      cursor: { type: 'number', description: 'Zero-based offset for pagination' },
+      verbose: { type: 'boolean', description: 'Include longer project names and descriptions' },
+      full: { type: 'boolean', description: 'Return all projects without compact truncation' },
+    },
     required: [],
   },
 };
@@ -52,6 +58,22 @@ export const projectGetTool: Tool = {
       id: {
         type: 'string',
         description: 'Project ID to retrieve (alternative to name)',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum plans to show in the project detail (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based plan offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer plan titles',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all project plan summaries',
       },
     },
     required: [],
@@ -139,6 +161,22 @@ export const planListTool: Tool = {
         type: 'string',
         description: 'Project ID (optional, uses most recent project if not specified)',
       },
+      limit: {
+        type: 'number',
+        description: 'Maximum plans to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer plan titles',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all plans without compact truncation',
+      },
     },
     required: [],
   },
@@ -160,6 +198,22 @@ export const planGetTool: Tool = {
       planId: {
         type: 'string',
         description: 'Plan ID to retrieve',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum steps to show (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based step offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer step text',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all plan steps without compact truncation',
       },
     },
     required: ['projectId', 'planId'],
@@ -337,36 +391,77 @@ function formatProjectSummary(project: ProjectRecord): string {
   return `- **${project.name}** (ID: ${project.id}) - ${planCount} plan${planCount !== 1 ? 's' : ''}, ${contextCount} context item${contextCount !== 1 ? 's' : ''}`;
 }
 
-function formatPlan(plan: ProjectPlan): string {
+function getCompactOptions(input: Record<string, unknown>, total: number): {
+  full: boolean;
+  verbose: boolean;
+  limit: number;
+  cursor: number;
+} {
+  const full = input.full === true;
+  const verbose = full || input.verbose === true;
+  const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+  const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+  return {
+    full,
+    verbose,
+    limit: full ? Math.max(total, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT),
+    cursor: Math.max(Math.floor(cursorInput), 0),
+  };
+}
+
+function compactHint(shown: number, total: number, nextCursor: number | null, detail: string): string {
+  if (nextCursor !== null) {
+    return `Showing ${shown} of ${total}. Pass cursor=${nextCursor} for more, or full=true for all ${detail}.`;
+  }
+  if (total > shown) {
+    return `Showing ${shown} of ${total}. Pass full=true for all ${detail}.`;
+  }
+  return `Pass verbose=true for longer text, or full=true for all ${detail}.`;
+}
+
+function formatPlan(plan: ProjectPlan, options?: { limit: number; cursor: number; verbose: boolean; full: boolean }): string {
   const lines: string[] = [];
   lines.push(`## ${plan.title}`);
   lines.push(`**ID:** ${plan.id}`);
   lines.push(`**Created:** ${new Date(plan.createdAt).toLocaleString()}`);
   lines.push(`**Updated:** ${new Date(plan.updatedAt).toLocaleString()}`);
   lines.push('');
-  lines.push('### Steps');
+  const stepPage = options ? pageItems(plan.steps, options) : {
+    items: plan.steps,
+    total: plan.steps.length,
+    shown: plan.steps.length,
+    nextCursor: null,
+  };
+  lines.push(`### Steps (${stepPage.shown}/${stepPage.total})`);
   if (plan.steps.length === 0) {
     lines.push('_No steps yet_');
   } else {
-    for (const step of plan.steps) {
+    for (const step of stepPage.items) {
       const statusEmoji = {
         todo: '⬜',
         doing: '🔄',
         done: '✅',
         blocked: '🚫',
       }[step.status] || '⬜';
-      lines.push(`${statusEmoji} [${step.status}] ${step.text} (ID: ${step.id})`);
+      const text = options && !options.full
+        ? truncateText(step.text, options.verbose ? 160 : 80)
+        : step.text;
+      lines.push(`${statusEmoji} [${step.status}] ${text} (ID: ${step.id})`);
+    }
+    if (options && !options.full) {
+      lines.push('');
+      lines.push(compactHint(stepPage.shown, stepPage.total, stepPage.nextCursor, 'steps'));
     }
   }
   return lines.join('\n');
 }
 
-function formatPlanSummary(plan: ProjectPlan): string {
+function formatPlanSummary(plan: ProjectPlan, verbose = false): string {
   const total = plan.steps.length;
   const done = plan.steps.filter((s) => s.status === 'done').length;
   const doing = plan.steps.filter((s) => s.status === 'doing').length;
   const blocked = plan.steps.filter((s) => s.status === 'blocked').length;
-  return `- **${plan.title}** (ID: ${plan.id}) - ${done}/${total} done${doing > 0 ? `, ${doing} in progress` : ''}${blocked > 0 ? `, ${blocked} blocked` : ''}`;
+  return `- **${truncateText(plan.title, verbose ? 140 : 72)}** (ID: ${plan.id}) - ${done}/${total} done${doing > 0 ? `, ${doing} in progress` : ''}${blocked > 0 ? `, ${blocked} blocked` : ''}`;
 }
 
 function isValidStepStatus(status: unknown): status is PlanStepStatus {
@@ -391,7 +486,7 @@ export function createProjectToolExecutors(
   return {
     // ==================== PROJECT EXECUTORS ====================
 
-    project_list: async () => {
+    project_list: async (input: Record<string, unknown> = {}) => {
       const { cwd } = getContext();
       try {
         const projects = await listProjects(cwd);
@@ -399,11 +494,22 @@ export function createProjectToolExecutors(
           return 'No projects found. Use `project_create` to create a new project.';
         }
 
+        const options = getCompactOptions(input, projects.length);
+        const page = pageItems(projects, options);
         const lines: string[] = [];
-        lines.push(`## Projects (${projects.length})`);
+        lines.push(`## Projects (${page.shown}/${page.total})`);
         lines.push('');
-        for (const project of projects) {
-          lines.push(formatProjectSummary(project));
+        for (const project of page.items) {
+          const planCount = project.plans.length;
+          const contextCount = project.context.length;
+          const description = input.verbose === true && project.description
+            ? ` - ${truncateText(project.description, 140)}`
+            : '';
+          lines.push(`- **${truncateText(project.name, options.verbose ? 140 : 72)}** (ID: ${project.id}) - ${planCount} plan${planCount !== 1 ? 's' : ''}, ${contextCount} context item${contextCount !== 1 ? 's' : ''}${description}`);
+        }
+        if (!options.full) {
+          lines.push('');
+          lines.push(compactHint(page.shown, page.total, page.nextCursor, 'projects'));
         }
         return lines.join('\n');
       } catch (error) {
@@ -436,10 +542,16 @@ export function createProjectToolExecutors(
         lines.push(formatProject(project));
 
         if (project.plans.length > 0) {
+          const options = getCompactOptions(input, project.plans.length);
+          const page = pageItems(project.plans, options);
           lines.push('');
-          lines.push('### Plans');
-          for (const plan of project.plans) {
-            lines.push(formatPlanSummary(plan));
+          lines.push(`### Plans (${page.shown}/${page.total})`);
+          for (const plan of page.items) {
+            lines.push(formatPlanSummary(plan, options.verbose));
+          }
+          if (!options.full) {
+            lines.push('');
+            lines.push(compactHint(page.shown, page.total, page.nextCursor, 'plans'));
           }
         }
 
@@ -564,11 +676,17 @@ export function createProjectToolExecutors(
           return `No plans found in project "${project.name}". Use \`plan_create\` to create a new plan.`;
         }
 
+        const options = getCompactOptions(input, project.plans.length);
+        const page = pageItems(project.plans, options);
         const lines: string[] = [];
-        lines.push(`## Plans for ${project.name} (${project.plans.length})`);
+        lines.push(`## Plans for ${project.name} (${page.shown}/${page.total})`);
         lines.push('');
-        for (const plan of project.plans) {
-          lines.push(formatPlanSummary(plan));
+        for (const plan of page.items) {
+          lines.push(formatPlanSummary(plan, options.verbose));
+        }
+        if (!options.full) {
+          lines.push('');
+          lines.push(compactHint(page.shown, page.total, page.nextCursor, 'plans'));
         }
         return lines.join('\n');
       } catch (error) {
@@ -599,7 +717,8 @@ export function createProjectToolExecutors(
           return `Plan not found: ${planId}`;
         }
 
-        return formatPlan(plan);
+        const options = getCompactOptions(input, plan.steps.length);
+        return formatPlan(plan, options);
       } catch (error) {
         return `Error getting plan: ${error instanceof Error ? error.message : String(error)}`;
       }

@@ -1,6 +1,7 @@
 import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import { ConnectorAutoRefreshManager, type ConnectorAutoRefreshSchedule } from '../connectors/auto-refresh';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 export const connectorAutoRefreshTool: Tool = {
   name: 'connector_autorefresh',
@@ -36,6 +37,22 @@ export const connectorAutoRefreshTool: Tool = {
       command: {
         type: 'string',
         description: 'Connector command to run (default: "auth refresh")',
+      },
+      limit: {
+        type: 'number',
+        description: 'For list: maximum entries to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'For list: zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'For list: include longer command fields',
+      },
+      full: {
+        type: 'boolean',
+        description: 'For list: return all entries without compact truncation',
       },
     },
     required: ['action'],
@@ -74,9 +91,27 @@ export function createConnectorAutoRefreshExecutor(): ToolExecutor {
     }
 
     if (action === 'list') {
+      const entries = manager.list();
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(entries.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(entries, { limit, cursor });
       return JSON.stringify({
-        count: manager.list().length,
-        entries: manager.list(),
+        count: entries.length,
+        shown: page.shown,
+        limit,
+        cursor,
+        nextCursor: page.nextCursor,
+        entries: full ? page.items : page.items.map((entry) => ({
+          ...entry,
+          command: entry.command ? truncateText(entry.command, verbose ? 160 : 72) : entry.command,
+        })),
+        hint: page.nextCursor !== null
+          ? `Pass cursor=${page.nextCursor} for more. Pass full=true for complete entries.`
+          : `Pass full=true for complete entries.`,
       }, null, 2);
     }
 

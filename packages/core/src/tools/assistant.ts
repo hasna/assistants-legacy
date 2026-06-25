@@ -9,6 +9,7 @@ import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from './registry';
 import type { AssistantManager } from '../identity';
 import { isSystemAssistantId } from '../identity/system-assistants';
+import { DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Types
@@ -24,10 +25,27 @@ export interface AssistantToolsContext {
 
 export const assistantListTool: Tool = {
   name: 'assistant_list',
-  description: 'List all configured assistants with their details (id, name, description, model, active status).',
+  description: 'List configured assistants compactly by default. Use limit/cursor for pagination and verbose or full for more detail.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum assistants to return (default 20, max 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Include longer descriptions in each row',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Return all assistants without compact truncation',
+      },
+    },
     required: [],
   },
 };
@@ -41,6 +59,14 @@ export const assistantGetTool: Tool = {
       id: {
         type: 'string',
         description: 'The assistant ID to retrieve',
+      },
+      full: {
+        type: 'boolean',
+        description: 'Include full system prompt additions and tool lists',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Alias for full detail output',
       },
     },
     required: ['id'],
@@ -204,7 +230,7 @@ export function createAssistantToolExecutors(
   context: AssistantToolsContext
 ): Record<string, ToolExecutor> {
   return {
-    assistant_list: async (): Promise<string> => {
+    assistant_list: async (input: Record<string, unknown> = {}): Promise<string> => {
       const manager = context.getAssistantManager();
       if (!manager) {
         return JSON.stringify({
@@ -215,11 +241,18 @@ export function createAssistantToolExecutors(
 
       const assistants = manager.listAssistants();
       const activeId = manager.getActiveId();
+      const full = input.full === true;
+      const verbose = full || input.verbose === true;
+      const limitInput = typeof input.limit === 'number' ? input.limit : DEFAULT_COMPACT_LIMIT;
+      const cursorInput = typeof input.cursor === 'number' ? input.cursor : 0;
+      const limit = full ? Math.max(assistants.length, 1) : Math.min(Math.max(Math.floor(limitInput), 1), MAX_COMPACT_LIMIT);
+      const cursor = Math.max(Math.floor(cursorInput), 0);
+      const page = pageItems(assistants, { limit, cursor });
 
-      const list = assistants.map((a) => ({
+      const list = page.items.map((a) => ({
         id: a.id,
-        name: a.name,
-        description: a.description || null,
+        name: truncateText(a.name, verbose ? 120 : 56),
+        description: a.description ? truncateText(a.description, verbose ? 240 : 80) : null,
         model: a.settings.model,
         backend: a.settings.backend || 'ai-sdk',
         isSystem: a.isSystem || false,
@@ -230,14 +263,22 @@ export function createAssistantToolExecutors(
 
       return JSON.stringify({
         success: true,
-        total: list.length,
+        total: assistants.length,
+        shown: list.length,
+        limit,
+        cursor,
+        nextCursor: page.nextCursor,
         activeId,
         assistants: list,
+        hint: page.nextCursor !== null
+          ? `Pass cursor=${page.nextCursor} for more. Pass full=true or assistant_get(id, full=true) for complete details.`
+          : `Pass full=true or assistant_get(id, full=true) for complete details.`,
       });
     },
 
     assistant_get: async (input: Record<string, unknown>): Promise<string> => {
       const id = input.id as string;
+      const full = input.full === true || input.verbose === true;
       if (!id) {
         return JSON.stringify({
           success: false,
@@ -276,14 +317,20 @@ export function createAssistantToolExecutors(
             model: assistant.settings.model,
             maxOutputTokens: assistant.settings.maxOutputTokens,
             temperature: assistant.settings.temperature,
-            systemPromptAddition: assistant.settings.systemPromptAddition,
-            enabledTools: assistant.settings.enabledTools,
-            disabledTools: assistant.settings.disabledTools,
+            systemPromptAddition: full
+              ? assistant.settings.systemPromptAddition
+              : assistant.settings.systemPromptAddition
+                ? truncateText(assistant.settings.systemPromptAddition, 240)
+                : undefined,
+            enabledTools: full ? assistant.settings.enabledTools : assistant.settings.enabledTools?.slice(0, 20),
+            disabledTools: full ? assistant.settings.disabledTools : assistant.settings.disabledTools?.slice(0, 20),
           },
           isActive: assistant.id === activeId,
           createdAt: assistant.createdAt,
           updatedAt: assistant.updatedAt,
+          compact: !full,
         },
+        hint: full ? undefined : 'Pass full=true for full prompts and complete tool lists.',
       });
     },
 

@@ -1,5 +1,5 @@
 import type { Command } from './types';
-import { splitArgs } from './helpers';
+import { splitArgs, parseDisclosureOptions, pageItems, disclosureHint, truncateText } from './helpers';
 
 export function webhooksCommand(): Command {
   return {
@@ -9,8 +9,8 @@ export function webhooksCommand(): Command {
     selfHandled: true,
     content: '',
     handler: async (args, context) => {
-      const trimmed = args.trim();
-      const [subcommand, ...rest] = trimmed.split(/\s+/);
+      const parts = splitArgs(args);
+      const [subcommand, ...rest] = parts;
       const subArgs = rest.join(' ');
 
       // /webhooks (no args) or /webhooks ui → open interactive panel
@@ -29,19 +29,35 @@ export function webhooksCommand(): Command {
       // /webhooks list
       if (subcommand === 'list') {
         try {
+          const outputOptions = parseDisclosureOptions(rest);
+          if (outputOptions.error) {
+            context.emit('text', `${outputOptions.error}\n`);
+            context.emit('done');
+            return { handled: true };
+          }
           const webhooks = await manager.list();
+          const page = pageItems(webhooks, outputOptions);
           if (webhooks.length === 0) {
             context.emit('text', 'No webhooks registered. Use /webhooks create <name> <source> to create one.\n');
+          } else if (outputOptions.json) {
+            context.emit('text', JSON.stringify({
+              webhooks: page.items,
+              total: page.total,
+              limit: outputOptions.limit,
+              cursor: outputOptions.cursor,
+              nextCursor: page.nextCursor,
+            }, null, 2));
           } else {
-            context.emit('text', `Webhooks (${webhooks.length}):\n\n`);
-            for (const wh of webhooks) {
+            context.emit('text', `Webhooks (${page.shown}/${page.total}):\n\n`);
+            for (const wh of page.items) {
               const statusIcon = wh.status === 'active' ? '●' : wh.status === 'paused' ? '◐' : '✗';
               const lastDelivery = wh.lastDeliveryAt
                 ? new Date(wh.lastDeliveryAt).toLocaleDateString()
                 : 'never';
-              context.emit('text', `  ${statusIcon} ${wh.name} (${wh.id})\n`);
-              context.emit('text', `    Source: ${wh.source} | Events: ${wh.deliveryCount} | Last: ${lastDelivery}\n`);
+              context.emit('text', `  ${statusIcon} ${truncateText(wh.name, outputOptions.verbose ? 100 : 48)} (${wh.id})\n`);
+              context.emit('text', `    Source: ${truncateText(wh.source, 40)} | Events: ${wh.deliveryCount} | Last: ${lastDelivery}\n`);
             }
+            context.emit('text', disclosureHint(outputOptions, page.total, page.shown, '/webhooks events <id>'));
           }
         } catch (error) {
           context.emit('text', `Error: ${error instanceof Error ? error.message : String(error)}\n`);

@@ -1,17 +1,31 @@
 /**
- * Wallet SDK Adapter — lazy-loading wrapper for @hasna/wallets.
- * Follows the same pattern as other sdk-adapter files.
+ * Wallet SDK adapter for an explicitly configured external wallet module.
  */
 
-let _lib: any = null;
+interface WalletSdkModule {
+  getBalance?: () => Promise<unknown> | unknown;
+  listCards?: () => Promise<unknown[]> | unknown[];
+  listTransactions?: (limit: number) => Promise<unknown[]> | unknown[];
+  createCard?: (options?: { label?: string }) => Promise<unknown> | unknown;
+  getCardDetails?: (cardId: string) => Promise<unknown> | unknown;
+  closeCard?: (cardId: string) => Promise<boolean> | boolean;
+}
 
-async function lib(): Promise<any> {
-  if (!_lib) {
-    try {
-      _lib = await import('@hasna/wallets' as any);
-    } catch {
-      return null;
-    }
+let _lib: WalletSdkModule | null | undefined;
+
+async function lib(): Promise<WalletSdkModule | null> {
+  if (_lib !== undefined) return _lib;
+
+  const moduleName = process.env.ASSISTANTS_WALLET_MODULE?.trim();
+  if (!moduleName) {
+    _lib = null;
+    return null;
+  }
+
+  try {
+    _lib = await import(moduleName) as WalletSdkModule;
+  } catch {
+    _lib = null;
   }
   return _lib;
 }

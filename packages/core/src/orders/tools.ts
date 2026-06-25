@@ -7,6 +7,7 @@ import type { Tool } from '@hasna/assistants-shared';
 import type { ToolExecutor, ToolRegistry } from '../tools/registry';
 import type { OrdersManager } from './manager';
 import type { OrderStatus, StoreCategory } from './types';
+import { disclosureHint, pageItems, truncateText } from '../commands/helpers';
 
 // ============================================
 // Tool Definitions
@@ -29,7 +30,19 @@ export const ordersListTool: Tool = {
       },
       limit: {
         type: 'number',
-        description: 'Maximum number of orders to return (default: 20)',
+        description: 'Maximum number of orders to return (default: 20, max: 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based row offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Show wider previews while still respecting limit',
+      },
+      json: {
+        type: 'boolean',
+        description: 'Return a structured JSON page instead of human text',
       },
     },
     required: [],
@@ -216,7 +229,24 @@ export const storesListTool: Tool = {
   description: 'List all registered stores/vendors with order counts.',
   parameters: {
     type: 'object',
-    properties: {},
+    properties: {
+      limit: {
+        type: 'number',
+        description: 'Maximum number of stores to return (default: 20, max: 100)',
+      },
+      cursor: {
+        type: 'number',
+        description: 'Zero-based row offset for pagination',
+      },
+      verbose: {
+        type: 'boolean',
+        description: 'Show wider previews and URLs while still respecting limit',
+      },
+      json: {
+        type: 'boolean',
+        description: 'Return a structured JSON page instead of human text',
+      },
+    },
     required: [],
   },
 };
@@ -271,6 +301,17 @@ export const storesGetTool: Tool = {
 export function createOrderToolExecutors(
   getOrdersManager: () => OrdersManager | null
 ): Record<string, ToolExecutor> {
+  const getOutputOptions = (input: Record<string, unknown>) => {
+    const rawLimit = typeof input.limit === 'number' ? Math.trunc(input.limit) : 20;
+    const rawCursor = typeof input.cursor === 'number' ? Math.trunc(input.cursor) : 0;
+    return {
+      limit: Math.max(1, Math.min(rawLimit, 100)),
+      cursor: Math.max(0, rawCursor),
+      verbose: input.verbose === true,
+      json: input.json === true,
+    };
+  };
+
   return {
     orders_list: async (input) => {
       const manager = getOrdersManager();
@@ -279,28 +320,41 @@ export function createOrderToolExecutors(
       }
 
       try {
+        const outputOptions = getOutputOptions(input);
         const orders = manager.listOrders({
           status: input.status as OrderStatus | undefined,
           store: input.store as string | undefined,
-          limit: typeof input.limit === 'number' ? input.limit : 20,
+          limit: 100,
         });
+        const page = pageItems(orders, outputOptions);
 
         if (orders.length === 0) {
           return 'No orders found.';
         }
 
+        if (outputOptions.json) {
+          return JSON.stringify({
+            orders: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2);
+        }
+
         const lines: string[] = [];
-        lines.push(`## Orders (${orders.length})`);
+        lines.push(`## Orders (${page.shown}/${page.total})`);
         lines.push('');
 
-        for (const order of orders) {
+        for (const order of page.items) {
           const amount = order.totalAmount != null ? ` | ${order.currency} ${order.totalAmount.toFixed(2)}` : '';
-          const desc = order.description ? ` — ${order.description}` : '';
+          const desc = order.description ? ` - ${truncateText(order.description, outputOptions.verbose ? 120 : 56)}` : '';
           const num = order.orderNumber ? ` #${order.orderNumber}` : '';
-          lines.push(`**${order.storeName}**${num} (${order.id})`);
+          lines.push(`**${truncateText(order.storeName, 48)}**${num} (${order.id})`);
           lines.push(`  Status: ${order.status}${amount} | Items: ${order.itemCount}${desc}`);
           lines.push('');
         }
+        lines.push(disclosureHint(outputOptions, page.total, page.shown, 'orders_get'));
 
         return lines.join('\n');
       } catch (error) {
@@ -469,27 +523,40 @@ export function createOrderToolExecutors(
       return lines.join('\n');
     },
 
-    stores_list: async () => {
+    stores_list: async (input) => {
       const manager = getOrdersManager();
       if (!manager) {
         return 'Error: Orders are not enabled. Set orders.enabled: true in config.';
       }
 
       try {
+        const outputOptions = getOutputOptions(input);
         const stores = manager.listStores();
+        const page = pageItems(stores, outputOptions);
         if (stores.length === 0) {
           return 'No stores registered. Use stores_add to register a store.';
         }
 
+        if (outputOptions.json) {
+          return JSON.stringify({
+            stores: page.items,
+            total: page.total,
+            limit: outputOptions.limit,
+            cursor: outputOptions.cursor,
+            nextCursor: page.nextCursor,
+          }, null, 2);
+        }
+
         const lines: string[] = [];
-        lines.push(`## Stores (${stores.length})`);
+        lines.push(`## Stores (${page.shown}/${page.total})`);
         lines.push('');
 
-        for (const store of stores) {
+        for (const store of page.items) {
           const orders = store.orderCount > 0 ? ` | ${store.orderCount} orders` : '';
-          const url = store.url ? ` | ${store.url}` : '';
-          lines.push(`**${store.name}** [${store.category}]${orders}${url}`);
+          const url = outputOptions.verbose && store.url ? ` | ${truncateText(store.url, 80)}` : '';
+          lines.push(`**${truncateText(store.name, outputOptions.verbose ? 120 : 56)}** [${store.category}]${orders}${url}`);
         }
+        lines.push(disclosureHint(outputOptions, page.total, page.shown, 'stores_get'));
 
         return lines.join('\n');
       } catch (error) {

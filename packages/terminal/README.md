@@ -86,6 +86,29 @@ assistants -p "What does this codebase do?"
 | `-r, --resume <session_id>` | Resume a specific session by ID |
 | `--cwd <path>` | Set working directory |
 
+### Compact Output Defaults
+
+Agent-facing list, search, status, history, and inspect commands show compact pages by default. Long text is previewed, rows are capped, and commands print a hint for getting more detail.
+
+Common disclosure flags:
+
+| Flag | Description |
+|------|-------------|
+| `--limit <n>` | Show up to `n` rows (default 20, capped at 100 where supported) |
+| `--cursor <n>` | Continue from a zero-based row offset |
+| `--verbose` | Show wider text previews |
+| `--json` | Return structured output for scripts |
+| `--full` | Return full detail for explicit inspect/read paths |
+
+Examples:
+
+```bash
+assistants sessions list --limit 10
+assistants sessions <id> --verbose
+assistants sessions <id> --full
+assistants search "token usage" --limit 5 --json
+```
+
 ### Headless Mode Examples
 
 ```bash

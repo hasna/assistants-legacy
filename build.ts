@@ -5,7 +5,7 @@
  */
 
 import { $ } from 'bun';
-import { existsSync } from 'fs';
+import { existsSync, renameSync } from 'fs';
 
 const outdir = './dist';
 
@@ -35,6 +35,7 @@ const result = await Bun.build({
   define: {
     'process.env.ASSISTANTS_VERSION': JSON.stringify(version),
   },
+  external: ['@aws-sdk/client-s3'],
   // Stub out packages that can't be resolved at build time
   plugins: [
     {
@@ -46,7 +47,7 @@ const result = await Bun.build({
           namespace: 'stub',
         }));
         // Stub optional @hasna/* SDK packages that lack dist (lazy-loaded at runtime)
-        build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|wallets|logs|telephony)$/ }, (args) => ({
+        build.onResolve({ filter: /^@hasna\/(researcher|economy|terminal|logs|telephony)$/ }, (args) => ({
           path: args.path,
           namespace: 'stub',
         }));
@@ -99,6 +100,84 @@ if (!content.startsWith('#!/usr/bin/env bun')) {
 }
 
 await Bun.write(outputFile, content);
+
+const storageResult = await Bun.build({
+  entrypoints: ['./packages/core/src/storage.ts'],
+  outdir,
+  target: 'bun',
+  format: 'esm',
+  minify: {
+    whitespace: true,
+    syntax: true,
+    identifiers: false,
+  },
+  sourcemap: 'external',
+  external: ['@aws-sdk/client-s3'],
+  plugins: [],
+});
+
+if (!storageResult.success) {
+  console.error('Storage build failed:');
+  for (const log of storageResult.logs) {
+    console.error(log);
+  }
+  process.exit(1);
+}
+
+const desiredStorageFile = `${outdir}/storage.js`;
+const builtStorageFile = [
+  desiredStorageFile,
+  `${outdir}/core/src/storage.js`,
+].find((file) => existsSync(file));
+
+if (!builtStorageFile) {
+  console.error('Storage build failed: dist/storage.js was not generated');
+  process.exit(1);
+}
+
+if (builtStorageFile !== desiredStorageFile) {
+  renameSync(builtStorageFile, desiredStorageFile);
+  const sourceMap = `${builtStorageFile}.map`;
+  if (existsSync(sourceMap)) {
+    renameSync(sourceMap, `${desiredStorageFile}.map`);
+  }
+}
+
+const storageDtsResult = await $`bunx tsc --declaration --emitDeclarationOnly --outDir ${outdir} --rootDir packages/core/src --module ESNext --target ESNext --moduleResolution bundler --skipLibCheck --types bun-types --noEmit false packages/core/src/storage.ts`.nothrow().quiet();
+if (storageDtsResult.exitCode !== 0) {
+  console.warn('  Could not generate full storage declarations; writing fallback storage.d.ts');
+  await Bun.write(`${outdir}/storage.d.ts`, `export declare const ASSISTANTS_STORAGE_ENV: {
+  readonly mode: "HASNA_ASSISTANTS_STORAGE_MODE";
+  readonly s3Bucket: "HASNA_ASSISTANTS_S3_BUCKET";
+  readonly s3Prefix: "HASNA_ASSISTANTS_S3_PREFIX";
+  readonly awsRegion: "HASNA_ASSISTANTS_AWS_REGION";
+  readonly s3Endpoint: "HASNA_ASSISTANTS_S3_ENDPOINT";
+  readonly s3ForcePathStyle: "HASNA_ASSISTANTS_S3_FORCE_PATH_STYLE";
+  readonly machineId: "HASNA_ASSISTANTS_MACHINE_ID";
+  readonly dbPath: "HASNA_ASSISTANTS_DB_PATH";
+};
+export declare const STORAGE_MODE_ENV: "HASNA_ASSISTANTS_STORAGE_MODE";
+export declare const STORAGE_TABLES: readonly string[];
+export type AssistantsStorageMode = "local" | "remote" | "hybrid";
+export interface AssistantsStorageSyncResult {
+  mode: AssistantsStorageMode;
+  pushed: number;
+  pulled: number;
+  skipped: boolean;
+  key: string;
+  reason?: string;
+  localPath?: string;
+  backupPath?: string;
+  sizeBytes?: number;
+}
+export declare function getAssistantsStorageStatus(env?: NodeJS.ProcessEnv): unknown;
+export declare function assistantsStorageSnapshotKey(env?: NodeJS.ProcessEnv): string;
+export declare function storagePush(env?: NodeJS.ProcessEnv): Promise<AssistantsStorageSyncResult>;
+export declare function storagePull(env?: NodeJS.ProcessEnv): Promise<AssistantsStorageSyncResult>;
+export declare function storageSync(env?: NodeJS.ProcessEnv): Promise<AssistantsStorageSyncResult>;
+export declare const getStorageStatus: typeof getAssistantsStorageStatus;
+`);
+}
 
 // Make executable
 await $`chmod +x ${outputFile}`;

@@ -38,6 +38,8 @@ claude mcp add --transport stdio --scope user assistants -- assistants-mcp
 
 This server uses **lean stubs** — tool descriptions are minimal by default to save tokens. Call `describe_tools` or `search_tools` to get full documentation on demand.
 
+List and session tools are compact by default. `list_sessions`, `list_skills`, `get_session`, and the `assistants://sessions*` resources support `limit`, `cursor`, `verbose`, and explicit `full` detail where applicable. The default session view is a bounded preview; request `full=true` only when the complete transcript is needed.
+
 | Tool | Description |
 |------|-------------|
 | `chat` | Send a message to the assistant (supports session resumption) |

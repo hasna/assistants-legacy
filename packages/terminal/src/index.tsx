@@ -3,6 +3,9 @@
 import { setRuntime, closeDatabase, createWorktree, removeWorktree } from '@hasna/assistants-core';
 import type { WorktreeInfo } from '@hasna/assistants-core';
 import { bunRuntime } from '@hasna/runtime-bun';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 setRuntime(bunRuntime);
 
 import { runHeadless } from './headless';
@@ -107,6 +110,24 @@ process.on('unhandledRejection', (reason) => {
 // Version is embedded at build time via define in build.ts
 const VERSION = process.env.ASSISTANTS_VERSION || 'dev';
 
+function saveTerminalFeedback(input: { message: string; type: string; email?: string }): { id: string; path: string } {
+  const id = crypto.randomUUID();
+  const dir = join(homedir(), '.hasna', 'assistants', 'feedback');
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, `${id}.json`);
+  writeFileSync(path, JSON.stringify({
+    id,
+    createdAt: new Date().toISOString(),
+    service: 'open-assistants',
+    version: VERSION,
+    type: input.type,
+    message: input.message,
+    email: input.email,
+    source: 'terminal',
+  }, null, 2));
+  return { id, path };
+}
+
 // DEC Mode 2026 - Synchronized Output
 // This prevents scrollback destruction by batching all updates atomically
 // Supported by: Ghostty, WezTerm, Windows Terminal, VS Code terminal
@@ -179,7 +200,7 @@ const subcommand = process.argv[2];
 if (subcommand === 'autocomplete') {
   const shell = (process.argv[3] || 'zsh').toLowerCase();
 
-  const subcommands = ['mcp', 'doctor', 'serve', 'report', 'config', 'sessions', 'search', 'autocomplete', 'feedback', 'brains'];
+  const subcommands = ['mcp', 'doctor', 'serve', 'report', 'config', 'sessions', 'search', 'storage', 'autocomplete', 'feedback', 'brains'];
   const flags = [
     '--help', '-h', '--version', '-v',
     '--print', '-p', '--output-format', '--allowed-tools', '--system-prompt',
@@ -296,9 +317,58 @@ if (subcommand === 'config') {
 }
 
 if (subcommand === 'search') {
-  const query = process.argv.slice(3).join(' ').trim();
+  const rawArgs = process.argv.slice(3);
+  let limit = 20;
+  let cursor = 0;
+  let verbose = false;
+  let json = false;
+  let endOfOptions = false;
+  const queryParts: string[] = [];
+
+  for (let i = 0; i < rawArgs.length; i += 1) {
+    const arg = rawArgs[i];
+    if (arg === '--') {
+      endOfOptions = true;
+      continue;
+    }
+    if (!endOfOptions && arg === '--limit') {
+      const parsed = Number(rawArgs[i + 1]);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        console.error('--limit requires a positive integer.');
+        process.exit(1);
+      }
+      limit = Math.min(parsed, 100);
+      i += 1;
+      continue;
+    }
+    if (!endOfOptions && arg === '--cursor') {
+      const parsed = Number(rawArgs[i + 1]);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        console.error('--cursor requires a non-negative integer offset.');
+        process.exit(1);
+      }
+      cursor = parsed;
+      i += 1;
+      continue;
+    }
+    if (!endOfOptions && (arg === '--verbose' || arg === '-v')) {
+      verbose = true;
+      continue;
+    }
+    if (!endOfOptions && arg === '--json') {
+      json = true;
+      continue;
+    }
+    queryParts.push(arg);
+  }
+
+  const compactText = (value: string, maxLength: number) => {
+    const single = value.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return single.length > maxLength ? `${single.slice(0, maxLength - 3)}...` : single;
+  };
+  const query = queryParts.join(' ').trim();
   if (!query) {
-    console.error('Usage: assistants search <query>');
+    console.error('Usage: assistants search <query> [--limit n] [--cursor n] [--verbose] [--json]');
     console.error('Search session message history for a keyword or phrase.');
     process.exit(1);
   }
@@ -326,37 +396,117 @@ if (subcommand === 'search') {
   }
 
   if (matches.length === 0) {
-    console.log(`No sessions found matching "${query}".`);
+    if (json) {
+      console.log(JSON.stringify({ matches: [], total: 0, limit, cursor, nextCursor: null }));
+    } else {
+      console.log(`No sessions found matching "${query}".`);
+    }
   } else {
-    console.log(`\nFound ${matches.length} session(s) matching "${query}":\n`);
-    for (const m of matches) {
+    const start = Math.min(cursor, matches.length);
+    const page = matches.slice(start, start + limit);
+    const nextCursor = start + page.length < matches.length ? start + page.length : null;
+    if (json) {
+      console.log(JSON.stringify({ matches: page, total: matches.length, limit, cursor, nextCursor }, null, 2));
+      process.exit(0);
+    }
+
+    console.log(`\nFound ${page.length}/${matches.length} session(s) matching "${compactText(query, 80)}":\n`);
+    for (const m of page) {
       const date = m.startedAt ? new Date(m.startedAt).toLocaleString() : 'unknown';
       const label = m.label ? ` "${m.label}"` : '';
       console.log(`  ${m.sessionId}${label}  (${date})  [${m.role}]`);
-      console.log(`  ${m.excerpt}\n`);
+      console.log(`  ${verbose ? m.excerpt : compactText(m.excerpt, 180)}\n`);
     }
-    console.log(`Use "assistants sessions <id>" to view a full session.`);
+    if (nextCursor !== null) {
+      console.log(`Showing ${page.length} of ${matches.length}. Use --cursor ${nextCursor} for more or --limit ${Math.min(matches.length, 100)} to show more rows.`);
+    }
+    console.log(`Use "assistants sessions <id>" to view details.`);
   }
   process.exit(0);
 }
 
 if (subcommand === 'sessions') {
   const { SessionStorage } = await import('@hasna/assistants-core');
-  const sub = process.argv[3];
-  const limit = parseInt(process.argv[4] || '20', 10);
+  const rawArgs = process.argv.slice(3);
+  let limit = 20;
+  let cursor = 0;
+  let verbose = false;
+  let full = false;
+  let json = false;
+  const positionals: string[] = [];
+
+  for (let i = 0; i < rawArgs.length; i += 1) {
+    const arg = rawArgs[i];
+    if (arg === '--limit') {
+      const parsed = Number(rawArgs[i + 1]);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        console.error('--limit requires a positive integer.');
+        process.exit(1);
+      }
+      limit = Math.min(parsed, 100);
+      i += 1;
+      continue;
+    }
+    if (arg === '--cursor') {
+      const parsed = Number(rawArgs[i + 1]);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        console.error('--cursor requires a non-negative integer offset.');
+        process.exit(1);
+      }
+      cursor = parsed;
+      i += 1;
+      continue;
+    }
+    if (arg === '--verbose' || arg === '-v') {
+      verbose = true;
+      continue;
+    }
+    if (arg === '--full') {
+      full = true;
+      continue;
+    }
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+    positionals.push(arg);
+  }
+
+  const sub = positionals[0];
+  if (positionals[1] && /^\d+$/.test(positionals[1])) {
+    limit = Math.min(parseInt(positionals[1], 10), 100);
+  }
+  const compactText = (value: string, maxLength: number) => {
+    const single = value.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return single.length > maxLength ? `${single.slice(0, maxLength - 3)}...` : single;
+  };
 
   if (!sub || sub === 'list') {
-    const sessions = SessionStorage.listAllSessions().slice(0, limit);
+    const allSessions = SessionStorage.listAllSessions();
+    const start = Math.min(cursor, allSessions.length);
+    const sessions = allSessions.slice(start, start + limit);
+    const nextCursor = start + sessions.length < allSessions.length ? start + sessions.length : null;
     if (sessions.length === 0) {
-      console.log('No sessions found.');
+      if (json) {
+        console.log(JSON.stringify({ sessions: [], total: 0, limit, cursor, nextCursor: null }));
+      } else {
+        console.log('No sessions found.');
+      }
+    } else if (json) {
+      console.log(JSON.stringify({ sessions, total: allSessions.length, limit, cursor, nextCursor }, null, 2));
     } else {
-      console.log(`Sessions (${sessions.length}):\n`);
+      console.log(`Sessions (${sessions.length}/${allSessions.length}):\n`);
       for (const s of sessions) {
         const date = s.startedAt ? new Date(s.startedAt).toLocaleString() : 'unknown';
         const msgs = s.messageCount ?? 0;
         const label = s.label ? ` "${s.label}"` : '';
-        console.log(`  ${s.id}${label}  (${msgs} msgs, ${date})`);
+        const cwd = verbose && s.cwd ? `  ${compactText(s.cwd, 90)}` : '';
+        console.log(`  ${s.id}${label}  (${msgs} msgs, ${date})${cwd}`);
       }
+      if (nextCursor !== null) {
+        console.log(`\nShowing ${sessions.length} of ${allSessions.length}. Use --cursor ${nextCursor} for more or --limit ${Math.min(allSessions.length, 100)} to show more rows.`);
+      }
+      console.log('Use "assistants sessions <id>" for a compact message preview, or --full for the full transcript.');
     }
   } else {
     // Treat as session ID
@@ -367,15 +517,34 @@ if (subcommand === 'sessions') {
       process.exit(1);
     }
     const data = loaded.data;
+    const messages = (data.messages || []) as Array<{ role: string; content: unknown }>;
+    if (json) {
+      const start = full ? 0 : Math.max(0, messages.length - limit);
+      const page = full ? messages : messages.slice(start, start + limit);
+      console.log(JSON.stringify({
+        session: { id: loaded.id, startedAt: data.startedAt, cwd: data.cwd, messageCount: messages.length },
+        messages: page,
+        total: messages.length,
+        limit: full ? messages.length : limit,
+        cursor: start,
+        nextCursor: null,
+        full,
+      }, null, 2));
+      process.exit(0);
+    }
     console.log(`Session: ${loaded.id}`);
     console.log(`Started: ${data.startedAt || 'unknown'}`);
     console.log(`CWD: ${data.cwd || 'unknown'}`);
-    const messages = (data.messages || []) as Array<{ role: string; content: unknown }>;
     console.log(`Messages: ${messages.length}\n`);
-    for (const m of messages.slice(-10)) {
+    const shown = full ? messages : messages.slice(-Math.min(limit, messages.length));
+    for (const m of shown) {
       const role = m.role === 'user' ? 'User' : 'Assistant';
       const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-      console.log(`[${role}] ${text.slice(0, 200)}${text.length > 200 ? '…' : ''}\n`);
+      const maxLength = full ? text.length : (verbose ? 1000 : 240);
+      console.log(`[${role}] ${compactText(text, maxLength)}\n`);
+    }
+    if (!full && messages.length > shown.length) {
+      console.log(`Showing the last ${shown.length} of ${messages.length} messages. Use --limit <n>, --verbose, or --full for more.`);
     }
   }
   process.exit(0);
@@ -648,6 +817,59 @@ if (subcommand === 'status') {
   process.exit(0);
 }
 
+if (subcommand === 'storage') {
+  const action = process.argv[3] || 'status';
+  const isJson = process.argv.includes('--json');
+  const {
+    getAssistantsStorageStatus,
+    storagePush,
+    storagePull,
+    storageSync,
+  } = await import('@hasna/assistants-core/storage');
+
+  try {
+    if (action === 'status') {
+      const status = getAssistantsStorageStatus();
+      if (isJson) {
+        console.log(JSON.stringify(status, null, 2));
+      } else {
+        console.log('\nassistants storage\n');
+        console.log(`  Mode:        ${status.mode}`);
+        console.log(`  Database:    ${status.local.dbPath}`);
+        console.log(`  DB exists:   ${status.local.dbExists ? 'yes' : 'no'}`);
+        console.log(`  Remote:      ${status.remote.configured ? `${status.remote.bucket}/${status.remote.prefix}` : 'not configured'}`);
+        console.log(`  Tables:      ${status.tables.length}`);
+      }
+      process.exit(0);
+    }
+
+    if (action === 'push' || action === 'pull' || action === 'sync') {
+      const result = action === 'push'
+        ? await storagePush()
+        : action === 'pull'
+          ? await storagePull()
+          : await storageSync();
+
+      if (isJson) {
+        console.log(JSON.stringify(result, null, 2));
+      } else if (result.skipped) {
+        console.log(`Storage ${action} skipped: ${result.reason}`);
+      } else {
+        const changed = action === 'pull' ? result.pulled : result.pushed;
+        console.log(`Storage ${action} complete (${changed} snapshot${changed === 1 ? '' : 's'}): ${result.key}`);
+        if (result.backupPath) console.log(`Previous local DB backup: ${result.backupPath}`);
+      }
+      process.exit(0);
+    }
+
+    console.error('Usage: assistants storage [status|push|pull|sync] [--json]');
+    process.exit(1);
+  } catch (err) {
+    console.error(`Storage ${action} failed: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
 if (subcommand === 'report') {
   const days = parseInt(process.argv[3] || '7', 10);
   const isJson = process.argv.includes('--json');
@@ -743,19 +965,13 @@ if (subcommand === 'feedback') {
     }
 
     try {
-      const { sendFeedback } = await import('@hasna/cloud');
-      const result = await sendFeedback({
-        service: 'open-assistants',
-        version: VERSION,
+      const result = saveTerminalFeedback({
         message: type !== 'feedback' ? `[${type}] ${message}` : message,
+        type,
         email,
       });
-      if (result.sent) {
-        console.log(`✓ Feedback sent. ID: ${result.id}`);
-      } else {
-        console.log(`Feedback saved locally. ID: ${result.id}`);
-        if (result.error) console.log(`  (cloud send failed: ${result.error})`);
-      }
+      console.log(`Feedback saved locally. ID: ${result.id}`);
+      console.log(`Path: ${result.path}`);
     } catch (err) {
       console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
       process.exit(1);
@@ -806,10 +1022,11 @@ Usage:
   assistants serve [port]                 Start web dashboard (default: 3000)
   assistants report [days]                Activity report (default: 7 days)
   assistants config [cwd]                 Show current configuration
-  assistants sessions [list|<id>]         List or inspect sessions
-  assistants search <query>               Search session message history
+  assistants sessions [list|<id>]         List or inspect sessions (compact by default)
+  assistants search <query>               Search session message history (compact by default)
   assistants recall <query>              Search past conversations by topic or question
   assistants status                       Show sessions, online agents, model, and config
+  assistants storage [status|push|pull|sync]  Show or sync local DB snapshots
 
 Options:
   -h, --help                   Show this help message
@@ -822,6 +1039,10 @@ Headless Mode:
   --system-prompt <prompt>     Custom system prompt
   --json-schema <schema>       JSON Schema for structured output (use with --output-format json)
   --headless-timeout-ms <ms>   Abort headless run after the given timeout (ms)
+  --limit <n>                  Row cap for sessions/search subcommands
+  --cursor <n>                 Row offset for sessions/search subcommands
+  --verbose                    Wider previews for compact subcommands
+  --full                       Full transcript for sessions <id>
   -c, --continue               Continue the most recent conversation
   -r, --resume <id_or_name>    Resume a session by ID or name
   --cwd <path>                 Set working directory
